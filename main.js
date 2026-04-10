@@ -91,12 +91,8 @@ const updateSpeedFactor = () => {
     const isMobile = window.innerWidth < 850;
     GAME.speedFactor = Math.max(0.4, Math.min(1.2, window.innerWidth / baseWidth));
     GAME.zoom = isMobile ? 0.7 : 1.0;
-    
-    // JOYSTICK ABSOLUTELY IN THE CORNER (5px margin)
-    // Radius is 75, so center at 80 for 5px gap
     GAME.joystick.startX = 80;
     GAME.joystick.startY = window.innerHeight - 80;
-    
     if (!GAME.joystick.active) {
         GAME.joystick.currentX = GAME.joystick.startX;
         GAME.joystick.currentY = GAME.joystick.startY;
@@ -161,28 +157,70 @@ const AudioEngine = {
     startMusic() {
         if (this.musicStarted || !this.ctx) return;
         this.musicStarted = true;
-        const playStep = (time, note, type = 'square') => {
+        
+        const playSynth = (time, freq, vol, duration, type='square') => {
             const osc = this.ctx.createOscillator();
             const g = this.ctx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(note, time);
-            g.gain.setValueAtTime(0.015, time);
-            g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
-            osc.connect(g);
-            g.connect(this.ctx.destination);
-            osc.start(time);
-            osc.stop(time + 0.5);
+            osc.type = type; osc.frequency.setValueAtTime(freq, time);
+            g.gain.setValueAtTime(vol, time);
+            g.gain.exponentialRampToValueAtTime(0.001, time + duration);
+            osc.connect(g); g.connect(this.ctx.destination);
+            osc.start(time); osc.stop(time + duration);
         };
+        
+        const playNoise = (time, vol, duration) => {
+            const bufferSize = this.ctx.sampleRate * duration;
+            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const src = this.ctx.createBufferSource();
+            src.buffer = buffer;
+            const g = this.ctx.createGain();
+            g.gain.setValueAtTime(vol, time);
+            g.gain.exponentialRampToValueAtTime(0.001, time + duration);
+            src.connect(g); g.connect(this.ctx.destination);
+            src.start(time); src.stop(time + duration);
+        };
+
         let step = 0;
-        const notes = [55, 55, 62, 49];
+        const bassNotes = [55, 55, 62, 49, 55, 55, 73, 65, 55, 55, 62, 49, 55, 55, 82, 98];
+        const melodyNotes = [110, 0, 165, 0, 110, 0, 220, 196, 110, 0, 165, 0, 110, 220, 330, 440];
+
         setInterval(() => {
             if (GAME.active && !GAME.paused) {
                 const now = this.ctx.currentTime;
-                playStep(now, notes[step % 4]);
-                if (step % 8 === 0) playStep(now, 110, 'sawtooth');
+                
+                // Bass Layer (Continuous drive)
+                playSynth(now, bassNotes[step % 16], 0.03, 0.4, 'sawtooth');
+                
+                // Kick Drum (Every 1st and 3rd weight)
+                if (step % 2 === 0) {
+                    playSynth(now, 60, 0.08, 0.2, 'sine');
+                }
+                
+                // Snare/Noise (Every 2nd and 4th weight)
+                if (step % 4 === 2) {
+                    playNoise(now, 0.02, 0.15);
+                }
+
+                // Hi-Hats (Offbeat)
+                if (step % 2 === 1) {
+                    playNoise(now, 0.008, 0.05);
+                }
+
+                // Melody (Pentatonic variations)
+                if (step % 16 >= 8 && Math.random() > 0.4) {
+                    playSynth(now, melodyNotes[step % 16] * 2, 0.015, 0.3, 'triangle');
+                }
+                
+                // Cosmic Sparkle (Random high pitch)
+                if (Math.random() > 0.95) {
+                    playSynth(now, 1000 + Math.random() * 2000, 0.005, 1.0, 'sine');
+                }
+
                 step++;
             }
-        }, 200);
+        }, 150); // Faster tempo (150ms ~= 100bpm with 16th feel)
     }
 };
 
@@ -458,9 +496,10 @@ function showBossWarning() {
 function updateUI() {
   const p = GAME.entities.player;
   if (!p) return;
+  const xpStr = `LVL ${p.level}`;
+  if (document.getElementById('level-display').innerText !== xpStr) document.getElementById('level-display').innerText = xpStr;
   document.getElementById('xp-bar-fill').style.width = `${(p.xp / p.nextLevelXp) * 100}%`;
   document.getElementById('hp-bar-fill').style.width = `${(p.hp / p.maxHp) * 100}%`;
-  document.getElementById('level-display').innerText = `LVL ${p.level}`;
   document.getElementById('kill-count').innerText = GAME.kills;
   const sRatio = Math.min(1, (Date.now() - GAME.lastSniperTime) / CONFIG.SNIPER_COOLDOWN);
   const sBar = document.getElementById('sniper-bar');
@@ -669,6 +708,7 @@ const META_UPGRADES = [
 
 function showMetaMenu() {
     const container = document.getElementById('meta-options');
+    if (!container) return;
     document.getElementById('meta-currency').innerText = META.currency;
     container.innerHTML = '';
     META_UPGRADES.forEach(m => {
@@ -802,8 +842,6 @@ function render() {
       ctx.save(); 
       const sx = GAME.joystick.startX, sy = GAME.joystick.startY;
       const cx = GAME.joystick.currentX, cy = GAME.joystick.currentY;
-      const angle = Math.atan2(cy - sy, cx - sx); 
-      const d = dist(sx, sy, cx, cy);
       
       ctx.beginPath(); ctx.arc(sx, sy, 75, 0, Math.PI * 2); 
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 2; ctx.stroke();
