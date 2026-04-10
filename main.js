@@ -13,7 +13,7 @@ const CONFIG = {
   GEM_VALUES: 10,
   XP_PER_LEVEL: 100,
   UPGRADES: [
-    { id: 'damage', name: 'Zvýšení Síly', desc: '+40% poškození', icon: '⚔️' },
+    { id: 'damage', name: 'Zvýšení Síly', desc: 'Poškození x2', icon: '⚔️' },
     { id: 'speed', name: 'Rychlé Boty', desc: '+15% rychlost pohybu', icon: '👟' },
     { id: 'count', name: 'Více Střel', desc: '+1 projektil navíc', icon: '🌀' },
     { id: 'firerate', name: 'Rychlá Palba', desc: '-20% prodleva útoku', icon: '🔥' },
@@ -25,7 +25,7 @@ const CONFIG = {
     { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřáteli', icon: '🏹' },
     { id: 'size', name: 'Obří Střely', desc: '+30% velikost projektilu', icon: '🌕' },
     { id: 'crit', name: 'Kritické Zásahy', desc: '15% šance na 2x damage', icon: '💥' },
-    { id: 'luck', name: 'Štěstí', desc: '+25% k hodnotě XP krystalů', icon: '🍀' },
+    { id: 'luck', name: 'Větší Výběr', desc: '4 možnosti při levelu', icon: '🍀' },
     { id: 'orbit', name: 'Orbitální Štít', desc: 'Vypustí rotující projektil', icon: '🪐' },
     { id: 'knockback', name: 'Silný Odhoz', desc: '+50% síla odhozu', icon: '💢' },
     { id: 'xpboost', name: 'XP Multiplikátor', desc: '+20% bonus k XP', icon: '📈' },
@@ -59,13 +59,14 @@ const GAME = {
   time: 0,
   lastBossTime: 0,
   speedFactor: 1.0,
+  upgradeOptionsCount: 3, // NEW: Session based upgrade count
   entities: {
     player: null,
     enemies: [],
     projectiles: [],
     gems: [],
     particles: [],
-    fire: [] // NEW: Fire trail units
+    fire: []
   },
   camera: { x: 0, y: 0 },
   input: { w: false, a: false, s: false, d: false },
@@ -259,7 +260,7 @@ class Orbiter {
     constructor(parent, index, count) {
         this.parent = parent; this.index = index;
         this.angle = (index / count) * Math.PI * 2;
-        this.radius = 120; this.size = 12; this.speed = 0.06; this.damage = 25;
+        this.radius = 120; this.size = 12; this.speed = 0.06; this.damage = 75; // 3x Increase (was 25)
     }
     update() { this.angle += this.speed * GAME.speedFactor; }
     draw(ctx, cam) {
@@ -451,7 +452,9 @@ function showLevelUp() {
     const modal = document.getElementById('levelup-modal');
     const container = document.getElementById('upgrade-options');
     container.innerHTML = '';
-    const selected = [...CONFIG.UPGRADES].sort(() => 0.5 - Math.random()).slice(0, 3);
+    
+    // Use SESSION BASED Upgrade Options Count
+    const selected = [...CONFIG.UPGRADES].sort(() => 0.5 - Math.random()).slice(0, GAME.upgradeOptionsCount);
     selected.forEach(u => {
         const card = document.createElement('div'); card.className = 'upgrade-card';
         card.innerHTML = `<div class="upgrade-icon">${u.icon}</div><h3>${u.name}</h3><p>${u.desc}</p>`;
@@ -463,7 +466,7 @@ function showLevelUp() {
 function applyUpgrade(id) {
     const p = GAME.entities.player;
     switch(id) {
-        case 'damage': p.damage *= 1.40; break;
+        case 'damage': p.damage *= 2.0; break; // 2x TO DAMAGE
         case 'speed': p.speed *= 1.15; break;
         case 'count': p.projectileCount += 1; break;
         case 'firerate': p.fireRate *= 0.8; break;
@@ -478,7 +481,7 @@ function applyUpgrade(id) {
         case 'pierce': p.pierceCount += 1; break;
         case 'size': p.projSize *= 1.3; break;
         case 'crit': p.critChance += 0.15; break;
-        case 'luck': p.luckFactor += 0.25; break;
+        case 'luck': GAME.upgradeOptionsCount = 4; break; // LUCK MECHANIC OVERHAUL
         case 'orbit': p.orbitals += 1; break;
         case 'knockback': p.knockbackForce *= 1.5; break;
         case 'xpboost': p.xpMultiplier += 0.2; break;
@@ -601,7 +604,7 @@ function fireSniper(cx, cy) {
 const META_UPGRADES = [
     { id: 'hp', name: 'Maximální HP', desc: '+10 HP za úroveň', icon: '❤️', cost: 5 },
     { id: 'speed', name: 'Rychlost', desc: '+2% k pohybu za úroveň', icon: '⚡', cost: 10 },
-    { id: 'luck', name: 'Sběrač XP', desc: '+5% XP bonus za úroveň', icon: '🪙', cost: 15 },
+    { id: 'luck', name: 'Sběrač Dogecoinů', desc: '+5% DOGE bonus za úroveň', icon: '🪙', cost: 15 },
     { id: 'hat_crown', name: 'Koruna', desc: 'Zlatý vzhled', icon: '👑', isHat: true, hatId: 'crown', cost: 50 },
     { id: 'hat_wizard', name: 'Mág', desc: 'Klobouk', icon: '🧙', isHat: true, hatId: 'wizard', cost: 50 }
 ];
@@ -614,7 +617,7 @@ function showMetaMenu() {
         const level = m.isHat ? (META.upgrades.hat === m.hatId ? 'Vybaveno' : 'Koupit') : (META.upgrades[m.id] || 0);
         const cost = m.cost * ((META.upgrades[m.id] || 0) + 1);
         const card = document.createElement('div'); card.className = 'upgrade-card';
-        card.innerHTML = `<div>${m.icon}</div><h3>${m.name}</h3><p>${m.desc}</p><p>Level: ${level}</p><p>Cena: ${cost} Cr</p>`;
+        card.innerHTML = `<div>${m.icon}</div><h3>${m.name}</h3><p>${m.desc}</p><p>Level: ${level}</p><p>Cena: ${cost} DOGE</p>`;
         card.onclick = () => {
             if (META.currency >= cost) {
                 META.currency -= cost;
@@ -629,7 +632,7 @@ function showMetaMenu() {
 function startGame() { resetGame(); GAME.active = true; document.getElementById('menu-modal').classList.remove('active'); document.getElementById('pause-modal').classList.remove('active'); }
 
 function resetGame() {
-    GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0;
+    GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0; GAME.upgradeOptionsCount = 3; // Reset session-based luck
     GAME.entities.player = new Player(); GAME.entities.enemies = []; GAME.entities.projectiles = []; GAME.entities.gems = []; GAME.entities.particles = []; GAME.entities.fire = [];
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     updateUI();
