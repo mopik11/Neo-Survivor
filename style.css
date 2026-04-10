@@ -225,29 +225,6 @@ canvas {
   margin-top: 1rem;
 }
 
-/* Fullscreen Helper Chip */
-.fs-chip {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 500;
-  background: var(--glass-bg);
-  padding: 8px 15px;
-  border-radius: 99px;
-  border: 1px solid var(--glass-border);
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: rgba(255,255,255,0.7);
-  cursor: pointer;
-  pointer-events: auto;
-  transition: all 0.3s;
-}
-
-.fs-chip:hover {
-  background: white;
-  color: black;
-}
-
 /* Upgrade Cards */
 .upgrade-grid {
   display: grid;
@@ -348,10 +325,8 @@ canvas {
     margin-top: 2rem;
   }
 
-  .fs-chip {
-    top: auto;
-    bottom: 1.5rem;
-    right: 1.5rem;
+  .fs-button {
+      display: none !important;
   }
 }
 
