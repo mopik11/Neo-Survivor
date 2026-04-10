@@ -499,12 +499,13 @@ class Player {
   addXp(amount) { 
       if (this.dead) return;
       if (NET.conn && !NET.isHost) {
-          // Client only notifies, host is authority
+          // Client: Just notify host, don't touch local XP
           NET.conn.send({ type: 'PICKUP_XP', amount: amount });
           return;
       }
+      // Host or Solo logic
       this.xp += amount * this.xpMultiplier; 
-      if (this.xp >= this.nextLevelXp) {
+      while (this.xp >= this.nextLevelXp) {
           this.levelUp();
       }
       if (NET.isHost && NET.conn) syncState();
@@ -515,8 +516,8 @@ class Player {
       this.xp = Math.max(0, this.xp - this.nextLevelXp); 
       this.nextLevelXp = Math.floor(this.nextLevelXp * 1.25); 
       AudioEngine.play('lvlup'); 
+      console.warn("TEAM LEVEL UP:", this.level);
       
-      // Trigger UI if in solo or as host
       if (!NET.conn || NET.isHost) {
           GAME.paused = true;
           if (NET.isHost && NET.conn) {
@@ -730,9 +731,12 @@ function setupConn() {
         }
         if (data.type === 'STATE_SYNC') {
             const p = GAME.entities.player;
-            p.level = data.lvl; p.xp = data.xp; p.nextLevelXp = data.next;
+            p.level = data.lvl; 
+            p.xp = data.xp; 
+            p.nextLevelXp = data.next;
             p.hp = data.hp;
-            GAME.paused = data.paused; GAME.time = data.time;
+            GAME.paused = data.paused; 
+            GAME.time = data.time;
             updateUI();
         }
         if (data.type === 'WORLD_STATE' && !NET.isHost) {
