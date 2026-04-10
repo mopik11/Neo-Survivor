@@ -27,7 +27,7 @@ const CONFIG = {
     { id: 'crit', name: 'Kritické Zásahy', desc: '15% šance na 2x damage', icon: '💥' },
     { id: 'luck', name: 'Větší Výběr', desc: '4 možnosti při levelu', icon: '🍀' },
     { id: 'orbit', name: 'Orbitální Štít', desc: 'Vypustí rotující projektil', icon: '🪐' },
-    { id: 'knockback', name: 'Silný Odhoz', desc: '+50% síla odhozu', icon: '💢' },
+    { id: 'knockback', name: 'Silný Odhoz', desc: '+50% sýla odhozu', icon: '💢' },
     { id: 'xpboost', name: 'XP Multiplikátor', desc: '+20% bonus k XP', icon: '📈' },
     { id: 'lifesteal', name: 'Lifesteal', desc: '5% šance na heal při killu', icon: '🧛' },
     { id: 'aura', name: 'Mrazivá Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️' },
@@ -59,6 +59,7 @@ const GAME = {
   time: 0,
   lastBossTime: 0,
   speedFactor: 1.0,
+  zoom: 1.0, // NEW: Rendering zoom
   upgradeOptionsCount: 3,
   entities: {
     player: null,
@@ -70,7 +71,14 @@ const GAME = {
   },
   camera: { x: 0, y: 0 },
   input: { w: false, a: false, s: false, d: false },
-  joystick: { active: false, x: 0, y: 0, startX: 0, startY: 0, currentX: 0, currentY: 0 },
+  joystick: { 
+      active: false, 
+      fixed: true, // ALWAYS FIXED NOW
+      startX: 120, // FIXED LEFT
+      startY: 0,   // DYNAMIC BOTTOM
+      currentX: 120, 
+      currentY: 0 
+  },
   stars: [],
   orbiters: [],
   lastSniperTime: 0,
@@ -80,7 +88,18 @@ const GAME = {
 
 const updateSpeedFactor = () => {
     const baseWidth = 1200;
+    const isMobile = window.innerWidth < 850;
     GAME.speedFactor = Math.max(0.4, Math.min(1.2, window.innerWidth / baseWidth));
+    
+    // REDUCE ZOOM on mobile to see more (0.75x)
+    GAME.zoom = isMobile ? 0.7 : 1.0;
+    
+    // UPDATE FIXED JOYSTICK POS
+    GAME.joystick.startY = window.innerHeight - 120;
+    if (!GAME.joystick.active) {
+        GAME.joystick.currentX = GAME.joystick.startX;
+        GAME.joystick.currentY = GAME.joystick.startY;
+    }
 };
 
 const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
@@ -409,7 +428,7 @@ class Player {
     ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
     if (META.upgrades.hat) {
         ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-        const h = { 'crown': '👑', 'wizard': '🧙', 'ninja': '🥷', 'cap': '🧢' }[META.upgrades.hat];
+        const h = { 'crown': '👑', 'wizard': '🧙', 'ninja': '𥷷', 'cap': '🧢' }[META.upgrades.hat];
         ctx.fillText(h || '🎩', this.x - cam.x, this.y - cam.y - this.radius + 8);
     }
     ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 4; ctx.stroke(); ctx.shadowBlur = 0;
@@ -580,16 +599,37 @@ function init() {
   GAME.canvas.addEventListener('touchstart', (e) => {
       if (!GAME.active || GAME.paused) return;
       const t = e.touches[0];
-      GAME.joystick.active = true; GAME.joystick.startX = t.clientX; GAME.joystick.startY = t.clientY;
+      
+      // Handle Sniper on Right Side
+      if (t.clientX > window.innerWidth / 2) {
+          if (Date.now() - GAME.lastSniperTime >= CONFIG.SNIPER_COOLDOWN) {
+              const rect = GAME.canvas.getBoundingClientRect();
+              const sx = (t.clientX - rect.left) / GAME.zoom;
+              const sy = (t.clientY - rect.top) / GAME.zoom;
+              fireSniper(sx, sy); GAME.lastSniperTime = Date.now();
+          }
+          return;
+      }
+      
+      // FIXED JOYSTICK INTERACTION
+      GAME.joystick.active = true;
       GAME.joystick.currentX = t.clientX; GAME.joystick.currentY = t.clientY;
-  }, { passive: true });
+  });
   
   GAME.canvas.addEventListener('touchmove', (e) => {
       if (!GAME.joystick.active) return;
-      GAME.joystick.currentX = e.touches[0].clientX; GAME.joystick.currentY = e.touches[0].clientY;
+      const t = e.touches[0];
+      // Limit to left side
+      if (t.clientX < window.innerWidth / 2) {
+          GAME.joystick.currentX = t.clientX; GAME.joystick.currentY = t.clientY;
+      }
   }, { passive: true });
   
-  GAME.canvas.addEventListener('touchend', () => { GAME.joystick.active = false; });
+  GAME.canvas.addEventListener('touchend', () => { 
+      GAME.joystick.active = false; 
+      GAME.joystick.currentX = GAME.joystick.startX;
+      GAME.joystick.currentY = GAME.joystick.startY;
+  });
 
   spawnEnemy(); loadMeta(); requestAnimationFrame(loop);
 }
@@ -641,7 +681,7 @@ function loop() { if (GAME.active && !GAME.paused) update(); render(); requestAn
 
 function update() {
   GAME.time += 1/60; const p = GAME.entities.player; p.update();
-  GAME.camera.x = p.x - GAME.canvas.width / 2; GAME.camera.y = p.y - GAME.canvas.height / 2;
+  GAME.camera.x = (p.x * GAME.zoom) - GAME.canvas.width / 2; GAME.camera.y = (p.y * GAME.zoom) - GAME.canvas.height / 2;
   if (CONFIG.SCREEN_SHAKE > 0) { GAME.camera.x += (Math.random()-0.5)*CONFIG.SCREEN_SHAKE; GAME.camera.y += (Math.random()-0.5)*CONFIG.SCREEN_SHAKE; CONFIG.SCREEN_SHAKE *= 0.9; }
   GAME.entities.enemies.forEach((e, i) => {
     e.update(p);
@@ -657,13 +697,10 @@ function update() {
   GAME.entities.projectiles.forEach((proj, pIndex) => {
     proj.update(); if (proj.life <= 0) { GAME.entities.projectiles.splice(pIndex, 1); return; }
     
-    let hitSomething = false;
     GAME.entities.enemies.forEach((enemy, eIndex) => {
         if (!proj.hitEnemies.has(enemy) && dist(proj.x, proj.y, enemy.x, enemy.y) < proj.radius + enemy.radius) {
             enemy.hp -= proj.damage; proj.hitEnemies.add(enemy);
-            hitSomething = true;
 
-            // Handle Bounce FIRST
             if (proj.bounce > 0) {
                 const targets = GAME.entities.enemies.filter(e => e !== enemy && !proj.hitEnemies.has(e));
                 if (targets.length > 0) {
@@ -675,7 +712,6 @@ function update() {
                 }
             }
 
-            // Handle Pierce
             if (proj.pierce > 1) {
                 proj.pierce--;
             } else if (proj.pierce !== Infinity && proj.bounce <= 0) {
@@ -695,26 +731,34 @@ function update() {
 
 function render() {
   const ctx = GAME.ctx, cam = GAME.camera;
+  ctx.save();
   ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
+  
+  // APPLY ZOOM
+  ctx.scale(GAME.zoom, GAME.zoom);
+  // Correct Camera offset for scaling
+  const camX = cam.x / GAME.zoom;
+  const camY = cam.y / GAME.zoom;
+  
   GAME.stars.forEach(s => {
-      const sx = (s.x - cam.x * 0.1) % GAME.canvas.width, sy = (s.y - cam.y * 0.1) % GAME.canvas.height;
-      ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`; ctx.beginPath(); ctx.arc(sx<0?sx+GAME.canvas.width:sx, sy<0?sy+GAME.canvas.height:sy, s.size, 0, Math.PI*2); ctx.fill();
+      const sx = (s.x - camX * 0.1) % (GAME.canvas.width/GAME.zoom), sy = (s.y - camY * 0.1) % (GAME.canvas.height/GAME.zoom);
+      ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`; ctx.beginPath(); ctx.arc(sx<0?sx+(GAME.canvas.width/GAME.zoom):sx, sy<0?sy+(GAME.canvas.height/GAME.zoom):sy, s.size, 0, Math.PI*2); ctx.fill();
   });
   
   const hexRadius = 60;
   const hexHeight = hexRadius * Math.sqrt(3);
-  const startCol = Math.floor(cam.x / (hexRadius * 1.5)) - 1;
-  const endCol = startCol + Math.ceil(GAME.canvas.width / (hexRadius * 1.5)) + 2;
-  const startRow = Math.floor(cam.y / hexHeight) - 1;
-  const endRow = startRow + Math.ceil(GAME.canvas.height / hexHeight) + 2;
+  const startCol = Math.floor(camX / (hexRadius * 1.5)) - 1;
+  const endCol = startCol + Math.ceil((GAME.canvas.width/GAME.zoom) / (hexRadius * 1.5)) + 2;
+  const startRow = Math.floor(camY / hexHeight) - 1;
+  const endRow = startRow + Math.ceil((GAME.canvas.height/GAME.zoom) / hexHeight) + 2;
 
   ctx.strokeStyle = 'rgba(99, 102, 241, 0.15)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let col = startCol; col <= endCol; col++) {
       for (let row = startRow; row <= endRow; row++) {
-          const cx = col * hexRadius * 1.5 - cam.x;
-          const cy = (row * hexHeight + (Math.abs(col) % 2 === 0 ? 0 : hexHeight / 2)) - cam.y;
+          const cx = col * hexRadius * 1.5 - camX;
+          const cy = (row * hexHeight + (Math.abs(col) % 2 === 0 ? 0 : hexHeight / 2)) - camY;
           
           for (let i = 0; i < 6; i++) {
               const a = (i / 6) * Math.PI * 2;
@@ -727,19 +771,21 @@ function render() {
   }
   ctx.stroke();
 
-  GAME.entities.fire.forEach(f => f.draw(ctx, cam));
-  GAME.entities.particles.forEach(p => p.draw(ctx, cam));
-  GAME.entities.gems.forEach(g => g.draw(ctx, cam));
-  GAME.entities.projectiles.forEach(p => p.draw(ctx, cam));
-  if (GAME.orbiters) GAME.orbiters.forEach(o => o.draw(ctx, cam));
-  GAME.entities.enemies.forEach(e => e.draw(ctx, cam));
-  if (GAME.entities.player) GAME.entities.player.draw(ctx, cam);
+  GAME.entities.fire.forEach(f => f.draw(ctx, {x:camX, y:camY}));
+  GAME.entities.particles.forEach(p => p.draw(ctx, {x:camX, y:camY}));
+  GAME.entities.gems.forEach(g => g.draw(ctx, {x:camX, y:camY}));
+  GAME.entities.projectiles.forEach(p => p.draw(ctx, {x:camX, y:camY}));
+  if (GAME.orbiters) GAME.orbiters.forEach(o => o.draw(ctx, {x:camX, y:camY}));
+  GAME.entities.enemies.forEach(e => e.draw(ctx, {x:camX, y:camY}));
+  if (GAME.entities.player) GAME.entities.player.draw(ctx, {x:camX, y:camY});
   
-  if (GAME.joystick.active) {
+  ctx.restore(); // END WORLD DRAW
+  
+  if (GAME.joystick.active || 1) { // Always draw if initialized
       ctx.save(); const { startX: sx, startY: sy, currentX: cx, currentY: cy } = GAME.joystick;
       const angle = Math.atan2(cy - sy, cx - sx); const d = Math.min(dist(sx, sy, cx, cy), 60);
-      ctx.beginPath(); ctx.arc(sx, sy, 65, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(99, 102, 241, 0.4)'; ctx.lineWidth = 4; ctx.stroke();
-      ctx.beginPath(); ctx.arc(sx + Math.cos(angle)*d, sy + Math.sin(angle)*d, 28, 0, Math.PI * 2); ctx.fillStyle = 'rgba(99, 102, 241, 0.7)'; ctx.shadowBlur = 20; ctx.shadowColor = '#6366f1'; ctx.fill(); ctx.restore();
+      ctx.beginPath(); ctx.arc(sx, sy, 65, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(99, 102, 241, 0.2)'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.beginPath(); ctx.arc(sx + Math.cos(angle)*d, sy + Math.sin(angle)*d, 28, 0, Math.PI * 2); ctx.fillStyle = 'rgba(99, 102, 241, 0.5)'; ctx.shadowBlur = 20; ctx.shadowColor = '#6366f1'; ctx.fill(); ctx.restore();
   }
 }
 
