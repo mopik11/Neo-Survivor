@@ -497,22 +497,32 @@ class Player {
     ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
   }
   addXp(amount) { 
+      if (this.dead) return;
       if (NET.conn && !NET.isHost) {
+          // Client only notifies, host is authority
           NET.conn.send({ type: 'PICKUP_XP', amount: amount });
           return;
       }
       this.xp += amount * this.xpMultiplier; 
-      if (this.xp >= this.nextLevelXp) this.levelUp(); 
+      if (this.xp >= this.nextLevelXp) {
+          this.levelUp();
+      }
       if (NET.isHost && NET.conn) syncState();
       updateUI(); 
   }
   levelUp() { 
-      this.level++; this.xp -= this.nextLevelXp; this.nextLevelXp = Math.floor(this.nextLevelXp * 1.25); 
+      this.level++; 
+      this.xp = Math.max(0, this.xp - this.nextLevelXp); 
+      this.nextLevelXp = Math.floor(this.nextLevelXp * 1.25); 
       AudioEngine.play('lvlup'); 
-      if (NET.isHost) {
+      
+      // Trigger UI if in solo or as host
+      if (!NET.conn || NET.isHost) {
           GAME.paused = true;
-          NET.playersReady.clear(); // Reset ready state for all
-          if (NET.conn) NET.conn.send({ type: 'TRIGGER_LEVEL_UP' });
+          if (NET.isHost && NET.conn) {
+              NET.playersReady.clear();
+              NET.conn.send({ type: 'TRIGGER_LEVEL_UP' });
+          }
           showLevelUp(); 
       }
   }
@@ -711,6 +721,7 @@ function setupConn() {
         }
         if (data.type === 'TRIGGER_LEVEL_UP') {
             GAME.paused = true;
+            // Ensure local XP state is exactly what host has
             showLevelUp();
         }
         if (data.type === 'PICKED_UPGRADE' && NET.isHost) {
