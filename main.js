@@ -56,8 +56,7 @@ const NET = {
     others: {},
     roomId: null,
     lastSync: 0,
-    playerSyncThrottle: 0,
-    lobbySyncThrottle: 0
+    playerSyncThrottle: 0
 };
 
 const META = {
@@ -656,7 +655,7 @@ function setupConn() {
             GAME.entities.projectiles.push(proj);
         }
         if (data.type === 'WORLD_STATE' && !NET.isHost) {
-            if (!GAME.active) startGame();
+            if (!GAME.active) startGame(); // Auto start client
             const hostEnemies = data.enemies;
             GAME.entities.enemies = hostEnemies.map(he => {
                 const e = he.isBoss ? new Boss(he.x, he.y, 1, he.id) : new Enemy(he.x, he.y, 1, he.id);
@@ -695,13 +694,6 @@ function syncWorld() {
         gems: GAME.entities.gems.map(g => ({ id: g.id, x: g.x, y: g.y })),
         time: GAME.time
     });
-    
-    // Throttle Gun.js broadcast to every 5 seconds to prevent relay flooding
-    const now = Date.now();
-    if (now - NET.lobbySyncThrottle > 5000) {
-        LOBBY.broadcast(NET.roomId);
-        NET.lobbySyncThrottle = now;
-    }
 }
 
 const LOBBY = {
@@ -720,7 +712,7 @@ const LOBBY = {
     },
     broadcast(id) {
         if (!this.gun || !id || id === 'Načítám...') return;
-        this.gun.get('neo-survivor-lobby-v3').get(id).put({
+        this.gun.get('neo-survivor-lobby-v2').get(id).put({
             id: id,
             name: "Hra #" + id,
             time: Date.now()
@@ -729,11 +721,10 @@ const LOBBY = {
     scan() {
         if (!this.gun) return;
         const listEl = document.getElementById('server-list');
-        if(listEl) listEl.innerHTML = '<div style="opacity:0.5; font-size:0.8rem; padding:10px;">Probíhá síťový sken...</div>';
-        this.gun.get('neo-survivor-lobby-v3').map().on((data, id) => {
+        if(listEl) listEl.innerHTML = '<div style="opacity:0.5; font-size:0.8rem; padding:10px;">Hledám servery v síti...</div>';
+        this.gun.get('neo-survivor-lobby-v2').map().on((data, id) => {
             if (!data || !data.id) return;
-            // Clean local cache of old servers
-            if (Date.now() - data.time > 15000) { delete this.servers[id]; this.updateUI(); return; }
+            if (Date.now() - data.time > 120000) return;
             this.servers[id] = data;
             this.updateUI();
         });
@@ -745,8 +736,7 @@ const LOBBY = {
         let count = 0;
         const sorted = Object.values(this.servers).sort((a,b) => b.time - a.time);
         sorted.forEach(s => {
-            if (s.id === NET.roomId) return; // HIDDEN SELF
-            if (Date.now() - s.time > 10000) return; // Strict 10s visibility to ensure freshness
+            if (Date.now() - s.time > 60000) return;
             count++;
             const item = document.createElement('div');
             item.style = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); margin-bottom:5px;";
@@ -899,6 +889,7 @@ function update() {
   if (NET.conn) syncPlayer();
   if (NET.isHost && Date.now() - NET.lastSync > 100) { 
       syncWorld(); NET.lastSync = Date.now(); 
+      LOBBY.broadcast(NET.roomId); 
   }
 
   for (const id in NET.others) {
