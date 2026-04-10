@@ -737,11 +737,15 @@ function setupConn() {
         }
         if (data.type === 'WORLD_STATE' && !NET.isHost) {
             if (!GAME.active) startGame();
-            GAME.entities.enemies = data.enemies.map(he => {
-                const e = he.isBoss ? new Boss(he.x, he.y, 1, he.id) : new Enemy(he.x, he.y, 1, he.id);
-                e.hp = he.hp; return e;
-            });
-            GAME.entities.gems = data.gems.map(hg => new Gem(hg.x, hg.y, hg.id));
+            if (data.enemies) {
+                GAME.entities.enemies = data.enemies.map(he => {
+                    const e = he.isBoss ? new Boss(he.x, he.y, 1, he.id) : new Enemy(he.x, he.y, 1, he.id);
+                    e.hp = he.hp; return e;
+                });
+            }
+            if (data.gems) {
+                GAME.entities.gems = data.gems.map(hg => new Gem(hg.x, hg.y, hg.id));
+            }
         }
     });
 }
@@ -777,10 +781,16 @@ function syncState() {
 
 function syncWorld() {
     if (!NET.isHost || !NET.conn) return;
+    const enemyData = GAME.entities.enemies.map(e => ({ 
+        id: e.id, x: e.x, y: e.y, hp: e.hp, isBoss: e.isBoss 
+    }));
+    const gemData = GAME.entities.gems.map(g => ({ 
+        id: g.id, x: g.x, y: g.y 
+    }));
     NET.conn.send({
         type: 'WORLD_STATE',
-        enemies: GAME.entities.enemies.map(e => ({ id: e.id, x: e.x, y: e.y, hp: e.hp, isBoss: e.isBoss })),
-        gems: GAME.entities.gems.map(g => ({ id: g.id, x: g.x, y: g.y }))
+        enemies: enemyData,
+        gems: gemData
     });
 }
 
