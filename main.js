@@ -118,7 +118,7 @@ const updateSpeedFactor = () => {
     }
 };
 
-const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
+const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - x1);
 const randomRange = (min, max) => Math.random() * (max - min) + min;
 
 function shakeScreen(amount = 5) {
@@ -398,12 +398,11 @@ class Enemy {
     this.knockback.x *= 0.8; this.knockback.y *= 0.8;
   }
   draw(ctx, cam) {
-    const ratio = this.hp / this.maxHp;
-    const color = `rgb(255, ${Math.floor(255 * (1 - ratio))}, 80)`;
-    ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
     const players = getAllAlivePlayers();
     const target = players.length > 0 ? players.sort((a,b) => dist(this.x,this.y,a.x,a.y) - dist(this.x,this.y,b.x,b.y))[0] : {x:0, y:0};
     const angle = Math.atan2(target.y - this.y, target.x - this.x);
+    const color = '#ef4444';
+    ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
     ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y); ctx.rotate(angle);
     ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, 12); ctx.lineTo(-12, -12); ctx.closePath(); ctx.fill();
     ctx.restore(); ctx.shadowBlur = 0;
@@ -433,14 +432,13 @@ class Player {
   update() {
     if (this.dead) return;
     if (!this.isLocal) {
-        this.x += (this.targetX - this.x) * 0.25; // Smoother lerp
+        this.x += (this.targetX - this.x) * 0.25;
         this.y += (this.targetY - this.y) * 0.25;
         return;
     }
     let dx = 0, dy = 0;
     if (GAME.joystick.active) {
-        const jdx = GAME.joystick.currentX - GAME.joystick.startX;
-        const jdy = GAME.joystick.currentY - GAME.joystick.startY;
+        const jdx = GAME.joystick.currentX - GAME.joystick.startX, jdy = GAME.joystick.currentY - GAME.joystick.startY;
         const d = dist(0, 0, jdx, jdy);
         if (d > 5) { dx = jdx / d; dy = jdy / d; }
     } else {
@@ -451,18 +449,13 @@ class Player {
       const angle = Math.atan2(dy, dx);
       this.x += Math.cos(angle) * this.speed * GAME.speedFactor; this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
       const now = Date.now();
-      if (this.fireTrail && now - this.lastFireTrail > 150) {
-          GAME.entities.fire.push(new Fire(this.x, this.y, this.damage * 0.5));
-          this.lastFireTrail = now;
+      if (this.fireTrail && now - this.lastFireTrail > 150) { 
+          GAME.entities.fire.push(new Fire(this.x, this.y, this.damage * 0.5)); this.lastFireTrail = now; 
       }
     }
     const now = Date.now();
-    if (this.regen > 0 && now - this.lastRegen > 1000) {
-        this.hp = Math.min(this.maxHp, this.hp + this.regen); this.lastRegen = now; updateUI();
-    }
-    if (this.xpGenInterval > 0 && now - this.lastXpGen > this.xpGenInterval) {
-        this.addXp(1); this.lastXpGen = now;
-    }
+    if (this.regen > 0 && now - this.lastRegen > 1000) { this.hp = Math.min(this.maxHp, this.hp + this.regen); this.lastRegen = now; updateUI(); }
+    if (this.xpGenInterval > 0 && now - this.lastXpGen > this.xpGenInterval) { this.addXp(1); this.lastXpGen = now; }
     if (now - this.lastFired > this.fireRate) { this.attack(); this.lastFired = now; }
   }
   attack() {
@@ -482,9 +475,7 @@ class Player {
     AudioEngine.play('shoot');
   }
   draw(ctx, cam) {
-    if (this.dead) {
-        ctx.globalAlpha = 0.2;
-    }
+    if (this.dead) ctx.globalAlpha = 0.2;
     ctx.shadowBlur = 30; ctx.shadowColor = this.isLocal ? '#6366f1' : '#f43f5e';
     ctx.fillStyle = this.isLocal ? '#f8fafc' : '#fca5a5';
     ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
@@ -494,14 +485,10 @@ class Player {
         const h = { 'crown': '👑', 'wizard': '🧙', 'ninja': '🥷', 'cap': '🧢' }[hat];
         ctx.fillText(h || '🎩', this.x - cam.x, this.y - cam.y - this.radius + 8);
     }
-    ctx.strokeStyle = this.isLocal ? '#6366f1' : '#f43f5e'; ctx.lineWidth = 4; ctx.stroke(); 
-    ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
+    ctx.strokeStyle = this.isLocal ? '#6366f1' : '#f43f5e'; ctx.lineWidth = 4; ctx.stroke(); ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
   }
   addXp(amount) { 
-      if (NET.conn && !NET.isHost) {
-          NET.conn.send({ type: 'PICKUP_XP', amount: amount });
-          return;
-      }
+      if (NET.conn && !NET.isHost) { NET.conn.send({ type: 'PICKUP_XP', amount: amount }); return; }
       this.xp += amount * this.xpMultiplier; 
       if (this.xp >= this.nextLevelXp) this.levelUp(); 
       if (NET.isHost && NET.conn) syncState();
@@ -512,7 +499,10 @@ class Player {
       AudioEngine.play('lvlup'); 
       if (NET.isHost) {
           GAME.paused = true;
-          if (NET.conn) syncState();
+          if (NET.conn) {
+              NET.conn.send({ type: 'SHOW_UPGRADES' });
+              syncState();
+          }
           showLevelUp(); 
       }
   }
@@ -523,10 +513,8 @@ function spawnEnemy() {
   if (NET.peer && !NET.isHost && NET.conn) { setTimeout(spawnEnemy, 1000); return; }
   const alive = getAllAlivePlayers();
   if (alive.length === 0) { setTimeout(spawnEnemy, 1000); return; }
-  const a = Math.random() * Math.PI * 2;
-  const pivot = alive[Math.floor(Math.random() * alive.length)];
-  const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
-  const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
+  const a = Math.random() * Math.PI * 2, pivot = alive[Math.floor(Math.random() * alive.length)];
+  const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS, y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
   const mod = Math.floor(GAME.time / 60) + 1;
   const enemy = (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) ? new Boss(x, y, mod) : new Enemy(x, y, mod);
   if (enemy.isBoss) { showBossWarning(); GAME.lastBossTime = GAME.time; }
@@ -541,8 +529,7 @@ function showBossWarning() {
 }
 
 function updateUI() {
-  const p = GAME.entities.player;
-  if (!p) return;
+  const p = GAME.entities.player; if (!p) return;
   const xpStr = `LVL ${p.level}`;
   if (document.getElementById('level-display').innerText !== xpStr) document.getElementById('level-display').innerText = xpStr;
   document.getElementById('xp-bar-fill').style.width = `${(p.xp / p.nextLevelXp) * 100}%`;
@@ -592,9 +579,8 @@ function applyUpgrade(id) {
         case 'fire': p.fireTrail = true; break;
         case 'growth': p.maxHp += Math.floor(p.maxHp * 0.1); p.hp = p.maxHp; break;
     }
-    GAME.paused = false; 
     document.getElementById('levelup-modal').classList.remove('active');
-    if (NET.isHost && NET.conn) syncState();
+    if (NET.isHost) { GAME.paused = false; if (NET.conn) syncState(); }
 }
 
 function gameOver() {
@@ -606,8 +592,7 @@ function gameOver() {
 }
 
 function togglePause() {
-    if (!GAME.active) return;
-    if (NET.conn && !NET.isHost) return; // Only host pauses
+    if (!GAME.active || (NET.conn && !NET.isHost)) return;
     GAME.paused = !GAME.paused;
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
     if (NET.isHost && NET.conn) syncState();
@@ -641,35 +626,22 @@ function showMetaMenu() {
         const cost = item.isHat ? item.cost : Math.floor(item.cost * (1 + item.val * 0.5));
         const owned = item.isHat && META.upgrades.hat === item.type;
         card.innerHTML = `<h3>${item.name}</h3><p>${item.desc}</p><span class="cost">${owned ? 'VLASTNĚNO' : cost + ' DOGE'}</span>`;
-        card.onclick = () => buyMetaUpgrade(item, cost);
-        container.appendChild(card);
+        card.onclick = () => buyMetaUpgrade(item, cost); container.appendChild(card);
     });
 }
 
 function buyMetaUpgrade(item, cost) {
     if (META.currency < cost) { alert("Nemáš dost Dogecoinu!"); return; }
-    if (item.isHat) { META.upgrades.hat = item.type; }
-    else { META.upgrades[item.id]++; }
+    if (item.isHat) { META.upgrades.hat = item.type; } else { META.upgrades[item.id]++; }
     META.currency -= cost; saveMeta(); showMetaMenu();
-}
-
-// MULTIPLAYER LOGIC
-function generateShortId() {
-    return Math.random().toString(36).substr(2, 6).toUpperCase();
 }
 
 function initPeer() {
     if (NET.peer) return;
     const shortId = generateShortId();
     NET.peer = new Peer(shortId);
-    NET.peer.on('open', (id) => {
-        NET.roomId = id;
-        document.getElementById('my-id-display').innerText = id;
-    });
-    NET.peer.on('connection', (c) => {
-        NET.conn = c; NET.isHost = true; setupConn();
-        startGame();
-    });
+    NET.peer.on('open', (id) => { NET.roomId = id; document.getElementById('my-id-display').innerText = id; });
+    NET.peer.on('connection', (c) => { NET.conn = c; NET.isHost = true; setupConn(); startGame(); });
     NET.peer.on('error', (err) => {
         if (err.type === 'peer-unavailable') alert("Kód neexistuje!");
         else if (err.type === 'unavailable-id') { NET.peer = null; initPeer(); }
@@ -680,32 +652,21 @@ function setupConn() {
     NET.conn.on('data', (data) => {
         if (data.type === 'PLAYER_SYNC') {
             if (!NET.others[data.id]) NET.others[data.id] = new Player(false);
-            const other = NET.others[data.id];
-            other.targetX = data.x; other.targetY = data.y; other.remoteHat = data.hat;
-            other.dead = data.dead;
+            const o = NET.others[data.id]; o.targetX = data.x; o.targetY = data.y; o.remoteHat = data.hat; o.dead = data.dead;
         }
         if (data.type === 'SHOT') {
-            const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, { ownerId: 'remote' });
-            GAME.entities.projectiles.push(proj);
+            const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, { ownerId: 'remote' }); GAME.entities.projectiles.push(proj);
         }
-        if (data.type === 'PICKUP_XP' && NET.isHost) {
-            GAME.entities.player.addXp(data.amount);
-        }
+        if (data.type === 'PICKUP_XP' && NET.isHost) GAME.entities.player.addXp(data.amount);
+        if (data.type === 'SHOW_UPGRADES' && !NET.isHost) showLevelUp();
         if (data.type === 'STATE_SYNC') {
-            const p = GAME.entities.player;
-            p.level = data.lvl; p.xp = data.xp; p.nextLevelXp = data.next;
-            p.hp = data.hp;
-            GAME.paused = data.paused; GAME.time = data.time;
-            if (GAME.paused && !document.querySelector('.modal.active:not(#multiplayer-modal)')) {
-                // Should show pause or levelup UI if needed, for simplicity we just freeze
-            }
-            updateUI();
+            const p = GAME.entities.player; p.level = data.lvl; p.xp = data.xp; p.nextLevelXp = data.next; p.hp = data.hp;
+            GAME.paused = data.paused; GAME.time = data.time; updateUI();
         }
         if (data.type === 'WORLD_STATE' && !NET.isHost) {
             if (!GAME.active) startGame();
             GAME.entities.enemies = data.enemies.map(he => {
-                const e = he.isBoss ? new Boss(he.x, he.y, 1, he.id) : new Enemy(he.x, he.y, 1, he.id);
-                e.hp = he.hp; return e;
+                const e = he.isBoss ? new Boss(he.x, he.y, 1, he.id) : new Enemy(he.x, he.y, 1, he.id); e.hp = he.hp; return e;
             });
             GAME.entities.gems = data.gems.map(hg => new Gem(hg.x, hg.y, hg.id));
         }
@@ -714,152 +675,99 @@ function setupConn() {
 
 function syncPlayer() {
     if (!NET.conn) return;
-    const now = Date.now();
-    if (now - NET.playerSyncThrottle < 20) return; // 50fps sync
+    const now = Date.now(); if (now - NET.playerSyncThrottle < 20) return;
     NET.playerSyncThrottle = now;
-    NET.conn.send({
-        type: 'PLAYER_SYNC', id: NET.roomId,
-        x: GAME.entities.player.x, y: GAME.entities.player.y, 
-        hat: META.upgrades.hat, dead: GAME.entities.player.dead
-    });
+    NET.conn.send({ type: 'PLAYER_SYNC', id: NET.roomId, x: GAME.entities.player.x, y: GAME.entities.player.y, hat: META.upgrades.hat, dead: GAME.entities.player.dead });
 }
 
 function syncShot(proj) {
     if (!NET.conn) return;
     const angle = Math.atan2(proj.vy, proj.vx);
-    NET.conn.send({
-        type: 'SHOT', x: proj.x, y: proj.y, tx: proj.x + Math.cos(angle)*100, ty: proj.y + Math.sin(angle)*100, dmg: proj.damage
-    });
+    NET.conn.send({ type: 'SHOT', x: proj.x, y: proj.y, tx: proj.x + Math.cos(angle)*100, ty: proj.y + Math.sin(angle)*100, dmg: proj.damage });
 }
 
 function syncState() {
     if (!NET.isHost || !NET.conn) return;
     const p = GAME.entities.player;
-    NET.conn.send({
-        type: 'STATE_SYNC', lvl: p.level, xp: p.xp, next: p.nextLevelXp, 
-        paused: GAME.paused, time: GAME.time, hp: p.hp
-    });
+    NET.conn.send({ type: 'STATE_SYNC', lvl: p.level, xp: p.xp, next: p.nextLevelXp, paused: GAME.paused, time: GAME.time, hp: p.hp });
 }
 
 function syncWorld() {
     if (!NET.isHost || !NET.conn) return;
-    NET.conn.send({
-        type: 'WORLD_STATE',
-        enemies: GAME.entities.enemies.map(e => ({ id: e.id, x: e.x, y: e.y, hp: e.hp, isBoss: e.isBoss })),
-        gems: GAME.entities.gems.map(g => ({ id: g.id, x: g.x, y: g.y }))
-    });
+    NET.conn.send({ type: 'WORLD_STATE', enemies: GAME.entities.enemies.map(e => ({ id: e.id, x: e.x, y: e.y, hp: e.hp, isBoss: e.isBoss })), gems: GAME.entities.gems.map(g => ({ id: g.id, x: g.x, y: g.y })) });
 }
 
 const LOBBY = {
     gun: null, servers: {},
-    init() {
-        if (typeof Gun === 'undefined' || this.gun) return;
-        this.gun = Gun(['https://gun-manhattan.herokuapp.com/gun', 'https://gun-sjc.herokuapp.com/gun']);
-        this.scan();
-    },
-    broadcast(id) {
-        if (!this.gun || !id || id === 'Načítám...') return;
-        this.gun.get('neo-survivor-lobby-v3').get(id).put({ id: id, name: "Hra #" + id, time: Date.now() });
-    },
-    scan() {
-        if (!this.gun) return;
-        this.gun.get('neo-survivor-lobby-v3').map().on((data, id) => {
-            if (!data || !data.id || Date.now() - data.time > 60000) return;
-            this.servers[id] = data; this.updateUI();
-        });
-    },
+    init() { if (typeof Gun === 'undefined' || this.gun) return; this.gun = Gun(['https://gun-manhattan.herokuapp.com/gun', 'https://gun-sjc.herokuapp.com/gun']); this.scan(); },
+    broadcast(id) { if (!this.gun || !id || id === 'Načítám...') return; this.gun.get('neo-survivor-lobby-v3').get(id).put({ id: id, name: "Hra #" + id, time: Date.now() }); },
+    scan() { if (!this.gun) return; this.gun.get('neo-survivor-lobby-v3').map().on((data, id) => { if (!data || !data.id || Date.now() - data.time > 60000) return; this.servers[id] = data; this.updateUI(); }); },
     updateUI() {
-        const container = document.getElementById('server-list'); if (!container) return;
-        container.innerHTML = '';
+        const container = document.getElementById('server-list'); if (!container) return; container.innerHTML = '';
         Object.values(this.servers).forEach(s => {
             if (Date.now() - s.time > 30000) return;
-            const item = document.createElement('div');
-            item.style = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); margin-bottom:5px;";
+            const item = document.createElement('div'); item.style = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); margin-bottom:5px;";
             item.innerHTML = `<div><b style="color:#a5b4fc">${s.id}</b></div><button onclick="connectToId('${s.id}')" style="background:var(--xp-color); border:none; border-radius:6px; color:white; padding:6px 12px; font-size:0.8rem; cursor:pointer;">PŘIPOJIT</button>`;
             container.appendChild(item);
         });
     }
 };
 
-window.connectToId = (id) => {
-    document.getElementById('input-join-id').value = id;
-    document.getElementById('btn-join-room').click();
-};
+window.connectToId = (id) => { document.getElementById('input-join-id').value = id; document.getElementById('btn-join-room').click(); };
 
 function init() {
-  GAME.canvas = document.getElementById('game-canvas');
-  GAME.ctx = GAME.canvas.getContext('2d');
-  updateSpeedFactor();
+  GAME.canvas = document.getElementById('game-canvas'); GAME.ctx = GAME.canvas.getContext('2d'); updateSpeedFactor();
   window.addEventListener('resize', () => { GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight; updateSpeedFactor(); });
-  GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight;
-  resetGame();
-  
+  GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight; resetGame();
   window.addEventListener('keydown', (e) => { GAME.input[e.key.toLowerCase()] = true; if (e.key === 'Escape') togglePause(); });
   window.addEventListener('keyup', (e) => { GAME.input[e.key.toLowerCase()] = false; });
-  
   GAME.canvas.addEventListener('mousedown', (e) => {
     if (!GAME.active || GAME.paused || GAME.entities.player.dead) return;
-    const rect = GAME.canvas.getBoundingClientRect();
-    const sx = (e.clientX - rect.left) / GAME.zoom;
-    const sy = (e.clientY - rect.top) / GAME.zoom;
+    const rect = GAME.canvas.getBoundingClientRect(); const sx = (e.clientX - rect.left) / GAME.zoom; const sy = (e.clientY - rect.top) / GAME.zoom;
     if (Date.now() - GAME.lastSniperTime >= CONFIG.SNIPER_COOLDOWN) { fireSniper(sx, sy); GAME.lastSniperTime = Date.now(); }
   });
-
   document.getElementById('btn-start').onclick = () => { NET.conn = null; NET.isHost = false; AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
   document.getElementById('btn-multiplayer').onclick = () => { initPeer(); LOBBY.init(); document.getElementById('multiplayer-modal').classList.add('active'); };
   document.getElementById('btn-close-mp').onclick = () => document.getElementById('multiplayer-modal').classList.remove('active');
   document.getElementById('btn-create-host').onclick = () => { if (!NET.roomId || NET.roomId === 'Načítám...') return; LOBBY.broadcast(NET.roomId); NET.isHost = true; startGame(); };
   document.getElementById('btn-copy-id').onclick = () => {
-      const id = document.getElementById('my-id-display').innerText;
-      if (id === 'Načítám...') return;
+      const id = document.getElementById('my-id-display').innerText; if (id === 'Načítám...') return;
       navigator.clipboard.writeText(id).then(() => { document.getElementById('btn-copy-id').innerText = 'OK!'; setTimeout(() => document.getElementById('btn-copy-id').innerText = 'Kopírovat', 2000); });
   };
   document.getElementById('btn-refresh-lobby').onclick = () => { LOBBY.servers = {}; LOBBY.scan(); };
   document.getElementById('btn-join-room').onclick = () => {
-      const id = document.getElementById('input-join-id').value.trim().toUpperCase();
-      if (!id) return;
-      if (!NET.peer) initPeer();
-      NET.conn = NET.peer.connect(id);
-      NET.isHost = false; setupConn();
+      const id = document.getElementById('input-join-id').value.trim().toUpperCase(); if (!id) return;
+      if (!NET.peer) initPeer(); NET.conn = NET.peer.connect(id); NET.isHost = false; setupConn();
   };
-  const btnMeta = document.getElementById('btn-meta-menu');
-  if(btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+  const btnMeta = document.getElementById('btn-meta-menu'); if(btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
   document.getElementById('btn-resume').onclick = togglePause;
   document.getElementById('mobile-pause').onclick = (e) => { e.stopPropagation(); togglePause(); };
   document.getElementById('fs-toggle').onclick = (e) => { e.stopPropagation(); toggleFullscreen(document.documentElement); };
   document.getElementById('btn-restart-game').onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); startGame(); };
   document.querySelectorAll('.btn-reload').forEach(btn => btn.onclick = () => location.reload());
-
   GAME.canvas.addEventListener('touchstart', (e) => {
       if (!GAME.active || GAME.paused || GAME.entities.player.dead) return;
-      const t = e.touches[0];
-      const rect = GAME.canvas.getBoundingClientRect();
-      const sx = (t.clientX - rect.left) / GAME.zoom;
-      const sy = (t.clientY - rect.top) / GAME.zoom;
+      const t = e.touches[0]; const rect = GAME.canvas.getBoundingClientRect();
+      const sx = (t.clientX - rect.left) / GAME.zoom, sy = (t.clientY - rect.top) / GAME.zoom;
       if (t.clientX > window.innerWidth / 2) { if (Date.now() - GAME.lastSniperTime >= CONFIG.SNIPER_COOLDOWN) { fireSniper(sx, sy); GAME.lastSniperTime = Date.now(); } return; }
       const dFromCenter = dist(t.clientX, t.clientY, GAME.joystick.startX, GAME.joystick.startY);
       if (dFromCenter < 120) { GAME.joystick.active = true; GAME.joystick.currentX = t.clientX; GAME.joystick.currentY = t.clientY; }
   });
   GAME.canvas.addEventListener('touchmove', (e) => {
       if (!GAME.joystick.active) return;
-      const t = e.touches[0];
-      const dx = t.clientX - GAME.joystick.startX, dy = t.clientY - GAME.joystick.startY;
+      const t = e.touches[0]; const dx = t.clientX - GAME.joystick.startX, dy = t.clientY - GAME.joystick.startY;
       const d = Math.min(dist(0, 0, dx, dy), 100), angle = Math.atan2(dy, dx);
-      GAME.joystick.currentX = GAME.joystick.startX + Math.cos(angle) * d;
-      GAME.joystick.currentY = GAME.joystick.startY + Math.sin(angle) * d;
+      GAME.joystick.currentX = GAME.joystick.startX + Math.cos(angle) * d; GAME.joystick.currentY = GAME.joystick.startY + Math.sin(angle) * d;
   }, { passive: true });
   GAME.canvas.addEventListener('touchend', () => { GAME.joystick.active = false; GAME.joystick.currentX = GAME.joystick.startX; GAME.joystick.currentY = GAME.joystick.startY; });
-
   spawnEnemy(); loadMeta(); requestAnimationFrame(loop);
 }
 
 function fireSniper(cx, cy) {
   const p = GAME.entities.player, cam = GAME.camera;
-  const worldTargetX = cx + (cam.x / GAME.zoom);
-  const worldTargetY = cy + (cam.y / GAME.zoom);
+  const worldTargetX = cx + (cam.x / GAME.zoom), worldTargetY = cy + (cam.y / GAME.zoom);
   const proj = new Projectile(p.x, p.y, worldTargetX, worldTargetY, p.damage * 10, { size: 12, pierce: Infinity });
-  GAME.entities.projectiles.push(proj); shakeScreen(15);
-  if (NET.conn) syncShot(proj);
+  GAME.entities.projectiles.push(proj); shakeScreen(15); if (NET.conn) syncShot(proj);
 }
 
 function startGame() { resetGame(); GAME.active = true; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); }
@@ -878,31 +786,20 @@ function update() {
   GAME.time += 1/60; const p = GAME.entities.player; p.update();
   GAME.camera.x = (p.x * GAME.zoom) - GAME.canvas.width / 2; GAME.camera.y = (p.y * GAME.zoom) - GAME.canvas.height / 2;
   if (CONFIG.SCREEN_SHAKE > 0) { GAME.camera.x += (Math.random()-0.5)*CONFIG.SCREEN_SHAKE; GAME.camera.y += (Math.random()-0.5)*CONFIG.SCREEN_SHAKE; CONFIG.SCREEN_SHAKE *= 0.9; }
-  
   if (NET.conn) syncPlayer();
   if (NET.isHost && Date.now() - NET.lastSync > 50) { syncWorld(); syncState(); NET.lastSync = Date.now(); LOBBY.broadcast(NET.roomId); }
-
   for (const id in NET.others) NET.others[id].update();
-
   if (!NET.peer || NET.isHost || !NET.conn) {
-    const alivePlayers = getAllAlivePlayers();
-    if (alivePlayers.length === 0 && GAME.active) gameOver();
-    
+    const alivePlayers = getAllAlivePlayers(); if (alivePlayers.length === 0 && GAME.active) gameOver();
     GAME.entities.enemies.forEach((e) => {
         e.update();
         alivePlayers.forEach(ap => {
-            if (dist(ap.x, ap.y, e.x, e.y) < ap.radius + e.radius) {
-                ap.hp -= (e.isBoss ? 2 : 0.5) * ap.shield;
-                if (ap.hp <= 0) ap.dead = true;
-                updateUI();
-            }
+            if (dist(ap.x, ap.y, e.x, e.y) < ap.radius + e.radius) { ap.hp -= (e.isBoss ? 2 : 0.5) * ap.shield; if (ap.hp <= 0) ap.dead = true; updateUI(); }
         });
     });
   }
-  
   GAME.orbiters.forEach(o => o.update());
   GAME.entities.fire.forEach((f, i) => { f.update(); if (f.life <= 0) GAME.entities.fire.splice(i, 1); });
-
   const enemies = GAME.entities.enemies;
   GAME.entities.projectiles.forEach((proj, pIndex) => {
     proj.update(); if (proj.life <= 0) { GAME.entities.projectiles.splice(pIndex, 1); return; }
@@ -922,14 +819,8 @@ function update() {
         }
     });
   });
-  
   const pForGems = GAME.entities.player;
-  GAME.entities.gems.forEach((g, i) => { 
-      g.update(pForGems); 
-      if (!pForGems.dead && dist(pForGems.x, pForGems.y, g.x, g.y) < pForGems.radius + g.radius) { 
-          AudioEngine.play('gem'); pForGems.addXp(10 * pForGems.luckFactor); GAME.entities.gems.splice(i, 1); 
-      } 
-  });
+  GAME.entities.gems.forEach((g, i) => { g.update(pForGems); if (!pForGems.dead && dist(pForGems.x, pForGems.y, g.x, g.y) < pForGems.radius + g.radius) { AudioEngine.play('gem'); pForGems.addXp(10 * pForGems.luckFactor); GAME.entities.gems.splice(i, 1); } });
   updateUI();
 }
 
