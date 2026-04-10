@@ -55,7 +55,8 @@ const NET = {
     isHost: false,
     others: {},
     roomId: null,
-    lastSync: 0
+    lastSync: 0,
+    playerSyncThrottle: 0
 };
 
 const META = {
@@ -392,9 +393,15 @@ class Player {
     this.lastFireTrail = 0; this.lastFired = 0; this.lastRegen = 0;
     this.level = 1; this.xp = 0; this.nextLevelXp = CONFIG.XP_PER_LEVEL;
     this.remoteHat = null;
+    this.targetX = 0; this.targetY = 0; // For Interpolation
   }
   update() {
-    if (!this.isLocal) return;
+    if (!this.isLocal) {
+        // Interpolate remote player
+        this.x += (this.targetX - this.x) * 0.15;
+        this.y += (this.targetY - this.y) * 0.15;
+        return;
+    }
     let dx = 0, dy = 0;
     if (GAME.joystick.active) {
         const jdx = GAME.joystick.currentX - GAME.joystick.startX;
@@ -593,9 +600,12 @@ function setupConn() {
     });
     NET.conn.on('data', (data) => {
         if (data.type === 'PLAYER_SYNC') {
-            if (!NET.others[data.id]) NET.others[data.id] = new Player(false);
+            if (!NET.others[data.id]) {
+                NET.others[data.id] = new Player(false);
+                console.warn("NET: Nový hráč detekován:", data.id);
+            }
             const other = NET.others[data.id];
-            other.x = data.x; other.y = data.y; other.remoteHat = data.hat;
+            other.targetX = data.x; other.targetY = data.y; other.remoteHat = data.hat;
         }
         if (data.type === 'SHOT') {
             const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, { ownerId: 'remote' });
@@ -615,6 +625,9 @@ function setupConn() {
 
 function syncPlayer() {
     if (!NET.conn) return;
+    const now = Date.now();
+    if (now - NET.playerSyncThrottle < 33) return; // ~30fps sync
+    NET.playerSyncThrottle = now;
     NET.conn.send({
         type: 'PLAYER_SYNC', id: NET.roomId,
         x: GAME.entities.player.x, y: GAME.entities.player.y, hat: META.upgrades.hat
@@ -753,6 +766,11 @@ function update() {
   
   if (NET.conn) syncPlayer();
   if (NET.isHost && Date.now() - NET.lastSync > 100) { syncWorld(); NET.lastSync = Date.now(); }
+
+  // Update other players with interpolation
+  for (const id in NET.others) {
+      NET.others[id].update();
+  }
 
   if (!NET.peer || NET.isHost || !NET.conn) {
     GAME.entities.enemies.forEach((e, i) => {
