@@ -140,6 +140,10 @@ canvas {
   pointer-events: auto;
 }
 
+.modal.active * {
+  pointer-events: auto;
+}
+
 .modal-content {
   background: var(--glass-bg);
   padding: 4rem;

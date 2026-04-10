@@ -87,7 +87,9 @@ const AudioEngine = {
     musicStarted: false,
     init() {
         if (this.ctx) return;
-        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch(e) { console.error("Audio init failed", e); }
     },
     play(type) {
         if (!this.ctx) return;
@@ -484,54 +486,25 @@ function init() {
     }
   });
 
-  // UI Button Listeners - Simplified for maximum compatibility
-  const setupButton = (idOrClass, callback) => {
-    const isClass = idOrClass.startsWith('.');
-    const elements = isClass 
-        ? document.querySelectorAll(idOrClass) 
-        : [document.getElementById(idOrClass)];
-    
-    elements.forEach(btn => {
-        if (btn) {
-            btn.onclick = () => {
-                callback();
-            };
-        }
-    });
-  };
+  // UI Button Listeners - Absolute compatibility fix
+  const btnStart = document.getElementById('btn-start');
+  if(btnStart) btnStart.onclick = () => { AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
+  
+  const btnMeta = document.getElementById('btn-meta-menu');
+  if(btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+  
+  const btnCloseMeta = document.getElementById('btn-close-meta');
+  if(btnCloseMeta) btnCloseMeta.onclick = () => { document.getElementById('meta-modal').classList.remove('active'); };
+  
+  const btnResume = document.getElementById('btn-resume');
+  if(btnResume) btnResume.onclick = togglePause;
+  
+  const btnRestart = document.getElementById('btn-restart-game');
+  if(btnRestart) btnRestart.onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); AudioEngine.startMusic(); startGame(); };
 
-  setupButton('btn-meta-menu', () => { 
-    showMetaMenu(); 
-    document.getElementById('meta-modal').classList.add('active'); 
+  document.querySelectorAll('.btn-reload').forEach(btn => {
+      btn.onclick = () => location.reload();
   });
-  
-  setupButton('btn-close-meta', () => { 
-    document.getElementById('meta-modal').classList.remove('active'); 
-  });
-  
-  setupButton('btn-resume', togglePause);
-  
-  setupButton('btn-start', () => { 
-    AudioEngine.init(); 
-    AudioEngine.startMusic(); 
-    startGame(); 
-  });
-  
-  setupButton('btn-restart-game', () => { 
-    document.getElementById('gameover-modal').classList.remove('active'); 
-    AudioEngine.startMusic(); 
-    startGame(); 
-  });
-
-  setupButton('.btn-reload', () => {
-    location.reload();
-  });
-  document.getElementById('btn-meta-menu').onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
-  document.getElementById('btn-close-meta').onclick = () => { document.getElementById('meta-modal').classList.remove('active'); };
-  document.getElementById('btn-resume').onclick = togglePause;
-  document.getElementById('btn-start').onclick = () => { AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
-  document.getElementById('btn-restart-game').onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); AudioEngine.startMusic(); startGame(); };
-  document.querySelectorAll('.btn-reload').forEach(b => b.onclick = () => location.reload());
 
   document.addEventListener('visibilitychange', () => {
       if (document.hidden && GAME.active && !GAME.paused) togglePause();
@@ -558,15 +531,6 @@ function fireSniper(cx, cy) {
     const p = GAME.entities.player, cam = GAME.camera;
     const proj = new Projectile(p.x, p.y, cx + cam.x, cy + cam.y, p.damage * 10, { size: 12, pierce: 50 });
     GAME.entities.projectiles.push(proj); shakeScreen(15); AudioEngine.play('lvlup');
-}
-
-.modal.active {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.modal.active * {
-  pointer-events: auto;
 }
 
 const META_UPGRADES = [
