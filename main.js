@@ -56,7 +56,8 @@ const NET = {
     others: {},
     roomId: null,
     lastSync: 0,
-    playerSyncThrottle: 0
+    playerSyncThrottle: 0,
+    playersReady: new Set()
 };
 
 const META = {
@@ -433,7 +434,7 @@ class Player {
   update() {
     if (this.dead) return;
     if (!this.isLocal) {
-        this.x += (this.targetX - this.x) * 0.25; // Smoother lerp
+        this.x += (this.targetX - this.x) * 0.25;
         this.y += (this.targetY - this.y) * 0.25;
         return;
     }
@@ -482,9 +483,7 @@ class Player {
     AudioEngine.play('shoot');
   }
   draw(ctx, cam) {
-    if (this.dead) {
-        ctx.globalAlpha = 0.2;
-    }
+    if (this.dead) ctx.globalAlpha = 0.2;
     ctx.shadowBlur = 30; ctx.shadowColor = this.isLocal ? '#6366f1' : '#f43f5e';
     ctx.fillStyle = this.isLocal ? '#f8fafc' : '#fca5a5';
     ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
@@ -512,7 +511,8 @@ class Player {
       AudioEngine.play('lvlup'); 
       if (NET.isHost) {
           GAME.paused = true;
-          if (NET.conn) syncState();
+          NET.playersReady.clear(); // Reset ready state for all
+          if (NET.conn) NET.conn.send({ type: 'TRIGGER_LEVEL_UP' });
           showLevelUp(); 
       }
   }
@@ -592,9 +592,27 @@ function applyUpgrade(id) {
         case 'fire': p.fireTrail = true; break;
         case 'growth': p.maxHp += Math.floor(p.maxHp * 0.1); p.hp = p.maxHp; break;
     }
-    GAME.paused = false; 
     document.getElementById('levelup-modal').classList.remove('active');
-    if (NET.isHost && NET.conn) syncState();
+    
+    if (NET.conn) {
+        if (NET.isHost) {
+            NET.playersReady.add('host');
+            checkReadyState();
+        } else {
+            NET.conn.send({ type: 'PICKED_UPGRADE' });
+        }
+    } else {
+        GAME.paused = false;
+    }
+}
+
+function checkReadyState() {
+    // Only host checks this
+    if (NET.playersReady.has('host') && NET.playersReady.has('remote')) {
+        GAME.paused = false;
+        NET.playersReady.clear();
+        syncState();
+    }
 }
 
 function gameOver() {
@@ -607,7 +625,7 @@ function gameOver() {
 
 function togglePause() {
     if (!GAME.active) return;
-    if (NET.conn && !NET.isHost) return; // Only host pauses
+    if (NET.conn && !NET.isHost) return; 
     GAME.paused = !GAME.paused;
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
     if (NET.isHost && NET.conn) syncState();
@@ -691,14 +709,19 @@ function setupConn() {
         if (data.type === 'PICKUP_XP' && NET.isHost) {
             GAME.entities.player.addXp(data.amount);
         }
+        if (data.type === 'TRIGGER_LEVEL_UP') {
+            GAME.paused = true;
+            showLevelUp();
+        }
+        if (data.type === 'PICKED_UPGRADE' && NET.isHost) {
+            NET.playersReady.add('remote');
+            checkReadyState();
+        }
         if (data.type === 'STATE_SYNC') {
             const p = GAME.entities.player;
             p.level = data.lvl; p.xp = data.xp; p.nextLevelXp = data.next;
             p.hp = data.hp;
             GAME.paused = data.paused; GAME.time = data.time;
-            if (GAME.paused && !document.querySelector('.modal.active:not(#multiplayer-modal)')) {
-                // Should show pause or levelup UI if needed, for simplicity we just freeze
-            }
             updateUI();
         }
         if (data.type === 'WORLD_STATE' && !NET.isHost) {
@@ -715,7 +738,7 @@ function setupConn() {
 function syncPlayer() {
     if (!NET.conn) return;
     const now = Date.now();
-    if (now - NET.playerSyncThrottle < 20) return; // 50fps sync
+    if (now - NET.playerSyncThrottle < 20) return; 
     NET.playerSyncThrottle = now;
     NET.conn.send({
         type: 'PLAYER_SYNC', id: NET.roomId,
