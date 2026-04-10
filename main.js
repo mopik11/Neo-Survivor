@@ -554,10 +554,15 @@ function toggleFullscreen(element, force = false) {
 }
 
 // MULTIPLAYER LOGIC
+function generateShortId() {
+    return Math.random().toString(36).substr(2, 6).toUpperCase();
+}
+
 function initPeer() {
     if (NET.peer) return;
-    console.warn("NET: Inicializace PeerJS...");
-    NET.peer = new Peer();
+    const shortId = generateShortId();
+    console.warn("NET: Inicializace PeerJS s ID:", shortId);
+    NET.peer = new Peer(shortId);
     NET.peer.on('open', (id) => {
         console.warn("NET: Peer otevřen s ID:", id);
         NET.roomId = id;
@@ -569,8 +574,15 @@ function initPeer() {
         startGame();
     });
     NET.peer.on('error', (err) => {
-        console.error("NET Peer Error:", err.type, err.message);
-        alert("Chyba sítě: " + err.type);
+        console.error("NET Peer Error:", err.type);
+        if (err.type === 'peer-unavailable') {
+           alert("CHYBA: Kód kámoše neexistuje nebo je kámoš offline. Zadej kód znovu.");
+        } else if (err.type === 'unavailable-id') {
+           console.warn("NET: ID už existovalo, zkouším znovu...");
+           NET.peer = null; initPeer();
+        } else {
+           alert("Chyba sítě: " + err.type);
+        }
     });
 }
 
@@ -650,15 +662,26 @@ function init() {
   document.getElementById('btn-start').onclick = () => { NET.conn = null; NET.isHost = false; const isMobile = window.innerWidth < 850; if (isMobile) toggleFullscreen(document.documentElement, true); AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
   document.getElementById('btn-multiplayer').onclick = () => { console.warn("INIT: Multiplayer tlačítko kliknuto."); initPeer(); document.getElementById('multiplayer-modal').classList.add('active'); };
   document.getElementById('btn-close-mp').onclick = () => document.getElementById('multiplayer-modal').classList.remove('active');
-  document.getElementById('btn-create-host').onclick = () => { alert("Čekání na kámoše... Pošli mu kód: " + NET.roomId); };
+  document.getElementById('btn-create-host').onclick = () => { alert("SERVER ZALOŽEN: Kód se objevil nahoře. Můžeš ho zkopírovat."); };
+  
+  document.getElementById('btn-copy-id').onclick = () => {
+      const id = document.getElementById('my-id-display').innerText;
+      if (id === 'Načítám...') return;
+      navigator.clipboard.writeText(id).then(() => {
+          document.getElementById('btn-copy-id').innerText = 'OK!';
+          setTimeout(() => document.getElementById('btn-copy-id').innerText = 'Kopírovat', 2000);
+      });
+  };
+
   document.getElementById('btn-join-room').onclick = () => {
-      const id = document.getElementById('input-join-id').value.trim();
+      const id = document.getElementById('input-join-id').value.trim().toUpperCase();
       console.warn("NET: Připojuji se k:", id);
-      if (!id) return;
+      if (!id) { alert("Zadej kód kámoše!"); return; }
+      if (!NET.peer) initPeer();
       NET.conn = NET.peer.connect(id);
       NET.isHost = false;
       NET.conn.on('open', () => { console.warn("NET: Připojení OK!"); setupConn(); startGame(); });
-      NET.conn.on('error', (e) => { console.error("NET: Chyba!", e); alert("Chyba: " + e); });
+      NET.conn.on('error', (e) => { console.error("NET: Chyba!", e); alert("Chyba spojení: " + e); });
   };
 
   const btnMeta = document.getElementById('btn-meta-menu');
