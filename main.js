@@ -73,10 +73,11 @@ const GAME = {
   input: { w: false, a: false, s: false, d: false },
   joystick: { 
       active: false, 
-      startX: 120, // FIXED
-      startY: 0,   // DYNAMIC BOTTOM
-      currentX: 120, 
-      currentY: 0 
+      startX: 100, 
+      startY: 0,   
+      currentX: 100, 
+      currentY: 0,
+      radius: 90
   },
   stars: [],
   orbiters: [],
@@ -91,9 +92,9 @@ const updateSpeedFactor = () => {
     GAME.speedFactor = Math.max(0.4, Math.min(1.2, window.innerWidth / baseWidth));
     GAME.zoom = isMobile ? 0.7 : 1.0;
     
-    // ENSURE START Y IS ALWAYS AT BOTTOM LEFT
-    GAME.joystick.startX = 150;
-    GAME.joystick.startY = window.innerHeight - 150;
+    // MOVED MORE TO CORNER (LEFT DOWN)
+    GAME.joystick.startX = 120;
+    GAME.joystick.startY = window.innerHeight - 120;
     if (!GAME.joystick.active) {
         GAME.joystick.currentX = GAME.joystick.startX;
         GAME.joystick.currentY = GAME.joystick.startY;
@@ -525,11 +526,12 @@ function togglePause() {
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
 }
 
-function toggleFullscreen(element) {
-  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+function toggleFullscreen(element, force = false) {
+  const isFS = document.fullscreenElement || document.webkitFullscreenElement;
+  if (!isFS || force) {
     if (element.requestFullscreen) element.requestFullscreen();
     else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
-  } else {
+  } else if (!force) {
     if (document.exitFullscreen) document.exitFullscreen();
     else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
   }
@@ -561,7 +563,7 @@ function init() {
 
   const handleStart = () => {
     const isMobile = window.innerWidth < 850;
-    if (isMobile) toggleFullscreen(document.documentElement);
+    if (isMobile) toggleFullscreen(document.documentElement, true);
     AudioEngine.init(); AudioEngine.startMusic(); startGame();
   };
 
@@ -569,10 +571,17 @@ function init() {
   if(btnStart) btnStart.onclick = handleStart;
   
   const btnMeta = document.getElementById('btn-meta-menu');
-  if(btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+  if(btnMeta) btnMeta.onclick = () => { 
+      showMetaMenu(); 
+      document.getElementById('meta-modal').classList.add('active');
+  };
   
   const btnCloseMeta = document.getElementById('btn-close-meta');
-  if(btnCloseMeta) btnCloseMeta.onclick = () => { document.getElementById('meta-modal').classList.remove('active'); };
+  if(btnCloseMeta) btnCloseMeta.onclick = () => { 
+      document.getElementById('meta-modal').classList.remove('active');
+      // Ensure we RE-REQUEST Fullscreen on return if we are on mobile
+      if (window.innerWidth < 850) toggleFullscreen(document.documentElement, true);
+  };
   
   const btnResume = document.getElementById('btn-resume');
   if(btnResume) btnResume.onclick = togglePause;
@@ -614,14 +623,17 @@ function init() {
           return;
       }
       
-      GAME.joystick.active = true;
-      GAME.joystick.currentX = t.clientX; GAME.joystick.currentY = t.clientY;
+      // ONLY ACTIVATE IF INSIDE RADIUS
+      const dFromCenter = dist(t.clientX, t.clientY, GAME.joystick.startX, GAME.joystick.startY);
+      if (dFromCenter < 120) {
+          GAME.joystick.active = true;
+          GAME.joystick.currentX = t.clientX; GAME.joystick.currentY = t.clientY;
+      }
   });
   
   GAME.canvas.addEventListener('touchmove', (e) => {
       if (!GAME.joystick.active) return;
       const t = e.touches[0];
-      // Limit knob to a circle around the fixed BASE
       const dx = t.clientX - GAME.joystick.startX;
       const dy = t.clientY - GAME.joystick.startY;
       const d = Math.min(dist(0, 0, dx, dy), 100);
@@ -791,11 +803,12 @@ function render() {
       const angle = Math.atan2(cy - sy, cx - sx); 
       const d = dist(sx, sy, cx, cy);
       
-      // BASE
-      ctx.beginPath(); ctx.arc(sx, sy, 70, 0, Math.PI * 2); 
-      ctx.strokeStyle = 'rgba(99, 102, 241, 0.25)'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.beginPath(); ctx.arc(sx, sy, 75, 0, Math.PI * 2); 
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 2; ctx.stroke();
       
-      // KNOB
+      ctx.beginPath(); ctx.arc(sx, sy, 70, 0, Math.PI * 2); 
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.2)'; ctx.lineWidth = 4; ctx.stroke();
+      
       ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI * 2); 
       ctx.fillStyle = 'rgba(99, 102, 241, 0.5)'; 
       ctx.shadowBlur = 20; ctx.shadowColor = '#6366f1'; 
