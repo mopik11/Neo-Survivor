@@ -1,5 +1,5 @@
 /**
- * Neo Survivor - Core Game Logic
+ * NEO SURVIVOR - Core Game Logic
  */
 
 const CONFIG = {
@@ -138,7 +138,7 @@ const AudioEngine = {
             const g = this.ctx.createGain();
             osc.type = type;
             osc.frequency.setValueAtTime(note, time);
-            g.gain.setValueAtTime(0.02, time);
+            g.gain.setValueAtTime(0.015, time);
             g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
             osc.connect(g);
             g.connect(this.ctx.destination);
@@ -466,6 +466,16 @@ function togglePause() {
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
 }
 
+function toggleFullscreen(element) {
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    if (element.requestFullscreen) element.requestFullscreen();
+    else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }
+}
+
 function init() {
   GAME.canvas = document.getElementById('game-canvas');
   GAME.ctx = GAME.canvas.getContext('2d');
@@ -486,9 +496,17 @@ function init() {
     }
   });
 
-  // UI Button Listeners - Absolute compatibility fix
+  // UI Button Listeners - Enhanced with Fullscreen logic
+  const handleStart = () => {
+    const isMobile = window.innerWidth < 850;
+    if (isMobile) toggleFullscreen(document.documentElement);
+    AudioEngine.init(); 
+    AudioEngine.startMusic(); 
+    startGame();
+  };
+
   const btnStart = document.getElementById('btn-start');
-  if(btnStart) btnStart.onclick = () => { AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
+  if(btnStart) btnStart.onclick = handleStart;
   
   const btnMeta = document.getElementById('btn-meta-menu');
   if(btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
@@ -505,6 +523,9 @@ function init() {
   document.querySelectorAll('.btn-reload').forEach(btn => {
       btn.onclick = () => location.reload();
   });
+
+  const fsToggle = document.getElementById('fs-toggle');
+  if (fsToggle) fsToggle.onclick = () => toggleFullscreen(document.documentElement);
 
   document.addEventListener('visibilitychange', () => {
       if (document.hidden && GAME.active && !GAME.paused) togglePause();

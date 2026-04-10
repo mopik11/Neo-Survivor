@@ -2,13 +2,16 @@
 <html lang="cs">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Neo Survivor - 2D Survival Action</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>NEO SURVIVOR | Premium Survival</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div id="app">
       <div class="scanlines"></div>
+      
+      <div id="fs-toggle" class="fs-chip">FULLSCREEN</div>
+      
       <canvas id="game-canvas"></canvas>
       
       <div id="ui-layer">
@@ -34,14 +37,14 @@
         </div>
       </div>
 
-      <!-- Modals -->
+      <!-- Main Menu -->
       <div id="menu-modal" class="modal active">
         <div class="modal-content">
           <h1 class="logo">NEO<span>SURVIVOR</span></h1>
           <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
           <div class="menu-actions">
             <button class="btn-restart" id="btn-start">SPUSTIT HRU</button>
-            <button class="btn-restart" id="btn-meta-menu" style="background: rgba(120, 120, 120, 0.2); box-shadow: none;">VYLEPŠENÍ</button>
+            <button class="btn-restart" id="btn-meta-menu" style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">VYLEPŠENÍ</button>
           </div>
           <div class="controls-hint">
             <span>WASD: POHYB</span>
@@ -51,45 +54,50 @@
         </div>
       </div>
 
+      <!-- Upgrades Modal -->
       <div id="meta-modal" class="modal">
         <div class="modal-content">
-          <h2>Permanentní Upgrady</h2>
+          <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">VYLEPŠENÍ</h2>
           <div class="stat-chip" style="margin-bottom:20px">KREDITY: <span id="meta-currency">0</span></div>
           <div id="meta-options" class="upgrade-grid"></div>
-          <button class="btn-restart" id="btn-close-meta" style="margin-top:2rem">ZAVŘÍT</button>
+          <button class="btn-restart" id="btn-close-meta" style="margin-top:2.5rem">ZAVŘÍT</button>
         </div>
       </div>
 
+      <!-- Level Up Modal -->
       <div id="levelup-modal" class="modal">
         <div class="modal-content">
-          <h2 class="levelup-text">LEVEL UP!</h2>
+          <h2 style="font-size: 3.5rem; color: var(--xp-color); text-shadow: 0 0 30px var(--xp-color);">LEVEL UP!</h2>
           <div id="upgrade-options" class="upgrade-grid"></div>
         </div>
       </div>
 
+      <!-- Game Over Modal -->
       <div id="gameover-modal" class="modal">
         <div class="modal-content">
           <h1 class="logo">KONEC<span>HRY</span></h1>
-          <div class="game-over-stats">
+          <div style="display: flex; gap: 15px; margin-bottom: 2rem;">
             <div class="stat-chip">LEVEL: <span id="final-level">1</span></div>
             <div class="stat-chip">KILLS: <span id="final-kills">0</span></div>
           </div>
           <div class="menu-actions">
             <button class="btn-restart" id="btn-restart-game">ZKUSIT ZNOVU</button>
-            <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.2); box-shadow: none;">MENU</button>
+            <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">MENU</button>
           </div>
         </div>
       </div>
 
+      <!-- Pause Modal -->
       <div id="pause-modal" class="modal">
         <div class="modal-content">
           <h1 class="logo">PAUZA</h1>
           <div class="menu-actions">
             <button class="btn-restart" id="btn-resume">POKRAČOVAT</button>
-            <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.2); box-shadow: none;">MENU</button>
+            <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">MENU</button>
           </div>
         </div>
       </div>
+
     </div>
     <script src="main.js"></script>
   </body>
