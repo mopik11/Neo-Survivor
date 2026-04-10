@@ -31,7 +31,7 @@ const CONFIG = {
     { id: 'regen', name: 'Regenerace', desc: 'Obnova 1 HP/s', icon: '💊' },
     { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎' },
     { id: 'ultramagnet', name: 'Ultra Magnet', desc: 'Pomalý sběr z celé mapy', icon: '🌌' },
-    { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřáteli', icon: '🏹' },
+    { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřátely', icon: '🏹' },
     { id: 'size', name: 'Obří Střely', desc: '+30% velikost projektilu', icon: '🌕' },
     { id: 'crit', name: 'Kritické Zásahy', desc: '15% šance na 2x damage', icon: '💥' },
     { id: 'luck', name: 'Větší Výběr', desc: '4 možnosti při levelu', icon: '🍀' },
@@ -294,6 +294,7 @@ class Gem {
     this.x = x; this.y = y; this.radius = 5; this.attracted = false; this.id = id;
   }
   update(player) {
+    if (player.dead) return;
     const d = dist(this.x, this.y, player.x, player.y);
     if (d < player.magnetRange) this.attracted = true;
     if (player.ultraMagnet) {
@@ -320,12 +321,22 @@ class Orbiter {
   }
   update() { this.angle += 0.05 * GAME.speedFactor; }
   draw(ctx, cam) {
+    if (this.owner.dead) return;
     const x = this.owner.x + Math.cos(this.angle) * this.radius, y = this.owner.y + Math.sin(this.angle) * this.radius;
     ctx.shadowBlur = 20; ctx.shadowColor = '#fbbf24'; ctx.fillStyle = '#f59e0b';
     ctx.beginPath(); ctx.arc(x - cam.x, y - cam.y, this.size, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
     GAME.entities.enemies.forEach(e => { if (dist(x, y, e.x, e.y) < this.size + e.radius) { e.hp -= this.owner.damage * 0.3 * (3); } });
   }
+}
+
+function getAllAlivePlayers() {
+    const list = [];
+    if (GAME.entities.player && !GAME.entities.player.dead) list.push(GAME.entities.player);
+    for (const id in NET.others) {
+        if (!NET.others[id].dead) list.push(NET.others[id]);
+    }
+    return list;
 }
 
 class Boss {
@@ -335,10 +346,13 @@ class Boss {
     this.speed = CONFIG.ENEMY_BASE_SPEED * 0.8; this.isBoss = true;
     this.knockback = { x: 0, y: 0 };
   }
-  update(player) {
-    const angle = Math.atan2(player.y - this.y, player.x - this.x);
-    let speedScale = player.level < 10 ? 0.8 : 1.0;
-    if (player.aura && dist(this.x, this.y, player.x, player.y) < player.auraRange) speedScale *= 0.5;
+  update() {
+    const players = getAllAlivePlayers();
+    if (players.length === 0) return;
+    const target = players.sort((a,b) => dist(this.x,this.y,a.x,a.y) - dist(this.x,this.y,b.x,b.y))[0];
+    const angle = Math.atan2(target.y - this.y, target.x - this.x);
+    let speedScale = 1.0;
+    players.forEach(p => { if (p.aura && dist(this.x, this.y, p.x, p.y) < p.auraRange) speedScale *= 0.5; });
     const currentSpeed = this.speed * speedScale * GAME.speedFactor;
     this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
     this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
@@ -371,10 +385,13 @@ class Enemy {
     this.speed = CONFIG.ENEMY_BASE_SPEED + (level * 0.15);
     this.knockback = { x: 0, y: 0 };
   }
-  update(player) {
-    const angle = Math.atan2(player.y - this.y, player.x - this.x);
-    let speedScale = player.level < 10 ? 0.8 : 1.0;
-    if (player.aura && dist(this.x, this.y, player.x, player.y) < player.auraRange) speedScale *= 0.5;
+  update() {
+    const players = getAllAlivePlayers();
+    if (players.length === 0) return;
+    const target = players.sort((a,b) => dist(this.x,this.y,a.x,a.y) - dist(this.x,this.y,b.x,b.y))[0];
+    const angle = Math.atan2(target.y - this.y, target.x - this.x);
+    let speedScale = 1.0;
+    players.forEach(p => { if (p.aura && dist(this.x, this.y, p.x, p.y) < p.auraRange) speedScale *= 0.5; });
     const currentSpeed = this.speed * speedScale * GAME.speedFactor;
     this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
     this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
@@ -384,7 +401,9 @@ class Enemy {
     const ratio = this.hp / this.maxHp;
     const color = `rgb(255, ${Math.floor(255 * (1 - ratio))}, 80)`;
     ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
-    const angle = Math.atan2(GAME.entities.player.y - this.y, GAME.entities.player.x - this.x);
+    const players = getAllAlivePlayers();
+    const target = players.length > 0 ? players.sort((a,b) => dist(this.x,this.y,a.x,a.y) - dist(this.x,this.y,b.x,b.y))[0] : {x:0, y:0};
+    const angle = Math.atan2(target.y - this.y, target.x - this.x);
     ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y); ctx.rotate(angle);
     ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, 12); ctx.lineTo(-12, -12); ctx.closePath(); ctx.fill();
     ctx.restore(); ctx.shadowBlur = 0;
@@ -409,11 +428,13 @@ class Player {
     this.level = 1; this.xp = 0; this.nextLevelXp = CONFIG.XP_PER_LEVEL;
     this.remoteHat = null;
     this.targetX = 0; this.targetY = 0;
+    this.dead = false;
   }
   update() {
+    if (this.dead) return;
     if (!this.isLocal) {
-        this.x += (this.targetX - this.x) * 0.15;
-        this.y += (this.targetY - this.y) * 0.15;
+        this.x += (this.targetX - this.x) * 0.25; // Smoother lerp
+        this.y += (this.targetY - this.y) * 0.25;
         return;
     }
     let dx = 0, dy = 0;
@@ -445,6 +466,7 @@ class Player {
     if (now - this.lastFired > this.fireRate) { this.attack(); this.lastFired = now; }
   }
   attack() {
+    if (this.dead) return;
     const enemies = GAME.entities.enemies;
     if (enemies.length === 0) return;
     const sortedEnemies = [...enemies].sort((a,b) => dist(this.x,this.y,a.x,a.y) - dist(this.x,this.y,b.x,b.y));
@@ -460,6 +482,9 @@ class Player {
     AudioEngine.play('shoot');
   }
   draw(ctx, cam) {
+    if (this.dead) {
+        ctx.globalAlpha = 0.2;
+    }
     ctx.shadowBlur = 30; ctx.shadowColor = this.isLocal ? '#6366f1' : '#f43f5e';
     ctx.fillStyle = this.isLocal ? '#f8fafc' : '#fca5a5';
     ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
@@ -469,20 +494,41 @@ class Player {
         const h = { 'crown': '👑', 'wizard': '🧙', 'ninja': '🥷', 'cap': '🧢' }[hat];
         ctx.fillText(h || '🎩', this.x - cam.x, this.y - cam.y - this.radius + 8);
     }
-    ctx.strokeStyle = this.isLocal ? '#6366f1' : '#f43f5e'; ctx.lineWidth = 4; ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.strokeStyle = this.isLocal ? '#6366f1' : '#f43f5e'; ctx.lineWidth = 4; ctx.stroke(); 
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
   }
-  addXp(amount) { this.xp += amount * this.xpMultiplier; if (this.xp >= this.nextLevelXp) this.levelUp(); updateUI(); }
-  levelUp() { this.level++; this.xp -= this.nextLevelXp; this.nextLevelXp = Math.floor(this.nextLevelXp * 1.25); AudioEngine.play('lvlup'); if(this.isLocal) showLevelUp(); }
+  addXp(amount) { 
+      if (NET.conn && !NET.isHost) {
+          NET.conn.send({ type: 'PICKUP_XP', amount: amount });
+          return;
+      }
+      this.xp += amount * this.xpMultiplier; 
+      if (this.xp >= this.nextLevelXp) this.levelUp(); 
+      if (NET.isHost && NET.conn) syncState();
+      updateUI(); 
+  }
+  levelUp() { 
+      this.level++; this.xp -= this.nextLevelXp; this.nextLevelXp = Math.floor(this.nextLevelXp * 1.25); 
+      AudioEngine.play('lvlup'); 
+      if (NET.isHost) {
+          GAME.paused = true;
+          if (NET.conn) syncState();
+          showLevelUp(); 
+      }
+  }
 }
 
 function spawnEnemy() {
   if (!GAME.active || GAME.paused) { setTimeout(spawnEnemy, 500); return; }
   if (NET.peer && !NET.isHost && NET.conn) { setTimeout(spawnEnemy, 1000); return; }
+  const alive = getAllAlivePlayers();
+  if (alive.length === 0) { setTimeout(spawnEnemy, 1000); return; }
   const a = Math.random() * Math.PI * 2;
-  const x = GAME.entities.player.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
-  const y = GAME.entities.player.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
+  const pivot = alive[Math.floor(Math.random() * alive.length)];
+  const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
+  const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
   const mod = Math.floor(GAME.time / 60) + 1;
-  const enemy = (GAME.entities.player.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) ? new Boss(x, y, mod) : new Enemy(x, y, mod);
+  const enemy = (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) ? new Boss(x, y, mod) : new Enemy(x, y, mod);
   if (enemy.isBoss) { showBossWarning(); GAME.lastBossTime = GAME.time; }
   GAME.entities.enemies.push(enemy);
   if (NET.isHost) syncWorld();
@@ -546,7 +592,9 @@ function applyUpgrade(id) {
         case 'fire': p.fireTrail = true; break;
         case 'growth': p.maxHp += Math.floor(p.maxHp * 0.1); p.hp = p.maxHp; break;
     }
-    GAME.paused = false; document.getElementById('levelup-modal').classList.remove('active');
+    GAME.paused = false; 
+    document.getElementById('levelup-modal').classList.remove('active');
+    if (NET.isHost && NET.conn) syncState();
 }
 
 function gameOver() {
@@ -559,8 +607,10 @@ function gameOver() {
 
 function togglePause() {
     if (!GAME.active) return;
+    if (NET.conn && !NET.isHost) return; // Only host pauses
     GAME.paused = !GAME.paused;
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
+    if (NET.isHost && NET.conn) syncState();
 }
 
 function toggleFullscreen(element, force = false) {
@@ -611,58 +661,53 @@ function generateShortId() {
 function initPeer() {
     if (NET.peer) return;
     const shortId = generateShortId();
-    console.warn("NET: Inicializace PeerJS s ID:", shortId);
     NET.peer = new Peer(shortId);
     NET.peer.on('open', (id) => {
-        console.warn("NET: Peer otevřen s ID:", id);
         NET.roomId = id;
         document.getElementById('my-id-display').innerText = id;
     });
     NET.peer.on('connection', (c) => {
-        console.warn("NET: Přijato nové připojení od:", c.peer);
         NET.conn = c; NET.isHost = true; setupConn();
         startGame();
     });
     NET.peer.on('error', (err) => {
-        console.error("NET Peer Error:", err.type);
-        if (err.type === 'peer-unavailable') {
-           alert("CHYBA: Kód kámoše neexistuje nebo je kámoš offline. Zadej kód znovu.");
-        } else if (err.type === 'unavailable-id') {
-           console.warn("NET: ID už existovalo, zkouším znovu...");
-           NET.peer = null; initPeer();
-        } else {
-           alert("Chyba sítě: " + err.type);
-        }
+        if (err.type === 'peer-unavailable') alert("Kód neexistuje!");
+        else if (err.type === 'unavailable-id') { NET.peer = null; initPeer(); }
     });
 }
 
 function setupConn() {
-    console.warn("NET: Nastavování data handleru...");
-    NET.conn.on('open', () => {
-        console.warn("NET: Připojení plně otevřeno.");
-    });
     NET.conn.on('data', (data) => {
         if (data.type === 'PLAYER_SYNC') {
-            if (!NET.others[data.id]) {
-                NET.others[data.id] = new Player(false);
-                console.warn("NET: Nový hráč detekován:", data.id);
-            }
+            if (!NET.others[data.id]) NET.others[data.id] = new Player(false);
             const other = NET.others[data.id];
             other.targetX = data.x; other.targetY = data.y; other.remoteHat = data.hat;
+            other.dead = data.dead;
         }
         if (data.type === 'SHOT') {
             const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, { ownerId: 'remote' });
             GAME.entities.projectiles.push(proj);
         }
+        if (data.type === 'PICKUP_XP' && NET.isHost) {
+            GAME.entities.player.addXp(data.amount);
+        }
+        if (data.type === 'STATE_SYNC') {
+            const p = GAME.entities.player;
+            p.level = data.lvl; p.xp = data.xp; p.nextLevelXp = data.next;
+            p.hp = data.hp;
+            GAME.paused = data.paused; GAME.time = data.time;
+            if (GAME.paused && !document.querySelector('.modal.active:not(#multiplayer-modal)')) {
+                // Should show pause or levelup UI if needed, for simplicity we just freeze
+            }
+            updateUI();
+        }
         if (data.type === 'WORLD_STATE' && !NET.isHost) {
-            if (!GAME.active) startGame(); // Auto start client
-            const hostEnemies = data.enemies;
-            GAME.entities.enemies = hostEnemies.map(he => {
+            if (!GAME.active) startGame();
+            GAME.entities.enemies = data.enemies.map(he => {
                 const e = he.isBoss ? new Boss(he.x, he.y, 1, he.id) : new Enemy(he.x, he.y, 1, he.id);
                 e.hp = he.hp; return e;
             });
             GAME.entities.gems = data.gems.map(hg => new Gem(hg.x, hg.y, hg.id));
-            GAME.time = data.time;
         }
     });
 }
@@ -670,11 +715,12 @@ function setupConn() {
 function syncPlayer() {
     if (!NET.conn) return;
     const now = Date.now();
-    if (now - NET.playerSyncThrottle < 33) return;
+    if (now - NET.playerSyncThrottle < 20) return; // 50fps sync
     NET.playerSyncThrottle = now;
     NET.conn.send({
         type: 'PLAYER_SYNC', id: NET.roomId,
-        x: GAME.entities.player.x, y: GAME.entities.player.y, hat: META.upgrades.hat
+        x: GAME.entities.player.x, y: GAME.entities.player.y, 
+        hat: META.upgrades.hat, dead: GAME.entities.player.dead
     });
 }
 
@@ -686,67 +732,52 @@ function syncShot(proj) {
     });
 }
 
+function syncState() {
+    if (!NET.isHost || !NET.conn) return;
+    const p = GAME.entities.player;
+    NET.conn.send({
+        type: 'STATE_SYNC', lvl: p.level, xp: p.xp, next: p.nextLevelXp, 
+        paused: GAME.paused, time: GAME.time, hp: p.hp
+    });
+}
+
 function syncWorld() {
     if (!NET.isHost || !NET.conn) return;
     NET.conn.send({
         type: 'WORLD_STATE',
         enemies: GAME.entities.enemies.map(e => ({ id: e.id, x: e.x, y: e.y, hp: e.hp, isBoss: e.isBoss })),
-        gems: GAME.entities.gems.map(g => ({ id: g.id, x: g.x, y: g.y })),
-        time: GAME.time
+        gems: GAME.entities.gems.map(g => ({ id: g.id, x: g.x, y: g.y }))
     });
 }
 
 const LOBBY = {
-    gun: null,
-    servers: {},
+    gun: null, servers: {},
     init() {
-        if (typeof Gun === 'undefined') return;
-        if (this.gun) return;
-        this.gun = Gun([
-            'https://gun-manhattan.herokuapp.com/gun',
-            'https://gun-sjc.herokuapp.com/gun',
-            'https://relay.peer.ooo/gun'
-        ]);
-        console.warn("LOBBY: Inicializace Gun.js...");
+        if (typeof Gun === 'undefined' || this.gun) return;
+        this.gun = Gun(['https://gun-manhattan.herokuapp.com/gun', 'https://gun-sjc.herokuapp.com/gun']);
         this.scan();
     },
     broadcast(id) {
         if (!this.gun || !id || id === 'Načítám...') return;
-        this.gun.get('neo-survivor-lobby-v2').get(id).put({
-            id: id,
-            name: "Hra #" + id,
-            time: Date.now()
-        });
+        this.gun.get('neo-survivor-lobby-v3').get(id).put({ id: id, name: "Hra #" + id, time: Date.now() });
     },
     scan() {
         if (!this.gun) return;
-        const listEl = document.getElementById('server-list');
-        if(listEl) listEl.innerHTML = '<div style="opacity:0.5; font-size:0.8rem; padding:10px;">Hledám servery v síti...</div>';
-        this.gun.get('neo-survivor-lobby-v2').map().on((data, id) => {
-            if (!data || !data.id) return;
-            if (Date.now() - data.time > 120000) return;
-            this.servers[id] = data;
-            this.updateUI();
+        this.gun.get('neo-survivor-lobby-v3').map().on((data, id) => {
+            if (!data || !data.id || Date.now() - data.time > 60000) return;
+            this.servers[id] = data; this.updateUI();
         });
     },
     updateUI() {
-        const container = document.getElementById('server-list');
-        if (!container) return;
+        const container = document.getElementById('server-list'); if (!container) return;
         container.innerHTML = '';
-        let count = 0;
-        const sorted = Object.values(this.servers).sort((a,b) => b.time - a.time);
-        sorted.forEach(s => {
-            if (Date.now() - s.time > 60000) return;
-            count++;
+        Object.values(this.servers).forEach(s => {
+            if (Date.now() - s.time > 30000) return;
             const item = document.createElement('div');
             item.style = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); margin-bottom:5px;";
-            item.innerHTML = `
-                <div style="font-size:0.9rem"><b style="color:#a5b4fc">${s.id}</b> <span style="opacity:0.5; font-size:0.7rem;">KOSMICKÁ LOĎ</span></div>
-                <button onclick="connectToId('${s.id}')" style="background:var(--xp-color); border:none; border-radius:6px; color:white; padding:6px 12px; font-size:0.8rem; cursor:pointer; font-weight:800; filter:hue-rotate(-20deg);">PŘIPOJIT</button>
-            `;
+            item.innerHTML = `<div><b style="color:#a5b4fc">${s.id}</b></div><button onclick="connectToId('${s.id}')" style="background:var(--xp-color); border:none; border-radius:6px; color:white; padding:6px 12px; font-size:0.8rem; cursor:pointer;">PŘIPOJIT</button>`;
             container.appendChild(item);
         });
-        if (count === 0) container.innerHTML = '<div style="opacity:0.5; font-size:0.8rem; padding:10px;">Žádné aktivní servery...</div>';
     }
 };
 
@@ -756,7 +787,6 @@ window.connectToId = (id) => {
 };
 
 function init() {
-  console.warn("INIT: Hra se spouští...");
   GAME.canvas = document.getElementById('game-canvas');
   GAME.ctx = GAME.canvas.getContext('2d');
   updateSpeedFactor();
@@ -768,78 +798,40 @@ function init() {
   window.addEventListener('keyup', (e) => { GAME.input[e.key.toLowerCase()] = false; });
   
   GAME.canvas.addEventListener('mousedown', (e) => {
-    if (!GAME.active || GAME.paused) return;
+    if (!GAME.active || GAME.paused || GAME.entities.player.dead) return;
     const rect = GAME.canvas.getBoundingClientRect();
     const sx = (e.clientX - rect.left) / GAME.zoom;
     const sy = (e.clientY - rect.top) / GAME.zoom;
     if (Date.now() - GAME.lastSniperTime >= CONFIG.SNIPER_COOLDOWN) { fireSniper(sx, sy); GAME.lastSniperTime = Date.now(); }
   });
 
-  document.getElementById('btn-start').onclick = () => { NET.conn = null; NET.isHost = false; const isMobile = window.innerWidth < 850; if (isMobile) toggleFullscreen(document.documentElement, true); AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
-  document.getElementById('btn-multiplayer').onclick = () => { 
-      initPeer(); 
-      LOBBY.init(); 
-      document.getElementById('multiplayer-modal').classList.add('active'); 
-  };
+  document.getElementById('btn-start').onclick = () => { NET.conn = null; NET.isHost = false; AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
+  document.getElementById('btn-multiplayer').onclick = () => { initPeer(); LOBBY.init(); document.getElementById('multiplayer-modal').classList.add('active'); };
   document.getElementById('btn-close-mp').onclick = () => document.getElementById('multiplayer-modal').classList.remove('active');
-  
-  document.getElementById('btn-create-host').onclick = () => { 
-      if (!NET.roomId || NET.roomId === 'Načítám...') {
-          alert("Počkej vteřinu na vygenerování kódu..."); return;
-      }
-      LOBBY.broadcast(NET.roomId);
-      NET.isHost = true;
-      startGame();
-  };
-  
+  document.getElementById('btn-create-host').onclick = () => { if (!NET.roomId || NET.roomId === 'Načítám...') return; LOBBY.broadcast(NET.roomId); NET.isHost = true; startGame(); };
   document.getElementById('btn-copy-id').onclick = () => {
       const id = document.getElementById('my-id-display').innerText;
       if (id === 'Načítám...') return;
-      navigator.clipboard.writeText(id).then(() => {
-          document.getElementById('btn-copy-id').innerText = 'OK!';
-          setTimeout(() => document.getElementById('btn-copy-id').innerText = 'Kopírovat', 2000);
-      });
+      navigator.clipboard.writeText(id).then(() => { document.getElementById('btn-copy-id').innerText = 'OK!'; setTimeout(() => document.getElementById('btn-copy-id').innerText = 'Kopírovat', 2000); });
   };
-
-  document.getElementById('btn-refresh-lobby').onclick = () => {
-      LOBBY.servers = {};
-      LOBBY.scan();
-      document.getElementById('btn-refresh-lobby').innerText = '...';
-      setTimeout(() => document.getElementById('btn-refresh-lobby').innerText = 'OBNOVIT', 1000);
-  };
-
+  document.getElementById('btn-refresh-lobby').onclick = () => { LOBBY.servers = {}; LOBBY.scan(); };
   document.getElementById('btn-join-room').onclick = () => {
       const id = document.getElementById('input-join-id').value.trim().toUpperCase();
-      console.warn("NET: Připojuji se k:", id);
-      if (!id) { alert("Zadej kód kámoše!"); return; }
+      if (!id) return;
       if (!NET.peer) initPeer();
       NET.conn = NET.peer.connect(id);
-      NET.isHost = false;
-      NET.conn.on('open', () => { console.warn("NET: Připojení OK!"); setupConn(); startGame(); });
-      NET.conn.on('error', (e) => { console.error("NET: Chyba!", e); alert("Chyba spojení: " + e); });
+      NET.isHost = false; setupConn();
   };
-
   const btnMeta = document.getElementById('btn-meta-menu');
   if(btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
-  const btnCloseMeta = document.getElementById('btn-close-meta');
-  if(btnCloseMeta) btnCloseMeta.onclick = () => { document.getElementById('meta-modal').classList.remove('active'); if (window.innerWidth < 850) toggleFullscreen(document.documentElement, true); };
   document.getElementById('btn-resume').onclick = togglePause;
   document.getElementById('mobile-pause').onclick = (e) => { e.stopPropagation(); togglePause(); };
   document.getElementById('fs-toggle').onclick = (e) => { e.stopPropagation(); toggleFullscreen(document.documentElement); };
-  document.getElementById('btn-restart-game').onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); AudioEngine.startMusic(); startGame(); };
-
-  document.querySelectorAll('.btn-reload').forEach(btn => {
-      btn.onclick = (e) => {
-          e.stopPropagation();
-          GAME.active = false; GAME.paused = false;
-          document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-          document.getElementById('menu-modal').classList.add('active');
-          resetGame();
-      };
-  });
+  document.getElementById('btn-restart-game').onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); startGame(); };
+  document.querySelectorAll('.btn-reload').forEach(btn => btn.onclick = () => location.reload());
 
   GAME.canvas.addEventListener('touchstart', (e) => {
-      if (!GAME.active || GAME.paused) return;
+      if (!GAME.active || GAME.paused || GAME.entities.player.dead) return;
       const t = e.touches[0];
       const rect = GAME.canvas.getBoundingClientRect();
       const sx = (t.clientX - rect.left) / GAME.zoom;
@@ -866,53 +858,59 @@ function fireSniper(cx, cy) {
   const worldTargetX = cx + (cam.x / GAME.zoom);
   const worldTargetY = cy + (cam.y / GAME.zoom);
   const proj = new Projectile(p.x, p.y, worldTargetX, worldTargetY, p.damage * 10, { size: 12, pierce: Infinity });
-  GAME.entities.projectiles.push(proj); shakeScreen(15); AudioEngine.play('lvlup');
+  GAME.entities.projectiles.push(proj); shakeScreen(15);
   if (NET.conn) syncShot(proj);
 }
 
-function startGame() { resetGame(); GAME.active = true; document.getElementById('menu-modal').classList.remove('active'); document.getElementById('multiplayer-modal').classList.remove('active'); document.getElementById('pause-modal').classList.remove('active'); }
+function startGame() { resetGame(); GAME.active = true; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); }
 
 function resetGame() {
-    GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0; GAME.upgradeOptionsCount = 3;
+    GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0;
     GAME.entities.player = new Player(true); GAME.entities.enemies = []; GAME.entities.projectiles = []; GAME.entities.gems = []; GAME.entities.particles = []; GAME.entities.fire = [];
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     updateSpeedFactor(); updateUI();
 }
 
-function loop() { if (GAME.active && !GAME.paused) update(); render(); requestAnimationFrame(loop); }
+function loop() { if (GAME.active) update(); render(); requestAnimationFrame(loop); }
 
 function update() {
+  if (GAME.paused) return;
   GAME.time += 1/60; const p = GAME.entities.player; p.update();
   GAME.camera.x = (p.x * GAME.zoom) - GAME.canvas.width / 2; GAME.camera.y = (p.y * GAME.zoom) - GAME.canvas.height / 2;
   if (CONFIG.SCREEN_SHAKE > 0) { GAME.camera.x += (Math.random()-0.5)*CONFIG.SCREEN_SHAKE; GAME.camera.y += (Math.random()-0.5)*CONFIG.SCREEN_SHAKE; CONFIG.SCREEN_SHAKE *= 0.9; }
   
   if (NET.conn) syncPlayer();
-  if (NET.isHost && Date.now() - NET.lastSync > 100) { 
-      syncWorld(); NET.lastSync = Date.now(); 
-      LOBBY.broadcast(NET.roomId); 
-  }
+  if (NET.isHost && Date.now() - NET.lastSync > 50) { syncWorld(); syncState(); NET.lastSync = Date.now(); LOBBY.broadcast(NET.roomId); }
 
-  for (const id in NET.others) {
-      NET.others[id].update();
-  }
+  for (const id in NET.others) NET.others[id].update();
 
   if (!NET.peer || NET.isHost || !NET.conn) {
-    GAME.entities.enemies.forEach((e, i) => {
-        e.update(p);
-        if (dist(p.x, p.y, e.x, e.y) < p.radius + e.radius) { p.hp -= (e.isBoss ? 2 : 0.5) * p.shield; if (p.hp <= 0) gameOver(); updateUI(); }
+    const alivePlayers = getAllAlivePlayers();
+    if (alivePlayers.length === 0 && GAME.active) gameOver();
+    
+    GAME.entities.enemies.forEach((e) => {
+        e.update();
+        alivePlayers.forEach(ap => {
+            if (dist(ap.x, ap.y, e.x, e.y) < ap.radius + e.radius) {
+                ap.hp -= (e.isBoss ? 2 : 0.5) * ap.shield;
+                if (ap.hp <= 0) ap.dead = true;
+                updateUI();
+            }
+        });
     });
   }
   
   GAME.orbiters.forEach(o => o.update());
   GAME.entities.fire.forEach((f, i) => { f.update(); if (f.life <= 0) GAME.entities.fire.splice(i, 1); });
 
+  const enemies = GAME.entities.enemies;
   GAME.entities.projectiles.forEach((proj, pIndex) => {
     proj.update(); if (proj.life <= 0) { GAME.entities.projectiles.splice(pIndex, 1); return; }
-    GAME.entities.enemies.forEach((enemy, eIndex) => {
+    enemies.forEach((enemy, eIndex) => {
         if (!proj.hitEnemies.has(enemy) && dist(proj.x, proj.y, enemy.x, enemy.y) < proj.radius + enemy.radius) {
             enemy.hp -= proj.damage; proj.hitEnemies.add(enemy);
             if (proj.bounce > 0) {
-                const targets = GAME.entities.enemies.filter(e => e !== enemy && !proj.hitEnemies.has(e));
+                const targets = enemies.filter(e => e !== enemy && !proj.hitEnemies.has(e));
                 if (targets.length > 0) {
                     const next = targets.sort((a,b) => dist(proj.x, proj.y, a.x, a.y) - dist(proj.x, proj.y, b.x, b.y))[0];
                     const angle = Math.atan2(next.y - proj.y, next.x - proj.x);
@@ -920,28 +918,33 @@ function update() {
                 }
             }
             if (proj.pierce > 1) proj.pierce--; else if (proj.pierce !== Infinity && proj.bounce <= 0) GAME.entities.projectiles.splice(pIndex, 1);
-            if (enemy.hp <= 0) { AudioEngine.play('hit'); if(!NET.peer || NET.isHost) GAME.entities.gems.push(new Gem(enemy.x, enemy.y)); GAME.entities.enemies.splice(eIndex, 1); GAME.kills++; updateUI(); }
+            if (enemy.hp <= 0) { AudioEngine.play('hit'); if(!NET.peer || NET.isHost) GAME.entities.gems.push(new Gem(enemy.x, enemy.y)); enemies.splice(eIndex, 1); GAME.kills++; updateUI(); }
         }
     });
   });
-  GAME.entities.gems.forEach((g, i) => { g.update(p); if (dist(p.x, p.y, g.x, g.y) < p.radius + g.radius) { AudioEngine.play('gem'); p.addXp(10 * p.luckFactor); GAME.entities.gems.splice(i, 1); } });
+  
+  const pForGems = GAME.entities.player;
+  GAME.entities.gems.forEach((g, i) => { 
+      g.update(pForGems); 
+      if (!pForGems.dead && dist(pForGems.x, pForGems.y, g.x, g.y) < pForGems.radius + g.radius) { 
+          AudioEngine.play('gem'); pForGems.addXp(10 * pForGems.luckFactor); GAME.entities.gems.splice(i, 1); 
+      } 
+  });
   updateUI();
 }
 
 function render() {
   const ctx = GAME.ctx, cam = GAME.camera;
-  ctx.save();
-  ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
-  ctx.scale(GAME.zoom, GAME.zoom);
+  ctx.save(); ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height); ctx.scale(GAME.zoom, GAME.zoom);
   const camX = cam.x / GAME.zoom, camY = cam.y / GAME.zoom;
   GAME.stars.forEach(s => {
       const sx = (s.x - camX * 0.1) % (GAME.canvas.width/GAME.zoom), sy = (s.y - camY * 0.1) % (GAME.canvas.height/GAME.zoom);
       ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`; ctx.beginPath(); ctx.arc(sx<0?sx+(GAME.canvas.width/GAME.zoom):sx, sy<0?sy+(GAME.canvas.height/GAME.zoom):sy, s.size, 0, Math.PI*2); ctx.fill();
   });
+  ctx.strokeStyle = 'rgba(99, 102, 241, 0.15)'; ctx.lineWidth = 1; ctx.beginPath();
   const hexRadius = 60, hexHeight = hexRadius * Math.sqrt(3);
   const startCol = Math.floor(camX / (hexRadius * 1.5)) - 1, endCol = startCol + Math.ceil((GAME.canvas.width/GAME.zoom) / (hexRadius * 1.5)) + 2;
   const startRow = Math.floor(camY / hexHeight) - 1, endRow = startRow + Math.ceil((GAME.canvas.height/GAME.zoom) / hexHeight) + 2;
-  ctx.strokeStyle = 'rgba(99, 102, 241, 0.15)'; ctx.lineWidth = 1; ctx.beginPath();
   for (let col = startCol; col <= endCol; col++) {
       for (let row = startRow; row <= endRow; row++) {
           const cx = col * hexRadius * 1.5 - camX, cy = (row * hexHeight + (Math.abs(col) % 2 === 0 ? 0 : hexHeight / 2)) - camY;
@@ -952,7 +955,7 @@ function render() {
   GAME.entities.fire.forEach(f => f.draw(ctx, {x:camX, y:camY}));
   GAME.entities.gems.forEach(g => g.draw(ctx, {x:camX, y:camY}));
   GAME.entities.projectiles.forEach(p => p.draw(ctx, {x:camX, y:camY}));
-  if (GAME.orbiters) GAME.orbiters.forEach(o => o.draw(ctx, {x:camX, y:camY}));
+  GAME.orbiters.forEach(o => o.draw(ctx, {x:camX, y:camY}));
   GAME.entities.enemies.forEach(e => e.draw(ctx, {x:camX, y:camY}));
   for (const id in NET.others) NET.others[id].draw(ctx, {x:camX, y:camY});
   if (GAME.entities.player) GAME.entities.player.draw(ctx, {x:camX, y:camY});
@@ -960,7 +963,6 @@ function render() {
   if (window.innerWidth < 850) {
       ctx.save(); const sx = GAME.joystick.startX, sy = GAME.joystick.startY, cx = GAME.joystick.currentX, cy = GAME.joystick.currentY;
       ctx.beginPath(); ctx.arc(sx, sy, 75, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.beginPath(); ctx.arc(sx, sy, 70, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(99, 102, 241, 0.2)'; ctx.lineWidth = 4; ctx.stroke();
       ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI * 2); ctx.fillStyle = 'rgba(99, 102, 241, 0.5)'; ctx.shadowBlur = 20; ctx.shadowColor = '#6366f1'; ctx.fill(); ctx.restore();
   }
 }
