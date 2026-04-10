@@ -855,10 +855,21 @@ function init() {
     if (Date.now() - GAME.lastSniperTime >= CONFIG.SNIPER_COOLDOWN) { fireSniper(sx, sy); GAME.lastSniperTime = Date.now(); }
   });
 
-  document.getElementById('btn-start').onclick = () => { NET.conn = null; NET.isHost = false; AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
-  document.getElementById('btn-multiplayer').onclick = () => { initPeer(); LOBBY.init(); document.getElementById('multiplayer-modal').classList.add('active'); };
+  document.getElementById('btn-start').onclick = () => { 
+      NET.conn = null; NET.isHost = false; 
+      toggleFullscreen(document.documentElement, true);
+      AudioEngine.init(); AudioEngine.startMusic(); startGame(); 
+  };
+  document.getElementById('btn-multiplayer').onclick = () => { 
+      initPeer(); LOBBY.init(); 
+      document.getElementById('multiplayer-modal').classList.add('active'); 
+  };
   document.getElementById('btn-close-mp').onclick = () => document.getElementById('multiplayer-modal').classList.remove('active');
-  document.getElementById('btn-create-host').onclick = () => { if (!NET.roomId || NET.roomId === 'Načítám...') return; LOBBY.broadcast(NET.roomId); NET.isHost = true; startGame(); };
+  document.getElementById('btn-create-host').onclick = () => { 
+      if (!NET.roomId || NET.roomId === 'Načítám...') return; 
+      toggleFullscreen(document.documentElement, true);
+      LOBBY.broadcast(NET.roomId); NET.isHost = true; startGame(); 
+  };
   document.getElementById('btn-copy-id').onclick = () => {
       const id = document.getElementById('my-id-display').innerText;
       if (id === 'Načítám...') return;
@@ -868,6 +879,7 @@ function init() {
   document.getElementById('btn-join-room').onclick = () => {
       const id = document.getElementById('input-join-id').value.trim().toUpperCase();
       if (!id) return;
+      toggleFullscreen(document.documentElement, true);
       if (!NET.peer) initPeer();
       NET.conn = NET.peer.connect(id);
       NET.isHost = false; setupConn();
