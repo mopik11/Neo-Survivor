@@ -46,7 +46,8 @@
           <h1 class="logo">NEO<span>SURVIVOR</span></h1>
           <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
           <div class="menu-actions">
-            <button class="btn-restart" id="btn-start">SPUSTIT HRU</button>
+            <button class="btn-restart" id="btn-start">SOLO</button>
+            <button class="btn-restart" id="btn-multiplayer" style="background: var(--xp-color); filter: hue-rotate(-30deg);">MULTIPLAYER</button>
             <button class="btn-restart" id="btn-meta-menu" style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">VYLEPŠENÍ</button>
           </div>
           <div class="controls-hint">
@@ -101,7 +102,24 @@
         </div>
       </div>
 
+      <!-- Multiplayer Modal -->
+      <div id="multiplayer-modal" class="modal">
+        <div class="modal-content">
+          <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">MULTIPLAYER</h2>
+          <div id="mp-status" class="stat-chip" style="margin-bottom:20px">TVŮJ KÓD: <span id="my-id-display">...</span></div>
+          <div class="menu-actions" style="flex-direction: column; width: 100%; gap: 15px;">
+             <button class="btn-restart" id="btn-create-host" style="width: 100%;">ZALOŽIT SEVER</button>
+             <div style="display: flex; gap: 10px; width: 100%;">
+                <input type="text" id="input-join-id" placeholder="Kód kámoše..." style="flex-grow: 1; padding: 15px; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-weight: 800;">
+                <button class="btn-restart" id="btn-join-room" style="padding: 15px 25px;">PŘIPOJIT</button>
+             </div>
+          </div>
+          <button class="btn-restart" id="btn-close-mp" style="margin-top:2.5rem; background: rgba(120, 120, 120, 0.1);">ZAVŘÍT</button>
+        </div>
+      </div>
+
     </div>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="main.js"></script>
   </body>
 </html>
