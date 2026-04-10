@@ -59,6 +59,54 @@ const NET = {
     playerSyncThrottle: 0
 };
 
+const LOBBY = {
+    gun: null,
+    servers: {},
+    init() {
+        if (typeof Gun === 'undefined') return;
+        this.gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+        console.warn("LOBBY: Inicializace Gun.js...");
+        this.scan();
+    },
+    broadcast(id) {
+        if (!this.gun) return;
+        this.gun.get('neo-survivor-lobby').get(id).put({
+            id: id,
+            name: "Hráč " + id,
+            time: Date.now()
+        });
+    },
+    scan() {
+        if (!this.gun) return;
+        this.gun.get('neo-survivor-lobby').map().on((data, id) => {
+            if (!data) return;
+            if (Date.now() - data.time > 300000) return; // Ignore older than 5 min
+            this.servers[id] = data;
+            this.updateUI();
+        });
+    },
+    updateUI() {
+        const container = document.getElementById('server-list');
+        if (!container) return;
+        container.innerHTML = '';
+        let count = 0;
+        for (const id in this.servers) {
+            const s = this.servers[id];
+            if (Date.now() - s.time > 60000) continue;
+            count++;
+            const item = document.createElement('div');
+            item.className = 'server-item';
+            item.style = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border: 1px solid rgba(255,255,255,0.05);";
+            item.innerHTML = `
+                <div><b style="color:#a5b4fc">#${s.id}</b> <span style="font-size:0.8rem; opacity:0.6; margin-left:8px;">Aktivní</span></div>
+                <button onclick="connectToId('${s.id}')" style="background:var(--xp-color); border:none; border-radius:6px; color:white; padding:6px 12px; font-size:0.8rem; cursor:pointer; font-weight:800;">PŘIPOJIT</button>
+            `;
+            container.appendChild(item);
+        }
+        if (count === 0) container.innerHTML = '<div style="opacity:0.5; font-size:0.8rem;">Žádné veřejné servery...</div>';
+    }
+};
+
 const META = {
     currency: 0,
     upgrades: { hp: 0, speed: 0, luck: 0, hat: null }
@@ -393,11 +441,10 @@ class Player {
     this.lastFireTrail = 0; this.lastFired = 0; this.lastRegen = 0;
     this.level = 1; this.xp = 0; this.nextLevelXp = CONFIG.XP_PER_LEVEL;
     this.remoteHat = null;
-    this.targetX = 0; this.targetY = 0; // For Interpolation
+    this.targetX = 0; this.targetY = 0;
   }
   update() {
     if (!this.isLocal) {
-        // Interpolate remote player
         this.x += (this.targetX - this.x) * 0.15;
         this.y += (this.targetY - this.y) * 0.15;
         return;
@@ -626,7 +673,7 @@ function setupConn() {
 function syncPlayer() {
     if (!NET.conn) return;
     const now = Date.now();
-    if (now - NET.playerSyncThrottle < 33) return; // ~30fps sync
+    if (now - NET.playerSyncThrottle < 33) return;
     NET.playerSyncThrottle = now;
     NET.conn.send({
         type: 'PLAYER_SYNC', id: NET.roomId,
@@ -652,6 +699,58 @@ function syncWorld() {
     });
 }
 
+const LOBBY = {
+    gun: null,
+    servers: {},
+    init() {
+        if (typeof Gun === 'undefined') return;
+        this.gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+        console.warn("LOBBY: Inicializace Gun.js...");
+        this.scan();
+    },
+    broadcast(id) {
+        if (!this.gun) return;
+        this.gun.get('neo-survivor-lobby-v1').get(id).put({
+            id: id,
+            name: "Hra #" + id,
+            time: Date.now()
+        });
+    },
+    scan() {
+        if (!this.gun) return;
+        this.gun.get('neo-survivor-lobby-v1').map().on((data, id) => {
+            if (!data || !data.id) return;
+            if (Date.now() - data.time > 300000) return; // Ignore older than 5 min
+            this.servers[id] = data;
+            this.updateUI();
+        });
+    },
+    updateUI() {
+        const container = document.getElementById('server-list');
+        if (!container) return;
+        container.innerHTML = '';
+        let count = 0;
+        const sorted = Object.values(this.servers).sort((a,b) => b.time - a.time);
+        sorted.forEach(s => {
+            if (Date.now() - s.time > 60000) return;
+            count++;
+            const item = document.createElement('div');
+            item.style = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); margin-bottom:5px;";
+            item.innerHTML = `
+                <div style="font-size:0.9rem"><b style="color:#a5b4fc">${s.id}</b> <span style="opacity:0.5; font-size:0.7rem;">KOSMICKÁ LOĎ</span></div>
+                <button onclick="connectToId('${s.id}')" style="background:var(--xp-color); border:none; border-radius:6px; color:white; padding:6px 12px; font-size:0.8rem; cursor:pointer; font-weight:800; filter:hue-rotate(-20deg);">PŘIPOJIT</button>
+            `;
+            container.appendChild(item);
+        });
+        if (count === 0) container.innerHTML = '<div style="opacity:0.5; font-size:0.8rem; padding:10px;">Žádné aktivní servery...</div>';
+    }
+};
+
+window.connectToId = (id) => {
+    document.getElementById('input-join-id').value = id;
+    document.getElementById('btn-join-room').click();
+};
+
 function init() {
   console.warn("INIT: Hra se spouští...");
   GAME.canvas = document.getElementById('game-canvas');
@@ -673,9 +772,12 @@ function init() {
   });
 
   document.getElementById('btn-start').onclick = () => { NET.conn = null; NET.isHost = false; const isMobile = window.innerWidth < 850; if (isMobile) toggleFullscreen(document.documentElement, true); AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
-  document.getElementById('btn-multiplayer').onclick = () => { console.warn("INIT: Multiplayer tlačítko kliknuto."); initPeer(); document.getElementById('multiplayer-modal').classList.add('active'); };
+  document.getElementById('btn-multiplayer').onclick = () => { console.warn("INIT: Multiplayer tlačítko kliknuto."); initPeer(); LOBBY.init(); document.getElementById('multiplayer-modal').classList.add('active'); };
   document.getElementById('btn-close-mp').onclick = () => document.getElementById('multiplayer-modal').classList.remove('active');
-  document.getElementById('btn-create-host').onclick = () => { alert("SERVER ZALOŽEN: Kód se objevil nahoře. Můžeš ho zkopírovat."); };
+  document.getElementById('btn-create-host').onclick = () => { 
+      LOBBY.broadcast(NET.roomId);
+      alert("SERVER ZALOŽEN: Tvůj kód je na seznamu serverů pro ostatní!");
+  };
   
   document.getElementById('btn-copy-id').onclick = () => {
       const id = document.getElementById('my-id-display').innerText;
@@ -765,9 +867,11 @@ function update() {
   if (CONFIG.SCREEN_SHAKE > 0) { GAME.camera.x += (Math.random()-0.5)*CONFIG.SCREEN_SHAKE; GAME.camera.y += (Math.random()-0.5)*CONFIG.SCREEN_SHAKE; CONFIG.SCREEN_SHAKE *= 0.9; }
   
   if (NET.conn) syncPlayer();
-  if (NET.isHost && Date.now() - NET.lastSync > 100) { syncWorld(); NET.lastSync = Date.now(); }
+  if (NET.isHost && Date.now() - NET.lastSync > 100) { 
+      syncWorld(); NET.lastSync = Date.now(); 
+      LOBBY.broadcast(NET.roomId); // Keep server alive in lobby
+  }
 
-  // Update other players with interpolation
   for (const id in NET.others) {
       NET.others[id].update();
   }

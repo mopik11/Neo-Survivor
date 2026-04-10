@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>NEO SURVIVOR | Premium Survival</title>
     <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
   </head>
   <body>
     <div id="app">
@@ -112,10 +113,16 @@
           </div>
           <div class="menu-actions" style="flex-direction: column; width: 100%; gap: 15px;">
              <button class="btn-restart" id="btn-create-host" style="width: 100%;">ZALOŽIT SEVER</button>
-             <div style="display: flex; gap: 10px; width: 100%;">
+              <div style="display: flex; gap: 10px; width: 100%;">
                 <input type="text" id="input-join-id" placeholder="Kód kámoše..." style="flex-grow: 1; padding: 15px; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-weight: 800;">
                 <button class="btn-restart" id="btn-join-room" style="padding: 15px 25px;">PŘIPOJIT</button>
-             </div>
+              </div>
+              <div id="server-list-container" style="width: 100%; margin-top: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">
+                <h3 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #a5b4fc; text-transform: uppercase;">Veřejné Servery</h3>
+                <div id="server-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 120px; overflow-y: auto;">
+                  <div style="opacity: 0.5; font-size: 0.8rem;">Hledám aktivní hry...</div>
+                </div>
+              </div>
           </div>
           <button class="btn-restart" id="btn-close-mp" style="margin-top:2.5rem; background: rgba(120, 120, 120, 0.1);">ZAVŘÍT</button>
         </div>
