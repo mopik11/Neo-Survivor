@@ -13,7 +13,7 @@ const CONFIG = {
   GEM_VALUES: 10,
   XP_PER_LEVEL: 100,
   UPGRADES: [
-    { id: 'damage', name: 'Zvýšení Síly', desc: '+25% poškození', icon: '⚔️' },
+    { id: 'damage', name: 'Zvýšení Síly', desc: '+40% poškození', icon: '⚔️' },
     { id: 'speed', name: 'Rychlé Boty', desc: '+15% rychlost pohybu', icon: '👟' },
     { id: 'count', name: 'Více Střel', desc: '+1 projektil navíc', icon: '🌀' },
     { id: 'firerate', name: 'Rychlá Palba', desc: '-20% prodleva útoku', icon: '🔥' },
@@ -64,7 +64,8 @@ const GAME = {
     enemies: [],
     projectiles: [],
     gems: [],
-    particles: []
+    particles: [],
+    fire: [] // NEW: Fire trail units
   },
   camera: { x: 0, y: 0 },
   input: { w: false, a: false, s: false, d: false },
@@ -185,6 +186,28 @@ class Particle {
   }
 }
 
+class Fire {
+    constructor(x, y, damage) {
+        this.x = x; this.y = y; this.damage = damage;
+        this.radius = 25; this.life = 1.5;
+    }
+    update() {
+        this.life -= 1/60;
+        GAME.entities.enemies.forEach(e => {
+            if (dist(this.x, this.y, e.x, e.y) < this.radius + e.radius) {
+                e.hp -= this.damage * (1/60);
+            }
+        });
+    }
+    draw(ctx, cam) {
+        ctx.globalAlpha = this.life / 1.5;
+        ctx.shadowBlur = 10; ctx.shadowColor = '#f59e0b';
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
+    }
+}
+
 class Projectile {
   constructor(x, y, targetX, targetY, damage, stats = {}) {
     this.x = x; this.y = y;
@@ -236,7 +259,7 @@ class Orbiter {
     constructor(parent, index, count) {
         this.parent = parent; this.index = index;
         this.angle = (index / count) * Math.PI * 2;
-        this.radius = 120; this.size = 12; this.speed = 0.06; this.damage = 20;
+        this.radius = 120; this.size = 12; this.speed = 0.06; this.damage = 25;
     }
     update() { this.angle += this.speed * GAME.speedFactor; }
     draw(ctx, cam) {
@@ -350,6 +373,12 @@ class Player {
     if (dx !== 0 || dy !== 0) {
       const angle = Math.atan2(dy, dx);
       this.x += Math.cos(angle) * this.speed * GAME.speedFactor; this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
+      
+      const now = Date.now();
+      if (this.fireTrail && now - this.lastFireTrail > 150) {
+          GAME.entities.fire.push(new Fire(this.x, this.y, this.damage * 0.5));
+          this.lastFireTrail = now;
+      }
     }
     const now = Date.now();
     if (this.regen > 0 && now - this.lastRegen > 1000) {
@@ -434,7 +463,7 @@ function showLevelUp() {
 function applyUpgrade(id) {
     const p = GAME.entities.player;
     switch(id) {
-        case 'damage': p.damage *= 1.25; break;
+        case 'damage': p.damage *= 1.40; break;
         case 'speed': p.speed *= 1.15; break;
         case 'count': p.projectileCount += 1; break;
         case 'firerate': p.fireRate *= 0.8; break;
@@ -565,7 +594,7 @@ function init() {
 
 function fireSniper(cx, cy) {
     const p = GAME.entities.player, cam = GAME.camera;
-    const proj = new Projectile(p.x, p.y, cx + cam.x, cy + cam.y, p.damage * 10, { size: 12, pierce: 50 });
+    const proj = new Projectile(p.x, p.y, cx + cam.x, cy + cam.y, p.damage * 10, { size: 12, pierce: Infinity });
     GAME.entities.projectiles.push(proj); shakeScreen(15); AudioEngine.play('lvlup');
 }
 
@@ -601,7 +630,7 @@ function startGame() { resetGame(); GAME.active = true; document.getElementById(
 
 function resetGame() {
     GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0;
-    GAME.entities.player = new Player(); GAME.entities.enemies = []; GAME.entities.projectiles = []; GAME.entities.gems = []; GAME.entities.particles = [];
+    GAME.entities.player = new Player(); GAME.entities.enemies = []; GAME.entities.projectiles = []; GAME.entities.gems = []; GAME.entities.particles = []; GAME.entities.fire = [];
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     updateUI();
 }
@@ -616,12 +645,19 @@ function update() {
     e.update(p);
     if (dist(p.x, p.y, e.x, e.y) < p.radius + e.radius) { p.hp -= (e.isBoss ? 2 : 0.5) * p.shield; if (p.hp <= 0) gameOver(); updateUI(); }
   });
+  
+  GAME.orbiters.forEach(o => o.update());
+
+  GAME.entities.fire.forEach((f, i) => {
+      f.update(); if (f.life <= 0) GAME.entities.fire.splice(i, 1);
+  });
+
   GAME.entities.projectiles.forEach((proj, pIndex) => {
     proj.update(); if (proj.life <= 0) { GAME.entities.projectiles.splice(pIndex, 1); return; }
     GAME.entities.enemies.forEach((enemy, eIndex) => {
         if (!proj.hitEnemies.has(enemy) && dist(proj.x, proj.y, enemy.x, enemy.y) < proj.radius + enemy.radius) {
             enemy.hp -= proj.damage; proj.hitEnemies.add(enemy);
-            if (proj.pierce > 1) proj.pierce--; else GAME.entities.projectiles.splice(pIndex, 1);
+            if (proj.pierce > 1) proj.pierce--; else if (proj.pierce !== Infinity) GAME.entities.projectiles.splice(pIndex, 1);
             if (enemy.hp <= 0) {
                 AudioEngine.play('hit'); GAME.entities.gems.push(new Gem(enemy.x, enemy.y)); GAME.entities.enemies.splice(eIndex, 1); GAME.kills++; updateUI();
             }
@@ -667,6 +703,7 @@ function render() {
   }
   ctx.stroke();
 
+  GAME.entities.fire.forEach(f => f.draw(ctx, cam));
   GAME.entities.particles.forEach(p => p.draw(ctx, cam));
   GAME.entities.gems.forEach(g => g.draw(ctx, cam));
   GAME.entities.projectiles.forEach(p => p.draw(ctx, cam));
