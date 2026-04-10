@@ -31,7 +31,7 @@ const CONFIG = {
     { id: 'regen', name: 'Regenerace', desc: 'Obnova 1 HP/s', icon: '💊' },
     { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎' },
     { id: 'ultramagnet', name: 'Ultra Magnet', desc: 'Pomalý sběr z celé mapy', icon: '🌌' },
-    { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřátely', icon: '🏹' },
+    { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřáteli', icon: '🏹' },
     { id: 'size', name: 'Obří Střely', desc: '+30% velikost projektilu', icon: '🌕' },
     { id: 'crit', name: 'Kritické Zásahy', desc: '15% šance na 2x damage', icon: '💥' },
     { id: 'luck', name: 'Větší Výběr', desc: '4 možnosti při levelu', icon: '🍀' },
@@ -655,6 +655,7 @@ function setupConn() {
             GAME.entities.projectiles.push(proj);
         }
         if (data.type === 'WORLD_STATE' && !NET.isHost) {
+            if (!GAME.active) startGame(); // Auto start client
             const hostEnemies = data.enemies;
             GAME.entities.enemies = hostEnemies.map(he => {
                 const e = he.isBoss ? new Boss(he.x, he.y, 1, he.id) : new Enemy(he.x, he.y, 1, he.id);
@@ -700,13 +701,18 @@ const LOBBY = {
     servers: {},
     init() {
         if (typeof Gun === 'undefined') return;
-        this.gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+        if (this.gun) return;
+        this.gun = Gun([
+            'https://gun-manhattan.herokuapp.com/gun',
+            'https://gun-sjc.herokuapp.com/gun',
+            'https://relay.peer.ooo/gun'
+        ]);
         console.warn("LOBBY: Inicializace Gun.js...");
         this.scan();
     },
     broadcast(id) {
-        if (!this.gun) return;
-        this.gun.get('neo-survivor-lobby-v1').get(id).put({
+        if (!this.gun || !id || id === 'Načítám...') return;
+        this.gun.get('neo-survivor-lobby-v2').get(id).put({
             id: id,
             name: "Hra #" + id,
             time: Date.now()
@@ -714,9 +720,11 @@ const LOBBY = {
     },
     scan() {
         if (!this.gun) return;
-        this.gun.get('neo-survivor-lobby-v1').map().on((data, id) => {
+        const listEl = document.getElementById('server-list');
+        if(listEl) listEl.innerHTML = '<div style="opacity:0.5; font-size:0.8rem; padding:10px;">Hledám servery v síti...</div>';
+        this.gun.get('neo-survivor-lobby-v2').map().on((data, id) => {
             if (!data || !data.id) return;
-            if (Date.now() - data.time > 300000) return;
+            if (Date.now() - data.time > 120000) return;
             this.servers[id] = data;
             this.updateUI();
         });
@@ -768,11 +776,20 @@ function init() {
   });
 
   document.getElementById('btn-start').onclick = () => { NET.conn = null; NET.isHost = false; const isMobile = window.innerWidth < 850; if (isMobile) toggleFullscreen(document.documentElement, true); AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
-  document.getElementById('btn-multiplayer').onclick = () => { console.warn("INIT: Multiplayer tlačítko kliknuto."); initPeer(); LOBBY.init(); document.getElementById('multiplayer-modal').classList.add('active'); };
+  document.getElementById('btn-multiplayer').onclick = () => { 
+      initPeer(); 
+      LOBBY.init(); 
+      document.getElementById('multiplayer-modal').classList.add('active'); 
+  };
   document.getElementById('btn-close-mp').onclick = () => document.getElementById('multiplayer-modal').classList.remove('active');
+  
   document.getElementById('btn-create-host').onclick = () => { 
+      if (!NET.roomId || NET.roomId === 'Načítám...') {
+          alert("Počkej vteřinu na vygenerování kódu..."); return;
+      }
       LOBBY.broadcast(NET.roomId);
-      alert("SERVER ZALOŽEN: Tvůj kód je na seznamu serverů pro ostatní!");
+      NET.isHost = true;
+      startGame();
   };
   
   document.getElementById('btn-copy-id').onclick = () => {
