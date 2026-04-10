@@ -504,7 +504,9 @@ class Player {
           return;
       }
       // Host or Solo logic
-      this.xp += amount * this.xpMultiplier; 
+      const gain = Math.round(Number(amount) * this.xpMultiplier);
+      if (isNaN(gain)) return;
+      this.xp += gain; 
       while (this.xp >= this.nextLevelXp) {
           this.levelUp();
       }
@@ -972,12 +974,15 @@ function update() {
   });
   
   const pForGems = GAME.entities.player;
-  GAME.entities.gems.forEach((g, i) => { 
+  for (let i = GAME.entities.gems.length - 1; i >= 0; i--) {
+      const g = GAME.entities.gems[i];
       g.update(pForGems); 
       if (!pForGems.dead && dist(pForGems.x, pForGems.y, g.x, g.y) < pForGems.radius + g.radius) { 
-          AudioEngine.play('gem'); pForGems.addXp(10 * pForGems.luckFactor); GAME.entities.gems.splice(i, 1); 
-      } 
-  });
+          AudioEngine.play('gem'); 
+          pForGems.addXp(Math.round(10 * (pForGems.luckFactor || 1))); 
+          GAME.entities.gems.splice(i, 1); 
+      }
+  }
   updateUI();
 }
 
