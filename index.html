@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="cs">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neo Survivor - 2D Survival Action</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas"></canvas>
+      
+      <div id="ui-layer">
+        <div class="top-bar">
+          <div class="stat-chip">
+            <span class="level-badge" id="level-display">LVL 1</span>
+          </div>
+          <div class="xp-container">
+            <div id="xp-bar-fill"></div>
+          </div>
+          <div class="stat-chip">
+            <span id="kill-count">0</span> KILLS
+          </div>
+          <div class="stat-chip sniper-chip" id="sniper-ui">
+            🎯 <div class="sniper-cooldown"><div id="sniper-bar"></div></div>
+          </div>
+        </div>
+        
+        <div id="boss-warning" class="boss-warning">BOSS PŘICHÁZÍ!</div>
+        
+        <div class="hp-container">
+          <div id="hp-bar-fill"></div>
+        </div>
+      </div>
+
+      <!-- Modals -->
+      <div id="menu-modal" class="modal active">
+        <div class="modal-content">
+          <h1 class="logo">NEO<span>SURVIVOR</span></h1>
+          <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
+          <div class="menu-actions">
+            <button class="btn-restart" id="btn-start">SPUSTIT HRU</button>
+            <button class="btn-restart" id="btn-meta-menu" style="background: rgba(120, 120, 120, 0.2); box-shadow: none;">VYLEPŠENÍ</button>
+          </div>
+          <div class="controls-hint">
+            <span>WASD: POHYB</span>
+            <span>KLIK: SNIPER</span>
+            <span>ESC: PAUZA</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="meta-modal" class="modal">
+        <div class="modal-content">
+          <h2>Permanentní Upgrady</h2>
+          <div class="stat-chip" style="margin-bottom:20px">KREDITY: <span id="meta-currency">0</span></div>
+          <div id="meta-options" class="upgrade-grid"></div>
+          <button class="btn-restart" id="btn-close-meta" style="margin-top:2rem">ZAVŘÍT</button>
+        </div>
+      </div>
+
+      <div id="levelup-modal" class="modal">
+        <div class="modal-content">
+          <h2 class="levelup-text">LEVEL UP!</h2>
+          <div id="upgrade-options" class="upgrade-grid"></div>
+        </div>
+      </div>
+
+      <div id="gameover-modal" class="modal">
+        <div class="modal-content">
+          <h1 class="logo">KONEC<span>HRY</span></h1>
+          <div class="game-over-stats">
+            <div class="stat-chip">LEVEL: <span id="final-level">1</span></div>
+            <div class="stat-chip">KILLS: <span id="final-kills">0</span></div>
+          </div>
+          <div class="menu-actions">
+            <button class="btn-restart" id="btn-restart-game">ZKUSIT ZNOVU</button>
+            <button class="btn-restart" onclick="location.reload()" style="background: rgba(120, 120, 120, 0.2); box-shadow: none;">MENU</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="pause-modal" class="modal">
+        <div class="modal-content">
+          <h1 class="logo">PAUZA</h1>
+          <div class="menu-actions">
+            <button class="btn-restart" id="btn-resume">POKRAČOVAT</button>
+            <button class="btn-restart" onclick="location.reload()" style="background: rgba(120, 120, 120, 0.2); box-shadow: none;">MENU</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="scanlines"></div>
+    </div>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
