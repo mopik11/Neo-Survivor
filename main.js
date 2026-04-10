@@ -59,7 +59,7 @@ const GAME = {
   time: 0,
   lastBossTime: 0,
   speedFactor: 1.0,
-  zoom: 1.0, // NEW: Rendering zoom
+  zoom: 1.0, 
   upgradeOptionsCount: 3,
   entities: {
     player: null,
@@ -73,8 +73,7 @@ const GAME = {
   input: { w: false, a: false, s: false, d: false },
   joystick: { 
       active: false, 
-      fixed: true, // ALWAYS FIXED NOW
-      startX: 120, // FIXED LEFT
+      startX: 120, // FIXED
       startY: 0,   // DYNAMIC BOTTOM
       currentX: 120, 
       currentY: 0 
@@ -90,12 +89,11 @@ const updateSpeedFactor = () => {
     const baseWidth = 1200;
     const isMobile = window.innerWidth < 850;
     GAME.speedFactor = Math.max(0.4, Math.min(1.2, window.innerWidth / baseWidth));
-    
-    // REDUCE ZOOM on mobile to see more (0.75x)
     GAME.zoom = isMobile ? 0.7 : 1.0;
     
-    // UPDATE FIXED JOYSTICK POS
-    GAME.joystick.startY = window.innerHeight - 120;
+    // ENSURE START Y IS ALWAYS AT BOTTOM LEFT
+    GAME.joystick.startX = 150;
+    GAME.joystick.startY = window.innerHeight - 150;
     if (!GAME.joystick.active) {
         GAME.joystick.currentX = GAME.joystick.startX;
         GAME.joystick.currentY = GAME.joystick.startY;
@@ -385,7 +383,7 @@ class Player {
         const jdx = GAME.joystick.currentX - GAME.joystick.startX;
         const jdy = GAME.joystick.currentY - GAME.joystick.startY;
         const d = dist(0, 0, jdx, jdy);
-        if (d > 10) { dx = jdx / d; dy = jdy / d; }
+        if (d > 5) { dx = jdx / d; dy = jdy / d; }
     } else {
         if (GAME.input.w) dy -= 1; if (GAME.input.s) dy += 1;
         if (GAME.input.a) dx -= 1; if (GAME.input.d) dx += 1;
@@ -428,7 +426,7 @@ class Player {
     ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
     if (META.upgrades.hat) {
         ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-        const h = { 'crown': '👑', 'wizard': '🧙', 'ninja': '𥷷', 'cap': '🧢' }[META.upgrades.hat];
+        const h = { 'crown': '👑', 'wizard': '🧙', 'ninja': '🥷', 'cap': '🧢' }[META.upgrades.hat];
         ctx.fillText(h || '🎩', this.x - cam.x, this.y - cam.y - this.radius + 8);
     }
     ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 4; ctx.stroke(); ctx.shadowBlur = 0;
@@ -594,7 +592,7 @@ function init() {
           GAME.active = false; GAME.paused = false;
           document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
           document.getElementById('menu-modal').classList.add('active');
-          resetGame(); // Properly reset state without reloading
+          resetGame();
       };
   });
 
@@ -606,7 +604,6 @@ function init() {
       if (!GAME.active || GAME.paused) return;
       const t = e.touches[0];
       
-      // Handle Sniper on Right Side
       if (t.clientX > window.innerWidth / 2) {
           if (Date.now() - GAME.lastSniperTime >= CONFIG.SNIPER_COOLDOWN) {
               const rect = GAME.canvas.getBoundingClientRect();
@@ -617,7 +614,6 @@ function init() {
           return;
       }
       
-      // FIXED JOYSTICK INTERACTION
       GAME.joystick.active = true;
       GAME.joystick.currentX = t.clientX; GAME.joystick.currentY = t.clientY;
   });
@@ -625,10 +621,13 @@ function init() {
   GAME.canvas.addEventListener('touchmove', (e) => {
       if (!GAME.joystick.active) return;
       const t = e.touches[0];
-      // Limit to left side
-      if (t.clientX < window.innerWidth / 2) {
-          GAME.joystick.currentX = t.clientX; GAME.joystick.currentY = t.clientY;
-      }
+      // Limit knob to a circle around the fixed BASE
+      const dx = t.clientX - GAME.joystick.startX;
+      const dy = t.clientY - GAME.joystick.startY;
+      const d = Math.min(dist(0, 0, dx, dy), 100);
+      const angle = Math.atan2(dy, dx);
+      GAME.joystick.currentX = GAME.joystick.startX + Math.cos(angle) * d;
+      GAME.joystick.currentY = GAME.joystick.startY + Math.sin(angle) * d;
   }, { passive: true });
   
   GAME.canvas.addEventListener('touchend', () => { 
@@ -680,7 +679,7 @@ function resetGame() {
     GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0; GAME.upgradeOptionsCount = 3;
     GAME.entities.player = new Player(); GAME.entities.enemies = []; GAME.entities.projectiles = []; GAME.entities.gems = []; GAME.entities.particles = []; GAME.entities.fire = [];
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
-    updateUI();
+    updateSpeedFactor(); updateUI();
 }
 
 function loop() { if (GAME.active && !GAME.paused) update(); render(); requestAnimationFrame(loop); }
@@ -739,10 +738,7 @@ function render() {
   const ctx = GAME.ctx, cam = GAME.camera;
   ctx.save();
   ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
-  
-  // APPLY ZOOM
   ctx.scale(GAME.zoom, GAME.zoom);
-  // Correct Camera offset for scaling
   const camX = cam.x / GAME.zoom;
   const camY = cam.y / GAME.zoom;
   
@@ -785,13 +781,25 @@ function render() {
   GAME.entities.enemies.forEach(e => e.draw(ctx, {x:camX, y:camY}));
   if (GAME.entities.player) GAME.entities.player.draw(ctx, {x:camX, y:camY});
   
-  ctx.restore(); // END WORLD DRAW
+  ctx.restore(); 
   
-  if (GAME.joystick.active || 1) { // Always draw if initialized
-      ctx.save(); const { startX: sx, startY: sy, currentX: cx, currentY: cy } = GAME.joystick;
-      const angle = Math.atan2(cy - sy, cx - sx); const d = Math.min(dist(sx, sy, cx, cy), 60);
-      ctx.beginPath(); ctx.arc(sx, sy, 65, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(99, 102, 241, 0.2)'; ctx.lineWidth = 4; ctx.stroke();
-      ctx.beginPath(); ctx.arc(sx + Math.cos(angle)*d, sy + Math.sin(angle)*d, 28, 0, Math.PI * 2); ctx.fillStyle = 'rgba(99, 102, 241, 0.5)'; ctx.shadowBlur = 20; ctx.shadowColor = '#6366f1'; ctx.fill(); ctx.restore();
+  const drawJ = window.innerWidth < 850;
+  if (drawJ) {
+      ctx.save(); 
+      const sx = GAME.joystick.startX, sy = GAME.joystick.startY;
+      const cx = GAME.joystick.currentX, cy = GAME.joystick.currentY;
+      const angle = Math.atan2(cy - sy, cx - sx); 
+      const d = dist(sx, sy, cx, cy);
+      
+      // BASE
+      ctx.beginPath(); ctx.arc(sx, sy, 70, 0, Math.PI * 2); 
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.25)'; ctx.lineWidth = 4; ctx.stroke();
+      
+      // KNOB
+      ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI * 2); 
+      ctx.fillStyle = 'rgba(99, 102, 241, 0.5)'; 
+      ctx.shadowBlur = 20; ctx.shadowColor = '#6366f1'; 
+      ctx.fill(); ctx.restore();
   }
 }
 
