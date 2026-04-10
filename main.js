@@ -31,7 +31,7 @@ const CONFIG = {
     { id: 'regen', name: 'Regenerace', desc: 'Obnova 1 HP/s', icon: '💊' },
     { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎' },
     { id: 'ultramagnet', name: 'Ultra Magnet', desc: 'Pomalý sběr z celé mapy', icon: '🌌' },
-    { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřáteli', icon: '🏹' },
+    { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřátely', icon: '🏹' },
     { id: 'size', name: 'Obří Střely', desc: '+30% velikost projektilu', icon: '🌕' },
     { id: 'crit', name: 'Kritické Zásahy', desc: '15% šance na 2x damage', icon: '💥' },
     { id: 'luck', name: 'Větší Výběr', desc: '4 možnosti při levelu', icon: '🍀' },
@@ -57,54 +57,6 @@ const NET = {
     roomId: null,
     lastSync: 0,
     playerSyncThrottle: 0
-};
-
-const LOBBY = {
-    gun: null,
-    servers: {},
-    init() {
-        if (typeof Gun === 'undefined') return;
-        this.gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
-        console.warn("LOBBY: Inicializace Gun.js...");
-        this.scan();
-    },
-    broadcast(id) {
-        if (!this.gun) return;
-        this.gun.get('neo-survivor-lobby').get(id).put({
-            id: id,
-            name: "Hráč " + id,
-            time: Date.now()
-        });
-    },
-    scan() {
-        if (!this.gun) return;
-        this.gun.get('neo-survivor-lobby').map().on((data, id) => {
-            if (!data) return;
-            if (Date.now() - data.time > 300000) return; // Ignore older than 5 min
-            this.servers[id] = data;
-            this.updateUI();
-        });
-    },
-    updateUI() {
-        const container = document.getElementById('server-list');
-        if (!container) return;
-        container.innerHTML = '';
-        let count = 0;
-        for (const id in this.servers) {
-            const s = this.servers[id];
-            if (Date.now() - s.time > 60000) continue;
-            count++;
-            const item = document.createElement('div');
-            item.className = 'server-item';
-            item.style = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border: 1px solid rgba(255,255,255,0.05);";
-            item.innerHTML = `
-                <div><b style="color:#a5b4fc">#${s.id}</b> <span style="font-size:0.8rem; opacity:0.6; margin-left:8px;">Aktivní</span></div>
-                <button onclick="connectToId('${s.id}')" style="background:var(--xp-color); border:none; border-radius:6px; color:white; padding:6px 12px; font-size:0.8rem; cursor:pointer; font-weight:800;">PŘIPOJIT</button>
-            `;
-            container.appendChild(item);
-        }
-        if (count === 0) container.innerHTML = '<div style="opacity:0.5; font-size:0.8rem;">Žádné veřejné servery...</div>';
-    }
 };
 
 const META = {
@@ -361,6 +313,21 @@ class Gem {
   }
 }
 
+class Orbiter {
+  constructor(owner, index, total) {
+    this.owner = owner; this.index = index; this.total = total;
+    this.angle = (index / total) * Math.PI * 2; this.radius = 120; this.size = 15;
+  }
+  update() { this.angle += 0.05 * GAME.speedFactor; }
+  draw(ctx, cam) {
+    const x = this.owner.x + Math.cos(this.angle) * this.radius, y = this.owner.y + Math.sin(this.angle) * this.radius;
+    ctx.shadowBlur = 20; ctx.shadowColor = '#fbbf24'; ctx.fillStyle = '#f59e0b';
+    ctx.beginPath(); ctx.arc(x - cam.x, y - cam.y, this.size, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    GAME.entities.enemies.forEach(e => { if (dist(x, y, e.x, e.y) < this.size + e.radius) { e.hp -= this.owner.damage * 0.3 * (3); } });
+  }
+}
+
 class Boss {
   constructor(x, y, level = 1, id = Math.random().toString(36).substr(2, 9)) {
     this.x = x; this.y = y; this.radius = 50; this.id = id;
@@ -607,6 +574,35 @@ function toggleFullscreen(element, force = false) {
   }
 }
 
+function showMetaMenu() {
+    const container = document.getElementById('meta-options');
+    document.getElementById('meta-currency').innerText = META.currency;
+    container.innerHTML = '';
+    const items = [
+        { id: 'hp', name: 'Extra HP', desc: 'Počáteční HP +10', cost: 10, val: META.upgrades.hp },
+        { id: 'speed', name: 'Rychlost', desc: 'Pohyb +2%', cost: 15, val: META.upgrades.speed },
+        { id: 'luck', name: 'Štěstí', desc: 'XP násobič +0.05', cost: 25, val: META.upgrades.luck },
+        { id: 'hat_crown', name: 'Koruna', desc: 'Zlatá královská koruna', cost: 100, isHat: true, type: 'crown' },
+        { id: 'hat_wizard', name: 'Mág', desc: 'Klobouk čaroděje', cost: 100, isHat: true, type: 'wizard' },
+        { id: 'hat_ninja', name: 'Ninja', desc: 'Maska stínu', cost: 100, isHat: true, type: 'ninja' }
+    ];
+    items.forEach(item => {
+        const card = document.createElement('div'); card.className = 'upgrade-card';
+        const cost = item.isHat ? item.cost : Math.floor(item.cost * (1 + item.val * 0.5));
+        const owned = item.isHat && META.upgrades.hat === item.type;
+        card.innerHTML = `<h3>${item.name}</h3><p>${item.desc}</p><span class="cost">${owned ? 'VLASTNĚNO' : cost + ' DOGE'}</span>`;
+        card.onclick = () => buyMetaUpgrade(item, cost);
+        container.appendChild(card);
+    });
+}
+
+function buyMetaUpgrade(item, cost) {
+    if (META.currency < cost) { alert("Nemáš dost Dogecoinu!"); return; }
+    if (item.isHat) { META.upgrades.hat = item.type; }
+    else { META.upgrades[item.id]++; }
+    META.currency -= cost; saveMeta(); showMetaMenu();
+}
+
 // MULTIPLAYER LOGIC
 function generateShortId() {
     return Math.random().toString(36).substr(2, 6).toUpperCase();
@@ -720,7 +716,7 @@ const LOBBY = {
         if (!this.gun) return;
         this.gun.get('neo-survivor-lobby-v1').map().on((data, id) => {
             if (!data || !data.id) return;
-            if (Date.now() - data.time > 300000) return; // Ignore older than 5 min
+            if (Date.now() - data.time > 300000) return;
             this.servers[id] = data;
             this.updateUI();
         });
@@ -786,6 +782,13 @@ function init() {
           document.getElementById('btn-copy-id').innerText = 'OK!';
           setTimeout(() => document.getElementById('btn-copy-id').innerText = 'Kopírovat', 2000);
       });
+  };
+
+  document.getElementById('btn-refresh-lobby').onclick = () => {
+      LOBBY.servers = {};
+      LOBBY.scan();
+      document.getElementById('btn-refresh-lobby').innerText = '...';
+      setTimeout(() => document.getElementById('btn-refresh-lobby').innerText = 'OBNOVIT', 1000);
   };
 
   document.getElementById('btn-join-room').onclick = () => {
@@ -869,7 +872,7 @@ function update() {
   if (NET.conn) syncPlayer();
   if (NET.isHost && Date.now() - NET.lastSync > 100) { 
       syncWorld(); NET.lastSync = Date.now(); 
-      LOBBY.broadcast(NET.roomId); // Keep server alive in lobby
+      LOBBY.broadcast(NET.roomId); 
   }
 
   for (const id in NET.others) {
