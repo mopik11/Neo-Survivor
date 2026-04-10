@@ -447,8 +447,7 @@ class Player {
 
 function spawnEnemy() {
   if (!GAME.active || GAME.paused) { setTimeout(spawnEnemy, 500); return; }
-  if (NET.peer && !NET.isHost && NET.conn) { setTimeout(spawnEnemy, 1000); return; } // Client doesn't spawn
-  
+  if (NET.peer && !NET.isHost && NET.conn) { setTimeout(spawnEnemy, 1000); return; }
   const a = Math.random() * Math.PI * 2;
   const x = GAME.entities.player.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
   const y = GAME.entities.player.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
@@ -548,18 +547,29 @@ function toggleFullscreen(element, force = false) {
 // MULTIPLAYER LOGIC
 function initPeer() {
     if (NET.peer) return;
+    console.log("NET: Inicializace PeerJS...");
     NET.peer = new Peer();
     NET.peer.on('open', (id) => {
+        console.log("NET: Peer otevřen s ID:", id);
         NET.roomId = id;
         document.getElementById('my-id-display').innerText = id;
     });
     NET.peer.on('connection', (c) => {
+        console.log("NET: Přijato nové připojení od:", c.peer);
         NET.conn = c; NET.isHost = true; setupConn();
         startGame();
+    });
+    NET.peer.on('error', (err) => {
+        console.error("NET Peer Error:", err.type, err.message);
+        alert("Chyba sítě: " + err.type);
     });
 }
 
 function setupConn() {
+    console.log("NET: Nastavování data handleru...");
+    NET.conn.on('open', () => {
+        console.log("NET: Připojení plně otevřeno.");
+    });
     NET.conn.on('data', (data) => {
         if (data.type === 'PLAYER_SYNC') {
             if (!NET.others[data.id]) NET.others[data.id] = new Player(false);
@@ -571,7 +581,6 @@ function setupConn() {
             GAME.entities.projectiles.push(proj);
         }
         if (data.type === 'WORLD_STATE' && !NET.isHost) {
-            // Update enemies based on host data
             const hostEnemies = data.enemies;
             GAME.entities.enemies = hostEnemies.map(he => {
                 const e = he.isBoss ? new Boss(he.x, he.y, 1, he.id) : new Enemy(he.x, he.y, 1, he.id);
@@ -580,6 +589,10 @@ function setupConn() {
             GAME.entities.gems = data.gems.map(hg => new Gem(hg.x, hg.y, hg.id));
             GAME.time = data.time;
         }
+    });
+    NET.conn.on('close', () => {
+        console.warn("NET: Připojení uzavřeno kamošem.");
+        alert("Kámoš se odpojil.");
     });
 }
 
@@ -631,32 +644,40 @@ function init() {
   document.getElementById('btn-start').onclick = () => { NET.conn = null; NET.isHost = false; const isMobile = window.innerWidth < 850; if (isMobile) toggleFullscreen(document.documentElement, true); AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
   document.getElementById('btn-multiplayer').onclick = () => { initPeer(); document.getElementById('multiplayer-modal').classList.add('active'); };
   document.getElementById('btn-close-mp').onclick = () => document.getElementById('multiplayer-modal').classList.remove('active');
-  document.getElementById('btn-create-host').onclick = () => { GAME.active = false; alert("Čekání na kámoše... Pošli mu kód: " + NET.roomId); };
+  document.getElementById('btn-create-host').onclick = () => { console.log("NET: Čekání na připojení..."); alert("Čekání na kámoše... Pošli mu kód: " + NET.roomId); };
   document.getElementById('btn-join-room').onclick = () => {
-      const id = document.getElementById('input-join-id').value;
-      if (!id) return;
-      NET.conn = NET.peer.connect(id);
-      NET.isHost = false;
-      NET.conn.on('open', () => { setupConn(); startGame(); });
+      const id = document.getElementById('input-join-id').value.trim();
+      console.log("NET: Pokus o připojení k ID:", id);
+      if (!id) { console.warn("NET: Žádné ID zadáno."); return; }
+      
+      try {
+          NET.conn = NET.peer.connect(id);
+          NET.isHost = false;
+          console.log("NET: Inicilizováno spojení...", NET.conn);
+          
+          NET.conn.on('open', () => {
+              console.log("NET: Spojení navázáno! Zapínám hru.");
+              setupConn(); startGame();
+          });
+          
+          NET.conn.on('error', (err) => {
+              console.error("NET: Chyba spojení:", err);
+              alert("Nepodařilo se připojit: " + err);
+          });
+          
+      } catch (e) {
+          console.error("NET: Kritická chyba při connect:", e);
+      }
   };
 
   const btnMeta = document.getElementById('btn-meta-menu');
   if(btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
-  
   const btnCloseMeta = document.getElementById('btn-close-meta');
   if(btnCloseMeta) btnCloseMeta.onclick = () => { document.getElementById('meta-modal').classList.remove('active'); if (window.innerWidth < 850) toggleFullscreen(document.documentElement, true); };
-  
-  const btnResume = document.getElementById('btn-resume');
-  if(btnResume) btnResume.onclick = togglePause;
-  
-  const btnMobilePause = document.getElementById('mobile-pause');
-  if(btnMobilePause) btnMobilePause.onclick = (e) => { e.stopPropagation(); togglePause(); };
-  
-  const fsToggle = document.getElementById('fs-toggle');
-  if (fsToggle) fsToggle.onclick = (e) => { e.stopPropagation(); toggleFullscreen(document.documentElement); };
-  
-  const btnRestart = document.getElementById('btn-restart-game');
-  if(btnRestart) btnRestart.onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); AudioEngine.startMusic(); startGame(); };
+  document.getElementById('btn-resume').onclick = togglePause;
+  document.getElementById('mobile-pause').onclick = (e) => { e.stopPropagation(); togglePause(); };
+  document.getElementById('fs-toggle').onclick = (e) => { e.stopPropagation(); toggleFullscreen(document.documentElement); };
+  document.getElementById('btn-restart-game').onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); AudioEngine.startMusic(); startGame(); };
 
   document.querySelectorAll('.btn-reload').forEach(btn => {
       btn.onclick = (e) => {
@@ -678,7 +699,6 @@ function init() {
       const dFromCenter = dist(t.clientX, t.clientY, GAME.joystick.startX, GAME.joystick.startY);
       if (dFromCenter < 120) { GAME.joystick.active = true; GAME.joystick.currentX = t.clientX; GAME.joystick.currentY = t.clientY; }
   });
-  
   GAME.canvas.addEventListener('touchmove', (e) => {
       if (!GAME.joystick.active) return;
       const t = e.touches[0];
@@ -687,7 +707,6 @@ function init() {
       GAME.joystick.currentX = GAME.joystick.startX + Math.cos(angle) * d;
       GAME.joystick.currentY = GAME.joystick.startY + Math.sin(angle) * d;
   }, { passive: true });
-  
   GAME.canvas.addEventListener('touchend', () => { GAME.joystick.active = false; GAME.joystick.currentX = GAME.joystick.startX; GAME.joystick.currentY = GAME.joystick.startY; });
 
   spawnEnemy(); loadMeta(); requestAnimationFrame(loop);
@@ -721,7 +740,6 @@ function update() {
   if (NET.conn) syncPlayer();
   if (NET.isHost && Date.now() - NET.lastSync > 100) { syncWorld(); NET.lastSync = Date.now(); }
 
-  // Only update enemies if local or host
   if (!NET.peer || NET.isHost || !NET.conn) {
     GAME.entities.enemies.forEach((e, i) => {
         e.update(p);
@@ -729,11 +747,6 @@ function update() {
     });
   }
   
-  for (const id in NET.others) {
-      const other = NET.others[id];
-      // Basic interpolation could go here
-  }
-
   GAME.orbiters.forEach(o => o.update());
   GAME.entities.fire.forEach((f, i) => { f.update(); if (f.life <= 0) GAME.entities.fire.splice(i, 1); });
 
@@ -765,12 +778,10 @@ function render() {
   ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
   ctx.scale(GAME.zoom, GAME.zoom);
   const camX = cam.x / GAME.zoom, camY = cam.y / GAME.zoom;
-  
   GAME.stars.forEach(s => {
       const sx = (s.x - camX * 0.1) % (GAME.canvas.width/GAME.zoom), sy = (s.y - camY * 0.1) % (GAME.canvas.height/GAME.zoom);
       ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`; ctx.beginPath(); ctx.arc(sx<0?sx+(GAME.canvas.width/GAME.zoom):sx, sy<0?sy+(GAME.canvas.height/GAME.zoom):sy, s.size, 0, Math.PI*2); ctx.fill();
   });
-  
   const hexRadius = 60, hexHeight = hexRadius * Math.sqrt(3);
   const startCol = Math.floor(camX / (hexRadius * 1.5)) - 1, endCol = startCol + Math.ceil((GAME.canvas.width/GAME.zoom) / (hexRadius * 1.5)) + 2;
   const startRow = Math.floor(camY / hexHeight) - 1, endRow = startRow + Math.ceil((GAME.canvas.height/GAME.zoom) / hexHeight) + 2;
@@ -782,19 +793,14 @@ function render() {
       }
   }
   ctx.stroke();
-
   GAME.entities.fire.forEach(f => f.draw(ctx, {x:camX, y:camY}));
   GAME.entities.gems.forEach(g => g.draw(ctx, {x:camX, y:camY}));
   GAME.entities.projectiles.forEach(p => p.draw(ctx, {x:camX, y:camY}));
   if (GAME.orbiters) GAME.orbiters.forEach(o => o.draw(ctx, {x:camX, y:camY}));
   GAME.entities.enemies.forEach(e => e.draw(ctx, {x:camX, y:camY}));
-  
-  // Render other players
   for (const id in NET.others) NET.others[id].draw(ctx, {x:camX, y:camY});
-  
   if (GAME.entities.player) GAME.entities.player.draw(ctx, {x:camX, y:camY});
   ctx.restore(); 
-  
   if (window.innerWidth < 850) {
       ctx.save(); const sx = GAME.joystick.startX, sy = GAME.joystick.startY, cx = GAME.joystick.currentX, cy = GAME.joystick.currentY;
       ctx.beginPath(); ctx.arc(sx, sy, 75, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 2; ctx.stroke();
