@@ -59,7 +59,7 @@ const GAME = {
   time: 0,
   lastBossTime: 0,
   speedFactor: 1.0,
-  upgradeOptionsCount: 3, // NEW: Session based upgrade count
+  upgradeOptionsCount: 3,
   entities: {
     player: null,
     enemies: [],
@@ -260,7 +260,7 @@ class Orbiter {
     constructor(parent, index, count) {
         this.parent = parent; this.index = index;
         this.angle = (index / count) * Math.PI * 2;
-        this.radius = 120; this.size = 12; this.speed = 0.06; this.damage = 75; // 3x Increase (was 25)
+        this.radius = 120; this.size = 12; this.speed = 0.06; this.damage = 75;
     }
     update() { this.angle += this.speed * GAME.speedFactor; }
     draw(ctx, cam) {
@@ -453,7 +453,6 @@ function showLevelUp() {
     const container = document.getElementById('upgrade-options');
     container.innerHTML = '';
     
-    // Use SESSION BASED Upgrade Options Count
     const selected = [...CONFIG.UPGRADES].sort(() => 0.5 - Math.random()).slice(0, GAME.upgradeOptionsCount);
     selected.forEach(u => {
         const card = document.createElement('div'); card.className = 'upgrade-card';
@@ -466,7 +465,7 @@ function showLevelUp() {
 function applyUpgrade(id) {
     const p = GAME.entities.player;
     switch(id) {
-        case 'damage': p.damage *= 2.0; break; // 2x TO DAMAGE
+        case 'damage': p.damage *= 2.0; break;
         case 'speed': p.speed *= 1.15; break;
         case 'count': p.projectileCount += 1; break;
         case 'firerate': p.fireRate *= 0.8; break;
@@ -481,7 +480,7 @@ function applyUpgrade(id) {
         case 'pierce': p.pierceCount += 1; break;
         case 'size': p.projSize *= 1.3; break;
         case 'crit': p.critChance += 0.15; break;
-        case 'luck': GAME.upgradeOptionsCount = 4; break; // LUCK MECHANIC OVERHAUL
+        case 'luck': GAME.upgradeOptionsCount = 4; break;
         case 'orbit': p.orbitals += 1; break;
         case 'knockback': p.knockbackForce *= 1.5; break;
         case 'xpboost': p.xpMultiplier += 0.2; break;
@@ -632,7 +631,7 @@ function showMetaMenu() {
 function startGame() { resetGame(); GAME.active = true; document.getElementById('menu-modal').classList.remove('active'); document.getElementById('pause-modal').classList.remove('active'); }
 
 function resetGame() {
-    GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0; GAME.upgradeOptionsCount = 3; // Reset session-based luck
+    GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0; GAME.upgradeOptionsCount = 3;
     GAME.entities.player = new Player(); GAME.entities.enemies = []; GAME.entities.projectiles = []; GAME.entities.gems = []; GAME.entities.particles = []; GAME.entities.fire = [];
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     updateUI();
@@ -657,10 +656,32 @@ function update() {
 
   GAME.entities.projectiles.forEach((proj, pIndex) => {
     proj.update(); if (proj.life <= 0) { GAME.entities.projectiles.splice(pIndex, 1); return; }
+    
+    let hitSomething = false;
     GAME.entities.enemies.forEach((enemy, eIndex) => {
         if (!proj.hitEnemies.has(enemy) && dist(proj.x, proj.y, enemy.x, enemy.y) < proj.radius + enemy.radius) {
             enemy.hp -= proj.damage; proj.hitEnemies.add(enemy);
-            if (proj.pierce > 1) proj.pierce--; else if (proj.pierce !== Infinity) GAME.entities.projectiles.splice(pIndex, 1);
+            hitSomething = true;
+
+            // Handle Bounce FIRST
+            if (proj.bounce > 0) {
+                const targets = GAME.entities.enemies.filter(e => e !== enemy && !proj.hitEnemies.has(e));
+                if (targets.length > 0) {
+                    const next = targets.sort((a,b) => dist(proj.x, proj.y, a.x, a.y) - dist(proj.x, proj.y, b.x, b.y))[0];
+                    const angle = Math.atan2(next.y - proj.y, next.x - proj.x);
+                    proj.vx = Math.cos(angle) * CONFIG.PROJECTILE_SPEED;
+                    proj.vy = Math.sin(angle) * CONFIG.PROJECTILE_SPEED;
+                    proj.bounce--;
+                }
+            }
+
+            // Handle Pierce
+            if (proj.pierce > 1) {
+                proj.pierce--;
+            } else if (proj.pierce !== Infinity && proj.bounce <= 0) {
+                GAME.entities.projectiles.splice(pIndex, 1);
+            }
+
             if (enemy.hp <= 0) {
                 AudioEngine.play('hit'); GAME.entities.gems.push(new Gem(enemy.x, enemy.y)); GAME.entities.enemies.splice(eIndex, 1); GAME.kills++; updateUI();
             }
