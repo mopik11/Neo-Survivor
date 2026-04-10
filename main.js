@@ -2,6 +2,15 @@
  * NEO SURVIVOR - Core Game Logic
  */
 
+// Error catching
+window.onerror = function(msg, url, line, col, error) {
+    alert("KRITICKÁ CHYBA: " + msg + "\nNa lince: " + line);
+    console.error(error);
+    return false;
+};
+
+console.warn("SCRIPT: Neo Survivor načten.");
+
 const CONFIG = {
   PLAYER_BASE_SPEED: 4,
   PLAYER_BASE_HEALTH: 120,
@@ -547,15 +556,15 @@ function toggleFullscreen(element, force = false) {
 // MULTIPLAYER LOGIC
 function initPeer() {
     if (NET.peer) return;
-    console.log("NET: Inicializace PeerJS...");
+    console.warn("NET: Inicializace PeerJS...");
     NET.peer = new Peer();
     NET.peer.on('open', (id) => {
-        console.log("NET: Peer otevřen s ID:", id);
+        console.warn("NET: Peer otevřen s ID:", id);
         NET.roomId = id;
         document.getElementById('my-id-display').innerText = id;
     });
     NET.peer.on('connection', (c) => {
-        console.log("NET: Přijato nové připojení od:", c.peer);
+        console.warn("NET: Přijato nové připojení od:", c.peer);
         NET.conn = c; NET.isHost = true; setupConn();
         startGame();
     });
@@ -566,9 +575,9 @@ function initPeer() {
 }
 
 function setupConn() {
-    console.log("NET: Nastavování data handleru...");
+    console.warn("NET: Nastavování data handleru...");
     NET.conn.on('open', () => {
-        console.log("NET: Připojení plně otevřeno.");
+        console.warn("NET: Připojení plně otevřeno.");
     });
     NET.conn.on('data', (data) => {
         if (data.type === 'PLAYER_SYNC') {
@@ -589,10 +598,6 @@ function setupConn() {
             GAME.entities.gems = data.gems.map(hg => new Gem(hg.x, hg.y, hg.id));
             GAME.time = data.time;
         }
-    });
-    NET.conn.on('close', () => {
-        console.warn("NET: Připojení uzavřeno kamošem.");
-        alert("Kámoš se odpojil.");
     });
 }
 
@@ -623,6 +628,7 @@ function syncWorld() {
 }
 
 function init() {
+  console.warn("INIT: Hra se spouští...");
   GAME.canvas = document.getElementById('game-canvas');
   GAME.ctx = GAME.canvas.getContext('2d');
   updateSpeedFactor();
@@ -642,32 +648,17 @@ function init() {
   });
 
   document.getElementById('btn-start').onclick = () => { NET.conn = null; NET.isHost = false; const isMobile = window.innerWidth < 850; if (isMobile) toggleFullscreen(document.documentElement, true); AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
-  document.getElementById('btn-multiplayer').onclick = () => { initPeer(); document.getElementById('multiplayer-modal').classList.add('active'); };
+  document.getElementById('btn-multiplayer').onclick = () => { console.warn("INIT: Multiplayer tlačítko kliknuto."); initPeer(); document.getElementById('multiplayer-modal').classList.add('active'); };
   document.getElementById('btn-close-mp').onclick = () => document.getElementById('multiplayer-modal').classList.remove('active');
-  document.getElementById('btn-create-host').onclick = () => { console.log("NET: Čekání na připojení..."); alert("Čekání na kámoše... Pošli mu kód: " + NET.roomId); };
+  document.getElementById('btn-create-host').onclick = () => { alert("Čekání na kámoše... Pošli mu kód: " + NET.roomId); };
   document.getElementById('btn-join-room').onclick = () => {
       const id = document.getElementById('input-join-id').value.trim();
-      console.log("NET: Pokus o připojení k ID:", id);
-      if (!id) { console.warn("NET: Žádné ID zadáno."); return; }
-      
-      try {
-          NET.conn = NET.peer.connect(id);
-          NET.isHost = false;
-          console.log("NET: Inicilizováno spojení...", NET.conn);
-          
-          NET.conn.on('open', () => {
-              console.log("NET: Spojení navázáno! Zapínám hru.");
-              setupConn(); startGame();
-          });
-          
-          NET.conn.on('error', (err) => {
-              console.error("NET: Chyba spojení:", err);
-              alert("Nepodařilo se připojit: " + err);
-          });
-          
-      } catch (e) {
-          console.error("NET: Kritická chyba při connect:", e);
-      }
+      console.warn("NET: Připojuji se k:", id);
+      if (!id) return;
+      NET.conn = NET.peer.connect(id);
+      NET.isHost = false;
+      NET.conn.on('open', () => { console.warn("NET: Připojení OK!"); setupConn(); startGame(); });
+      NET.conn.on('error', (e) => { console.error("NET: Chyba!", e); alert("Chyba: " + e); });
   };
 
   const btnMeta = document.getElementById('btn-meta-menu');
