@@ -56,7 +56,7 @@ canvas {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 100;
+  z-index: 5000;
   padding: 1.5rem;
 }
 
@@ -98,6 +98,8 @@ canvas {
   gap: 8px;
   font-size: 0.85rem;
   box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  pointer-events: auto !important;
+  cursor: pointer;
 }
 
 .hp-container {
@@ -319,6 +321,23 @@ canvas {
     padding-right: 10px;
   }
 
+  .top-bar {
+    gap: 6px !important;
+    justify-content: space-between !important;
+    padding: 0 !important;
+  }
+
+  .stat-chip {
+    padding: 6px 12px !important;
+    font-size: 0.75rem !important;
+    gap: 4px !important;
+  }
+
+  #mobile-pause {
+    padding: 8px !important;
+    font-size: 1rem !important;
+  }
+
   .controls-hint {
     flex-direction: column;
     gap: 10px;
@@ -328,6 +347,11 @@ canvas {
   .fs-button {
       display: none !important;
   }
+}
+
+#mobile-pause:active {
+  transform: scale(0.9) !important;
+  filter: brightness(0.8) !important;
 }
 
 :fullscreen, :-webkit-full-screen {

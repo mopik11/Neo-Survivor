@@ -58,7 +58,7 @@ const GAME = {
   kills: 0,
   time: 0,
   lastBossTime: 0,
-  speedFactor: 1.0, // Dynamic speed scaling
+  speedFactor: 1.0,
   entities: {
     player: null,
     enemies: [],
@@ -77,7 +77,6 @@ const GAME = {
 };
 
 const updateSpeedFactor = () => {
-    // Normalizing speed based on 1200px width reference
     const baseWidth = 1200;
     GAME.speedFactor = Math.max(0.4, Math.min(1.2, window.innerWidth / baseWidth));
 };
@@ -414,7 +413,8 @@ function updateUI() {
   document.getElementById('level-display').innerText = `LVL ${p.level}`;
   document.getElementById('kill-count').innerText = GAME.kills;
   const sRatio = Math.min(1, (Date.now() - GAME.lastSniperTime) / CONFIG.SNIPER_COOLDOWN);
-  document.getElementById('sniper-bar').style.width = `${sRatio * 100}%`;
+  const sBar = document.getElementById('sniper-bar');
+  if (sBar) sBar.style.width = `${sRatio * 100}%`;
 }
 
 function showLevelUp() {
@@ -511,13 +511,10 @@ function init() {
     }
   });
 
-  // UI Button Listeners - Enhanced with Fullscreen logic
   const handleStart = () => {
     const isMobile = window.innerWidth < 850;
     if (isMobile) toggleFullscreen(document.documentElement);
-    AudioEngine.init(); 
-    AudioEngine.startMusic(); 
-    startGame();
+    AudioEngine.init(); AudioEngine.startMusic(); startGame();
   };
 
   const btnStart = document.getElementById('btn-start');
@@ -532,8 +529,11 @@ function init() {
   const btnResume = document.getElementById('btn-resume');
   if(btnResume) btnResume.onclick = togglePause;
   
-  const btnPauseMobile = document.getElementById('mobile-pause');
-  if(btnPauseMobile) btnPauseMobile.onclick = togglePause;
+  const btnMobilePause = document.getElementById('mobile-pause');
+  if(btnMobilePause) btnMobilePause.onclick = (e) => { e.stopPropagation(); togglePause(); };
+  
+  const fsToggle = document.getElementById('fs-toggle');
+  if (fsToggle) fsToggle.onclick = (e) => { e.stopPropagation(); toggleFullscreen(document.documentElement); };
   
   const btnRestart = document.getElementById('btn-restart-game');
   if(btnRestart) btnRestart.onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); AudioEngine.startMusic(); startGame(); };
@@ -541,9 +541,6 @@ function init() {
   document.querySelectorAll('.btn-reload').forEach(btn => {
       btn.onclick = () => location.reload();
   });
-
-  const fsToggle = document.getElementById('fs-toggle');
-  if (fsToggle) fsToggle.onclick = () => toggleFullscreen(document.documentElement);
 
   document.addEventListener('visibilitychange', () => {
       if (document.hidden && GAME.active && !GAME.paused) togglePause();
@@ -633,7 +630,7 @@ function update() {
   });
   GAME.entities.gems.forEach((g, i) => { g.update(p); if (dist(p.x, p.y, g.x, g.y) < p.radius + g.radius) { AudioEngine.play('gem'); p.addXp(10 * p.luckFactor); GAME.entities.gems.splice(i, 1); } });
   GAME.entities.particles.forEach((part, i) => { part.update(); if (part.life <= 0) GAME.entities.particles.splice(i, 1); });
-  updateUI(); // Keep UI updated
+  updateUI();
 }
 
 function render() {
@@ -644,7 +641,6 @@ function render() {
       ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`; ctx.beginPath(); ctx.arc(sx<0?sx+GAME.canvas.width:sx, sy<0?sy+GAME.canvas.height:sy, s.size, 0, Math.PI*2); ctx.fill();
   });
   
-  // FIXED Hex Grid Rendering
   const hexRadius = 60;
   const hexHeight = hexRadius * Math.sqrt(3);
   const startCol = Math.floor(cam.x / (hexRadius * 1.5)) - 1;
