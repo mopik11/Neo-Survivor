@@ -484,38 +484,71 @@ function init() {
     }
   });
 
-  const btnMeta = document.getElementById('btn-meta-menu');
-  if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+  // UI Button Listeners - Simplified for maximum compatibility
+  const setupButton = (idOrClass, callback) => {
+    const isClass = idOrClass.startsWith('.');
+    const elements = isClass 
+        ? document.querySelectorAll(idOrClass) 
+        : [document.getElementById(idOrClass)];
+    
+    elements.forEach(btn => {
+        if (btn) {
+            btn.onclick = () => {
+                callback();
+            };
+        }
+    });
+  };
+
+  setupButton('btn-meta-menu', () => { 
+    showMetaMenu(); 
+    document.getElementById('meta-modal').classList.add('active'); 
+  });
   
-  const btnCloseMeta = document.getElementById('btn-close-meta');
-  if (btnCloseMeta) btnCloseMeta.onclick = () => { document.getElementById('meta-modal').classList.remove('active'); };
+  setupButton('btn-close-meta', () => { 
+    document.getElementById('meta-modal').classList.remove('active'); 
+  });
   
-  const btnResume = document.getElementById('btn-resume');
-  if (btnResume) btnResume.onclick = togglePause;
+  setupButton('btn-resume', togglePause);
   
-  const btnStart = document.getElementById('btn-start');
-  if (btnStart) btnStart.onclick = () => { AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
+  setupButton('btn-start', () => { 
+    AudioEngine.init(); 
+    AudioEngine.startMusic(); 
+    startGame(); 
+  });
   
-  const btnRestart = document.getElementById('btn-restart-game');
-  if (btnRestart) btnRestart.onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); AudioEngine.startMusic(); startGame(); };
+  setupButton('btn-restart-game', () => { 
+    document.getElementById('gameover-modal').classList.remove('active'); 
+    AudioEngine.startMusic(); 
+    startGame(); 
+  });
+
+  setupButton('.btn-reload', () => {
+    location.reload();
+  });
+  document.getElementById('btn-meta-menu').onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+  document.getElementById('btn-close-meta').onclick = () => { document.getElementById('meta-modal').classList.remove('active'); };
+  document.getElementById('btn-resume').onclick = togglePause;
+  document.getElementById('btn-start').onclick = () => { AudioEngine.init(); AudioEngine.startMusic(); startGame(); };
+  document.getElementById('btn-restart-game').onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); AudioEngine.startMusic(); startGame(); };
+  document.querySelectorAll('.btn-reload').forEach(b => b.onclick = () => location.reload());
 
   document.addEventListener('visibilitychange', () => {
       if (document.hidden && GAME.active && !GAME.paused) togglePause();
   });
 
-  if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-      document.body.classList.add('mobile');
-  }
-
   GAME.canvas.addEventListener('touchstart', (e) => {
+      if (!GAME.active || GAME.paused) return;
       const t = e.touches[0];
       GAME.joystick.active = true; GAME.joystick.startX = t.clientX; GAME.joystick.startY = t.clientY;
       GAME.joystick.currentX = t.clientX; GAME.joystick.currentY = t.clientY;
-  });
+  }, { passive: true });
+  
   GAME.canvas.addEventListener('touchmove', (e) => {
       if (!GAME.joystick.active) return;
       GAME.joystick.currentX = e.touches[0].clientX; GAME.joystick.currentY = e.touches[0].clientY;
-  });
+  }, { passive: true });
+  
   GAME.canvas.addEventListener('touchend', () => { GAME.joystick.active = false; });
 
   spawnEnemy(); loadMeta(); requestAnimationFrame(loop);
@@ -525,6 +558,15 @@ function fireSniper(cx, cy) {
     const p = GAME.entities.player, cam = GAME.camera;
     const proj = new Projectile(p.x, p.y, cx + cam.x, cy + cam.y, p.damage * 10, { size: 12, pierce: 50 });
     GAME.entities.projectiles.push(proj); shakeScreen(15); AudioEngine.play('lvlup');
+}
+
+.modal.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal.active * {
+  pointer-events: auto;
 }
 
 const META_UPGRADES = [

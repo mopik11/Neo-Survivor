@@ -8,6 +8,7 @@
   </head>
   <body>
     <div id="app">
+      <div class="scanlines"></div>
       <canvas id="game-canvas"></canvas>
       
       <div id="ui-layer">
@@ -75,7 +76,7 @@
           </div>
           <div class="menu-actions">
             <button class="btn-restart" id="btn-restart-game">ZKUSIT ZNOVU</button>
-            <button class="btn-restart" onclick="location.reload()" style="background: rgba(120, 120, 120, 0.2); box-shadow: none;">MENU</button>
+            <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.2); box-shadow: none;">MENU</button>
           </div>
         </div>
       </div>
@@ -85,13 +86,11 @@
           <h1 class="logo">PAUZA</h1>
           <div class="menu-actions">
             <button class="btn-restart" id="btn-resume">POKRAČOVAT</button>
-            <button class="btn-restart" onclick="location.reload()" style="background: rgba(120, 120, 120, 0.2); box-shadow: none;">MENU</button>
+            <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.2); box-shadow: none;">MENU</button>
           </div>
         </div>
       </div>
-
-      <div class="scanlines"></div>
     </div>
-    <script type="module" src="/main.js"></script>
+    <script src="main.js"></script>
   </body>
 </html>

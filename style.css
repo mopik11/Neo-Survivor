@@ -36,6 +36,8 @@ body {
 
 canvas {
   display: block;
+  position: relative;
+  z-index: 0;
 }
 
 /* UI Layer */
@@ -258,7 +260,7 @@ canvas {
   );
   background-size: 100% 4px, 3px 100%;
   pointer-events: none;
-  z-index: 500;
+  z-index: 1;
 }
 
 .boss-warning {
@@ -294,28 +296,77 @@ canvas {
   box-shadow: 0 0 10px var(--accent-color);
 }
 
-/* Mobile Specifics */
-body.mobile .modal-content {
-  width: 95vw;
-  min-width: unset;
-  padding: 2rem;
-}
+/* Mobile & Tablet Responsiveness */
+@media screen and (max-width: 850px) {
+  .modal {
+    justify-content: flex-start !important;
+    overflow-y: auto !important;
+    padding: 1.5rem 0 !important;
+  }
 
-body.mobile .logo {
-  font-size: 3.5rem;
-}
+  .modal-content {
+    width: 94vw !important;
+    min-width: unset !important;
+    padding: 2rem 1rem !important;
+    border-radius: 20px !important;
+    margin: 1rem auto !important;
+    transform: scale(1) !important;
+  }
 
-body.mobile .upgrade-grid {
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
+  .logo {
+    font-size: 2.2rem !important;
+    letter-spacing: -1px !important;
+  }
 
-body.mobile .stat-chip {
-  padding: 6px 12px;
-  font-size: 0.7rem;
-}
+  .subtitle {
+    font-size: 0.75rem !important;
+    letter-spacing: 2px !important;
+    margin-bottom: 2rem !important;
+  }
 
-body.mobile .btn-restart {
-  padding: 1rem 2rem;
-  font-size: 0.9rem;
+  .menu-actions {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 12px !important;
+    margin-top: 2rem !important;
+  }
+
+  .btn-restart {
+    width: 100% !important;
+    padding: 1.2rem !important;
+    font-size: 1.1rem !important;
+    display: block !important;
+  }
+
+  .upgrade-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    max-height: 40vh !important;
+  }
+
+  .stat-chip {
+    padding: 10px 15px !important;
+    font-size: 0.8rem !important;
+  }
+
+  #ui-layer {
+    padding: 1rem !important;
+  }
+
+  .top-bar {
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .hp-container {
+    width: 220px !important;
+    bottom: 2rem !important;
+  }
+
+  .controls-hint {
+    flex-direction: column !important;
+    gap: 8px !important;
+    margin-top: 2rem !important;
+    font-size: 0.8rem !important;
+  }
 }
