@@ -589,7 +589,13 @@ function init() {
   if(btnRestart) btnRestart.onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); AudioEngine.startMusic(); startGame(); };
 
   document.querySelectorAll('.btn-reload').forEach(btn => {
-      btn.onclick = () => location.reload();
+      btn.onclick = (e) => {
+          e.stopPropagation();
+          GAME.active = false; GAME.paused = false;
+          document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+          document.getElementById('menu-modal').classList.add('active');
+          resetGame(); // Properly reset state without reloading
+      };
   });
 
   document.addEventListener('visibilitychange', () => {
