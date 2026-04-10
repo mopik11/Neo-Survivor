@@ -58,6 +58,7 @@ const GAME = {
   kills: 0,
   time: 0,
   lastBossTime: 0,
+  speedFactor: 1.0, // Dynamic speed scaling
   entities: {
     player: null,
     enemies: [],
@@ -73,6 +74,12 @@ const GAME = {
   lastSniperTime: 0,
   canvas: null,
   ctx: null
+};
+
+const updateSpeedFactor = () => {
+    // Normalizing speed based on 1200px width reference
+    const baseWidth = 1200;
+    GAME.speedFactor = Math.max(0.4, Math.min(1.2, window.innerWidth / baseWidth));
 };
 
 const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
@@ -167,8 +174,8 @@ class Particle {
     this.life = 1.0; this.decay = randomRange(0.01, 0.03);
   }
   update() {
-    this.x += Math.cos(this.angle) * this.speed;
-    this.y += Math.sin(this.angle) * this.speed;
+    this.x += Math.cos(this.angle) * this.speed * GAME.speedFactor;
+    this.y += Math.sin(this.angle) * this.speed * GAME.speedFactor;
     this.life -= this.decay;
   }
   draw(ctx, cam) {
@@ -191,7 +198,11 @@ class Projectile {
     this.bounce = stats.bounce || 0;
     this.hitEnemies = new Set();
   }
-  update() { this.x += this.vx; this.y += this.vy; this.life--; }
+  update() { 
+    this.x += this.vx * GAME.speedFactor; 
+    this.y += this.vy * GAME.speedFactor; 
+    this.life--; 
+  }
   draw(ctx, cam) {
     ctx.shadowBlur = 15; ctx.shadowColor = '#6366f1';
     ctx.fillStyle = '#f8fafc';
@@ -207,11 +218,11 @@ class Gem {
     if (d < player.magnetRange) this.attracted = true;
     if (player.ultraMagnet) {
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
-        this.x += Math.cos(angle) * 0.8; this.y += Math.sin(angle) * 0.8;
+        this.x += Math.cos(angle) * 0.8 * GAME.speedFactor; this.y += Math.sin(angle) * 0.8 * GAME.speedFactor;
     }
     if (this.attracted) {
       const angle = Math.atan2(player.y - this.y, player.x - this.x);
-      this.x += Math.cos(angle) * 14; this.y += Math.sin(angle) * 14;
+      this.x += Math.cos(angle) * 14 * GAME.speedFactor; this.y += Math.sin(angle) * 14 * GAME.speedFactor;
     }
   }
   draw(ctx, cam) {
@@ -228,7 +239,7 @@ class Orbiter {
         this.angle = (index / count) * Math.PI * 2;
         this.radius = 120; this.size = 12; this.speed = 0.06; this.damage = 20;
     }
-    update() { this.angle += this.speed; }
+    update() { this.angle += this.speed * GAME.speedFactor; }
     draw(ctx, cam) {
         const x = this.parent.x + Math.cos(this.angle) * this.radius;
         const y = this.parent.y + Math.sin(this.angle) * this.radius;
@@ -257,7 +268,7 @@ class Boss {
     const angle = Math.atan2(player.y - this.y, player.x - this.x);
     let speedScale = player.level < 10 ? 0.8 : 1.0;
     if (player.aura && dist(this.x, this.y, player.x, player.y) < player.auraRange) speedScale *= 0.5;
-    const currentSpeed = this.speed * speedScale;
+    const currentSpeed = this.speed * speedScale * GAME.speedFactor;
     this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
     this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
     this.knockback.x *= 0.9; this.knockback.y *= 0.9;
@@ -293,7 +304,7 @@ class Enemy {
     const angle = Math.atan2(player.y - this.y, player.x - this.x);
     let speedScale = player.level < 10 ? 0.8 : 1.0;
     if (player.aura && dist(this.x, this.y, player.x, player.y) < player.auraRange) speedScale *= 0.5;
-    const currentSpeed = this.speed * speedScale;
+    const currentSpeed = this.speed * speedScale * GAME.speedFactor;
     this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
     this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
     this.knockback.x *= 0.8; this.knockback.y *= 0.8;
@@ -339,7 +350,7 @@ class Player {
     }
     if (dx !== 0 || dy !== 0) {
       const angle = Math.atan2(dy, dx);
-      this.x += Math.cos(angle) * this.speed; this.y += Math.sin(angle) * this.speed;
+      this.x += Math.cos(angle) * this.speed * GAME.speedFactor; this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
     }
     const now = Date.now();
     if (this.regen > 0 && now - this.lastRegen > 1000) {
@@ -479,7 +490,11 @@ function toggleFullscreen(element) {
 function init() {
   GAME.canvas = document.getElementById('game-canvas');
   GAME.ctx = GAME.canvas.getContext('2d');
-  window.addEventListener('resize', () => { GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight; });
+  updateSpeedFactor();
+  window.addEventListener('resize', () => { 
+      GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight; 
+      updateSpeedFactor();
+  });
   GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight;
   resetGame();
   
@@ -516,6 +531,9 @@ function init() {
   
   const btnResume = document.getElementById('btn-resume');
   if(btnResume) btnResume.onclick = togglePause;
+  
+  const btnPauseMobile = document.getElementById('mobile-pause');
+  if(btnPauseMobile) btnPauseMobile.onclick = togglePause;
   
   const btnRestart = document.getElementById('btn-restart-game');
   if(btnRestart) btnRestart.onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); AudioEngine.startMusic(); startGame(); };
@@ -615,6 +633,7 @@ function update() {
   });
   GAME.entities.gems.forEach((g, i) => { g.update(p); if (dist(p.x, p.y, g.x, g.y) < p.radius + g.radius) { AudioEngine.play('gem'); p.addXp(10 * p.luckFactor); GAME.entities.gems.splice(i, 1); } });
   GAME.entities.particles.forEach((part, i) => { part.update(); if (part.life <= 0) GAME.entities.particles.splice(i, 1); });
+  updateUI(); // Keep UI updated
 }
 
 function render() {
