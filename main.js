@@ -73,11 +73,11 @@ const GAME = {
   input: { w: false, a: false, s: false, d: false },
   joystick: { 
       active: false, 
-      startX: 100, 
+      startX: 80, 
       startY: 0,   
-      currentX: 100, 
+      currentX: 80, 
       currentY: 0,
-      radius: 90
+      radius: 75
   },
   stars: [],
   orbiters: [],
@@ -92,9 +92,11 @@ const updateSpeedFactor = () => {
     GAME.speedFactor = Math.max(0.4, Math.min(1.2, window.innerWidth / baseWidth));
     GAME.zoom = isMobile ? 0.7 : 1.0;
     
-    // MOVED MORE TO CORNER (LEFT DOWN)
-    GAME.joystick.startX = 120;
-    GAME.joystick.startY = window.innerHeight - 120;
+    // JOYSTICK ABSOLUTELY IN THE CORNER (5px margin)
+    // Radius is 75, so center at 80 for 5px gap
+    GAME.joystick.startX = 80;
+    GAME.joystick.startY = window.innerHeight - 80;
+    
     if (!GAME.joystick.active) {
         GAME.joystick.currentX = GAME.joystick.startX;
         GAME.joystick.currentY = GAME.joystick.startY;
@@ -556,8 +558,11 @@ function init() {
   
   GAME.canvas.addEventListener('mousedown', (e) => {
     if (!GAME.active || GAME.paused) return;
+    const rect = GAME.canvas.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) / GAME.zoom;
+    const sy = (e.clientY - rect.top) / GAME.zoom;
     if (Date.now() - GAME.lastSniperTime >= CONFIG.SNIPER_COOLDOWN) {
-        fireSniper(e.clientX, e.clientY); GAME.lastSniperTime = Date.now();
+        fireSniper(sx, sy); GAME.lastSniperTime = Date.now();
     }
   });
 
@@ -571,15 +576,11 @@ function init() {
   if(btnStart) btnStart.onclick = handleStart;
   
   const btnMeta = document.getElementById('btn-meta-menu');
-  if(btnMeta) btnMeta.onclick = () => { 
-      showMetaMenu(); 
-      document.getElementById('meta-modal').classList.add('active');
-  };
+  if(btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
   
   const btnCloseMeta = document.getElementById('btn-close-meta');
   if(btnCloseMeta) btnCloseMeta.onclick = () => { 
       document.getElementById('meta-modal').classList.remove('active');
-      // Ensure we RE-REQUEST Fullscreen on return if we are on mobile
       if (window.innerWidth < 850) toggleFullscreen(document.documentElement, true);
   };
   
@@ -612,18 +613,17 @@ function init() {
   GAME.canvas.addEventListener('touchstart', (e) => {
       if (!GAME.active || GAME.paused) return;
       const t = e.touches[0];
+      const rect = GAME.canvas.getBoundingClientRect();
+      const sx = (t.clientX - rect.left) / GAME.zoom;
+      const sy = (t.clientY - rect.top) / GAME.zoom;
       
       if (t.clientX > window.innerWidth / 2) {
           if (Date.now() - GAME.lastSniperTime >= CONFIG.SNIPER_COOLDOWN) {
-              const rect = GAME.canvas.getBoundingClientRect();
-              const sx = (t.clientX - rect.left) / GAME.zoom;
-              const sy = (t.clientY - rect.top) / GAME.zoom;
               fireSniper(sx, sy); GAME.lastSniperTime = Date.now();
           }
           return;
       }
       
-      // ONLY ACTIVATE IF INSIDE RADIUS
       const dFromCenter = dist(t.clientX, t.clientY, GAME.joystick.startX, GAME.joystick.startY);
       if (dFromCenter < 120) {
           GAME.joystick.active = true;
@@ -652,9 +652,11 @@ function init() {
 }
 
 function fireSniper(cx, cy) {
-    const p = GAME.entities.player, cam = GAME.camera;
-    const proj = new Projectile(p.x, p.y, cx + cam.x, cy + cam.y, p.damage * 10, { size: 12, pierce: Infinity });
-    GAME.entities.projectiles.push(proj); shakeScreen(15); AudioEngine.play('lvlup');
+  const p = GAME.entities.player, cam = GAME.camera;
+  const worldTargetX = cx + (cam.x / GAME.zoom);
+  const worldTargetY = cy + (cam.y / GAME.zoom);
+  const proj = new Projectile(p.x, p.y, worldTargetX, worldTargetY, p.damage * 10, { size: 12, pierce: Infinity });
+  GAME.entities.projectiles.push(proj); shakeScreen(15); AudioEngine.play('lvlup');
 }
 
 const META_UPGRADES = [
