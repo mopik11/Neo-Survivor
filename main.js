@@ -129,11 +129,66 @@ function shakeScreen(amount = 5) {
 const AudioEngine = {
     ctx: null,
     musicStarted: false,
+    menuInterval: null,
+    menuPlaying: false,
     init() {
         if (this.ctx) return;
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         } catch(e) { console.error("Audio init failed", e); }
+    },
+    startMenuMusic() {
+        if (!this.ctx || this.menuPlaying) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        this.menuPlaying = true;
+        const melody = [
+            { n: 329.63, d: 0.15, r: 0.25 }, // E
+            { n: 349.23, d: 0.15, r: 0.25 }, // F
+            { n: 392.00, d: 0.20, r: 0.50 }, // G (quarter rest)
+            { n: 329.63, d: 0.15, r: 0.25 }, // E
+            { n: 349.23, d: 0.15, r: 0.25 }, // F
+            { n: 392.00, d: 0.15, r: 0.25 }, // G
+            { n: 293.66, d: 0.15, r: 0.25 }, // D
+            { n: 261.63, d: 0.25, r: 0.60 }  // C (quarter rest)
+        ];
+        let idx = 0;
+        const playNext = () => {
+            if (!this.menuPlaying) return;
+            const note = melody[idx];
+            this.piano(note.n, note.d);
+            idx = (idx + 1) % melody.length;
+            this.menuInterval = setTimeout(playNext, note.r * 1000);
+        };
+        playNext();
+    },
+    stopMenuMusic() {
+        this.menuPlaying = false;
+        if (this.menuInterval) clearTimeout(this.menuInterval);
+    },
+    piano(freq, dur) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+        
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+        
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, now);
+        filter.frequency.exponentialRampToValueAtTime(400, now + dur + 0.5);
+        
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur + 1.2);
+        
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        
+        osc.start(now);
+        osc.stop(now + dur + 1.5);
     },
     play(type) {
         if (!this.ctx) return;
@@ -963,15 +1018,23 @@ function init() {
     if (Date.now() - GAME.lastSniperTime >= CONFIG.SNIPER_COOLDOWN) { fireSniper(sx, sy); GAME.lastSniperTime = Date.now(); }
   });
 
+  window.addEventListener('mousedown', () => { 
+      AudioEngine.init(); 
+      if (document.getElementById('menu-modal').classList.contains('active')) {
+          AudioEngine.startMenuMusic();
+      }
+  }, { once: true });
+
   document.getElementById('btn-start').onclick = () => { 
       NET.conn = null; NET.isHost = false; 
       toggleFullscreen(document.documentElement, true);
-      AudioEngine.init(); AudioEngine.startMusic(); startGame(); 
+      AudioEngine.init(); AudioEngine.stopMenuMusic(); AudioEngine.startMusic(); startGame(); 
   };
   document.getElementById('btn-multiplayer').onclick = (e) => { 
       if (e) e.preventDefault();
       document.getElementById('menu-modal').classList.remove('active'); 
       document.getElementById('multiplayer-modal').classList.add('active'); 
+      AudioEngine.init(); // Stay in menu music for now
       setTimeout(() => {
           try { initPeer(); LOBBY.init(); } catch(err) { console.error("Cloud init delayed:", err); }
       }, 50);
@@ -1029,7 +1092,12 @@ function fireSniper(cx, cy) {
   if (NET.conn) syncShot(proj);
 }
 
-function startGame() { resetGame(); GAME.active = true; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); }
+function startGame() { 
+    resetGame(); 
+    GAME.active = true; 
+    AudioEngine.stopMenuMusic();
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); 
+}
 
 function resetGame() {
     GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0;
