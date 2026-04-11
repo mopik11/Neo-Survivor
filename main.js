@@ -1,3 +1,70 @@
+import './style.css'
+import javascriptLogo from './assets/javascript.svg'
+import viteLogo from './assets/vite.svg'
+import heroImg from './assets/hero.png'
+import { setupCounter } from './counter.js'
+import { io } from 'socket.io-client'
+
+document.querySelector('#app').innerHTML = `
+<section id="center">
+  <div class="hero">
+    <img src="${heroImg}" class="base" width="170" height="179">
+    <img src="${javascriptLogo}" class="framework" alt="JavaScript logo"/>
+    <img src=${viteLogo} class="vite" alt="Vite logo" />
+  </div>
+  <div>
+    <h1>Get started</h1>
+    <p>Edit <code>src/main.js</code> and save to test <code>HMR</code></p>
+  </div>
+  <button id="counter" type="button" class="counter"></button>
+</section>
+
+<div class="ticks"></div>
+
+<section id="next-steps">
+  <div id="docs">
+    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
+    <h2>Documentation</h2>
+    <p>Your questions, answered</p>
+    <ul>
+      <li>
+        <a href="https://vite.dev/" target="_blank">
+          <img class="logo" src=${viteLogo} alt="" />
+          Explore Vite
+        </a>
+      </li>
+      <li>
+        <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank">
+          <img class="button-icon" src="${javascriptLogo}" alt="">
+          Learn more
+        </a>
+      </li>
+    </ul>
+  </div>
+  <div id="social">
+    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
+    <h2>Connect with us</h2>
+    <p>Join the Vite community</p>
+    <ul>
+      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
+      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
+      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
+      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
+    </ul>
+  </div>
+</section>
+
+<div class="ticks"></div>
+<section id="spacer"></section>
+`
+
+setupCounter(document.querySelector('#counter'))
+
+/**
+ * NEO SURVIVOR - Core Game Logic
+ */
+
+// Error catching
 window.onerror = function (msg, url, line, col, error) {
     alert("KRITICKÁ CHYBA: " + msg + "\nNa lince: " + line);
     console.error(error);
@@ -22,20 +89,24 @@ const CONFIG = {
         { id: 'firerate', name: 'Rychlá Palba', desc: '-20% prodleva útoku', icon: '🔥', rarity: 'common' },
         { id: 'shield', name: 'Energetický Štít', desc: 'Snížení poškození o 20%', icon: '🛡️', rarity: 'common' },
         { id: 'growth', name: 'Růst', desc: '+10% max HP a plný heal', icon: '🥗', rarity: 'common' },
+
         { id: 'count', name: 'Více Střel', desc: '+1 projektil navíc', icon: '🌀', rarity: 'uncommon' },
         { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřátely', icon: '🏹', rarity: 'uncommon' },
         { id: 'size', name: 'Obří Střely', desc: '+30% velikost projektilu', icon: '🌕', rarity: 'uncommon' },
         { id: 'xpboost', name: 'XP Multiplikátor', desc: '+20% bonus k XP', icon: '📈', rarity: 'uncommon' },
         { id: 'bounce', name: 'Odraz', desc: 'Střely se odráží k dalšímu cíli', icon: '🪃', rarity: 'uncommon' },
+
         { id: 'magnet', name: 'Magnet na XP', desc: '+50% dosah sběru', icon: '🧲', rarity: 'rare' },
         { id: 'crit', name: 'Kritické Zásahy', desc: '15% šance na 2x damage', icon: '💥', rarity: 'rare' },
         { id: 'knockback', name: 'Silný Odhoz', desc: '+50% sýla odhozu', icon: '💢', rarity: 'rare' },
+
         { id: 'regen', name: 'Regenerace', desc: 'Obnova 1 HP/s', icon: '💊', rarity: 'epic' },
         { id: 'ultramagnet', name: 'Ultra Magnet', desc: 'Pomalý sběr z celé mapy', icon: '🌌', rarity: 'epic' },
         { id: 'orbit', name: 'Orbitální Štít', desc: 'Vypustí rotující projektil', icon: '🪐', rarity: 'epic' },
         { id: 'lifesteal', name: 'Lifesteal', desc: '5% šance na heal při killu', icon: '🧛', rarity: 'epic' },
         { id: 'fire', name: 'Ohnivá Stopa', desc: 'Zanecháváš za sebou oheň', icon: '🔥', rarity: 'epic' },
         { id: 'kaktus', name: 'Kaktus', desc: 'Sáhni si a umřeš! (1x)', icon: '🌵', rarity: 'epic' },
+
         { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎', rarity: 'legendary' },
         { id: 'luck', name: 'Větší Výběr', desc: '4 možnosti při levelu', icon: '🍀', rarity: 'legendary' },
         { id: 'aura', name: 'Mrazivá Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' },
@@ -54,14 +125,10 @@ const CONFIG = {
 };
 
 const NET = {
-    peer: null,
-    conn: null,
-    isHost: false,
-    others: {},
+    socket: null,
     roomId: null,
-    lastSync: 0,
-    playerSyncThrottle: 0,
-    playersReady: new Set()
+    isMultiplayer: false,
+    others: {}
 };
 
 const META = {
@@ -342,6 +409,7 @@ class Fire {
         GAME.entities.enemies.forEach(e => {
             if (dist(this.x, this.y, e.x, e.y) < this.radius + e.radius) {
                 e.hp -= this.damage * (1 / 60);
+                if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: this.damage * (1 / 60) });
             }
         });
     }
@@ -422,7 +490,12 @@ class Orbiter {
         ctx.shadowBlur = 20; ctx.shadowColor = '#fbbf24'; ctx.fillStyle = '#f59e0b';
         ctx.beginPath(); ctx.arc(x - cam.x, y - cam.y, this.size, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
-        GAME.entities.enemies.forEach(e => { if (dist(x, y, e.x, e.y) < this.size + e.radius) { e.hp -= this.owner.damage * 0.3 * (3); } });
+        GAME.entities.enemies.forEach(e => {
+            if (dist(x, y, e.x, e.y) < this.size + e.radius) {
+                e.hp -= this.owner.damage * 0.3 * (3);
+                if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: this.owner.damage * 0.3 * 3 });
+            }
+        });
     }
 }
 
@@ -468,6 +541,7 @@ class Boss {
         this.knockback = { x: 0, y: 0 };
     }
     update() {
+        if (NET.isMultiplayer) return; // V MP ovládá nepřátele server
         const targets = getAllTargets();
         if (targets.length === 0) return;
         const baits = targets.filter(t => t.isBait);
@@ -520,6 +594,7 @@ class Enemy {
         this.knockback = { x: 0, y: 0 };
     }
     update() {
+        if (NET.isMultiplayer) return; // Server pohybuje nepřáteli
         const targets = getAllTargets();
         if (targets.length === 0) return;
         const baits = targets.filter(t => t.isBait);
@@ -535,7 +610,6 @@ class Enemy {
         this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
         this.knockback.x *= 0.8; this.knockback.y *= 0.8;
 
-        // Type 2 Mechanics: Shooting
         if (this.type === 2 && Date.now() - this.lastShot > this.shotInterval) {
             const pSpeed = CONFIG.ENEMY_BASE_SPEED * 1.2;
             GAME.entities.projectiles.push(new Projectile(this.x, this.y, target.x, target.y, 10, {
@@ -559,7 +633,6 @@ class Enemy {
             ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, 12); ctx.lineTo(-12, -12); ctx.closePath(); ctx.fill();
             ctx.restore(); ctx.shadowBlur = 0;
         } else if (this.type === 2) {
-            // Square shape, Purple (full) to Green (low)
             const r = Math.floor(168 * ratio + 34 * (1 - ratio));
             const g = Math.floor(85 * ratio + 197 * (1 - ratio));
             const b = Math.floor(247 * ratio + 94 * (1 - ratio));
@@ -567,7 +640,7 @@ class Enemy {
 
             ctx.shadowBlur = 20; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
-            ctx.rotate(Date.now() / 1000); // Rotating square for flair
+            ctx.rotate(Date.now() / 1000);
             ctx.fillRect(-15, -15, 30, 30);
             ctx.restore(); ctx.shadowBlur = 0;
         }
@@ -644,7 +717,7 @@ class Player {
         for (let i = 0; i < this.projectileCount; i++) {
             const proj = new Projectile(this.x, this.y, target.x, target.y, this.damage, { size: this.projSize, pierce: this.pierceCount, bounce: this.bounces });
             GAME.entities.projectiles.push(proj);
-            if (NET.peer && (NET.conn || NET.isHost)) syncShot(proj);
+            if (NET.isMultiplayer) syncShot(proj);
         }
         if (this.orbitals !== GAME.orbiters.length) {
             GAME.orbiters = []; for (let i = 0; i < this.orbitals; i++) GAME.orbiters.push(new Orbiter(this, i, this.orbitals));
@@ -667,19 +740,12 @@ class Player {
     }
     addXp(amount) {
         if (this.dead) return;
-        if (NET.conn && !NET.isHost) {
-            // Client: Just notify host, don't touch local XP
-            NET.conn.send({ type: 'PICKUP_XP', amount: amount });
-            return;
-        }
-        // Host or Solo logic
         const gain = Math.round(Number(amount) * this.xpMultiplier);
         if (isNaN(gain)) return;
         this.xp += gain;
         while (this.xp >= this.nextLevelXp) {
             this.levelUp();
         }
-        if (NET.isHost && NET.conn) syncState();
         updateUI();
     }
     levelUp() {
@@ -688,21 +754,14 @@ class Player {
         this.nextLevelXp = Math.floor(this.nextLevelXp * 1.25);
         AudioEngine.play('lvlup');
         console.warn("TEAM LEVEL UP:", this.level);
-
-        if (!NET.conn || NET.isHost) {
-            GAME.paused = true;
-            if (NET.isHost && NET.conn) {
-                NET.playersReady.clear();
-                NET.conn.send({ type: 'TRIGGER_LEVEL_UP' });
-            }
-            showLevelUp();
-        }
+        GAME.paused = true;
+        showLevelUp();
     }
 }
 
 function spawnEnemy() {
+    if (NET.isMultiplayer) return; // Server spawnuje nepřátele
     if (!GAME.active || GAME.paused) { setTimeout(spawnEnemy, 500); return; }
-    if (NET.peer && !NET.isHost && NET.conn) { setTimeout(spawnEnemy, 1000); return; }
     const alive = getAllAlivePlayers();
     if (alive.length === 0) { setTimeout(spawnEnemy, 1000); return; }
     const a = Math.random() * Math.PI * 2;
@@ -722,7 +781,6 @@ function spawnEnemy() {
 
     if (enemy.isBoss) { showBossWarning(); GAME.lastBossTime = GAME.time; }
     GAME.entities.enemies.push(enemy);
-    if (NET.isHost) syncWorld();
     setTimeout(spawnEnemy, Math.max(100, (CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60))));
 }
 
@@ -746,8 +804,7 @@ function updateUI() {
 
 function showLevelUp() {
     GAME.paused = true;
-    GAME.entities.enemies = []; // Clear all enemies on level up
-    if (NET.isHost) syncWorld();
+    if (!NET.isMultiplayer) GAME.entities.enemies = [];
     const modal = document.getElementById('levelup-modal');
     const container = document.getElementById('upgrade-options');
     container.innerHTML = '';
@@ -757,7 +814,6 @@ function showLevelUp() {
     const usedIds = new Set();
 
     while (selected.length < count && usedIds.size < CONFIG.UPGRADES.length) {
-        // Weighted Random Rarity
         const rand = Math.random() * 100;
         let rarity = 'common';
         if (rand < 5) rarity = 'legendary';
@@ -774,7 +830,6 @@ function showLevelUp() {
             selected.push(pick);
             usedIds.add(pick.id);
         } else {
-            // Fallback if no more items in this rarity
             const remaining = CONFIG.UPGRADES.filter(u => !usedIds.has(u.id));
             if (remaining.length === 0) break;
             const pick = remaining[Math.floor(Math.random() * remaining.length)];
@@ -833,26 +888,7 @@ function applyUpgrade(id) {
     } catch (e) { console.error("Upgrade error:", e); }
 
     document.getElementById('levelup-modal').classList.remove('active');
-
-    if (NET.conn) {
-        if (NET.isHost) {
-            NET.playersReady.add('host');
-            checkReadyState();
-        } else {
-            NET.conn.send({ type: 'PICKED_UPGRADE' });
-        }
-    } else {
-        GAME.paused = false;
-    }
-}
-
-function checkReadyState() {
-    // Only host checks this
-    if (NET.playersReady.has('host') && NET.playersReady.has('remote')) {
-        GAME.paused = false;
-        NET.playersReady.clear();
-        syncState();
-    }
+    GAME.paused = false;
 }
 
 function gameOver() {
@@ -865,10 +901,9 @@ function gameOver() {
 
 function togglePause() {
     if (!GAME.active) return;
-    if (NET.conn && !NET.isHost) return;
+    if (NET.isMultiplayer) return; // V MP nelze pauzovat hru
     GAME.paused = !GAME.paused;
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
-    if (NET.isHost && NET.conn) syncState();
 }
 
 function toggleFullscreen(element, force = false) {
@@ -911,196 +946,107 @@ function buyMetaUpgrade(item, cost) {
     META.currency -= cost; saveMeta(); showMetaMenu();
 }
 
-// MULTIPLAYER LOGIC
-function generateShortId() {
-    return Math.random().toString(36).substr(2, 6).toUpperCase();
-}
+// MULTIPLAYER LOGIC NODE.JS
+function initSocket() {
+    if (NET.socket) return;
 
-function initPeer(customId = null) {
-    if (NET.peer) {
-        if (customId && NET.peer.id !== customId) {
-            NET.peer.destroy();
-            NET.peer = null;
-        } else {
-            return;
-        }
-    }
-    
-    // Fix: Přidán správný prefix k Host ID, aby se Client dokázal připojit
-    const shortId = customId || "NEO_SERVER_" + generateShortId();
+    // TADY ZMĚŇ URL NA SVOU ADRESU Z RENDER.COM!
+    const SERVER_URL = "https://neo-survivor-server.onrender.com";
 
     try {
-        // High-performance Cloud Configuration
-        const config = {
-            config: {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun.anyfirewall.com:3478' }
-                ],
-                iceTransportPolicy: 'all'
-            }
-        };
-        NET.peer = new Peer(shortId, config);
+        NET.socket = io(SERVER_URL);
 
-        NET.peer.on('open', (id) => {
+        NET.socket.on('connect', () => {
+            console.warn("CLOUD: Připojeno k hernímu serveru!");
+        });
+
+        NET.socket.on('joined', (id) => {
             NET.roomId = id;
-            const displayId = id.replace("NEO_SERVER_", "");
-            console.warn("CLOUD: Připojeno k uzlu", id);
-            
-            // Oznámíme Hostovi jeho kód místnosti!
-            alert("✅ Server spuštěn!\nPošli tento kód kamarádovi pro připojení:\n\n" + displayId);
-        });
-
-        NET.peer.on('connection', (c) => {
-            NET.conn = c; NET.isHost = true; setupConn();
-            alert("🚀 Hráč se úspěšně připojil k tvé hře!");
+            NET.isMultiplayer = true;
+            document.getElementById('multiplayer-modal').classList.remove('active');
             startGame();
+            alert("Úspěšně ses připojil do místnosti: " + id);
         });
 
-        NET.peer.on('error', (err) => {
-            console.error("CLOUD Error:", err.type);
-            if (err.type === 'peer-unavailable') {
-                alert("❌ Hráč s tímto kódem nebyl nalezen. Zkontroluj kód.");
+        NET.socket.on('stateUpdate', (data) => {
+            if (!GAME.active) return;
+
+            // Sync Enemies
+            GAME.entities.enemies = data.enemies.map(he => {
+                const e = he.isBoss ? new Boss(he.x, he.y, 1, he.id) : new Enemy(he.x, he.y, 1, he.id, he.type);
+                e.hp = he.hp;
+                e.maxHp = he.maxHp;
+                return e;
+            });
+
+            // Sync Gems
+            GAME.entities.gems = data.gems.map(g => new Gem(g.x, g.y, g.id));
+
+            // Sync Others
+            const newOthers = {};
+            for (let pId in data.players) {
+                if (pId === NET.socket.id) continue; // to jsem já
+                if (!NET.others[pId]) {
+                    newOthers[pId] = new Player(false);
+                } else {
+                    newOthers[pId] = NET.others[pId];
+                }
+                newOthers[pId].targetX = data.players[pId].x;
+                newOthers[pId].targetY = data.players[pId].y;
+                newOthers[pId].dead = data.players[pId].dead;
+                newOthers[pId].remoteHat = data.players[pId].hat;
             }
+            NET.others = newOthers;
+            GAME.time = data.time;
         });
-    } catch (e) {
-        console.error("Critical Cloud init fail", e);
-    }
-}
 
-function setupConn() {
-    NET.conn.on('data', (data) => {
-        if (data.type === 'PLAYER_SYNC') {
-            if (!NET.others[data.id]) NET.others[data.id] = new Player(false);
-            const other = NET.others[data.id];
-            other.targetX = data.x; other.targetY = data.y; other.remoteHat = data.hat;
-            other.dead = data.dead;
-        }
-        if (data.type === 'SHOT') {
+        NET.socket.on('enemyShoot', (data) => {
             const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, { ownerId: 'remote' });
             GAME.entities.projectiles.push(proj);
-        }
-        if (data.type === 'PICKUP_XP' && NET.isHost) {
-            GAME.entities.player.addXp(data.amount);
-        }
-        if (data.type === 'TRIGGER_LEVEL_UP') {
-            GAME.paused = true;
-            // Ensure local XP state is exactly what host has
-            showLevelUp();
-        }
-        if (data.type === 'PICKED_UPGRADE' && NET.isHost) {
-            NET.playersReady.add('remote');
-            checkReadyState();
-        }
-        if (data.type === 'STATE_SYNC') {
-            const p = GAME.entities.player;
-            p.level = data.lvl;
-            p.xp = data.xp;
-            p.nextLevelXp = data.next;
-            p.hp = data.hp;
-            GAME.paused = data.paused;
-            GAME.time = data.time;
-            updateUI();
-        }
-        if (data.type === 'WORLD_STATE' && !NET.isHost) {
-            if (!GAME.active) startGame();
-            if (data.enemies) {
-                GAME.entities.enemies = data.enemies.map(he => {
-                    const e = he.isBoss ? new Boss(he.x, he.y, 1, he.id) : new Enemy(he.x, he.y, 1, he.id);
-                    e.hp = he.hp; return e;
-                });
-            }
-            if (data.gems) {
-                GAME.entities.gems = data.gems.map(hg => new Gem(hg.x, hg.y, hg.id));
-            }
-        }
-    });
+        });
+
+        NET.socket.on('gemCollected', (data) => {
+            GAME.entities.gems = GAME.entities.gems.filter(g => g.id !== data.gemId);
+        });
+
+    } catch (e) {
+        console.error("Socket init failed", e);
+    }
 }
 
 function syncPlayer() {
-    if (!NET.conn) return;
-    const now = Date.now();
-    if (now - NET.playerSyncThrottle < 20) return;
-    NET.playerSyncThrottle = now;
-    NET.conn.send({
-        type: 'PLAYER_SYNC', id: NET.roomId,
-        x: GAME.entities.player.x, y: GAME.entities.player.y,
-        hat: META.upgrades.hat, dead: GAME.entities.player.dead
+    if (!NET.isMultiplayer || !NET.socket) return;
+    NET.socket.emit('playerUpdate', {
+        x: GAME.entities.player.x,
+        y: GAME.entities.player.y,
+        hp: GAME.entities.player.hp,
+        maxHp: GAME.entities.player.maxHp,
+        hat: META.upgrades.hat,
+        dead: GAME.entities.player.dead,
+        level: GAME.entities.player.level
     });
 }
 
 function syncShot(proj) {
-    if (!NET.conn) return;
+    if (!NET.isMultiplayer || !NET.socket) return;
     const angle = Math.atan2(proj.vy, proj.vx);
-    NET.conn.send({
-        type: 'SHOT', x: proj.x, y: proj.y, tx: proj.x + Math.cos(angle) * 100, ty: proj.y + Math.sin(angle) * 100, dmg: proj.damage
-    });
-}
-
-function syncState() {
-    if (!NET.isHost || !NET.conn) return;
-    const p = GAME.entities.player;
-    NET.conn.send({
-        type: 'STATE_SYNC', lvl: p.level, xp: p.xp, next: p.nextLevelXp,
-        paused: GAME.paused, time: GAME.time, hp: p.hp
-    });
-}
-
-function syncWorld() {
-    if (!NET.isHost || !NET.conn) return;
-    const enemyData = GAME.entities.enemies.map(e => ({
-        id: e.id, x: e.x, y: e.y, hp: e.hp, isBoss: e.isBoss
-    }));
-    const gemData = GAME.entities.gems.map(g => ({
-        id: g.id, x: g.x, y: g.y
-    }));
-    NET.conn.send({
-        type: 'WORLD_STATE',
-        enemies: enemyData,
-        gems: gemData
+    NET.socket.emit('shoot', {
+        x: proj.x, y: proj.y, tx: proj.x + Math.cos(angle) * 100, ty: proj.y + Math.sin(angle) * 100, dmg: proj.damage
     });
 }
 
 window.joinCloudServer = (roomName) => {
-    if(!roomName) {
-        alert("Nejdříve zadej kód místnosti!");
-        return;
+    if (!roomName) {
+        // Vygenerování náhodné místnosti pokud není zadána
+        roomName = Math.random().toString(36).substr(2, 6).toUpperCase();
+        document.getElementById('input-join-id').value = roomName;
     }
-    
-    const publicId = "NEO_SERVER_" + roomName.trim().toUpperCase();
-    console.warn("CLOUD: Připojuji se k uzlu", publicId);
-
-    // Zrušili jsme GunJS, připojujeme se jen rovnou přes PeerJS
-    if (!NET.peer) {
-        // Klient si založí anonymní ID bez specifického prefixu
-        initPeer("CLIENT_" + generateShortId()); 
-    }
-
-    const conn = NET.peer.connect(publicId);
-    let connectionTimeout = setTimeout(() => {
-        if (!NET.conn) {
-            console.warn("CLOUD: Nepodařilo se připojit k zadané místnosti.");
-            alert("❌ Nelze se připojit! Hráč buď neexistuje, nebo jsi zadal špatný kód.");
-            conn.close();
-        }
-    }, 5000); // 5 sec timeout
-
-    conn.on('open', () => {
-        clearTimeout(connectionTimeout);
-        console.warn("CLOUD: Spojení navázáno!");
-        NET.conn = conn;
-        NET.isHost = false;
-        setupConn();
-        alert("✅ Úspěšně připojeno k Hostovi!");
-        startGame();
-    });
+    initSocket();
+    NET.socket.emit('joinRoom', roomName.trim().toUpperCase());
 };
 
-// Pomocná metoda pro UI
 window.connectToId = (id) => {
-    const input = document.getElementById('input-join-id');
-    if (input) input.value = id;
+    document.getElementById('input-join-id').value = id;
 };
 
 function init() {
@@ -1124,7 +1070,7 @@ function init() {
 
     const startAudio = () => {
         AudioEngine.init();
-        if (document.getElementById('menu-modal') && document.getElementById('menu-modal').classList.contains('active')) {
+        if (document.getElementById('menu-modal').classList.contains('active')) {
             AudioEngine.startMenuMusic();
         }
         if (AudioEngine.ctx && AudioEngine.ctx.state === 'running') {
@@ -1134,30 +1080,19 @@ function init() {
     ['mousedown', 'keydown', 'touchstart', 'mousemove'].forEach(type => window.addEventListener(type, startAudio));
     setInterval(() => { if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume(); }, 500);
 
-    const btnStart = document.getElementById('btn-start');
-    if (btnStart) btnStart.onclick = () => {
-        NET.conn = null; NET.isHost = false;
+    document.getElementById('btn-start').onclick = () => {
+        NET.isMultiplayer = false;
         toggleFullscreen(document.documentElement, true);
         AudioEngine.init(); AudioEngine.stopMenuMusic(); AudioEngine.startMusic(); startGame();
     };
-    
-    const btnMP = document.getElementById('btn-multiplayer');
-    if (btnMP) btnMP.onclick = (e) => {
+    document.getElementById('btn-multiplayer').onclick = (e) => {
         if (e) e.preventDefault();
         document.getElementById('menu-modal').classList.remove('active');
         document.getElementById('multiplayer-modal').classList.add('active');
         AudioEngine.init();
-        setTimeout(() => {
-            try { 
-                initPeer(); 
-            } catch (err) { 
-                console.error("Cloud init delayed:", err); 
-            }
-        }, 50);
+        initSocket(); // Připojit na pozadí, když otevře MP menu
     };
-    
-    const btnCloseMP = document.getElementById('btn-close-mp');
-    if (btnCloseMP) btnCloseMP.onclick = () => {
+    document.getElementById('btn-close-mp').onclick = () => {
         document.getElementById('multiplayer-modal').classList.remove('active');
         document.getElementById('menu-modal').classList.add('active');
     };
@@ -1207,7 +1142,7 @@ function fireSniper(cx, cy) {
     const worldTargetY = cy + (cam.y / GAME.zoom);
     const proj = new Projectile(p.x, p.y, worldTargetX, worldTargetY, p.damage * 10, { size: 12, pierce: Infinity });
     GAME.entities.projectiles.push(proj); shakeScreen(15);
-    if (NET.conn) syncShot(proj);
+    if (NET.isMultiplayer) syncShot(proj);
 }
 
 function startGame() {
@@ -1229,42 +1164,41 @@ function loop() { if (GAME.active) update(); render(); requestAnimationFrame(loo
 
 function update() {
     if (GAME.paused) return;
-    GAME.time += 1 / 60; const p = GAME.entities.player; p.update();
+
+    if (!NET.isMultiplayer) GAME.time += 1 / 60;
+
+    const p = GAME.entities.player; p.update();
     GAME.camera.x = (p.x * GAME.zoom) - GAME.canvas.width / 2; GAME.camera.y = (p.y * GAME.zoom) - GAME.canvas.height / 2;
     if (CONFIG.SCREEN_SHAKE > 0) { GAME.camera.x += (Math.random() - 0.5) * CONFIG.SCREEN_SHAKE; GAME.camera.y += (Math.random() - 0.5) * CONFIG.SCREEN_SHAKE; CONFIG.SCREEN_SHAKE *= 0.9; }
 
-    if (NET.conn) syncPlayer();
-    if (NET.isHost && Date.now() - NET.lastSync > 50) { syncWorld(); syncState(); NET.lastSync = Date.now(); }
-
+    syncPlayer();
     for (const id in NET.others) NET.others[id].update();
 
-    if (!NET.peer || NET.isHost || !NET.conn) {
-        const targets = getAllTargets();
-        const alivePlayers = getAllAlivePlayers();
-        if (alivePlayers.length === 0 && GAME.active) gameOver();
+    const targets = getAllTargets();
+    const alivePlayers = getAllAlivePlayers();
+    if (alivePlayers.length === 0 && GAME.active) gameOver();
 
-        GAME.entities.enemies.forEach((e) => {
-            e.update();
-            targets.forEach(t => {
-                if (dist(t.x, t.y, e.x, e.y) < t.radius + e.radius) {
-                    if (t.isBait) {
-                        t.obj.hp -= (e.isBoss ? 5 : 1) * GAME.speedFactor;
+    GAME.entities.enemies.forEach((e) => {
+        e.update();
+        targets.forEach(t => {
+            if (dist(t.x, t.y, e.x, e.y) < t.radius + e.radius) {
+                if (t.isBait) {
+                    t.obj.hp -= (e.isBoss ? 5 : 1) * GAME.speedFactor;
+                } else {
+                    if (t.kaktus) {
+                        e.hp = 0; e.dead = true;
+                        if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: 99999 });
                     } else {
-                        if (t.kaktus) {
-                            e.hp = 0; e.dead = true; // Instant-kill and mark dead
-                        } else {
-                            t.hp -= (e.isBoss ? 2 : 0.5) * (t.shield || 1);
-                            if (t.hp <= 0) t.dead = true;
-                        }
+                        t.hp -= (e.isBoss ? 2 : 0.5) * (t.shield || 1);
+                        if (t.hp <= 0) t.dead = true;
                     }
-                    updateUI();
                 }
-            });
+                updateUI();
+            }
         });
+    });
 
-        // Remove dead enemies immediately
-        GAME.entities.enemies = GAME.entities.enemies.filter(e => e.hp > 0 && !e.dead);
-    }
+    if (!NET.isMultiplayer) GAME.entities.enemies = GAME.entities.enemies.filter(e => e.hp > 0 && !e.dead);
 
     GAME.entities.baits = GAME.entities.baits.filter(b => b.hp > 0);
     GAME.entities.baits.forEach(b => b.update());
@@ -1278,7 +1212,6 @@ function update() {
         if (proj.life <= 0) { GAME.entities.projectiles.splice(pIndex, 1); return; }
 
         if (proj.isEnemy) {
-            // Enemy projectiles hit players
             const alivePlayers = getAllAlivePlayers();
             alivePlayers.forEach(p => {
                 if (dist(proj.x, proj.y, p.x, p.y) < proj.radius + p.radius) {
@@ -1289,10 +1222,12 @@ function update() {
                 }
             });
         } else {
-            // Player projectiles hit enemies
             enemies.forEach((enemy, eIndex) => {
                 if (!proj.hitEnemies.has(enemy) && dist(proj.x, proj.y, enemy.x, enemy.y) < proj.radius + enemy.radius) {
                     enemy.hp -= proj.damage; proj.hitEnemies.add(enemy);
+                    if (NET.isMultiplayer) {
+                        NET.socket.emit('enemyHit', { id: enemy.id, damage: proj.damage });
+                    }
                     if (proj.bounce > 0) {
                         const targets = enemies.filter(e => e !== enemy && !proj.hitEnemies.has(e));
                         if (targets.length > 0) {
@@ -1302,7 +1237,12 @@ function update() {
                         }
                     }
                     if (proj.pierce > 1) proj.pierce--; else if (proj.pierce !== Infinity && proj.bounce <= 0) GAME.entities.projectiles.splice(pIndex, 1);
-                    if (enemy.hp <= 0) { AudioEngine.play('hit'); if (!NET.peer || NET.isHost) GAME.entities.gems.push(new Gem(enemy.x, enemy.y)); enemies.splice(eIndex, 1); GAME.kills++; updateUI(); }
+                    if (enemy.hp <= 0) {
+                        AudioEngine.play('hit');
+                        if (!NET.isMultiplayer) GAME.entities.gems.push(new Gem(enemy.x, enemy.y));
+                        GAME.kills++;
+                        updateUI();
+                    }
                 }
             });
         }
@@ -1315,6 +1255,7 @@ function update() {
         if (!pForGems.dead && dist(pForGems.x, pForGems.y, g.x, g.y) < pForGems.radius + g.radius) {
             AudioEngine.play('gem');
             pForGems.addXp(Math.round(10 * (pForGems.luckFactor || 1)));
+            if (NET.isMultiplayer) NET.socket.emit('gemPickup', g.id);
             GAME.entities.gems.splice(i, 1);
         }
     }
@@ -1356,7 +1297,6 @@ function render() {
     }
 }
 
-// Audio Trigger Setup
 const initAudio = () => {
     AudioEngine.init();
     if (document.getElementById('menu-modal') && document.getElementById('menu-modal').classList.contains('active')) {
