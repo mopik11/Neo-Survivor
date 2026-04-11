@@ -22,28 +22,39 @@ const CONFIG = {
   GEM_VALUES: 10,
   XP_PER_LEVEL: 100,
   UPGRADES: [
-    { id: 'damage', name: 'Zvýšení Síly', desc: 'Poškození x2', icon: '⚔️' },
-    { id: 'speed', name: 'Rychlé Boty', desc: '+15% rychlost pohybu', icon: '👟' },
-    { id: 'count', name: 'Více Střel', desc: '+1 projektil navíc', icon: '🌀' },
-    { id: 'firerate', name: 'Rychlá Palba', desc: '-20% prodleva útoku', icon: '🔥' },
-    { id: 'magnet', name: 'Magnet na XP', desc: '+50% dosah sběru', icon: '🧲' },
-    { id: 'shield', name: 'Energetický Štít', desc: 'Snížení poškození o 20%', icon: '🛡️' },
-    { id: 'regen', name: 'Regenerace', desc: 'Obnova 1 HP/s', icon: '💊' },
-    { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎' },
-    { id: 'ultramagnet', name: 'Ultra Magnet', desc: 'Pomalý sběr z celé mapy', icon: '🌌' },
-    { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřátely', icon: '🏹' },
-    { id: 'size', name: 'Obří Střely', desc: '+30% velikost projektilu', icon: '🌕' },
-    { id: 'crit', name: 'Kritické Zásahy', desc: '15% šance na 2x damage', icon: '💥' },
-    { id: 'luck', name: 'Větší Výběr', desc: '4 možnosti při levelu', icon: '🍀' },
-    { id: 'orbit', name: 'Orbitální Štít', desc: 'Vypustí rotující projektil', icon: '🪐' },
-    { id: 'knockback', name: 'Silný Odhoz', desc: '+50% sýla odhozu', icon: '💢' },
-    { id: 'xpboost', name: 'XP Multiplikátor', desc: '+20% bonus k XP', icon: '📈' },
-    { id: 'lifesteal', name: 'Lifesteal', desc: '5% šance na heal při killu', icon: '🧛' },
-    { id: 'aura', name: 'Mrazivá Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️' },
-    { id: 'bounce', name: 'Odraz', desc: 'Střely se odráží k dalšímu cíli', icon: '🪃' },
-    { id: 'fire', name: 'Ohnivá Stopa', desc: 'Zanecháváš za sebou oheň', icon: '🔥' },
-    { id: 'growth', name: 'Růst', desc: '+10% max HP a plný heal', icon: '🥗' }
+    { id: 'damage', name: 'Zvýšení Síly', desc: 'Poškození x2', icon: '⚔️', rarity: 'common' },
+    { id: 'speed', name: 'Rychlé Boty', desc: '+15% rychlost pohybu', icon: '👟', rarity: 'common' },
+    { id: 'firerate', name: 'Rychlá Palba', desc: '-20% prodleva útoku', icon: '🔥', rarity: 'common' },
+    { id: 'shield', name: 'Energetický Štít', desc: 'Snížení poškození o 20%', icon: '🛡️', rarity: 'common' },
+    { id: 'growth', name: 'Růst', desc: '+10% max HP a plný heal', icon: '🥗', rarity: 'common' },
+    
+    { id: 'count', name: 'Více Střel', desc: '+1 projektil navíc', icon: '🌀', rarity: 'uncommon' },
+    { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřátely', icon: '🏹', rarity: 'uncommon' },
+    { id: 'size', name: 'Obří Střely', desc: '+30% velikost projektilu', icon: '🌕', rarity: 'uncommon' },
+    { id: 'xpboost', name: 'XP Multiplikátor', desc: '+20% bonus k XP', icon: '📈', rarity: 'uncommon' },
+    { id: 'bounce', name: 'Odraz', desc: 'Střely se odráží k dalšímu cíli', icon: '🪃', rarity: 'uncommon' },
+    
+    { id: 'magnet', name: 'Magnet na XP', desc: '+50% dosah sběru', icon: '🧲', rarity: 'rare' },
+    { id: 'crit', name: 'Kritické Zásahy', desc: '15% šance na 2x damage', icon: '💥', rarity: 'rare' },
+    { id: 'knockback', name: 'Silný Odhoz', desc: '+50% sýla odhozu', icon: '💢', rarity: 'rare' },
+    
+    { id: 'regen', name: 'Regenerace', desc: 'Obnova 1 HP/s', icon: '💊', rarity: 'epic' },
+    { id: 'ultramagnet', name: 'Ultra Magnet', desc: 'Pomalý sběr z celé mapy', icon: '🌌', rarity: 'epic' },
+    { id: 'orbit', name: 'Orbitální Štít', desc: 'Vypustí rotující projektil', icon: '🪐', rarity: 'epic' },
+    { id: 'lifesteal', name: 'Lifesteal', desc: '5% šance na heal při killu', icon: '🧛', rarity: 'epic' },
+    { id: 'fire', name: 'Ohnivá Stopa', desc: 'Zanecháváš za sebou oheň', icon: '🔥', rarity: 'epic' },
+    
+    { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎', rarity: 'legendary' },
+    { id: 'luck', name: 'Větší Výběr', desc: '4 možnosti při levelu', icon: '🍀', rarity: 'legendary' },
+    { id: 'aura', name: 'Mrazivá Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' }
   ],
+  RARITIES: {
+    common: { chance: 40, color: '#94a3b8', name: 'COMMON' },
+    uncommon: { chance: 25, color: '#3b82f6', name: 'UNCOMMON' },
+    rare: { chance: 20, color: '#22c55e', name: 'RARE' },
+    epic: { chance: 10, color: '#a855f7', name: 'EPIC' },
+    legendary: { chance: 5, color: '#eab308', name: 'LEGENDARY' }
+  },
   SCREEN_SHAKE: 0,
   BOSS_INTERVAL: 60,
   SNIPER_COOLDOWN: 15000,
@@ -675,11 +686,50 @@ function showLevelUp() {
     const modal = document.getElementById('levelup-modal');
     const container = document.getElementById('upgrade-options');
     container.innerHTML = '';
-    const selected = [...CONFIG.UPGRADES].sort(() => 0.5 - Math.random()).slice(0, GAME.upgradeOptionsCount);
+    
+    const count = GAME.entities.player.level === 1 ? 3 : GAME.upgradeOptionsCount;
+    const selected = [];
+    const usedIds = new Set();
+    
+    while (selected.length < count && usedIds.size < CONFIG.UPGRADES.length) {
+        // Weighted Random Rarity
+        const rand = Math.random() * 100;
+        let rarity = 'common';
+        if (rand < 5) rarity = 'legendary';
+        else if (rand < 15) rarity = 'epic';
+        else if (rand < 35) rarity = 'rare';
+        else if (rand < 60) rarity = 'uncommon';
+        
+        const possible = CONFIG.UPGRADES.filter(u => u.rarity === rarity && !usedIds.has(u.id));
+        if (possible.length > 0) {
+            const pick = possible[Math.floor(Math.random() * possible.length)];
+            selected.push(pick);
+            usedIds.add(pick.id);
+        } else {
+            // Fallback if no more items in this rarity
+            const remaining = CONFIG.UPGRADES.filter(u => !usedIds.has(u.id));
+            if (remaining.length === 0) break;
+            const pick = remaining[Math.floor(Math.random() * remaining.length)];
+            selected.push(pick);
+            usedIds.add(pick.id);
+        }
+    }
+
     selected.forEach(u => {
-        const card = document.createElement('div'); card.className = 'upgrade-card';
-        card.innerHTML = `<div class="upgrade-icon">${u.icon}</div><h3>${u.name}</h3><p>${u.desc}</p>`;
-        card.onclick = () => applyUpgrade(u.id); container.appendChild(card);
+        const rarityData = CONFIG.RARITIES[u.rarity];
+        const card = document.createElement('div'); 
+        card.className = 'upgrade-card';
+        card.style.border = `2px solid ${rarityData.color}`;
+        card.style.boxShadow = `0 10px 20px -10px ${rarityData.color}`;
+        
+        card.innerHTML = `
+            <div style="font-size: 0.65rem; color: ${rarityData.color}; font-weight: 800; margin-bottom: 5px; letter-spacing: 1px;">${rarityData.name}</div>
+            <div class="upgrade-icon">${u.icon}</div>
+            <h3>${u.name}</h3>
+            <p>${u.desc}</p>
+        `;
+        card.onclick = () => applyUpgrade(u.id); 
+        container.appendChild(card);
     });
     modal.classList.add('active');
 }
