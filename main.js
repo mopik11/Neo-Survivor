@@ -921,12 +921,16 @@ function init() {
   };
   document.getElementById('btn-multiplayer').onclick = (e) => { 
       if (e) e.preventDefault();
+      document.getElementById('menu-modal').classList.remove('active'); 
       document.getElementById('multiplayer-modal').classList.add('active'); 
       setTimeout(() => {
           try { initPeer(); LOBBY.init(); } catch(err) { console.error("Cloud init delayed:", err); }
       }, 50);
   };
-  document.getElementById('btn-close-mp').onclick = () => document.getElementById('multiplayer-modal').classList.remove('active');
+  document.getElementById('btn-close-mp').onclick = () => {
+      document.getElementById('multiplayer-modal').classList.remove('active');
+      document.getElementById('menu-modal').classList.add('active');
+  };
   
   const btnMeta = document.getElementById('btn-meta-menu');
   if(btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
