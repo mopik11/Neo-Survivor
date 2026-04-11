@@ -43,12 +43,12 @@ const CONFIG = {
     { id: 'orbit', name: 'Orbitální Štít', desc: 'Vypustí rotující projektil', icon: '🪐', rarity: 'epic' },
     { id: 'lifesteal', name: 'Lifesteal', desc: '5% šance na heal při killu', icon: '🧛', rarity: 'epic' },
     { id: 'fire', name: 'Ohnivá Stopa', desc: 'Zanecháváš za sebou oheň', icon: '🔥', rarity: 'epic' },
-    { id: 'cactus', name: 'Kaktus', desc: 'Dotek nepřítele znamená jeho smrt', icon: '🌵', rarity: 'epic' },
+    { id: 'kaktus', name: 'Kaktus', desc: 'Sáhni si a umřeš! (1x)', icon: '🌵', rarity: 'epic' },
     
     { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎', rarity: 'legendary' },
     { id: 'luck', name: 'Větší Výběr', desc: '4 možnosti při levelu', icon: '🍀', rarity: 'legendary' },
     { id: 'aura', name: 'Mrazivá Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' },
-    { id: 'decoy', name: 'Návnada', desc: 'Položí kosočtverec co láká ufony', icon: '🪤', rarity: 'legendary' }
+    { id: 'bait', name: 'Návnada', desc: 'Vypouští chutné cíle pro ufony', icon: '🪤', rarity: 'legendary' }
   ],
   RARITIES: {
     common: { chance: 40, color: '#94a3b8', name: 'COMMON' },
@@ -101,7 +101,7 @@ const GAME = {
     gems: [],
     particles: [],
     fire: [],
-    decoys: []
+    baits: []
   },
   camera: { x: 0, y: 0 },
   input: { w: false, a: false, s: false, d: false },
@@ -405,25 +405,6 @@ class Orbiter {
   }
 }
 
-class Decoy {
-    constructor(x, y, hp) {
-        this.x = x; this.y = y; this.radius = 25;
-        this.maxHp = hp; this.hp = hp;
-        this.life = 1500; // Lasts ~25 seconds max
-    }
-    update() { this.life--; }
-    draw(ctx, cam) {
-        const ratio = this.hp / this.maxHp;
-        ctx.shadowBlur = 20; ctx.shadowColor = '#fff'; ctx.fillStyle = '#fff';
-        ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
-        ctx.rotate(Math.PI / 4); ctx.fillRect(-15, -15, 30, 30); ctx.restore();
-        ctx.shadowBlur = 0;
-        // Mini health bar
-        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(this.x - cam.x - 20, this.y - cam.y - 40, 40, 5);
-        ctx.fillStyle = '#fff'; ctx.fillRect(this.x - cam.x - 20, this.y - cam.y - 40, 40 * ratio, 5);
-    }
-}
-
 function getAllAlivePlayers() {
     const list = [];
     if (GAME.entities.player && !GAME.entities.player.dead) list.push(GAME.entities.player);
@@ -431,6 +412,31 @@ function getAllAlivePlayers() {
         if (!NET.others[id].dead) list.push(NET.others[id]);
     }
     return list;
+}
+
+function getAllTargets() {
+    const list = getAllAlivePlayers();
+    GAME.entities.baits.forEach(b => {
+        if (b.hp > 0) list.push({ x: b.x, y: b.y, radius: b.radius, isBait: true, obj: b });
+    });
+    return list;
+}
+
+class Bait {
+    constructor(x, y, hp) {
+        this.x = x; this.y = y; this.hp = hp; this.maxHp = hp; this.radius = 25;
+    }
+    update() {}
+    draw(ctx, cam) {
+        const r = Math.max(0.1, this.hp / this.maxHp);
+        ctx.shadowBlur = 15; ctx.shadowColor = `rgba(255,255,255,${r})`;
+        ctx.strokeStyle = `rgba(255,255,255,${r})`;
+        ctx.lineWidth = 4;
+        ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
+        ctx.rotate(Math.PI / 4 + (Date.now() / 500));
+        ctx.strokeRect(-20, -20, 40, 40);
+        ctx.restore(); ctx.shadowBlur = 0;
+    }
 }
 
 class Boss {
@@ -441,16 +447,15 @@ class Boss {
     this.knockback = { x: 0, y: 0 };
   }
   update() {
-    const players = getAllAlivePlayers();
-    const decoys = GAME.entities.decoys || [];
-    if (players.length === 0 && decoys.length === 0) return;
-    
-    let targets = [...players.map(p => ({ obj: p, weight: 1 })), ...decoys.map(d => ({ obj: d, weight: 5 }))];
-    let targetData = targets.sort((a,b) => (dist(this.x,this.y,a.obj.x,a.obj.y) / a.weight) - (dist(this.x,this.y,b.obj.x,b.obj.y) / b.weight))[0];
-    const target = targetData.obj;
-    
+    const targets = getAllTargets();
+    if (targets.length === 0) return;
+    const baits = targets.filter(t => t.isBait);
+    const target = baits.length > 0 
+        ? baits.sort((a,b) => dist(this.x,this.y,a.x,a.y) - dist(this.x,this.y,b.x,b.y))[0]
+        : targets.sort((a,b) => dist(this.x,this.y,a.x,a.y) - dist(this.x,this.y,b.x,b.y))[0];
     const angle = Math.atan2(target.y - this.y, target.x - this.x);
     let speedScale = 1.0;
+    const players = getAllAlivePlayers();
     players.forEach(p => { if (p.aura && dist(this.x, this.y, p.x, p.y) < p.auraRange) speedScale *= 0.5; });
     const currentSpeed = this.speed * speedScale * GAME.speedFactor;
     this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
@@ -494,16 +499,15 @@ class Enemy {
     this.knockback = { x: 0, y: 0 };
   }
   update() {
-    const players = getAllAlivePlayers();
-    const decoys = GAME.entities.decoys || [];
-    if (players.length === 0 && decoys.length === 0) return;
-    
-    let targets = [...players.map(p => ({ obj: p, weight: 1 })), ...decoys.map(d => ({ obj: d, weight: 5 }))];
-    let targetData = targets.sort((a,b) => (dist(this.x,this.y,a.obj.x,a.obj.y) / a.weight) - (dist(this.x,this.y,b.obj.x,b.obj.y) / b.weight))[0];
-    const target = targetData.obj;
-    
+    const targets = getAllTargets();
+    if (targets.length === 0) return;
+    const baits = targets.filter(t => t.isBait);
+    const target = baits.length > 0 
+        ? baits.sort((a,b) => dist(this.x,this.y,a.x,a.y) - dist(this.x,this.y,b.x,b.y))[0]
+        : targets.sort((a,b) => dist(this.x,this.y,a.x,a.y) - dist(this.x,this.y,b.x,b.y))[0];
     const angle = Math.atan2(target.y - this.y, target.x - this.x);
     let speedScale = 1.0;
+    const players = getAllAlivePlayers();
     players.forEach(p => { if (p.aura && dist(this.x, this.y, p.x, p.y) < p.auraRange) speedScale *= 0.5; });
     const currentSpeed = this.speed * speedScale * GAME.speedFactor;
     this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
@@ -562,8 +566,8 @@ class Player {
     this.luckFactor = 1.0 + (isLocal ? (META.upgrades.luck * 0.05) : 0);
     this.orbitals = 0; this.knockbackForce = 6; this.xpMultiplier = 1.0;
     this.lifestealChance = 0; this.aura = false; this.auraRange = 150;
-    this.cactus = false; this.decoyInterval = 0;
-    this.lastDecoy = 0;
+    this.bounces = 0; this.fireTrail = false;
+    this.kaktus = false; this.bait = false; this.lastBait = 0;
     this.lastFireTrail = 0; this.lastFired = 0; this.lastRegen = 0;
     this.level = 1; this.xp = 0; this.nextLevelXp = CONFIG.XP_PER_LEVEL;
     this.remoteHat = null;
@@ -576,6 +580,11 @@ class Player {
         this.x += (this.targetX - this.x) * 0.25;
         this.y += (this.targetY - this.y) * 0.25;
         return;
+    }
+    
+    if (this.bait && Date.now() - this.lastBait > 10000) {
+        GAME.entities.baits.push(new Bait(this.x, this.y, this.maxHp * 5));
+        this.lastBait = Date.now();
     }
     let dx = 0, dy = 0;
     if (GAME.joystick.active) {
@@ -722,7 +731,7 @@ function showLevelUp() {
     const container = document.getElementById('upgrade-options');
     container.innerHTML = '';
     
-        const count = GAME.entities.player.level === 1 ? 3 : GAME.upgradeOptionsCount;
+    const count = GAME.entities.player.level === 1 ? 3 : GAME.upgradeOptionsCount;
     const selected = [];
     const usedIds = new Set();
     
@@ -736,12 +745,9 @@ function showLevelUp() {
         else if (rand < 60) rarity = 'uncommon';
         
         const possible = CONFIG.UPGRADES.filter(u => {
-            if (usedIds.has(u.id)) return false;
-            if (u.rarity !== rarity) return false;
-            if (u.id === 'cactus' && GAME.entities.player.cactus) return false;
-            return true;
+            if (u.id === 'kaktus' && GAME.entities.player.kaktus) return false;
+            return u.rarity === rarity && !usedIds.has(u.id);
         });
-        
         if (possible.length > 0) {
             const pick = possible[Math.floor(Math.random() * possible.length)];
             selected.push(pick);
@@ -798,6 +804,8 @@ function applyUpgrade(id) {
         case 'aura': p.aura = true; p.auraRange += 20; break;
         case 'bounce': p.bounces += 1; break;
         case 'fire': p.fireTrail = true; break;
+        case 'kaktus': p.kaktus = true; break;
+        case 'bait': p.bait = true; p.lastBait = Date.now(); break;
         case 'growth': p.maxHp += Math.floor(p.maxHp * 0.1); p.hp = p.maxHp; break;
     }
     document.getElementById('levelup-modal').classList.remove('active');
@@ -1135,11 +1143,9 @@ function init() {
       document.getElementById('menu-modal').classList.add('active');
   };
   
-  if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+  const btnMeta = document.getElementById('btn-meta-menu');
+  if(btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
   
-  const btnCloseMeta = document.getElementById('btn-close-meta');
-  if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
-
   const btnResume = document.getElementById('btn-resume');
   if(btnResume) btnResume.onclick = togglePause;
   
@@ -1213,30 +1219,30 @@ function update() {
   for (const id in NET.others) NET.others[id].update();
 
   if (!NET.peer || NET.isHost || !NET.conn) {
+    const targets = getAllTargets();
     const alivePlayers = getAllAlivePlayers();
     if (alivePlayers.length === 0 && GAME.active) gameOver();
     
     GAME.entities.enemies.forEach((e) => {
         e.update();
-        alivePlayers.forEach(ap => {
-            if (dist(ap.x, ap.y, e.x, e.y) < ap.radius + e.radius) {
-                if (ap.cactus) { e.hp = 0; }
-                else {
-                    ap.hp -= (e.isBoss ? 2 : 0.5) * ap.shield;
-                    if (ap.hp <= 0) ap.dead = true;
-                    updateUI();
+        targets.forEach(t => {
+            if (dist(t.x, t.y, e.x, e.y) < t.radius + e.radius) {
+                if (t.isBait) {
+                    t.obj.hp -= (e.isBoss ? 5 : 1) * GAME.speedFactor;
+                } else {
+                    if (t.kaktus) e.hp = 0; // Kaktus instant kill
+                    t.hp -= (e.isBoss ? 2 : 0.5) * (t.shield || 1);
+                    if (t.hp <= 0) t.dead = true;
                 }
-            }
-        });
-        (GAME.entities.decoys || []).forEach(d => {
-            if (dist(d.x, d.y, e.x, e.y) < d.radius + e.radius) {
-                d.hp -= (e.isBoss ? 5 : 1);
+                updateUI();
             }
         });
     });
   }
   
-  (GAME.entities.decoys || []).forEach((d, i) => { d.update(); if (d.life <= 0 || d.hp <= 0) GAME.entities.decoys.splice(i, 1); });
+  GAME.entities.baits = GAME.entities.baits.filter(b => b.hp > 0);
+  GAME.entities.baits.forEach(b => b.update());
+  
   GAME.orbiters.forEach(o => o.update());
   GAME.entities.fire.forEach((f, i) => { f.update(); if (f.life <= 0) GAME.entities.fire.splice(i, 1); });
 
@@ -1309,6 +1315,7 @@ function render() {
   }
   ctx.stroke();
   GAME.entities.fire.forEach(f => f.draw(ctx, {x:camX, y:camY}));
+  GAME.entities.baits.forEach(b => b.draw(ctx, {x:camX, y:camY}));
   GAME.entities.gems.forEach(g => g.draw(ctx, {x:camX, y:camY}));
   GAME.entities.projectiles.forEach(p => p.draw(ctx, {x:camX, y:camY}));
   GAME.orbiters.forEach(o => o.draw(ctx, {x:camX, y:camY}));
