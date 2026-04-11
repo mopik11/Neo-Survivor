@@ -629,7 +629,11 @@ class Player {
         }
 
         if (this.bait && Date.now() - this.lastBait > 10000) {
-            GAME.entities.baits.push(new Bait(this.x, this.y, this.maxHp * 5));
+            if (NET.isMultiplayer) {
+                NET.socket.emit('spawnBait', { x: this.x, y: this.y, hp: this.maxHp * 5 });
+            } else {
+                GAME.entities.baits.push(new Bait(this.x, this.y, this.maxHp * 5));
+            }
             this.lastBait = Date.now();
         }
         let dx = 0, dy = 0;
@@ -858,9 +862,19 @@ function gameOver() {
 
 function togglePause() {
     if (!GAME.active) return;
-    if (NET.isMultiplayer) return; 
+    
     GAME.paused = !GAME.paused;
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
+    
+    // Logika odpojení v MP: Pokud zapnu pauzu -> vypnu socket, aby po mně nepřátelé nešli
+    if (NET.isMultiplayer) {
+        if (GAME.paused) {
+            NET.socket.disconnect();
+        } else {
+            NET.socket.connect();
+            NET.socket.emit('joinRoom', NET.roomId);
+        }
+    }
 }
 
 function toggleFullscreen(element, force = false) {
@@ -961,6 +975,15 @@ function initSocket() {
                     }
                     return g;
                 });
+                
+            if (data.baits) {
+                GAME.entities.baits = data.baits.map(b => {
+                    let bait = new Bait(b.x, b.y, b.hp);
+                    bait.id = b.id;
+                    bait.maxHp = b.maxHp;
+                    return bait;
+                });
+            }
 
             const newOthers = {};
             for(let pId in data.players) {
@@ -1102,7 +1125,6 @@ function init() {
     const btnMeta = document.getElementById('btn-meta-menu');
     if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
 
-    // OPRAVA: Tlačítko zavřít v menu vylepšení
     const btnCloseMeta = document.getElementById('btn-close-meta');
     if (btnCloseMeta) btnCloseMeta.onclick = () => {
         document.getElementById('meta-modal').classList.remove('active');
@@ -1173,6 +1195,7 @@ function resetGame() {
     GAME.entities.pickedGems = new Set(); 
     GAME.entities.particles = []; 
     GAME.entities.fire = [];
+    GAME.entities.baits = [];
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     updateSpeedFactor(); updateUI();
 }
@@ -1200,7 +1223,11 @@ function update() {
         targets.forEach(t => {
             if (dist(t.x, t.y, e.x, e.y) < t.radius + e.radius) {
                 if (t.isBait) {
-                    t.obj.hp -= (e.isBoss ? 5 : 1) * GAME.speedFactor;
+                    if (NET.isMultiplayer) {
+                        NET.socket.emit('baitHit', { id: t.obj.id, damage: (e.isBoss ? 5 : 1) * GAME.speedFactor });
+                    } else {
+                        t.obj.hp -= (e.isBoss ? 5 : 1) * GAME.speedFactor;
+                    }
                 } else {
                     if (t.kaktus) {
                         e.hp = 0; e.dead = true;
