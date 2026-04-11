@@ -632,7 +632,6 @@ class Player {
         this.targetX = 0; this.targetY = 0;
         this.dead = false;
         
-        // Atributy pro sčítání (stackování) bonusů
         this.ultraMagnetPower = 1;
         this.fireDamageMult = 0.5;
         this.baitHpMult = 5;
@@ -884,7 +883,6 @@ function togglePause() {
     
     GAME.paused = !GAME.paused;
     
-    // Propsání statistik
     if (GAME.paused) {
         const p = GAME.entities.player;
         document.getElementById('stat-hp').innerText = Math.floor(p.hp) + ' / ' + p.maxHp;
@@ -1064,7 +1062,13 @@ function initSocket() {
         });
 
         NET.socket.on('enemyShoot', (data) => {
-            const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, { ownerId: 'remote' });
+            const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, { 
+                ownerId: 'remote',
+                speed: data.speed,
+                size: data.size,
+                pierce: data.pierce,
+                bounce: data.bounce
+            });
             GAME.entities.projectiles.push(proj);
         });
 
@@ -1118,8 +1122,16 @@ function syncPlayer() {
 function syncShot(proj) {
     if (!NET.isMultiplayer || !NET.socket) return;
     const angle = Math.atan2(proj.vy, proj.vx);
+    const speed = Math.hypot(proj.vx, proj.vy);
     NET.socket.emit('shoot', {
-        x: proj.x, y: proj.y, tx: proj.x + Math.cos(angle) * 100, ty: proj.y + Math.sin(angle) * 100, dmg: proj.damage
+        x: proj.x, y: proj.y, 
+        tx: proj.x + Math.cos(angle) * 100, 
+        ty: proj.y + Math.sin(angle) * 100, 
+        dmg: proj.damage,
+        speed: speed,
+        size: proj.radius,
+        pierce: proj.pierce,
+        bounce: proj.bounce
     });
 }
 
