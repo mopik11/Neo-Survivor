@@ -701,20 +701,22 @@ function initPeer(customId = null) {
     const shortId = customId || generateShortId();
     
     try {
+        // High-performance Cloud Configuration
         const config = {
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
-                ]
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun.anyfirewall.com:3478' }
+                ],
+                iceTransportPolicy: 'all'
             }
         };
         NET.peer = new Peer(shortId, config);
         
         NET.peer.on('open', (id) => {
             NET.roomId = id;
-            const el = document.getElementById('my-id-display');
-            if (el) el.innerText = id;
+            console.warn("CLOUD: Připojeno k uzlu", id);
         });
         
         NET.peer.on('connection', (c) => {
@@ -723,10 +725,13 @@ function initPeer(customId = null) {
         });
         
         NET.peer.on('error', (err) => {
-            console.error("NET Error:", err.type);
+            console.error("CLOUD Error:", err.type);
+            if (err.type === 'peer-unavailable') {
+                // Handled in joinCloudServer logic
+            }
         });
     } catch(e) {
-        console.error("Critical PeerJS init fail", e);
+        console.error("Critical Cloud init fail", e);
     }
 }
 
@@ -823,31 +828,31 @@ function syncWorld() {
     });
 }
 
-window.joinPublicRoom = (roomName) => {
-    const publicId = "NEO_ROOM_" + roomName;
-    console.warn("LOBBY: Pokus o připojení k veřejné místnosti:", publicId);
+window.joinCloudServer = (roomName) => {
+    const publicId = "NEO_SERVER_" + roomName;
+    console.warn("CLOUD: Připojuji se k uzlu", roomName);
     
-    // 1. Try to connect first
+    document.getElementById('room-' + roomName + '-status').innerText = 'SYNCHRONIZACE...';
+    
     if (!NET.peer) initPeer();
     
     const conn = NET.peer.connect(publicId);
     let connectionTimeout = setTimeout(() => {
         if (!NET.conn) {
-            console.warn("LOBBY: Místnost je prázdná, zakládám ji jako hostitel...");
+            console.warn("CLOUD: Uzel je neaktivní, spouštím instanci serveru...");
             conn.close();
             initPeer(publicId);
             setTimeout(() => {
                 LOBBY.broadcast(publicId);
                 NET.isHost = true;
-                alert("Jsi nyní HOSTITELEM místnosti " + roomName + "! Počkej na ostatní.");
                 startGame();
-            }, 1000);
+            }, 800);
         }
-    }, 2500);
+    }, 1800);
 
     conn.on('open', () => {
         clearTimeout(connectionTimeout);
-        console.warn("LOBBY: Připojeno k veřejné místnosti!");
+        console.warn("CLOUD: Spojení navázáno!");
         NET.conn = conn;
         NET.isHost = false;
         setupConn();

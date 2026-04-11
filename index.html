@@ -100,60 +100,44 @@
             <button class="btn-restart" id="btn-resume">POKRAČOVAT</button>
             <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">MENU</button>
           </div>
-        </div>
-      </div>
-
-      <!-- Multiplayer Modal -->
+              <!-- Multiplayer Modal -->
       <div id="multiplayer-modal" class="modal">
-        <div class="modal-content" style="max-width: 500px;">
-          <h2 style="font-size: 2.2rem; margin-bottom: 1.5rem;">MULTIPLAYER</h2>
+        <div class="modal-content" style="max-width: 600px; padding: 40px; border: 2px solid rgba(168, 85, 247, 0.5); background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), rgba(15, 23, 42, 0.95)); position: relative;">
+          <div style="position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 8px;">
+            <div id="cloud-status-dot" style="width: 10px; height: 10px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 10px #4ade80;"></div>
+            <span style="font-size: 0.7rem; color: #4ade80; font-weight: 800; letter-spacing: 1px;">CLOUD ONLINE</span>
+          </div>
           
-          <div id="mp-content" style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
+          <h2 style="font-size: 2.8rem; margin-bottom: 2rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SÍŤOVÉ SERVERY</h2>
+          
+          <div id="mp-content" style="display: flex; flex-direction: column; gap: 25px; align-items: center;">
             
-            <!-- STÁLÉ MÍSTNOSTI -->
-            <div id="official-servers" style="width: 100%; background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15)); border-radius: 12px; padding: 18px; border: 1px solid rgba(168, 85, 247, 0.4); text-align: left;">
-              <h3 style="margin: 0 0 12px 0; font-size: 1rem; color: #d8b4fe; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 1.2rem;">🌐</span> Oficiální Místnosti
-              </h3>
-              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-                <button onclick="joinPublicRoom('ALFA')" style="background: rgba(168, 85, 247, 0.25); border: 2px solid #d8b4fe; color: white; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 0.9rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">ALFA</button>
-                <button onclick="joinPublicRoom('BETA')" style="background: rgba(168, 85, 247, 0.25); border: 2px solid #d8b4fe; color: white; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 0.9rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">BETA</button>
-                <button onclick="joinPublicRoom('GAMA')" style="background: rgba(168, 85, 247, 0.25); border: 2px solid #d8b4fe; color: white; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 0.9rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">GAMA</button>
-              </div>
-              <p style="font-size: 0.7rem; margin: 10px 0 0 0; opacity: 0.7; font-style: italic;">* Pokud je místnost prázdná, staneš se automaticky HOSTITELEM.</p>
-            </div>
-
-            <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.1); margin: 5px 0;"></div>
-
-            <!-- PRIVATE / CUSTOM -->
-            <div style="width: 100%; display: flex; flex-direction: column; gap: 10px;">
-              <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <span style="font-size: 0.7rem; opacity: 0.6; text-transform: uppercase;">Tvůj Kód:</span>
-                <b id="my-id-display" style="color: #4ade80; font-family: monospace;">Načítám...</b>
-                <button id="btn-copy-id" style="background: rgba(255,255,255,0.1); border: none; border-radius: 4px; color: white; padding: 3px 8px; font-size: 0.6rem; cursor: pointer;">KOPÍROVAT</button>
-              </div>
-              
-              <div style="display: flex; gap: 8px;">
-                <input type="text" id="input-join-id" placeholder="Kód kámoše..." style="flex-grow: 1; padding: 12px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.8rem;">
-                <button class="btn-restart" id="btn-join-room" style="padding: 12px 20px; font-size: 0.8rem;">PŘIPOJIT</button>
-              </div>
-              
-              <button class="btn-restart" id="btn-create-host" style="width: 100%; padding: 12px; font-size: 0.9rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2);">ZALOŽIT VLASTNÍ SOUKROMOU HRU</button>
-            </div>
-
-            <!-- SERVER LIST -->
-            <div id="server-list-container" style="width: 100%; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <h3 style="margin: 0; font-size: 0.8rem; color: #a5b4fc; text-transform: uppercase;">Ostatní Hry</h3>
-                <button id="btn-refresh-lobby" style="background: transparent; border: 1px solid #a5b4fc; color: #a5b4fc; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.6rem;">OBNOVIT</button>
-              </div>
-              <div id="server-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 80px; overflow-y: auto;">
-                <div style="opacity: 0.4; font-size: 0.7rem;">Hledám aktivní hry...</div>
+            <div style="width: 100%; text-align: left;">
+              <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: #a5b4fc; text-transform: uppercase; letter-spacing: 2px; font-weight: 400;">Vyberte dostupný uzel:</h3>
+              <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+                <button onclick="joinCloudServer('ALFA')" class="server-btn" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.4); color: white; padding: 20px; border-radius: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s;">
+                  <span style="font-weight: 800; font-size: 1.2rem; letter-spacing: 2px;">SERVER <span style="color: #d8b4fe;">ALFA</span></span>
+                  <span id="room-ALFA-status" style="font-size: 0.8rem; opacity: 0.7;">PŘIPOJIT SE</span>
+                </button>
+                <button onclick="joinCloudServer('BETA')" class="server-btn" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.4); color: white; padding: 20px; border-radius: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s;">
+                  <span style="font-weight: 800; font-size: 1.2rem; letter-spacing: 2px;">SERVER <span style="color: #d8b4fe;">BETA</span></span>
+                  <span id="room-BETA-status" style="font-size: 0.8rem; opacity: 0.7;">PŘIPOJIT SE</span>
+                </button>
+                <button onclick="joinCloudServer('GAMA')" class="server-btn" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.4); color: white; padding: 20px; border-radius: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s;">
+                  <span style="font-weight: 800; font-size: 1.2rem; letter-spacing: 2px;">SERVER <span style="color: #d8b4fe;">GAMA</span></span>
+                  <span id="room-GAMA-status" style="font-size: 0.8rem; opacity: 0.7;">PŘIPOJIT SE</span>
+                </button>
               </div>
             </div>
+
+            <div style="width: 100%; height: 2px; background: linear-gradient(to right, transparent, rgba(168, 85, 247, 0.3), transparent); margin: 10px 0;"></div>
+
+            <p style="font-size: 0.8rem; opacity: 0.6; text-align: center; max-width: 400px; line-height: 1.5;">
+              Všechna data jsou synchronizována přes globální cloudové uzly <b>GitHub/Gun Relays</b> pro maximální stabilitu a plynulost.
+            </p>
 
           </div>
-          <button class="btn-restart" id="btn-close-mp" style="margin-top:1.5rem; background: rgba(255, 50, 50, 0.1); font-size: 0.9rem;">ZAVŘÍT</button>
+          <button class="btn-restart" id="btn-close-mp" style="margin-top:2.5rem; background: rgba(255, 255, 255, 0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZPĚT DO MENU</button>
         </div>
       </div>
 
