@@ -291,42 +291,92 @@ canvas {
   letter-spacing: 2px;
 }
 
-/* RESPONSIVE OVERRIDES */
+/* Scrollbar pre zoznam serverů */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.4);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.8);
+}
+
+
+/* =========================================
+   MOBILNÍ OPTIMALIZACE (MEDIA QUERIES)
+   ========================================= */
 @media screen and (max-width: 850px) {
   .modal-content {
-    min-width: unset;
-    width: 94vw;
-    padding: 2.5rem 1.5rem;
-    border-radius: 32px;
+    min-width: unset !important;
+    width: 95vw !important;
+    padding: 1.5rem 1rem !important; /* Přepíše tvrdý padding z HTML */
+    border-radius: 24px !important;
   }
 
   .logo {
-    font-size: 3.2rem;
+    font-size: 2.8rem !important;
     letter-spacing: -2px;
   }
 
   .subtitle {
-    font-size: 0.85rem;
-    letter-spacing: 4px;
+    font-size: 0.8rem !important;
+    letter-spacing: 3px !important;
+    margin-bottom: 1.5rem !important;
   }
 
+  /* Zmenšení nadpisů (SÍŤOVÁ HRA, VYLEPŠENÍ, LEVEL UP) */
+  .modal-content h2 {
+    font-size: 1.6rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* Oprava tlačítek aby nepřetékala */
   .menu-actions {
     flex-direction: column;
     width: 100%;
-    gap: 12px;
+    gap: 10px !important;
+    margin-top: 0.5rem !important;
   }
 
   .btn-restart {
-    width: 100%;
-    padding: 1.1rem;
-    font-size: 1rem;
+    width: 100% !important;
+    padding: 1rem !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* Zmenšení zadávacího pole a seznamu serverů z HTML */
+  input[type="text"] {
+    padding: 10px !important;
+    font-size: 1rem !important;
+    margin-bottom: 10px !important;
+  }
+
+  #server-list-container {
+    max-height: 120px !important;
   }
 
   .upgrade-grid {
     grid-template-columns: 1fr;
-    max-height: 50vh;
+    max-height: 45vh;
     overflow-y: auto;
-    padding-right: 10px;
+    padding-right: 5px;
+    gap: 10px;
+  }
+
+  .upgrade-card {
+    min-height: 120px;
+    padding: 1rem;
+  }
+
+  .upgrade-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
   }
 
   .top-bar {
@@ -348,8 +398,9 @@ canvas {
 
   .controls-hint {
     flex-direction: column;
-    gap: 10px;
-    margin-top: 2rem;
+    gap: 8px;
+    margin-top: 1.5rem;
+    font-size: 0.75rem;
   }
 
   .fs-button {
