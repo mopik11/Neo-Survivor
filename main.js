@@ -10,6 +10,127 @@ window.onerror = function (msg, url, line, col, error) {
 
 console.warn("SCRIPT: Neo Survivor načten.");
 
+document.querySelector('#app').innerHTML = `
+  <div class="scanlines"></div>
+  <canvas id="game-canvas"></canvas>
+  
+  <div id="ui-layer">
+    <div class="top-bar">
+      <div class="stat-chip">
+        <span class="level-badge" id="level-display">LVL 1</span>
+      </div>
+      <div class="xp-container">
+        <div id="xp-bar-fill"></div>
+      </div>
+      <div class="stat-chip">
+        <span id="kill-count">0</span> KILLS
+      </div>
+      <div class="stat-chip sniper-chip" id="sniper-ui" style="flex-grow: 1; max-width: 150px; justify-content: flex-start;">
+        🎯 <div class="sniper-cooldown" style="flex-grow: 1; height: 8px; margin-left: 8px; background: rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden;"><div id="sniper-bar" style="height: 100%; width: 0%; background: var(--accent-color); transition: width 0.1s linear;"></div></div>
+      </div>
+      <div id="fs-toggle" class="stat-chip fs-button" style="cursor: pointer; color: var(--accent-color);">
+        ⛶
+      </div>
+      <div id="mobile-pause" class="stat-chip" style="cursor: pointer; background: var(--hp-color); color: white; border: none; font-size: 1.2rem; padding: 10px;">
+        ⏸
+      </div>
+    </div>
+    
+    <div id="boss-warning" class="boss-warning">BOSS PŘICHÁZÍ!</div>
+    
+    <div class="hp-container">
+      <div id="hp-bar-fill"></div>
+    </div>
+  </div>
+
+  <div id="menu-modal" class="modal active">
+    <div class="modal-content">
+      <h1 class="logo">NEO<span>SURVIVOR</span></h1>
+      <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
+      <div class="menu-actions">
+        <button class="btn-restart" id="btn-start" style="width: 100%; border-radius: 12px; font-size: 1.1rem; padding: 18px; margin-bottom: 5px;">SOLO</button>
+        <button class="btn-restart" id="btn-multiplayer" style="width: 100%; border-radius: 12px; font-size: 0.95rem; letter-spacing: 1px; padding: 18px 10px; background: linear-gradient(to right, #6366f1, #a855f7); margin-bottom: 5px;">MULTIPLAYER</button>
+        <button class="btn-restart" id="btn-meta-menu" style="width: 100%; border-radius: 12px; font-size: 1.1rem; padding: 18px; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.05);">VYLEPŠENÍ</button>
+      </div>
+      <div class="controls-hint">
+        <span>WASD: POHYB</span>
+        <span>KLIK: SNIPER</span>
+        <span>ESC: PAUZA</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="multiplayer-modal" class="modal">
+    <div class="modal-content" style="max-width: 500px; padding: 40px; border: 2px solid rgba(168, 85, 247, 0.5); background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), rgba(15, 23, 42, 0.95)); position: relative;">
+      <h2 style="font-size: 2.2rem; margin-bottom: 1.5rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SÍŤOVÁ HRA</h2>
+      
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        
+        <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+              <h3 style="margin: 0; font-size: 0.9rem; opacity: 0.7; letter-spacing: 1px;">DOSTUPNÉ SERVERY</h3>
+              <button onclick="requestServerList()" class="btn-restart" style="padding: 5px 10px; font-size: 0.7rem; background: rgba(255,255,255,0.1); border:none;">OBNOVIT</button>
+          </div>
+          <div id="server-list-container" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
+              <div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">Hledám servery...</div>
+          </div>
+        </div>
+
+        <div style="color: rgba(255,255,255,0.3); font-size: 0.8rem; letter-spacing: 2px;">— NEBO KÓD —</div>
+
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="input-join-id" placeholder="ZADEJ KÓD..." style="flex-grow: 1; background: rgba(0,0,0,0.3); border: 2px solid rgba(168, 85, 247, 0.4); color: white; padding: 15px; border-radius: 10px; font-family: inherit; font-size: 1.1rem; text-align: center; letter-spacing: 2px;">
+            <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart" style="padding: 15px 20px; font-size: 1rem; background: #6366f1;">PŘIPOJIT</button>
+        </div>
+
+        <button onclick="joinCloudServer()" class="btn-restart" style="width: 100%; padding: 20px; font-size: 1.1rem; background: #a855f7; margin-top: 10px;">ZALOŽIT NOVOU MÍSTNOST</button>
+      </div>
+
+      <button class="btn-restart" id="btn-close-mp" style="margin-top:2.5rem; background: rgba(255, 255, 255, 0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZPĚT DO MENU</button>
+    </div>
+  </div>
+
+  <div id="meta-modal" class="modal">
+    <div class="modal-content">
+      <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">VYLEPŠENÍ</h2>
+      <div class="stat-chip" style="margin-bottom:20px">DOGECOIN: <span id="meta-currency">0</span></div>
+      <div id="meta-options" class="upgrade-grid"></div>
+      <button class="btn-restart" id="btn-close-meta" style="margin-top:2.5rem">ZAVŘÍT</button>
+    </div>
+  </div>
+
+  <div id="levelup-modal" class="modal">
+    <div class="modal-content">
+      <h2 style="font-size: 3.5rem; color: var(--xp-color); text-shadow: 0 0 30px var(--xp-color);">LEVEL UP!</h2>
+      <div id="upgrade-options" class="upgrade-grid"></div>
+    </div>
+  </div>
+
+  <div id="gameover-modal" class="modal">
+    <div class="modal-content">
+      <h1 class="logo">KONEC<span>HRY</span></h1>
+      <div style="display: flex; gap: 15px; margin-bottom: 2rem;">
+        <div class="stat-chip">LEVEL: <span id="final-level">1</span></div>
+        <div class="stat-chip">KILLS: <span id="final-kills">0</span></div>
+      </div>
+      <div class="menu-actions">
+        <button class="btn-restart" id="btn-restart-game">ZKUSIT ZNOVU</button>
+        <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pause-modal" class="modal">
+    <div class="modal-content">
+      <h1 class="logo">PAUZA</h1>
+      <div class="menu-actions">
+        <button class="btn-restart" id="btn-resume">POKRAČOVAT</button>
+        <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">MENU</button>
+      </div>
+    </div>
+  </div>
+`;
+
 const CONFIG = {
     PLAYER_BASE_SPEED: 4,
     PLAYER_BASE_HEALTH: 120,
@@ -65,7 +186,8 @@ const NET = {
     socket: null,
     roomId: null,
     isMultiplayer: false,
-    others: {}
+    others: {},
+    serverPollingInterval: null
 };
 
 const META = {
@@ -154,14 +276,14 @@ const AudioEngine = {
         this.menuPlaying = true;
         this.menuDrone();
         const melody = [
-            { n: 329.63, d: 0.15, r: 0.25 }, // E
-            { n: 349.23, d: 0.15, r: 0.25 }, // F
-            { n: 392.00, d: 0.20, r: 0.50 }, // G (quarter rest)
-            { n: 329.63, d: 0.15, r: 0.25 }, // E
-            { n: 349.23, d: 0.15, r: 0.25 }, // F
-            { n: 392.00, d: 0.15, r: 0.25 }, // G
-            { n: 293.66, d: 0.15, r: 0.25 }, // D
-            { n: 261.63, d: 0.25, r: 0.60 }  // C (quarter rest)
+            { n: 329.63, d: 0.15, r: 0.25 }, 
+            { n: 349.23, d: 0.15, r: 0.25 }, 
+            { n: 392.00, d: 0.20, r: 0.50 }, 
+            { n: 329.63, d: 0.15, r: 0.25 }, 
+            { n: 349.23, d: 0.15, r: 0.25 }, 
+            { n: 392.00, d: 0.15, r: 0.25 }, 
+            { n: 293.66, d: 0.15, r: 0.25 }, 
+            { n: 261.63, d: 0.25, r: 0.60 }  
         ];
         let idx = 0;
         const playNext = () => {
@@ -696,7 +818,7 @@ class Player {
     }
     addXp(amount) {
         if (this.dead) return;
-        if (NET.isMultiplayer) return; // XP pool řídí server v multiplayeru
+        if (NET.isMultiplayer) return;
 
         const gain = Math.round(Number(amount) * this.xpMultiplier);
         if (isNaN(gain)) return;
@@ -866,13 +988,15 @@ function togglePause() {
     GAME.paused = !GAME.paused;
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
     
-    // Logika odpojení v MP: Pokud zapnu pauzu -> vypnu socket, aby po mně nepřátelé nešli
+    // MP Pauza = dočasné odpojení
     if (NET.isMultiplayer) {
         if (GAME.paused) {
-            NET.socket.disconnect();
+            if (NET.socket) NET.socket.disconnect();
         } else {
-            NET.socket.connect();
-            NET.socket.emit('joinRoom', NET.roomId);
+            if (NET.socket) {
+                NET.socket.connect();
+                NET.socket.emit('joinRoom', NET.roomId);
+            }
         }
     }
 }
@@ -880,7 +1004,7 @@ function togglePause() {
 function toggleFullscreen(element, force = false) {
     const isFS = document.fullscreenElement || document.webkitFullscreenElement;
     if (!isFS || force) {
-        if (element.requestFullscreen) element.requestFullscreen();
+        if (element.requestFullscreen) element.requestFullscreen().catch(e=>{});
         else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
     } else if (!force) {
         if (document.exitFullscreen) document.exitFullscreen();
@@ -919,7 +1043,7 @@ function buyMetaUpgrade(item, cost) {
 
 // MULTIPLAYER LOGIC NODE.JS
 function initSocket() {
-    if (NET.socket) return;
+    if (NET.socket && NET.socket.connected) return;
     
     const SERVER_URL = "https://neo-survivor-server.onrender.com"; 
     
@@ -928,14 +1052,41 @@ function initSocket() {
         
         NET.socket.on('connect', () => {
             console.warn("CLOUD: Připojeno k hernímu serveru!");
+            // Hned si vyžádáme servery
+            window.requestServerList();
+        });
+
+        // Naslouchání pro seznam serverů
+        NET.socket.on('roomList', (rooms) => {
+            const container = document.getElementById('server-list-container');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            if (rooms.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">Žádné aktivní servery</div>';
+                return;
+            }
+            
+            rooms.forEach(room => {
+                const btn = document.createElement('div');
+                btn.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);";
+                btn.innerHTML = `
+                    <div>
+                        <strong style="color: #a5b4fc; font-size: 1.1rem; letter-spacing: 2px;">${room.id}</strong>
+                        <div style="font-size: 0.75rem; color: gray; margin-top: 4px;">LVL ${room.level} | Hráči: ${room.players}</div>
+                    </div>
+                    <button class="btn-restart" style="padding: 8px 15px; font-size: 0.8rem; background: #10b981; margin: 0;" onclick="joinCloudServer('${room.id}')">HRÁT</button>
+                `;
+                container.appendChild(btn);
+            });
         });
 
         NET.socket.on('joined', (id) => {
             NET.roomId = id;
             NET.isMultiplayer = true;
             document.getElementById('multiplayer-modal').classList.remove('active');
+            clearInterval(NET.serverPollingInterval); // Vypneme zjišťování serverů
             startGame();
-            alert("Úspěšně ses připojil do místnosti: " + id);
         });
 
         NET.socket.on('stateUpdate', (data) => {
@@ -1032,6 +1183,12 @@ function initSocket() {
     }
 }
 
+window.requestServerList = () => {
+    if (NET.socket && NET.socket.connected) {
+        NET.socket.emit('requestRooms');
+    }
+}
+
 function syncPlayer() {
     if (!NET.isMultiplayer || !NET.socket) return;
     NET.socket.emit('playerUpdate', {
@@ -1054,6 +1211,7 @@ function syncShot(proj) {
 }
 
 window.joinCloudServer = (roomName) => {
+    toggleFullscreen(document.documentElement, true);
     if(!roomName) {
         roomName = Math.random().toString(36).substr(2, 6).toUpperCase();
         const input = document.getElementById('input-join-id');
@@ -1061,11 +1219,6 @@ window.joinCloudServer = (roomName) => {
     }
     initSocket();
     NET.socket.emit('joinRoom', roomName.trim().toUpperCase());
-};
-
-window.connectToId = (id) => {
-    const input = document.getElementById('input-join-id');
-    if (input) input.value = id;
 };
 
 function init() {
@@ -1113,11 +1266,13 @@ function init() {
         document.getElementById('menu-modal').classList.remove('active');
         document.getElementById('multiplayer-modal').classList.add('active');
         AudioEngine.init(); 
-        initSocket(); 
+        initSocket();
+        NET.serverPollingInterval = setInterval(window.requestServerList, 2000); 
     };
     
     const btnCloseMP = document.getElementById('btn-close-mp');
     if (btnCloseMP) btnCloseMP.onclick = () => {
+        clearInterval(NET.serverPollingInterval);
         document.getElementById('multiplayer-modal').classList.remove('active');
         document.getElementById('menu-modal').classList.add('active');
     };
@@ -1142,6 +1297,7 @@ function init() {
     const btnRestart = document.getElementById('btn-restart-game');
     if (btnRestart) btnRestart.onclick = () => { 
         document.getElementById('gameover-modal').classList.remove('active'); 
+        toggleFullscreen(document.documentElement, true);
         startGame(); 
     };
     document.querySelectorAll('.btn-reload').forEach(btn => btn.onclick = () => location.reload());
@@ -1338,6 +1494,48 @@ function render() {
     for (const id in NET.others) NET.others[id].draw(ctx, { x: camX, y: camY });
     if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
     ctx.restore();
+    
+    // --- MINIMAPA ---
+    if (GAME.active && GAME.entities.player && !GAME.entities.player.dead) {
+        const mapSize = 150;
+        const padding = 20;
+        const startX = GAME.canvas.width - mapSize - padding;
+        const startY = 80; 
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.fillRect(startX, startY, mapSize, mapSize);
+        ctx.strokeRect(startX, startY, mapSize, mapSize);
+
+        const viewDist = 4000;
+        const scale = mapSize / viewDist;
+        const cx = GAME.entities.player.x;
+        const cy = GAME.entities.player.y;
+
+        const drawDot = (x, y, color, size) => {
+            const relX = (x - cx) * scale + mapSize / 2;
+            const relY = (y - cy) * scale + mapSize / 2;
+            if (relX >= 0 && relX <= mapSize && relY >= 0 && relY <= mapSize) {
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(startX + relX, startY + relY, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        };
+
+        GAME.entities.gems.forEach(g => drawDot(g.x, g.y, '#34d399', 1));
+        GAME.entities.enemies.forEach(e => drawDot(e.x, e.y, e.isBoss ? '#ef4444' : (e.type===2 ? '#a855f7' : '#f59e0b'), e.isBoss ? 4 : 2));
+        for (const id in NET.others) {
+            const op = NET.others[id];
+            if (!op.dead) drawDot(op.x, op.y, '#3b82f6', 3);
+        }
+        drawDot(cx, cy, '#10b981', 3);
+
+        ctx.restore();
+    }
+
     if (window.innerWidth < 850) {
         ctx.save(); const sx = GAME.joystick.startX, sy = GAME.joystick.startY, cx = GAME.joystick.currentX, cy = GAME.joystick.currentY;
         ctx.beginPath(); ctx.arc(sx, sy, 75, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 2; ctx.stroke();
