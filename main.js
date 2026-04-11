@@ -94,6 +94,7 @@ const GAME = {
         enemies: [],
         projectiles: [],
         gems: [],
+        pickedGems: new Set(),
         particles: [],
         fire: [],
         baits: []
@@ -479,7 +480,6 @@ class Boss {
     }
     update() {
         if (NET.isMultiplayer) {
-            // Plynulá interpolace (odstranění glitchování)
             if (this.targetX !== undefined && this.targetY !== undefined) {
                 this.x += (this.targetX - this.x) * 0.3;
                 this.y += (this.targetY - this.y) * 0.3;
@@ -540,7 +540,6 @@ class Enemy {
     }
     update() {
         if (NET.isMultiplayer) {
-            // Plynulá interpolace (odstranění glitchování)
             if (this.targetX !== undefined && this.targetY !== undefined) {
                 this.x += (this.targetX - this.x) * 0.3;
                 this.y += (this.targetY - this.y) * 0.3;
@@ -938,7 +937,6 @@ function initSocket() {
                 GAME.entities.player.nextLevelXp = data.roomInfo.nextLevelXp;
             }
             
-            // Mapování existujících nepřátel, aby se nepřekreslovali od nuly (fix glitchování)
             const currentEnemies = new Map(GAME.entities.enemies.map(e => [e.id, e]));
             GAME.entities.enemies = data.enemies.map(he => {
                 let e = currentEnemies.get(he.id);
@@ -954,8 +952,22 @@ function initSocket() {
                 return e;
             });
 
-            // Sync Gems
-            GAME.entities.gems = data.gems.map(g => new Gem(g.x, g.y, g.id));
+            // Oprava problikávání (glitchování) krystalů!
+            // Ignorujeme krystaly, které jsme už sebrali nebo které už k nám letí.
+            const currentGems = new Map(GAME.entities.gems.map(g => [g.id, g]));
+            GAME.entities.gems = data.gems
+                .filter(hg => !GAME.entities.pickedGems.has(hg.id))
+                .map(hg => {
+                    let g = currentGems.get(hg.id);
+                    if (!g) {
+                        g = new Gem(hg.x, hg.y, hg.id);
+                    } else if (!g.attracted) {
+                        // Pokud už se krystal přitahuje k hráči, NEAKTUALIZUJEME ho zpět na serverovou pozici!
+                        g.x = hg.x;
+                        g.y = hg.y;
+                    }
+                    return g;
+                });
 
             // Sync Others
             const newOthers = {};
@@ -1155,7 +1167,13 @@ function startGame() {
 
 function resetGame() {
     GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0;
-    GAME.entities.player = new Player(true); GAME.entities.enemies = []; GAME.entities.projectiles = []; GAME.entities.gems = []; GAME.entities.particles = []; GAME.entities.fire = [];
+    GAME.entities.player = new Player(true); 
+    GAME.entities.enemies = []; 
+    GAME.entities.projectiles = []; 
+    GAME.entities.gems = []; 
+    GAME.entities.pickedGems = new Set(); // Smažeme paměť sebraných krystalů
+    GAME.entities.particles = []; 
+    GAME.entities.fire = [];
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     updateSpeedFactor(); updateUI();
 }
@@ -1255,6 +1273,8 @@ function update() {
         if (!pForGems.dead && dist(pForGems.x, pForGems.y, g.x, g.y) < pForGems.radius + g.radius) {
             AudioEngine.play('gem');
             if(NET.isMultiplayer) {
+                // Uložíme ID krystalu, aby se už znova nevykreslil, pokud ho server ještě pošle
+                GAME.entities.pickedGems.add(g.id);
                 NET.socket.emit('gemPickup', g.id);
             } else {
                 pForGems.addXp(Math.round(10 * (pForGems.luckFactor || 1)));
