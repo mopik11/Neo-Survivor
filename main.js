@@ -692,7 +692,7 @@ class Player {
     }
     addXp(amount) {
         if (this.dead) return;
-        if (NET.isMultiplayer) return; // XP v multiplayeru spravuje server
+        if (NET.isMultiplayer) return; // XP pool řídí server v multiplayeru
 
         const gain = Math.round(Number(amount) * this.xpMultiplier);
         if (isNaN(gain)) return;
@@ -707,14 +707,13 @@ class Player {
         this.xp = Math.max(0, this.xp - this.nextLevelXp);
         this.nextLevelXp = Math.floor(this.nextLevelXp * 1.25);
         AudioEngine.play('lvlup');
-        console.warn("SOLO LEVEL UP:", this.level);
         GAME.paused = true;
         showLevelUp();
     }
 }
 
 function spawnEnemy() {
-    if (NET.isMultiplayer) return; // Server spawnuje nepřátele
+    if (NET.isMultiplayer) return; 
     if (!GAME.active || GAME.paused) { setTimeout(spawnEnemy, 500); return; }
     const alive = getAllAlivePlayers();
     if (alive.length === 0) { setTimeout(spawnEnemy, 1000); return; }
@@ -757,7 +756,6 @@ function updateUI() {
 }
 
 function showLevelUp() {
-    GAME.paused = true;
     if (!NET.isMultiplayer) GAME.entities.enemies = []; 
     const modal = document.getElementById('levelup-modal');
     const container = document.getElementById('upgrade-options');
@@ -845,7 +843,6 @@ function applyUpgrade(id) {
     
     if (NET.isMultiplayer) {
         NET.socket.emit('upgradePicked');
-        // Pauza zůstává, dokud nevyberou všichni (řeší server -> resumeGame)
     } else {
         GAME.paused = false;
     }
@@ -861,7 +858,7 @@ function gameOver() {
 
 function togglePause() {
     if (!GAME.active) return;
-    if (NET.isMultiplayer) return; // V MP nelze manuálně pauzovat hru
+    if (NET.isMultiplayer) return; 
     GAME.paused = !GAME.paused;
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
 }
@@ -930,7 +927,6 @@ function initSocket() {
         NET.socket.on('stateUpdate', (data) => {
             if (!GAME.active) return;
             
-            // Sdílené údaje místnosti
             if (data.roomInfo) {
                 GAME.entities.player.level = data.roomInfo.level;
                 GAME.entities.player.xp = data.roomInfo.xp;
@@ -952,8 +948,6 @@ function initSocket() {
                 return e;
             });
 
-            // Oprava problikávání (glitchování) krystalů!
-            // Ignorujeme krystaly, které jsme už sebrali nebo které už k nám letí.
             const currentGems = new Map(GAME.entities.gems.map(g => [g.id, g]));
             GAME.entities.gems = data.gems
                 .filter(hg => !GAME.entities.pickedGems.has(hg.id))
@@ -962,14 +956,12 @@ function initSocket() {
                     if (!g) {
                         g = new Gem(hg.x, hg.y, hg.id);
                     } else if (!g.attracted) {
-                        // Pokud už se krystal přitahuje k hráči, NEAKTUALIZUJEME ho zpět na serverovou pozici!
                         g.x = hg.x;
                         g.y = hg.y;
                     }
                     return g;
                 });
 
-            // Sync Others
             const newOthers = {};
             for(let pId in data.players) {
                 if(pId === NET.socket.id) continue;
@@ -997,7 +989,7 @@ function initSocket() {
         });
         
         NET.socket.on('teamLevelUp', (data) => {
-            GAME.entities.player.level = data.level; // Sychronizace se serverem
+            GAME.entities.player.level = data.level; 
             AudioEngine.play('lvlup');
             GAME.paused = true;
             showLevelUp();
@@ -1074,7 +1066,8 @@ function init() {
 
     const startAudio = () => {
         AudioEngine.init();
-        if (document.getElementById('menu-modal') && document.getElementById('menu-modal').classList.contains('active')) {
+        const menu = document.getElementById('menu-modal');
+        if (menu && menu.classList.contains('active')) {
             AudioEngine.startMenuMusic();
         }
         if (AudioEngine.ctx && AudioEngine.ctx.state === 'running') {
@@ -1097,7 +1090,7 @@ function init() {
         document.getElementById('menu-modal').classList.remove('active');
         document.getElementById('multiplayer-modal').classList.add('active');
         AudioEngine.init(); 
-        initSocket(); // Připojit na pozadí, když otevře MP menu
+        initSocket(); 
     };
     
     const btnCloseMP = document.getElementById('btn-close-mp');
@@ -1108,6 +1101,12 @@ function init() {
 
     const btnMeta = document.getElementById('btn-meta-menu');
     if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+
+    // OPRAVA: Tlačítko zavřít v menu vylepšení
+    const btnCloseMeta = document.getElementById('btn-close-meta');
+    if (btnCloseMeta) btnCloseMeta.onclick = () => {
+        document.getElementById('meta-modal').classList.remove('active');
+    };
 
     const btnResume = document.getElementById('btn-resume');
     if (btnResume) btnResume.onclick = togglePause;
@@ -1121,12 +1120,12 @@ function init() {
     const btnRestart = document.getElementById('btn-restart-game');
     if (btnRestart) btnRestart.onclick = () => { 
         document.getElementById('gameover-modal').classList.remove('active'); 
-        startGame(); // Resetuje klienta. Server je už resetován
+        startGame(); 
     };
     document.querySelectorAll('.btn-reload').forEach(btn => btn.onclick = () => location.reload());
 
     GAME.canvas.addEventListener('touchstart', (e) => {
-        if (!GAME.active || GAME.paused || GAME.entities.player.dead) return;
+        if (!GAME.active || GAME.paused || (GAME.entities.player && GAME.entities.player.dead)) return;
         const t = e.touches[0];
         const rect = GAME.canvas.getBoundingClientRect();
         const sx = (t.clientX - rect.left) / GAME.zoom;
@@ -1171,7 +1170,7 @@ function resetGame() {
     GAME.entities.enemies = []; 
     GAME.entities.projectiles = []; 
     GAME.entities.gems = []; 
-    GAME.entities.pickedGems = new Set(); // Smažeme paměť sebraných krystalů
+    GAME.entities.pickedGems = new Set(); 
     GAME.entities.particles = []; 
     GAME.entities.fire = [];
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
@@ -1273,7 +1272,6 @@ function update() {
         if (!pForGems.dead && dist(pForGems.x, pForGems.y, g.x, g.y) < pForGems.radius + g.radius) {
             AudioEngine.play('gem');
             if(NET.isMultiplayer) {
-                // Uložíme ID krystalu, aby se už znova nevykreslil, pokud ho server ještě pošle
                 GAME.entities.pickedGems.add(g.id);
                 NET.socket.emit('gemPickup', g.id);
             } else {
