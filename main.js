@@ -924,31 +924,21 @@ function init() {
       document.getElementById('multiplayer-modal').classList.add('active'); 
   };
   document.getElementById('btn-close-mp').onclick = () => document.getElementById('multiplayer-modal').classList.remove('active');
-  document.getElementById('btn-create-host').onclick = () => { 
-      if (!NET.roomId || NET.roomId === 'Načítám...') return; 
-      toggleFullscreen(document.documentElement, true);
-      LOBBY.broadcast(NET.roomId); NET.isHost = true; startGame(); 
-  };
-  document.getElementById('btn-copy-id').onclick = () => {
-      const id = document.getElementById('my-id-display').innerText;
-      if (id === 'Načítám...') return;
-      navigator.clipboard.writeText(id).then(() => { document.getElementById('btn-copy-id').innerText = 'OK!'; setTimeout(() => document.getElementById('btn-copy-id').innerText = 'Kopírovat', 2000); });
-  };
-  document.getElementById('btn-refresh-lobby').onclick = () => { LOBBY.servers = {}; LOBBY.scan(); };
-  document.getElementById('btn-join-room').onclick = () => {
-      const id = document.getElementById('input-join-id').value.trim().toUpperCase();
-      if (!id) return;
-      toggleFullscreen(document.documentElement, true);
-      if (!NET.peer) initPeer();
-      NET.conn = NET.peer.connect(id);
-      NET.isHost = false; setupConn();
-  };
+  
   const btnMeta = document.getElementById('btn-meta-menu');
   if(btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
-  document.getElementById('btn-resume').onclick = togglePause;
-  document.getElementById('mobile-pause').onclick = (e) => { e.stopPropagation(); togglePause(); };
-  document.getElementById('fs-toggle').onclick = (e) => { e.stopPropagation(); toggleFullscreen(document.documentElement); };
-  document.getElementById('btn-restart-game').onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); startGame(); };
+  
+  const btnResume = document.getElementById('btn-resume');
+  if(btnResume) btnResume.onclick = togglePause;
+  
+  const mobilePause = document.getElementById('mobile-pause');
+  if(mobilePause) mobilePause.onclick = (e) => { e.stopPropagation(); togglePause(); };
+  
+  const fsToggle = document.getElementById('fs-toggle');
+  if(fsToggle) fsToggle.onclick = (e) => { e.stopPropagation(); toggleFullscreen(document.documentElement); };
+  
+  const btnRestart = document.getElementById('btn-restart-game');
+  if(btnRestart) btnRestart.onclick = () => { document.getElementById('gameover-modal').classList.remove('active'); startGame(); };
   document.querySelectorAll('.btn-reload').forEach(btn => btn.onclick = () => location.reload());
 
   GAME.canvas.addEventListener('touchstart', (e) => {
