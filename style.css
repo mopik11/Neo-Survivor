@@ -225,6 +225,9 @@ canvas {
   display: flex;
   gap: 20px;
   margin-top: 1rem;
+  z-index: 10001;
+  position: relative;
+  pointer-events: auto;
 }
 
 /* Upgrade Cards */

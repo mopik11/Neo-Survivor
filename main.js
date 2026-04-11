@@ -919,9 +919,12 @@ function init() {
       toggleFullscreen(document.documentElement, true);
       AudioEngine.init(); AudioEngine.startMusic(); startGame(); 
   };
-  document.getElementById('btn-multiplayer').onclick = () => { 
-      initPeer(); LOBBY.init(); 
+  document.getElementById('btn-multiplayer').onclick = (e) => { 
+      if (e) e.preventDefault();
       document.getElementById('multiplayer-modal').classList.add('active'); 
+      setTimeout(() => {
+          try { initPeer(); LOBBY.init(); } catch(err) { console.error("Cloud init delayed:", err); }
+      }, 50);
   };
   document.getElementById('btn-close-mp').onclick = () => document.getElementById('multiplayer-modal').classList.remove('active');
   
