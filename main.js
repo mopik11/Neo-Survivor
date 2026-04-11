@@ -43,10 +43,12 @@ const CONFIG = {
     { id: 'orbit', name: 'Orbitální Štít', desc: 'Vypustí rotující projektil', icon: '🪐', rarity: 'epic' },
     { id: 'lifesteal', name: 'Lifesteal', desc: '5% šance na heal při killu', icon: '🧛', rarity: 'epic' },
     { id: 'fire', name: 'Ohnivá Stopa', desc: 'Zanecháváš za sebou oheň', icon: '🔥', rarity: 'epic' },
+    { id: 'cactus', name: 'Kaktus', desc: 'Dotek nepřítele znamená jeho smrt', icon: '🌵', rarity: 'epic' },
     
     { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎', rarity: 'legendary' },
     { id: 'luck', name: 'Větší Výběr', desc: '4 možnosti při levelu', icon: '🍀', rarity: 'legendary' },
-    { id: 'aura', name: 'Mrazivá Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' }
+    { id: 'aura', name: 'Mrazivá Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' },
+    { id: 'decoy', name: 'Návnada', desc: 'Položí kosočtverec co láká ufony', icon: '🪤', rarity: 'legendary' }
   ],
   RARITIES: {
     common: { chance: 40, color: '#94a3b8', name: 'COMMON' },
@@ -400,6 +402,25 @@ class Orbiter {
     ctx.shadowBlur = 0;
     GAME.entities.enemies.forEach(e => { if (dist(x, y, e.x, e.y) < this.size + e.radius) { e.hp -= this.owner.damage * 0.3 * (3); } });
   }
+}
+
+class Decoy {
+    constructor(x, y, hp) {
+        this.x = x; this.y = y; this.radius = 25;
+        this.maxHp = hp; this.hp = hp;
+        this.life = 1500; // Lasts ~25 seconds max
+    }
+    update() { this.life--; }
+    draw(ctx, cam) {
+        const ratio = this.hp / this.maxHp;
+        ctx.shadowBlur = 20; ctx.shadowColor = '#fff'; ctx.fillStyle = '#fff';
+        ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
+        ctx.rotate(Math.PI / 4); ctx.fillRect(-15, -15, 30, 30); ctx.restore();
+        ctx.shadowBlur = 0;
+        // Mini health bar
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(this.x - cam.x - 20, this.y - cam.y - 40, 40, 5);
+        ctx.fillStyle = '#fff'; ctx.fillRect(this.x - cam.x - 20, this.y - cam.y - 40, 40 * ratio, 5);
+    }
 }
 
 function getAllAlivePlayers() {
@@ -1096,9 +1117,11 @@ function init() {
       document.getElementById('menu-modal').classList.add('active');
   };
   
-  const btnMeta = document.getElementById('btn-meta-menu');
-  if(btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+  if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
   
+  const btnCloseMeta = document.getElementById('btn-close-meta');
+  if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
+
   const btnResume = document.getElementById('btn-resume');
   if(btnResume) btnResume.onclick = togglePause;
   
