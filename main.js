@@ -145,6 +145,7 @@ const AudioEngine = {
     musicStarted: false,
     menuInterval: null,
     menuPlaying: false,
+    droneNodes: null,
     init() {
         if (this.ctx) return;
         try {
@@ -155,6 +156,7 @@ const AudioEngine = {
         if (!this.ctx || this.menuPlaying) return;
         if (this.ctx.state === 'suspended') this.ctx.resume();
         this.menuPlaying = true;
+        this.menuDrone();
         const melody = [
             { n: 329.63, d: 0.15, r: 0.25 }, // E
             { n: 349.23, d: 0.15, r: 0.25 }, // F
@@ -175,9 +177,37 @@ const AudioEngine = {
         };
         playNext();
     },
+    menuDrone() {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(55, this.ctx.currentTime);
+        
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(200, this.ctx.currentTime);
+        
+        gain.gain.setValueAtTime(0, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.04, this.ctx.currentTime + 3);
+        
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        
+        osc.start();
+        this.droneNodes = [osc, gain];
+    },
     stopMenuMusic() {
         this.menuPlaying = false;
         if (this.menuInterval) clearTimeout(this.menuInterval);
+        if (this.droneNodes) {
+            this.droneNodes.forEach(n => {
+                try { if(n.stop) n.stop(); n.disconnect(); } catch(e) {}
+            });
+            this.droneNodes = null;
+        }
     },
     piano(freq, dur) {
         if (!this.ctx) return;
@@ -1195,6 +1225,7 @@ function startGame() {
     resetGame(); 
     GAME.active = true; 
     AudioEngine.stopMenuMusic();
+    AudioEngine.startMusic();
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); 
 }
 
