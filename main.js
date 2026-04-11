@@ -100,7 +100,8 @@ const GAME = {
     projectiles: [],
     gems: [],
     particles: [],
-    fire: []
+    fire: [],
+    decoys: []
   },
   camera: { x: 0, y: 0 },
   input: { w: false, a: false, s: false, d: false },
@@ -441,8 +442,13 @@ class Boss {
   }
   update() {
     const players = getAllAlivePlayers();
-    if (players.length === 0) return;
-    const target = players.sort((a,b) => dist(this.x,this.y,a.x,a.y) - dist(this.x,this.y,b.x,b.y))[0];
+    const decoys = GAME.entities.decoys || [];
+    if (players.length === 0 && decoys.length === 0) return;
+    
+    let targets = [...players.map(p => ({ obj: p, weight: 1 })), ...decoys.map(d => ({ obj: d, weight: 5 }))];
+    let targetData = targets.sort((a,b) => (dist(this.x,this.y,a.obj.x,a.obj.y) / a.weight) - (dist(this.x,this.y,b.obj.x,b.obj.y) / b.weight))[0];
+    const target = targetData.obj;
+    
     const angle = Math.atan2(target.y - this.y, target.x - this.x);
     let speedScale = 1.0;
     players.forEach(p => { if (p.aura && dist(this.x, this.y, p.x, p.y) < p.auraRange) speedScale *= 0.5; });
@@ -489,8 +495,13 @@ class Enemy {
   }
   update() {
     const players = getAllAlivePlayers();
-    if (players.length === 0) return;
-    const target = players.sort((a,b) => dist(this.x,this.y,a.x,a.y) - dist(this.x,this.y,b.x,b.y))[0];
+    const decoys = GAME.entities.decoys || [];
+    if (players.length === 0 && decoys.length === 0) return;
+    
+    let targets = [...players.map(p => ({ obj: p, weight: 1 })), ...decoys.map(d => ({ obj: d, weight: 5 }))];
+    let targetData = targets.sort((a,b) => (dist(this.x,this.y,a.obj.x,a.obj.y) / a.weight) - (dist(this.x,this.y,b.obj.x,b.obj.y) / b.weight))[0];
+    const target = targetData.obj;
+    
     const angle = Math.atan2(target.y - this.y, target.x - this.x);
     let speedScale = 1.0;
     players.forEach(p => { if (p.aura && dist(this.x, this.y, p.x, p.y) < p.auraRange) speedScale *= 0.5; });
@@ -551,7 +562,8 @@ class Player {
     this.luckFactor = 1.0 + (isLocal ? (META.upgrades.luck * 0.05) : 0);
     this.orbitals = 0; this.knockbackForce = 6; this.xpMultiplier = 1.0;
     this.lifestealChance = 0; this.aura = false; this.auraRange = 150;
-    this.bounces = 0; this.fireTrail = false;
+    this.cactus = false; this.decoyInterval = 0;
+    this.lastDecoy = 0;
     this.lastFireTrail = 0; this.lastFired = 0; this.lastRegen = 0;
     this.level = 1; this.xp = 0; this.nextLevelXp = CONFIG.XP_PER_LEVEL;
     this.remoteHat = null;
@@ -710,7 +722,7 @@ function showLevelUp() {
     const container = document.getElementById('upgrade-options');
     container.innerHTML = '';
     
-    const count = GAME.entities.player.level === 1 ? 3 : GAME.upgradeOptionsCount;
+        const count = GAME.entities.player.level === 1 ? 3 : GAME.upgradeOptionsCount;
     const selected = [];
     const usedIds = new Set();
     
@@ -723,7 +735,13 @@ function showLevelUp() {
         else if (rand < 35) rarity = 'rare';
         else if (rand < 60) rarity = 'uncommon';
         
-        const possible = CONFIG.UPGRADES.filter(u => u.rarity === rarity && !usedIds.has(u.id));
+        const possible = CONFIG.UPGRADES.filter(u => {
+            if (usedIds.has(u.id)) return false;
+            if (u.rarity !== rarity) return false;
+            if (u.id === 'cactus' && GAME.entities.player.cactus) return false;
+            return true;
+        });
+        
         if (possible.length > 0) {
             const pick = possible[Math.floor(Math.random() * possible.length)];
             selected.push(pick);
@@ -1202,14 +1220,23 @@ function update() {
         e.update();
         alivePlayers.forEach(ap => {
             if (dist(ap.x, ap.y, e.x, e.y) < ap.radius + e.radius) {
-                ap.hp -= (e.isBoss ? 2 : 0.5) * ap.shield;
-                if (ap.hp <= 0) ap.dead = true;
-                updateUI();
+                if (ap.cactus) { e.hp = 0; }
+                else {
+                    ap.hp -= (e.isBoss ? 2 : 0.5) * ap.shield;
+                    if (ap.hp <= 0) ap.dead = true;
+                    updateUI();
+                }
+            }
+        });
+        (GAME.entities.decoys || []).forEach(d => {
+            if (dist(d.x, d.y, e.x, e.y) < d.radius + e.radius) {
+                d.hp -= (e.isBoss ? 5 : 1);
             }
         });
     });
   }
   
+  (GAME.entities.decoys || []).forEach((d, i) => { d.update(); if (d.life <= 0 || d.hp <= 0) GAME.entities.decoys.splice(i, 1); });
   GAME.orbiters.forEach(o => o.update());
   GAME.entities.fire.forEach((f, i) => { f.update(); if (f.life <= 0) GAME.entities.fire.splice(i, 1); });
 
