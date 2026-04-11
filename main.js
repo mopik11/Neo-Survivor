@@ -268,14 +268,18 @@ class Projectile {
   constructor(x, y, targetX, targetY, damage, stats = {}) {
     this.x = x; this.y = y;
     const angle = Math.atan2(targetY - y, targetX - x);
-    this.vx = Math.cos(angle) * CONFIG.PROJECTILE_SPEED;
-    this.vy = Math.sin(angle) * CONFIG.PROJECTILE_SPEED;
+    const speed = stats.speed || CONFIG.PROJECTILE_SPEED;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
     this.damage = damage;
     this.radius = stats.size || 6;
-    this.life = 200; this.pierce = stats.pierce || 1;
+    this.life = stats.life || 200; 
+    this.pierce = stats.pierce || 1;
     this.bounce = stats.bounce || 0;
     this.hitEnemies = new Set();
     this.ownerId = stats.ownerId || 'local';
+    this.isEnemy = stats.isEnemy || false;
+    this.color = stats.color || null;
   }
   update() { 
     this.x += this.vx * GAME.speedFactor; 
@@ -283,8 +287,9 @@ class Projectile {
     this.life--; 
   }
   draw(ctx, cam) {
-    ctx.shadowBlur = 15; ctx.shadowColor = this.ownerId === 'local' ? '#6366f1' : '#f43f5e';
-    ctx.fillStyle = '#f8fafc';
+    ctx.shadowBlur = 15; 
+    ctx.shadowColor = this.isEnemy ? (this.color || '#ff00ff') : (this.ownerId === 'local' ? '#6366f1' : '#f43f5e');
+    ctx.fillStyle = this.isEnemy ? (this.color || '#ff00ff') : '#f8fafc';
     ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
   }
@@ -380,10 +385,19 @@ class Boss {
 }
 
 class Enemy {
-  constructor(x, y, level = 1, id = Math.random().toString(36).substr(2, 9)) {
-    this.x = x; this.y = y; this.radius = 18; this.id = id;
-    this.maxHp = CONFIG.ENEMY_BASE_HEALTH * level; this.hp = this.maxHp;
+  constructor(x, y, level = 1, id = Math.random().toString(36).substr(2, 9), type = 1) {
+    this.x = x; this.y = y; this.radius = 18; this.id = id; this.type = type;
+    this.maxHp = CONFIG.ENEMY_BASE_HEALTH * level; 
     this.speed = CONFIG.ENEMY_BASE_SPEED + (level * 0.15);
+    
+    if (this.type === 2) {
+        this.maxHp *= 0.5;
+        this.speed *= 0.5;
+        this.lastShot = Date.now();
+        this.shotInterval = 5000;
+    }
+    
+    this.hp = this.maxHp;
     this.knockback = { x: 0, y: 0 };
   }
   update() {
@@ -397,17 +411,43 @@ class Enemy {
     this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
     this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
     this.knockback.x *= 0.8; this.knockback.y *= 0.8;
+
+    // Type 2 Mechanics: Shooting
+    if (this.type === 2 && Date.now() - this.lastShot > this.shotInterval) {
+        const pSpeed = CONFIG.ENEMY_BASE_SPEED * 1.2;
+        GAME.entities.projectiles.push(new Projectile(this.x, this.y, target.x, target.y, 10, {
+            isEnemy: true,
+            color: '#ff00ff',
+            speed: pSpeed,
+            size: 8
+        }));
+        this.lastShot = Date.now();
+    }
   }
   draw(ctx, cam) {
     const ratio = this.hp / this.maxHp;
-    const color = `rgb(255, ${Math.floor(255 * (1 - ratio))}, 80)`;
-    ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
-    const players = getAllAlivePlayers();
-    const target = players.length > 0 ? players.sort((a,b) => dist(this.x,this.y,a.x,a.y) - dist(this.x,this.y,b.x,b.y))[0] : {x:0, y:0};
-    const angle = Math.atan2(target.y - this.y, target.x - this.x);
-    ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y); ctx.rotate(angle);
-    ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, 12); ctx.lineTo(-12, -12); ctx.closePath(); ctx.fill();
-    ctx.restore(); ctx.shadowBlur = 0;
+    if (this.type === 1) {
+        const color = `rgb(255, ${Math.floor(255 * (1 - ratio))}, 80)`;
+        ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
+        const players = getAllAlivePlayers();
+        const target = players.length > 0 ? players.sort((a,b) => dist(this.x,this.y,a.x,a.y) - dist(this.x,this.y,b.x,b.y))[0] : {x:0, y:0};
+        const angle = Math.atan2(target.y - this.y, target.x - this.x);
+        ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y); ctx.rotate(angle);
+        ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, 12); ctx.lineTo(-12, -12); ctx.closePath(); ctx.fill();
+        ctx.restore(); ctx.shadowBlur = 0;
+    } else if (this.type === 2) {
+        // Square shape, Purple (full) to Green (low)
+        const r = Math.floor(168 * ratio + 34 * (1 - ratio));
+        const g = Math.floor(85 * ratio + 197 * (1 - ratio));
+        const b = Math.floor(247 * ratio + 94 * (1 - ratio));
+        const color = `rgb(${r}, ${g}, ${b})`;
+        
+        ctx.shadowBlur = 20; ctx.shadowColor = color; ctx.fillStyle = color;
+        ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
+        ctx.rotate(Date.now() / 1000); // Rotating square for flair
+        ctx.fillRect(-15, -15, 30, 30);
+        ctx.restore(); ctx.shadowBlur = 0;
+    }
   }
 }
 
@@ -541,7 +581,16 @@ function spawnEnemy() {
   const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
   const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
   const mod = Math.floor(GAME.time / 60) + 1;
-  const enemy = (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) ? new Boss(x, y, mod) : new Enemy(x, y, mod);
+  
+  let enemy;
+  if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
+      enemy = new Boss(x, y, mod);
+  } else {
+      let type = 1;
+      if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
+      enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
+  }
+
   if (enemy.isBoss) { showBossWarning(); GAME.lastBossTime = GAME.time; }
   GAME.entities.enemies.push(enemy);
   if (NET.isHost) syncWorld();
@@ -1023,22 +1072,38 @@ function update() {
 
   const enemies = GAME.entities.enemies;
   GAME.entities.projectiles.forEach((proj, pIndex) => {
-    proj.update(); if (proj.life <= 0) { GAME.entities.projectiles.splice(pIndex, 1); return; }
-    enemies.forEach((enemy, eIndex) => {
-        if (!proj.hitEnemies.has(enemy) && dist(proj.x, proj.y, enemy.x, enemy.y) < proj.radius + enemy.radius) {
-            enemy.hp -= proj.damage; proj.hitEnemies.add(enemy);
-            if (proj.bounce > 0) {
-                const targets = enemies.filter(e => e !== enemy && !proj.hitEnemies.has(e));
-                if (targets.length > 0) {
-                    const next = targets.sort((a,b) => dist(proj.x, proj.y, a.x, a.y) - dist(proj.x, proj.y, b.x, b.y))[0];
-                    const angle = Math.atan2(next.y - proj.y, next.x - proj.x);
-                    proj.vx = Math.cos(angle) * CONFIG.PROJECTILE_SPEED; proj.vy = Math.sin(angle) * CONFIG.PROJECTILE_SPEED; proj.bounce--;
-                }
+    proj.update(); 
+    if (proj.life <= 0) { GAME.entities.projectiles.splice(pIndex, 1); return; }
+    
+    if (proj.isEnemy) {
+        // Enemy projectiles hit players
+        const alivePlayers = getAllAlivePlayers();
+        alivePlayers.forEach(p => {
+            if (dist(proj.x, proj.y, p.x, p.y) < proj.radius + p.radius) {
+                p.hp -= 10 * (p.shield || 1);
+                if (p.hp <= 0) p.dead = true;
+                GAME.entities.projectiles.splice(pIndex, 1);
+                updateUI();
             }
-            if (proj.pierce > 1) proj.pierce--; else if (proj.pierce !== Infinity && proj.bounce <= 0) GAME.entities.projectiles.splice(pIndex, 1);
-            if (enemy.hp <= 0) { AudioEngine.play('hit'); if(!NET.peer || NET.isHost) GAME.entities.gems.push(new Gem(enemy.x, enemy.y)); enemies.splice(eIndex, 1); GAME.kills++; updateUI(); }
-        }
-    });
+        });
+    } else {
+        // Player projectiles hit enemies
+        enemies.forEach((enemy, eIndex) => {
+            if (!proj.hitEnemies.has(enemy) && dist(proj.x, proj.y, enemy.x, enemy.y) < proj.radius + enemy.radius) {
+                enemy.hp -= proj.damage; proj.hitEnemies.add(enemy);
+                if (proj.bounce > 0) {
+                    const targets = enemies.filter(e => e !== enemy && !proj.hitEnemies.has(e));
+                    if (targets.length > 0) {
+                        const next = targets.sort((a,b) => dist(proj.x, proj.y, a.x, a.y) - dist(proj.x, proj.y, b.x, b.y))[0];
+                        const angle = Math.atan2(next.y - proj.y, next.x - proj.x);
+                        proj.vx = Math.cos(angle) * CONFIG.PROJECTILE_SPEED; proj.vy = Math.sin(angle) * CONFIG.PROJECTILE_SPEED; proj.bounce--;
+                    }
+                }
+                if (proj.pierce > 1) proj.pierce--; else if (proj.pierce !== Infinity && proj.bounce <= 0) GAME.entities.projectiles.splice(pIndex, 1);
+                if (enemy.hp <= 0) { AudioEngine.play('hit'); if(!NET.peer || NET.isHost) GAME.entities.gems.push(new Gem(enemy.x, enemy.y)); enemies.splice(eIndex, 1); GAME.kills++; updateUI(); }
+            }
+        });
+    }
   });
   
   const pForGems = GAME.entities.player;
