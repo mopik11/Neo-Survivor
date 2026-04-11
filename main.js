@@ -689,22 +689,45 @@ function generateShortId() {
     return Math.random().toString(36).substr(2, 6).toUpperCase();
 }
 
-function initPeer() {
-    if (NET.peer) return;
-    const shortId = generateShortId();
-    NET.peer = new Peer(shortId);
-    NET.peer.on('open', (id) => {
-        NET.roomId = id;
-        document.getElementById('my-id-display').innerText = id;
-    });
-    NET.peer.on('connection', (c) => {
-        NET.conn = c; NET.isHost = true; setupConn();
-        startGame();
-    });
-    NET.peer.on('error', (err) => {
-        if (err.type === 'peer-unavailable') alert("Kód neexistuje!");
-        else if (err.type === 'unavailable-id') { NET.peer = null; initPeer(); }
-    });
+function initPeer(customId = null) {
+    if (NET.peer) {
+        if (customId && NET.peer.id !== customId) {
+            NET.peer.destroy();
+            NET.peer = null;
+        } else {
+            return;
+        }
+    }
+    const shortId = customId || generateShortId();
+    
+    try {
+        const config = {
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            }
+        };
+        NET.peer = new Peer(shortId, config);
+        
+        NET.peer.on('open', (id) => {
+            NET.roomId = id;
+            const el = document.getElementById('my-id-display');
+            if (el) el.innerText = id;
+        });
+        
+        NET.peer.on('connection', (c) => {
+            NET.conn = c; NET.isHost = true; setupConn();
+            startGame();
+        });
+        
+        NET.peer.on('error', (err) => {
+            console.error("NET Error:", err.type);
+        });
+    } catch(e) {
+        console.error("Critical PeerJS init fail", e);
+    }
 }
 
 function setupConn() {
@@ -800,6 +823,37 @@ function syncWorld() {
     });
 }
 
+window.joinPublicRoom = (roomName) => {
+    const publicId = "NEO_ROOM_" + roomName;
+    console.warn("LOBBY: Pokus o připojení k veřejné místnosti:", publicId);
+    
+    // 1. Try to connect first
+    if (!NET.peer) initPeer();
+    
+    const conn = NET.peer.connect(publicId);
+    let connectionTimeout = setTimeout(() => {
+        if (!NET.conn) {
+            console.warn("LOBBY: Místnost je prázdná, zakládám ji jako hostitel...");
+            conn.close();
+            initPeer(publicId);
+            setTimeout(() => {
+                LOBBY.broadcast(publicId);
+                NET.isHost = true;
+                alert("Jsi nyní HOSTITELEM místnosti " + roomName + "! Počkej na ostatní.");
+                startGame();
+            }, 1000);
+        }
+    }, 2500);
+
+    conn.on('open', () => {
+        clearTimeout(connectionTimeout);
+        console.warn("LOBBY: Připojeno k veřejné místnosti!");
+        NET.conn = conn;
+        NET.isHost = false;
+        setupConn();
+        startGame();
+    });
+};
 const LOBBY = {
     gun: null, servers: {},
     init() {

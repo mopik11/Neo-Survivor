@@ -47,9 +47,9 @@
           <h1 class="logo">NEO<span>SURVIVOR</span></h1>
           <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
           <div class="menu-actions">
-            <button class="btn-restart" id="btn-start">SOLO</button>
-            <button class="btn-restart" id="btn-multiplayer" style="background: var(--xp-color); filter: hue-rotate(-30deg);">MULTIPLAYER</button>
-            <button class="btn-restart" id="btn-meta-menu" style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">VYLEPŠENÍ</button>
+            <button class="btn-restart" id="btn-start" style="width: 100%; border-radius: 12px; font-size: 1.1rem; padding: 18px; margin-bottom: 5px;">SOLO</button>
+            <button class="btn-restart" id="btn-multiplayer" style="width: 100%; border-radius: 12px; font-size: 1.1rem; padding: 18px; background: linear-gradient(to right, #6366f1, #a855f7); margin-bottom: 5px;">MULTIPLAYER</button>
+            <button class="btn-restart" id="btn-meta-menu" style="width: 100%; border-radius: 12px; font-size: 1.1rem; padding: 18px; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.05);">VYLEPŠENÍ</button>
           </div>
           <div class="controls-hint">
             <span>WASD: POHYB</span>
@@ -105,29 +105,55 @@
 
       <!-- Multiplayer Modal -->
       <div id="multiplayer-modal" class="modal">
-        <div class="modal-content">
-          <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">MULTIPLAYER</h2>
-          <div id="mp-status" class="stat-chip" style="margin-bottom:20px; display: flex; align-items: center; gap: 10px;">
-             TVŮJ KÓD: <span id="my-id-display" style="color: var(--xp-color); letter-spacing: 1px;">Načítám...</span>
-             <button id="btn-copy-id" style="background: rgba(255,255,255,0.1); border: none; border-radius: 5px; color: white; cursor: pointer; padding: 2px 8px; font-size: 0.8rem;">Kopírovat</button>
-          </div>
-          <div class="menu-actions" style="flex-direction: column; width: 100%; gap: 15px;">
-             <button class="btn-restart" id="btn-create-host" style="width: 100%;">ZALOŽIT SEVER</button>
-              <div style="display: flex; gap: 10px; width: 100%;">
-                <input type="text" id="input-join-id" placeholder="Kód kámoše..." style="flex-grow: 1; padding: 15px; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-weight: 800;">
-                <button class="btn-restart" id="btn-join-room" style="padding: 15px 25px;">PŘIPOJIT</button>
+        <div class="modal-content" style="max-width: 500px;">
+          <h2 style="font-size: 2.2rem; margin-bottom: 1.5rem;">MULTIPLAYER</h2>
+          
+          <div id="mp-content" style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
+            
+            <!-- STÁLÉ MÍSTNOSTI -->
+            <div id="official-servers" style="width: 100%; background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15)); border-radius: 12px; padding: 18px; border: 1px solid rgba(168, 85, 247, 0.4); text-align: left;">
+              <h3 style="margin: 0 0 12px 0; font-size: 1rem; color: #d8b4fe; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.2rem;">🌐</span> Oficiální Místnosti
+              </h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                <button onclick="joinPublicRoom('ALFA')" style="background: rgba(168, 85, 247, 0.25); border: 2px solid #d8b4fe; color: white; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 0.9rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">ALFA</button>
+                <button onclick="joinPublicRoom('BETA')" style="background: rgba(168, 85, 247, 0.25); border: 2px solid #d8b4fe; color: white; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 0.9rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">BETA</button>
+                <button onclick="joinPublicRoom('GAMA')" style="background: rgba(168, 85, 247, 0.25); border: 2px solid #d8b4fe; color: white; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 0.9rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">GAMA</button>
               </div>
-              <div id="server-list-container" style="width: 100%; margin-top: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                  <h3 style="margin: 0; font-size: 0.9rem; color: #a5b4fc; text-transform: uppercase;">Veřejné Servery</h3>
-                  <button id="btn-refresh-lobby" style="background: rgba(165, 180, 252, 0.1); border: 1px solid #a5b4fc; color: #a5b4fc; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 0.7rem; font-weight: 800;">OBNOVIT</button>
-                </div>
-                <div id="server-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 120px; overflow-y: auto;">
-                  <div style="opacity: 0.5; font-size: 0.8rem;">Hledám aktivní hry...</div>
-                </div>
+              <p style="font-size: 0.7rem; margin: 10px 0 0 0; opacity: 0.7; font-style: italic;">* Pokud je místnost prázdná, staneš se automaticky HOSTITELEM.</p>
+            </div>
+
+            <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.1); margin: 5px 0;"></div>
+
+            <!-- PRIVATE / CUSTOM -->
+            <div style="width: 100%; display: flex; flex-direction: column; gap: 10px;">
+              <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <span style="font-size: 0.7rem; opacity: 0.6; text-transform: uppercase;">Tvůj Kód:</span>
+                <b id="my-id-display" style="color: #4ade80; font-family: monospace;">Načítám...</b>
+                <button id="btn-copy-id" style="background: rgba(255,255,255,0.1); border: none; border-radius: 4px; color: white; padding: 3px 8px; font-size: 0.6rem; cursor: pointer;">KOPÍROVAT</button>
               </div>
+              
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="input-join-id" placeholder="Kód kámoše..." style="flex-grow: 1; padding: 12px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.8rem;">
+                <button class="btn-restart" id="btn-join-room" style="padding: 12px 20px; font-size: 0.8rem;">PŘIPOJIT</button>
+              </div>
+              
+              <button class="btn-restart" id="btn-create-host" style="width: 100%; padding: 12px; font-size: 0.9rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2);">ZALOŽIT VLASTNÍ SOUKROMOU HRU</button>
+            </div>
+
+            <!-- SERVER LIST -->
+            <div id="server-list-container" style="width: 100%; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h3 style="margin: 0; font-size: 0.8rem; color: #a5b4fc; text-transform: uppercase;">Ostatní Hry</h3>
+                <button id="btn-refresh-lobby" style="background: transparent; border: 1px solid #a5b4fc; color: #a5b4fc; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.6rem;">OBNOVIT</button>
+              </div>
+              <div id="server-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 80px; overflow-y: auto;">
+                <div style="opacity: 0.4; font-size: 0.7rem;">Hledám aktivní hry...</div>
+              </div>
+            </div>
+
           </div>
-          <button class="btn-restart" id="btn-close-mp" style="margin-top:2.5rem; background: rgba(120, 120, 120, 0.1);">ZAVŘÍT</button>
+          <button class="btn-restart" id="btn-close-mp" style="margin-top:1.5rem; background: rgba(255, 50, 50, 0.1); font-size: 0.9rem;">ZAVŘÍT</button>
         </div>
       </div>
 
