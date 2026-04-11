@@ -1,130 +1,147 @@
 <!DOCTYPE html>
 <html lang="cs">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>NEO SURVIVOR | Premium Multiplayer</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div id="app">
-      <div class="scanlines"></div>
-      <canvas id="game-canvas"></canvas>
-      
-      <div id="ui-layer">
-        <div class="top-bar">
-          <div class="stat-chip">
-            <span class="level-badge" id="level-display">LVL 1</span>
-          </div>
-          <div class="xp-container">
-            <div id="xp-bar-fill"></div>
-          </div>
-          <div class="stat-chip">
-            <span id="kill-count">0</span> KILLS
-          </div>
-          <div class="stat-chip sniper-chip" id="sniper-ui" style="flex-grow: 1; max-width: 150px; justify-content: flex-start;">
-            🎯 <div class="sniper-cooldown" style="flex-grow: 1; height: 8px; margin-left: 8px; background: rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden;"><div id="sniper-bar" style="height: 100%; width: 0%; background: var(--accent-color); transition: width 0.1s linear;"></div></div>
-          </div>
-          <div id="fs-toggle" class="stat-chip fs-button" style="cursor: pointer; color: var(--accent-color);">
-            ⛶
-          </div>
-          <div id="mobile-pause" class="stat-chip" style="cursor: pointer; background: var(--hp-color); color: white; border: none; font-size: 1.2rem; padding: 10px;">
-            ⏸
-          </div>
-        </div>
-        
-        <div id="boss-warning" class="boss-warning">BOSS PŘICHÁZÍ!</div>
-        
-        <div class="hp-container">
-          <div id="hp-bar-fill"></div>
-        </div>
-      </div>
 
-      <!-- Main Menu -->
-      <div id="menu-modal" class="modal active">
-        <div class="modal-content">
-          <h1 class="logo">NEO<span>SURVIVOR</span></h1>
-          <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
-          <div class="menu-actions">
-            <button class="btn-restart" id="btn-start" style="width: 100%; border-radius: 12px; font-size: 1.1rem; padding: 18px; margin-bottom: 5px;">SOLO</button>
-            <button class="btn-restart" id="btn-multiplayer" style="width: 100%; border-radius: 12px; font-size: 1.1rem; padding: 18px; background: linear-gradient(to right, #6366f1, #a855f7); margin-bottom: 5px;">MULTIPLAYER</button>
-            <button class="btn-restart" id="btn-meta-menu" style="width: 100%; border-radius: 12px; font-size: 1.1rem; padding: 18px; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.05);">VYLEPŠENÍ</button>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NEO SURVIVOR | Premium Multiplayer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div id="app">
+    <div class="scanlines"></div>
+    <canvas id="game-canvas"></canvas>
+
+    <div id="ui-layer">
+      <div class="top-bar">
+        <div class="stat-chip">
+          <span class="level-badge" id="level-display">LVL 1</span>
+        </div>
+        <div class="xp-container">
+          <div id="xp-bar-fill"></div>
+        </div>
+        <div class="stat-chip">
+          <span id="kill-count">0</span> KILLS
+        </div>
+        <div class="stat-chip sniper-chip" id="sniper-ui"
+          style="flex-grow: 1; max-width: 150px; justify-content: flex-start;">
+          🎯 <div class="sniper-cooldown"
+            style="flex-grow: 1; height: 8px; margin-left: 8px; background: rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden;">
+            <div id="sniper-bar"
+              style="height: 100%; width: 0%; background: var(--accent-color); transition: width 0.1s linear;"></div>
           </div>
-          <div class="controls-hint">
-            <span>WASD: POHYB</span>
-            <span>KLIK: SNIPER</span>
-            <span>ESC: PAUZA</span>
-          </div>
+        </div>
+        <div id="fs-toggle" class="stat-chip fs-button" style="cursor: pointer; color: var(--accent-color);">
+          ⛶
+        </div>
+        <div id="mobile-pause" class="stat-chip"
+          style="cursor: pointer; background: var(--hp-color); color: white; border: none; font-size: 1.2rem; padding: 10px;">
+          ⏸
         </div>
       </div>
 
-      <!-- Multiplayer Modal -->
-      <div id="multiplayer-modal" class="modal">
-        <div class="modal-content" style="max-width: 500px; padding: 40px; border: 2px solid rgba(168, 85, 247, 0.5); background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), rgba(15, 23, 42, 0.95)); position: relative;">
-          <h2 style="font-size: 2.2rem; margin-bottom: 1.5rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SÍŤOVÁ HRA</h2>
-          
-          <div style="display: flex; flex-direction: column; gap: 20px;">
-            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
-              <h3 style="margin: 0 0 10px 0; font-size: 0.9rem; opacity: 0.7; letter-spacing: 1px;">PŘIPOJIT SE KE KÓDU</h3>
-              <input type="text" id="input-join-id" placeholder="ZADEJ KÓD..." style="width: 100%; background: rgba(0,0,0,0.3); border: 2px solid rgba(168, 85, 247, 0.4); color: white; padding: 15px; border-radius: 10px; font-family: inherit; font-size: 1.2rem; text-align: center; letter-spacing: 5px; margin-bottom: 15px;">
-              <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart" style="width: 100%; padding: 15px; font-size: 1rem; background: #6366f1;">PŘIPOJIT SE</button>
-            </div>
+      <div id="boss-warning" class="boss-warning">BOSS PŘICHÁZÍ!</div>
 
-            <div style="color: rgba(255,255,255,0.3); font-size: 0.8rem; letter-spacing: 2px;">— NEBO —</div>
-
-            <button onclick="initPeer()" class="btn-restart" style="width: 100%; padding: 20px; font-size: 1.1rem; background: #a855f7;">ZALOŽIT NOVOU MÍSTNOST</button>
-          </div>
-
-          <button class="btn-restart" id="btn-close-mp" style="margin-top:2.5rem; background: rgba(255, 255, 255, 0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZPĚT DO MENU</button>
-        </div>
+      <div class="hp-container">
+        <div id="hp-bar-fill"></div>
       </div>
-
-      <!-- Upgrades Modal -->
-      <div id="meta-modal" class="modal">
-        <div class="modal-content">
-          <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">VYLEPŠENÍ</h2>
-          <div class="stat-chip" style="margin-bottom:20px">DOGECOIN: <span id="meta-currency">0</span></div>
-          <div id="meta-options" class="upgrade-grid"></div>
-          <button class="btn-restart" id="btn-close-meta" style="margin-top:2.5rem">ZAVŘÍT</button>
-        </div>
-      </div>
-
-      <!-- Level Up Modal -->
-      <div id="levelup-modal" class="modal">
-        <div class="modal-content">
-          <h2 style="font-size: 3.5rem; color: var(--xp-color); text-shadow: 0 0 30px var(--xp-color);">LEVEL UP!</h2>
-          <div id="upgrade-options" class="upgrade-grid"></div>
-        </div>
-      </div>
-
-      <!-- Game Over Modal -->
-      <div id="gameover-modal" class="modal">
-        <div class="modal-content">
-          <h1 class="logo">KONEC<span>HRY</span></h1>
-          <div style="display: flex; gap: 15px; margin-bottom: 2rem;">
-            <div class="stat-chip">LEVEL: <span id="final-level">1</span></div>
-            <div class="stat-chip">KILLS: <span id="final-kills">0</span></div>
-          </div>
-          <div class="menu-actions">
-            <button class="btn-restart" id="btn-restart-game">ZKUSIT ZNOVU</button>
-            <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">MENU</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Pause Modal -->
-      <div id="pause-modal" class="modal">
-        <div class="modal-content">
-          <h1 class="logo">PAUZA</h1>
-          <div class="menu-actions">
-            <button class="btn-restart" id="btn-resume">POKRAČOVAT</button>
-            <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">MENU</button>
-          </div>
-        </div>
-      </div>
-
     </div>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="main.js"></script>
-  </body>
+
+    <div id="menu-modal" class="modal active">
+      <div class="modal-content">
+        <h1 class="logo">NEO<span>SURVIVOR</span></h1>
+        <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
+        <div class="menu-actions">
+          <button class="btn-restart" id="btn-start"
+            style="width: 100%; border-radius: 12px; font-size: 1.1rem; padding: 18px; margin-bottom: 5px;">SOLO</button>
+          <button class="btn-restart" id="btn-multiplayer"
+            style="width: 100%; border-radius: 12px; font-size: 1.1rem; padding: 18px; background: linear-gradient(to right, #6366f1, #a855f7); margin-bottom: 5px;">MULTIPLAYER</button>
+          <button class="btn-restart" id="btn-meta-menu"
+            style="width: 100%; border-radius: 12px; font-size: 1.1rem; padding: 18px; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.05);">VYLEPŠENÍ</button>
+        </div>
+        <div class="controls-hint">
+          <span>WASD: POHYB</span>
+          <span>KLIK: SNIPER</span>
+          <span>ESC: PAUZA</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="multiplayer-modal" class="modal">
+      <div class="modal-content"
+        style="max-width: 500px; padding: 40px; border: 2px solid rgba(168, 85, 247, 0.5); background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), rgba(15, 23, 42, 0.95)); position: relative;">
+        <h2
+          style="font-size: 2.2rem; margin-bottom: 1.5rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+          SÍŤOVÁ HRA</h2>
+
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <div
+            style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
+            <h3 style="margin: 0 0 10px 0; font-size: 0.9rem; opacity: 0.7; letter-spacing: 1px;">PŘIPOJIT SE KE KÓDU
+            </h3>
+            <input type="text" id="input-join-id" placeholder="ZADEJ KÓD..."
+              style="width: 100%; background: rgba(0,0,0,0.3); border: 2px solid rgba(168, 85, 247, 0.4); color: white; padding: 15px; border-radius: 10px; font-family: inherit; font-size: 1.2rem; text-align: center; letter-spacing: 5px; margin-bottom: 15px;">
+            <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart"
+              style="width: 100%; padding: 15px; font-size: 1rem; background: #6366f1;">PŘIPOJIT SE</button>
+          </div>
+
+          <div style="color: rgba(255,255,255,0.3); font-size: 0.8rem; letter-spacing: 2px;">— NEBO —</div>
+
+          <button onclick="joinCloudServer()" class="btn-restart"
+            style="width: 100%; padding: 20px; font-size: 1.1rem; background: #a855f7;">ZALOŽIT NOVOU MÍSTNOST</button>
+        </div>
+
+        <button class="btn-restart" id="btn-close-mp"
+          style="margin-top:2.5rem; background: rgba(255, 255, 255, 0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZPĚT
+          DO MENU</button>
+      </div>
+    </div>
+
+    <div id="meta-modal" class="modal">
+      <div class="modal-content">
+        <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">VYLEPŠENÍ</h2>
+        <div class="stat-chip" style="margin-bottom:20px">DOGECOIN: <span id="meta-currency">0</span></div>
+        <div id="meta-options" class="upgrade-grid"></div>
+        <button class="btn-restart" id="btn-close-meta" style="margin-top:2.5rem">ZAVŘÍT</button>
+      </div>
+    </div>
+
+    <div id="levelup-modal" class="modal">
+      <div class="modal-content">
+        <h2 style="font-size: 3.5rem; color: var(--xp-color); text-shadow: 0 0 30px var(--xp-color);">LEVEL UP!</h2>
+        <div id="upgrade-options" class="upgrade-grid"></div>
+      </div>
+    </div>
+
+    <div id="gameover-modal" class="modal">
+      <div class="modal-content">
+        <h1 class="logo">KONEC<span>HRY</span></h1>
+        <div style="display: flex; gap: 15px; margin-bottom: 2rem;">
+          <div class="stat-chip">LEVEL: <span id="final-level">1</span></div>
+          <div class="stat-chip">KILLS: <span id="final-kills">0</span></div>
+        </div>
+        <div class="menu-actions">
+          <button class="btn-restart" id="btn-restart-game">ZKUSIT ZNOVU</button>
+          <button class="btn-restart btn-reload"
+            style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="pause-modal" class="modal">
+      <div class="modal-content">
+        <h1 class="logo">PAUZA</h1>
+        <div class="menu-actions">
+          <button class="btn-restart" id="btn-resume">POKRAČOVAT</button>
+          <button class="btn-restart btn-reload"
+            style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">MENU</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+
 </html>
