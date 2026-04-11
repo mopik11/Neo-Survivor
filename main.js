@@ -1,8 +1,3 @@
-/**
- * NEO SURVIVOR - Core Game Logic
- */
-
-// Error catching
 window.onerror = function (msg, url, line, col, error) {
     alert("KRITICKÁ CHYBA: " + msg + "\nNa lince: " + line);
     console.error(error);
@@ -27,24 +22,20 @@ const CONFIG = {
         { id: 'firerate', name: 'Rychlá Palba', desc: '-20% prodleva útoku', icon: '🔥', rarity: 'common' },
         { id: 'shield', name: 'Energetický Štít', desc: 'Snížení poškození o 20%', icon: '🛡️', rarity: 'common' },
         { id: 'growth', name: 'Růst', desc: '+10% max HP a plný heal', icon: '🥗', rarity: 'common' },
-
         { id: 'count', name: 'Více Střel', desc: '+1 projektil navíc', icon: '🌀', rarity: 'uncommon' },
         { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřátely', icon: '🏹', rarity: 'uncommon' },
         { id: 'size', name: 'Obří Střely', desc: '+30% velikost projektilu', icon: '🌕', rarity: 'uncommon' },
         { id: 'xpboost', name: 'XP Multiplikátor', desc: '+20% bonus k XP', icon: '📈', rarity: 'uncommon' },
         { id: 'bounce', name: 'Odraz', desc: 'Střely se odráží k dalšímu cíli', icon: '🪃', rarity: 'uncommon' },
-
         { id: 'magnet', name: 'Magnet na XP', desc: '+50% dosah sběru', icon: '🧲', rarity: 'rare' },
         { id: 'crit', name: 'Kritické Zásahy', desc: '15% šance na 2x damage', icon: '💥', rarity: 'rare' },
         { id: 'knockback', name: 'Silný Odhoz', desc: '+50% sýla odhozu', icon: '💢', rarity: 'rare' },
-
         { id: 'regen', name: 'Regenerace', desc: 'Obnova 1 HP/s', icon: '💊', rarity: 'epic' },
         { id: 'ultramagnet', name: 'Ultra Magnet', desc: 'Pomalý sběr z celé mapy', icon: '🌌', rarity: 'epic' },
         { id: 'orbit', name: 'Orbitální Štít', desc: 'Vypustí rotující projektil', icon: '🪐', rarity: 'epic' },
         { id: 'lifesteal', name: 'Lifesteal', desc: '5% šance na heal při killu', icon: '🧛', rarity: 'epic' },
         { id: 'fire', name: 'Ohnivá Stopa', desc: 'Zanecháváš za sebou oheň', icon: '🔥', rarity: 'epic' },
         { id: 'kaktus', name: 'Kaktus', desc: 'Sáhni si a umřeš! (1x)', icon: '🌵', rarity: 'epic' },
-
         { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎', rarity: 'legendary' },
         { id: 'luck', name: 'Větší Výběr', desc: '4 možnosti při levelu', icon: '🍀', rarity: 'legendary' },
         { id: 'aura', name: 'Mrazivá Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' },
@@ -934,7 +925,9 @@ function initPeer(customId = null) {
             return;
         }
     }
-    const shortId = customId || generateShortId();
+    
+    // Fix: Přidán správný prefix k Host ID, aby se Client dokázal připojit
+    const shortId = customId || "NEO_SERVER_" + generateShortId();
 
     try {
         // High-performance Cloud Configuration
@@ -952,18 +945,23 @@ function initPeer(customId = null) {
 
         NET.peer.on('open', (id) => {
             NET.roomId = id;
+            const displayId = id.replace("NEO_SERVER_", "");
             console.warn("CLOUD: Připojeno k uzlu", id);
+            
+            // Oznámíme Hostovi jeho kód místnosti!
+            alert("✅ Server spuštěn!\nPošli tento kód kamarádovi pro připojení:\n\n" + displayId);
         });
 
         NET.peer.on('connection', (c) => {
             NET.conn = c; NET.isHost = true; setupConn();
+            alert("🚀 Hráč se úspěšně připojil k tvé hře!");
             startGame();
         });
 
         NET.peer.on('error', (err) => {
             console.error("CLOUD Error:", err.type);
             if (err.type === 'peer-unavailable') {
-                // Handled in joinCloudServer logic
+                alert("❌ Hráč s tímto kódem nebyl nalezen. Zkontroluj kód.");
             }
         });
     } catch (e) {
@@ -1065,26 +1063,28 @@ function syncWorld() {
 }
 
 window.joinCloudServer = (roomName) => {
-    const publicId = "NEO_SERVER_" + roomName;
-    console.warn("CLOUD: Připojuji se k uzlu", roomName);
+    if(!roomName) {
+        alert("Nejdříve zadej kód místnosti!");
+        return;
+    }
+    
+    const publicId = "NEO_SERVER_" + roomName.trim().toUpperCase();
+    console.warn("CLOUD: Připojuji se k uzlu", publicId);
 
-    document.getElementById('room-' + roomName + '-status').innerText = 'SYNCHRONIZACE...';
-
-    if (!NET.peer) initPeer();
+    // Zrušili jsme GunJS, připojujeme se jen rovnou přes PeerJS
+    if (!NET.peer) {
+        // Klient si založí anonymní ID bez specifického prefixu
+        initPeer("CLIENT_" + generateShortId()); 
+    }
 
     const conn = NET.peer.connect(publicId);
     let connectionTimeout = setTimeout(() => {
         if (!NET.conn) {
-            console.warn("CLOUD: Uzel je neaktivní, spouštím instanci serveru...");
+            console.warn("CLOUD: Nepodařilo se připojit k zadané místnosti.");
+            alert("❌ Nelze se připojit! Hráč buď neexistuje, nebo jsi zadal špatný kód.");
             conn.close();
-            initPeer(publicId);
-            setTimeout(() => {
-                LOBBY.broadcast(publicId);
-                NET.isHost = true;
-                startGame();
-            }, 800);
         }
-    }, 1800);
+    }, 5000); // 5 sec timeout
 
     conn.on('open', () => {
         clearTimeout(connectionTimeout);
@@ -1092,43 +1092,15 @@ window.joinCloudServer = (roomName) => {
         NET.conn = conn;
         NET.isHost = false;
         setupConn();
+        alert("✅ Úspěšně připojeno k Hostovi!");
         startGame();
     });
 };
-const LOBBY = {
-    gun: null, servers: {},
-    init() {
-        if (typeof Gun === 'undefined' || this.gun) return;
-        this.gun = Gun(['https://gun-manhattan.herokuapp.com/gun', 'https://gun-sjc.herokuapp.com/gun']);
-        this.scan();
-    },
-    broadcast(id) {
-        if (!this.gun || !id || id === 'Načítám...') return;
-        this.gun.get('neo-survivor-lobby-v3').get(id).put({ id: id, name: "Hra #" + id, time: Date.now() });
-    },
-    scan() {
-        if (!this.gun) return;
-        this.gun.get('neo-survivor-lobby-v3').map().on((data, id) => {
-            if (!data || !data.id || Date.now() - data.time > 60000) return;
-            this.servers[id] = data; this.updateUI();
-        });
-    },
-    updateUI() {
-        const container = document.getElementById('server-list'); if (!container) return;
-        container.innerHTML = '';
-        Object.values(this.servers).forEach(s => {
-            if (Date.now() - s.time > 30000) return;
-            const item = document.createElement('div');
-            item.style = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); margin-bottom:5px;";
-            item.innerHTML = `<div><b style="color:#a5b4fc">${s.id}</b></div><button onclick="connectToId('${s.id}')" style="background:var(--xp-color); border:none; border-radius:6px; color:white; padding:6px 12px; font-size:0.8rem; cursor:pointer;">PŘIPOJIT</button>`;
-            container.appendChild(item);
-        });
-    }
-};
 
+// Pomocná metoda pro UI
 window.connectToId = (id) => {
-    document.getElementById('input-join-id').value = id;
-    document.getElementById('btn-join-room').click();
+    const input = document.getElementById('input-join-id');
+    if (input) input.value = id;
 };
 
 function init() {
@@ -1152,7 +1124,7 @@ function init() {
 
     const startAudio = () => {
         AudioEngine.init();
-        if (document.getElementById('menu-modal').classList.contains('active')) {
+        if (document.getElementById('menu-modal') && document.getElementById('menu-modal').classList.contains('active')) {
             AudioEngine.startMenuMusic();
         }
         if (AudioEngine.ctx && AudioEngine.ctx.state === 'running') {
@@ -1162,21 +1134,30 @@ function init() {
     ['mousedown', 'keydown', 'touchstart', 'mousemove'].forEach(type => window.addEventListener(type, startAudio));
     setInterval(() => { if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume(); }, 500);
 
-    document.getElementById('btn-start').onclick = () => {
+    const btnStart = document.getElementById('btn-start');
+    if (btnStart) btnStart.onclick = () => {
         NET.conn = null; NET.isHost = false;
         toggleFullscreen(document.documentElement, true);
         AudioEngine.init(); AudioEngine.stopMenuMusic(); AudioEngine.startMusic(); startGame();
     };
-    document.getElementById('btn-multiplayer').onclick = (e) => {
+    
+    const btnMP = document.getElementById('btn-multiplayer');
+    if (btnMP) btnMP.onclick = (e) => {
         if (e) e.preventDefault();
         document.getElementById('menu-modal').classList.remove('active');
         document.getElementById('multiplayer-modal').classList.add('active');
-        AudioEngine.init(); // Stay in menu music for now
+        AudioEngine.init();
         setTimeout(() => {
-            try { initPeer(); LOBBY.init(); } catch (err) { console.error("Cloud init delayed:", err); }
+            try { 
+                initPeer(); 
+            } catch (err) { 
+                console.error("Cloud init delayed:", err); 
+            }
         }, 50);
     };
-    document.getElementById('btn-close-mp').onclick = () => {
+    
+    const btnCloseMP = document.getElementById('btn-close-mp');
+    if (btnCloseMP) btnCloseMP.onclick = () => {
         document.getElementById('multiplayer-modal').classList.remove('active');
         document.getElementById('menu-modal').classList.add('active');
     };
@@ -1253,7 +1234,7 @@ function update() {
     if (CONFIG.SCREEN_SHAKE > 0) { GAME.camera.x += (Math.random() - 0.5) * CONFIG.SCREEN_SHAKE; GAME.camera.y += (Math.random() - 0.5) * CONFIG.SCREEN_SHAKE; CONFIG.SCREEN_SHAKE *= 0.9; }
 
     if (NET.conn) syncPlayer();
-    if (NET.isHost && Date.now() - NET.lastSync > 50) { syncWorld(); syncState(); NET.lastSync = Date.now(); LOBBY.broadcast(NET.roomId); }
+    if (NET.isHost && Date.now() - NET.lastSync > 50) { syncWorld(); syncState(); NET.lastSync = Date.now(); }
 
     for (const id in NET.others) NET.others[id].update();
 
@@ -1378,7 +1359,7 @@ function render() {
 // Audio Trigger Setup
 const initAudio = () => {
     AudioEngine.init();
-    if (document.getElementById('menu-modal').classList.contains('active')) {
+    if (document.getElementById('menu-modal') && document.getElementById('menu-modal').classList.contains('active')) {
         AudioEngine.startMenuMusic();
     }
 };

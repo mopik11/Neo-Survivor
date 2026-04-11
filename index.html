@@ -3,9 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>NEO SURVIVOR | Premium Survival</title>
+    <title>NEO SURVIVOR | Premium Multiplayer</title>
     <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
   </head>
   <body>
     <div id="app">
@@ -59,6 +58,27 @@
         </div>
       </div>
 
+      <!-- Multiplayer Modal -->
+      <div id="multiplayer-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px; padding: 40px; border: 2px solid rgba(168, 85, 247, 0.5); background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), rgba(15, 23, 42, 0.95)); position: relative;">
+          <h2 style="font-size: 2.2rem; margin-bottom: 1.5rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SÍŤOVÁ HRA</h2>
+          
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
+              <h3 style="margin: 0 0 10px 0; font-size: 0.9rem; opacity: 0.7; letter-spacing: 1px;">PŘIPOJIT SE KE KÓDU</h3>
+              <input type="text" id="input-join-id" placeholder="ZADEJ KÓD..." style="width: 100%; background: rgba(0,0,0,0.3); border: 2px solid rgba(168, 85, 247, 0.4); color: white; padding: 15px; border-radius: 10px; font-family: inherit; font-size: 1.2rem; text-align: center; letter-spacing: 5px; margin-bottom: 15px;">
+              <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart" style="width: 100%; padding: 15px; font-size: 1rem; background: #6366f1;">PŘIPOJIT SE</button>
+            </div>
+
+            <div style="color: rgba(255,255,255,0.3); font-size: 0.8rem; letter-spacing: 2px;">— NEBO —</div>
+
+            <button onclick="initPeer()" class="btn-restart" style="width: 100%; padding: 20px; font-size: 1.1rem; background: #a855f7;">ZALOŽIT NOVOU MÍSTNOST</button>
+          </div>
+
+          <button class="btn-restart" id="btn-close-mp" style="margin-top:2.5rem; background: rgba(255, 255, 255, 0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZPĚT DO MENU</button>
+        </div>
+      </div>
+
       <!-- Upgrades Modal -->
       <div id="meta-modal" class="modal">
         <div class="modal-content">
@@ -100,44 +120,6 @@
             <button class="btn-restart" id="btn-resume">POKRAČOVAT</button>
             <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">MENU</button>
           </div>
-              <!-- Multiplayer Modal -->
-      <div id="multiplayer-modal" class="modal">
-        <div class="modal-content" style="max-width: 600px; padding: 40px; border: 2px solid rgba(168, 85, 247, 0.5); background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), rgba(15, 23, 42, 0.95)); position: relative;">
-          <div style="position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 8px;">
-            <div id="cloud-status-dot" style="width: 10px; height: 10px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 10px #4ade80;"></div>
-            <span style="font-size: 0.7rem; color: #4ade80; font-weight: 800; letter-spacing: 1px;">CLOUD ONLINE</span>
-          </div>
-          
-          <h2 style="font-size: 2.8rem; margin-bottom: 2rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SÍŤOVÉ SERVERY</h2>
-          
-          <div id="mp-content" style="display: flex; flex-direction: column; gap: 25px; align-items: center;">
-            
-            <div style="width: 100%; text-align: left;">
-              <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: #a5b4fc; text-transform: uppercase; letter-spacing: 2px; font-weight: 400;">Vyberte dostupný uzel:</h3>
-              <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
-                <button onclick="joinCloudServer('ALFA')" class="server-btn" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.4); color: white; padding: 20px; border-radius: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s;">
-                  <span style="font-weight: 800; font-size: 1.2rem; letter-spacing: 2px;">SERVER <span style="color: #d8b4fe;">ALFA</span></span>
-                  <span id="room-ALFA-status" style="font-size: 0.8rem; opacity: 0.7;">PŘIPOJIT SE</span>
-                </button>
-                <button onclick="joinCloudServer('BETA')" class="server-btn" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.4); color: white; padding: 20px; border-radius: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s;">
-                  <span style="font-weight: 800; font-size: 1.2rem; letter-spacing: 2px;">SERVER <span style="color: #d8b4fe;">BETA</span></span>
-                  <span id="room-BETA-status" style="font-size: 0.8rem; opacity: 0.7;">PŘIPOJIT SE</span>
-                </button>
-                <button onclick="joinCloudServer('GAMA')" class="server-btn" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.4); color: white; padding: 20px; border-radius: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s;">
-                  <span style="font-weight: 800; font-size: 1.2rem; letter-spacing: 2px;">SERVER <span style="color: #d8b4fe;">GAMA</span></span>
-                  <span id="room-GAMA-status" style="font-size: 0.8rem; opacity: 0.7;">PŘIPOJIT SE</span>
-                </button>
-              </div>
-            </div>
-
-            <div style="width: 100%; height: 2px; background: linear-gradient(to right, transparent, rgba(168, 85, 247, 0.3), transparent); margin: 10px 0;"></div>
-
-            <p style="font-size: 0.8rem; opacity: 0.6; text-align: center; max-width: 400px; line-height: 1.5;">
-              Všechna data jsou synchronizována přes globální cloudové uzly <b>GitHub/Gun Relays</b> pro maximální stabilitu a plynulost.
-            </p>
-
-          </div>
-          <button class="btn-restart" id="btn-close-mp" style="margin-top:2.5rem; background: rgba(255, 255, 255, 0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZPĚT DO MENU</button>
         </div>
       </div>
 
