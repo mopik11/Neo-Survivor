@@ -683,6 +683,8 @@ function updateUI() {
 
 function showLevelUp() {
     GAME.paused = true;
+    GAME.entities.enemies = []; // Clear all enemies on level up
+    if (NET.isHost) syncWorld();
     const modal = document.getElementById('levelup-modal');
     const container = document.getElementById('upgrade-options');
     container.innerHTML = '';
