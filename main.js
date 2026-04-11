@@ -10,127 +10,6 @@ window.onerror = function (msg, url, line, col, error) {
 
 console.warn("SCRIPT: Neo Survivor načten.");
 
-document.querySelector('#app').innerHTML = `
-  <div class="scanlines"></div>
-  <canvas id="game-canvas"></canvas>
-  
-  <div id="ui-layer">
-    <div class="top-bar">
-      <div class="stat-chip">
-        <span class="level-badge" id="level-display">LVL 1</span>
-      </div>
-      <div class="xp-container">
-        <div id="xp-bar-fill"></div>
-      </div>
-      <div class="stat-chip">
-        <span id="kill-count">0</span> KILLS
-      </div>
-      <div class="stat-chip sniper-chip" id="sniper-ui" style="flex-grow: 1; max-width: 150px; justify-content: flex-start;">
-        🎯 <div class="sniper-cooldown" style="flex-grow: 1; height: 8px; margin-left: 8px; background: rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden;"><div id="sniper-bar" style="height: 100%; width: 0%; background: var(--accent-color); transition: width 0.1s linear;"></div></div>
-      </div>
-      <div id="fs-toggle" class="stat-chip fs-button" style="cursor: pointer; color: var(--accent-color);">
-        ⛶
-      </div>
-      <div id="mobile-pause" class="stat-chip" style="cursor: pointer; background: var(--hp-color); color: white; border: none; font-size: 1.2rem; padding: 10px;">
-        ⏸
-      </div>
-    </div>
-    
-    <div id="boss-warning" class="boss-warning">BOSS PŘICHÁZÍ!</div>
-    
-    <div class="hp-container">
-      <div id="hp-bar-fill"></div>
-    </div>
-  </div>
-
-  <div id="menu-modal" class="modal active">
-    <div class="modal-content">
-      <h1 class="logo">NEO<span>SURVIVOR</span></h1>
-      <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
-      <div class="menu-actions">
-        <button class="btn-restart" id="btn-start" style="width: 100%; border-radius: 12px; font-size: 1.1rem; padding: 18px; margin-bottom: 5px;">SOLO</button>
-        <button class="btn-restart" id="btn-multiplayer" style="width: 100%; border-radius: 12px; font-size: 0.95rem; letter-spacing: 1px; padding: 18px 10px; background: linear-gradient(to right, #6366f1, #a855f7); margin-bottom: 5px;">MULTIPLAYER</button>
-        <button class="btn-restart" id="btn-meta-menu" style="width: 100%; border-radius: 12px; font-size: 1.1rem; padding: 18px; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.05);">VYLEPŠENÍ</button>
-      </div>
-      <div class="controls-hint">
-        <span>WASD: POHYB</span>
-        <span>KLIK: SNIPER</span>
-        <span>ESC: PAUZA</span>
-      </div>
-    </div>
-  </div>
-
-  <div id="multiplayer-modal" class="modal">
-    <div class="modal-content" style="max-width: 500px; padding: 40px; border: 2px solid rgba(168, 85, 247, 0.5); background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), rgba(15, 23, 42, 0.95)); position: relative;">
-      <h2 style="font-size: 2.2rem; margin-bottom: 1.5rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SÍŤOVÁ HRA</h2>
-      
-      <div style="display: flex; flex-direction: column; gap: 20px;">
-        
-        <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-              <h3 style="margin: 0; font-size: 0.9rem; opacity: 0.7; letter-spacing: 1px;">DOSTUPNÉ SERVERY</h3>
-              <button onclick="requestServerList()" class="btn-restart" style="padding: 5px 10px; font-size: 0.7rem; background: rgba(255,255,255,0.1); border:none;">OBNOVIT</button>
-          </div>
-          <div id="server-list-container" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
-              <div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">Hledám servery...</div>
-          </div>
-        </div>
-
-        <div style="color: rgba(255,255,255,0.3); font-size: 0.8rem; letter-spacing: 2px;">— NEBO KÓD —</div>
-
-        <div style="display: flex; gap: 10px;">
-            <input type="text" id="input-join-id" placeholder="ZADEJ KÓD..." style="flex-grow: 1; background: rgba(0,0,0,0.3); border: 2px solid rgba(168, 85, 247, 0.4); color: white; padding: 15px; border-radius: 10px; font-family: inherit; font-size: 1.1rem; text-align: center; letter-spacing: 2px;">
-            <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart" style="padding: 15px 20px; font-size: 1rem; background: #6366f1;">PŘIPOJIT</button>
-        </div>
-
-        <button onclick="joinCloudServer()" class="btn-restart" style="width: 100%; padding: 20px; font-size: 1.1rem; background: #a855f7; margin-top: 10px;">ZALOŽIT NOVOU MÍSTNOST</button>
-      </div>
-
-      <button class="btn-restart" id="btn-close-mp" style="margin-top:2.5rem; background: rgba(255, 255, 255, 0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZPĚT DO MENU</button>
-    </div>
-  </div>
-
-  <div id="meta-modal" class="modal">
-    <div class="modal-content">
-      <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">VYLEPŠENÍ</h2>
-      <div class="stat-chip" style="margin-bottom:20px">DOGECOIN: <span id="meta-currency">0</span></div>
-      <div id="meta-options" class="upgrade-grid"></div>
-      <button class="btn-restart" id="btn-close-meta" style="margin-top:2.5rem">ZAVŘÍT</button>
-    </div>
-  </div>
-
-  <div id="levelup-modal" class="modal">
-    <div class="modal-content">
-      <h2 style="font-size: 3.5rem; color: var(--xp-color); text-shadow: 0 0 30px var(--xp-color);">LEVEL UP!</h2>
-      <div id="upgrade-options" class="upgrade-grid"></div>
-    </div>
-  </div>
-
-  <div id="gameover-modal" class="modal">
-    <div class="modal-content">
-      <h1 class="logo">KONEC<span>HRY</span></h1>
-      <div style="display: flex; gap: 15px; margin-bottom: 2rem;">
-        <div class="stat-chip">LEVEL: <span id="final-level">1</span></div>
-        <div class="stat-chip">KILLS: <span id="final-kills">0</span></div>
-      </div>
-      <div class="menu-actions">
-        <button class="btn-restart" id="btn-restart-game">ZKUSIT ZNOVU</button>
-        <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">MENU</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="pause-modal" class="modal">
-    <div class="modal-content">
-      <h1 class="logo">PAUZA</h1>
-      <div class="menu-actions">
-        <button class="btn-restart" id="btn-resume">POKRAČOVAT</button>
-        <button class="btn-restart btn-reload" style="background: rgba(120, 120, 120, 0.1); border-color: rgba(255,255,255,0.05); box-shadow: none;">MENU</button>
-      </div>
-    </div>
-  </div>
-`;
-
 const CONFIG = {
     PLAYER_BASE_SPEED: 4,
     PLAYER_BASE_HEALTH: 120,
@@ -166,7 +45,7 @@ const CONFIG = {
         { id: 'kaktus', name: 'Kaktus', desc: 'Sáhni si a umřeš! (1x)', icon: '🌵', rarity: 'epic' },
 
         { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎', rarity: 'legendary' },
-        { id: 'luck', name: 'Větší Výběr', desc: '4 možnosti při levelu', icon: '🍀', rarity: 'legendary' },
+        { id: 'luck', name: 'Větší Výběr', desc: '+1 možnost při levelu', icon: '🍀', rarity: 'legendary' },
         { id: 'aura', name: 'Mrazivá Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' },
         { id: 'bait', name: 'Návnada', desc: 'Vypouští chutné cíle pro ufony', icon: '🪤', rarity: 'legendary' }
     ],
@@ -523,11 +402,14 @@ class Gem {
         if (d < player.magnetRange) this.attracted = true;
         if (player.ultraMagnet) {
             const angle = Math.atan2(player.y - this.y, player.x - this.x);
-            this.x += Math.cos(angle) * 0.8 * GAME.speedFactor; this.y += Math.sin(angle) * 0.8 * GAME.speedFactor;
+            const umSpeed = 0.8 * (player.ultraMagnetPower || 1);
+            this.x += Math.cos(angle) * umSpeed * GAME.speedFactor; 
+            this.y += Math.sin(angle) * umSpeed * GAME.speedFactor;
         }
         if (this.attracted) {
             const angle = Math.atan2(player.y - this.y, player.x - this.x);
-            this.x += Math.cos(angle) * 14 * GAME.speedFactor; this.y += Math.sin(angle) * 14 * GAME.speedFactor;
+            this.x += Math.cos(angle) * 14 * GAME.speedFactor; 
+            this.y += Math.sin(angle) * 14 * GAME.speedFactor;
         }
     }
     draw(ctx, cam) {
@@ -618,7 +500,11 @@ class Boss {
         const angle = Math.atan2(target.y - this.y, target.x - this.x);
         let speedScale = 1.0;
         const players = getAllAlivePlayers();
-        players.forEach(p => { if (p.aura && dist(this.x, this.y, p.x, p.y) < p.auraRange) speedScale *= 0.5; });
+        players.forEach(p => { 
+            if (p.aura && dist(this.x, this.y, p.x, p.y) < (p.auraRange || 150)) {
+                speedScale *= (p.auraPower || 0.5); 
+            } 
+        });
         const currentSpeed = this.speed * speedScale * GAME.speedFactor;
         this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
         this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
@@ -678,7 +564,11 @@ class Enemy {
         const angle = Math.atan2(target.y - this.y, target.x - this.x);
         let speedScale = 1.0;
         const players = getAllAlivePlayers();
-        players.forEach(p => { if (p.aura && dist(this.x, this.y, p.x, p.y) < p.auraRange) speedScale *= 0.5; });
+        players.forEach(p => { 
+            if (p.aura && dist(this.x, this.y, p.x, p.y) < (p.auraRange || 150)) {
+                speedScale *= (p.auraPower || 0.5);
+            } 
+        });
         const currentSpeed = this.speed * speedScale * GAME.speedFactor;
         this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
         this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
@@ -741,6 +631,12 @@ class Player {
         this.remoteHat = null;
         this.targetX = 0; this.targetY = 0;
         this.dead = false;
+        
+        // Atributy pro sčítání (stackování) bonusů
+        this.ultraMagnetPower = 1;
+        this.fireDamageMult = 0.5;
+        this.baitHpMult = 5;
+        this.auraPower = 0.5; 
     }
     update() {
         if (this.dead) return;
@@ -751,10 +647,11 @@ class Player {
         }
 
         if (this.bait && Date.now() - this.lastBait > 10000) {
+            const baitHp = this.maxHp * this.baitHpMult;
             if (NET.isMultiplayer) {
-                NET.socket.emit('spawnBait', { x: this.x, y: this.y, hp: this.maxHp * 5 });
+                NET.socket.emit('spawnBait', { x: this.x, y: this.y, hp: baitHp });
             } else {
-                GAME.entities.baits.push(new Bait(this.x, this.y, this.maxHp * 5));
+                GAME.entities.baits.push(new Bait(this.x, this.y, baitHp));
             }
             this.lastBait = Date.now();
         }
@@ -773,7 +670,7 @@ class Player {
             this.x += Math.cos(angle) * this.speed * GAME.speedFactor; this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
             const now = Date.now();
             if (this.fireTrail && now - this.lastFireTrail > 150) {
-                GAME.entities.fire.push(new Fire(this.x, this.y, this.damage * 0.5));
+                GAME.entities.fire.push(new Fire(this.x, this.y, this.damage * this.fireDamageMult));
                 this.lastFireTrail = now;
             }
         }
@@ -947,20 +844,20 @@ function applyUpgrade(id) {
             case 'shield': p.shield *= 0.8; break;
             case 'regen': p.regen += 1; break;
             case 'xpgen': if (!p.lastXpGen) p.xpGenInterval = 60000; else p.xpGenInterval = Math.max(500, p.xpGenInterval / 2); p.lastXpGen = Date.now(); break;
-            case 'ultramagnet': p.ultraMagnet = true; break;
+            case 'ultramagnet': p.ultraMagnet = true; p.ultraMagnetPower += 1; break;
             case 'pierce': p.pierceCount += 1; break;
             case 'size': p.projSize *= 1.3; break;
             case 'crit': p.critChance += 0.15; break;
-            case 'luck': GAME.upgradeOptionsCount = 4; break;
+            case 'luck': GAME.upgradeOptionsCount += 1; break;
             case 'orbit': p.orbitals += 1; break;
             case 'knockback': p.knockbackForce *= 1.5; break;
             case 'xpboost': p.xpMultiplier += 0.2; break;
             case 'lifesteal': p.lifestealChance += 0.05; break;
-            case 'aura': p.aura = true; p.auraRange += 20; break;
+            case 'aura': p.aura = true; p.auraRange += 20; p.auraPower *= 0.8; break;
             case 'bounce': p.bounces += 1; break;
-            case 'fire': p.fireTrail = true; break;
+            case 'fire': p.fireTrail = true; p.fireDamageMult += 0.5; break;
             case 'kaktus': p.kaktus = true; break;
-            case 'bait': p.bait = true; p.lastBait = Date.now(); break;
+            case 'bait': p.bait = true; p.baitHpMult += 5; p.lastBait = Date.now(); break;
             case 'growth': p.maxHp += Math.floor(p.maxHp * 0.1); p.hp = p.maxHp; break;
         }
     } catch (e) { console.error("Upgrade error:", e); }
@@ -986,9 +883,24 @@ function togglePause() {
     if (!GAME.active) return;
     
     GAME.paused = !GAME.paused;
+    
+    // Propsání statistik
+    if (GAME.paused) {
+        const p = GAME.entities.player;
+        document.getElementById('stat-hp').innerText = Math.floor(p.hp) + ' / ' + p.maxHp;
+        document.getElementById('stat-dmg').innerText = p.damage.toFixed(1);
+        document.getElementById('stat-speed').innerText = p.speed.toFixed(1);
+        document.getElementById('stat-count').innerText = p.projectileCount;
+        document.getElementById('stat-firerate').innerText = (p.fireRate / 1000).toFixed(2) + 's';
+        document.getElementById('stat-crit').innerText = Math.floor(p.critChance * 100) + '%';
+        document.getElementById('stat-shield').innerText = Math.floor((1 - p.shield) * 100) + '%';
+        document.getElementById('stat-regen').innerText = p.regen + ' HP/s';
+        document.getElementById('stat-lifesteal').innerText = Math.floor(p.lifestealChance * 100) + '%';
+        document.getElementById('stat-magnet').innerText = Math.floor(p.magnetRange);
+    }
+    
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
     
-    // MP Pauza = dočasné odpojení
     if (NET.isMultiplayer) {
         if (GAME.paused) {
             if (NET.socket) NET.socket.disconnect();
@@ -1052,11 +964,9 @@ function initSocket() {
         
         NET.socket.on('connect', () => {
             console.warn("CLOUD: Připojeno k hernímu serveru!");
-            // Hned si vyžádáme servery
             window.requestServerList();
         });
 
-        // Naslouchání pro seznam serverů
         NET.socket.on('roomList', (rooms) => {
             const container = document.getElementById('server-list-container');
             if (!container) return;
@@ -1085,7 +995,7 @@ function initSocket() {
             NET.roomId = id;
             NET.isMultiplayer = true;
             document.getElementById('multiplayer-modal').classList.remove('active');
-            clearInterval(NET.serverPollingInterval); // Vypneme zjišťování serverů
+            clearInterval(NET.serverPollingInterval);
             startGame();
         });
 
@@ -1198,7 +1108,10 @@ function syncPlayer() {
         maxHp: GAME.entities.player.maxHp,
         hat: META.upgrades.hat, 
         dead: GAME.entities.player.dead,
-        level: GAME.entities.player.level
+        level: GAME.entities.player.level,
+        aura: GAME.entities.player.aura,
+        auraRange: GAME.entities.player.auraRange,
+        auraPower: GAME.entities.player.auraPower
     });
 }
 
@@ -1219,6 +1132,11 @@ window.joinCloudServer = (roomName) => {
     }
     initSocket();
     NET.socket.emit('joinRoom', roomName.trim().toUpperCase());
+};
+
+window.connectToId = (id) => {
+    const input = document.getElementById('input-join-id');
+    if (input) input.value = id;
 };
 
 function init() {
@@ -1495,7 +1413,6 @@ function render() {
     if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
     ctx.restore();
     
-    // --- MINIMAPA ---
     if (GAME.active && GAME.entities.player && !GAME.entities.player.dead) {
         const mapSize = 150;
         const padding = 20;
