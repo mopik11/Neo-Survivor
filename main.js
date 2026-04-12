@@ -29,7 +29,7 @@ const CONFIG = {
 
         { id: 'count', name: 'Více Střel', desc: '+1 projektil navíc', icon: '🌀', rarity: 'uncommon' },
         { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřátely', icon: '🏹', rarity: 'uncommon' },
-        { id: 'wall_range', name: 'Dosah Zdi', desc: 'Zvětší dolet a životnost tvé zdi', icon: '🌊', rarity: 'uncommon' }, // Nový pro loď 3
+        { id: 'wall_range', name: 'Dosah Zdi', desc: 'Zvětší dolet a životnost tvé zdi', icon: '🌊', rarity: 'uncommon' }, 
         { id: 'size', name: 'Obří Střely', desc: '+30% velikost projektilu', icon: '🌕', rarity: 'uncommon' },
         { id: 'xpboost', name: 'XP Multiplikátor', desc: '+20% bonus k XP', icon: '📈', rarity: 'uncommon' },
         { id: 'bounce', name: 'Odraz', desc: 'Střely se odráží k dalšímu cíli', icon: '🪃', rarity: 'uncommon' },
@@ -229,6 +229,31 @@ const AudioEngine = {
             this.droneNodes = null;
         }
     },
+    piano(freq, dur) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, now);
+        filter.frequency.exponentialRampToValueAtTime(400, now + dur + 0.5);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur + 1.2);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + dur + 1.5);
+    },
     play(type) {
         if (!this.ctx) return;
         if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -267,6 +292,52 @@ const AudioEngine = {
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
                 osc.start(); osc.stop(now + 0.1); break;
         }
+    },
+    // OPRAVENO: Vrácena chybějící funkce startMusic
+    startMusic() {
+        if (this.musicStarted || !this.ctx) return;
+        this.musicStarted = true;
+
+        const playSynth = (time, freq, vol, duration, type = 'square') => {
+            const osc = this.ctx.createOscillator();
+            const g = this.ctx.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, time);
+            g.gain.setValueAtTime(vol, time);
+            g.gain.exponentialRampToValueAtTime(0.001, time + duration);
+            osc.connect(g); g.connect(this.ctx.destination);
+            osc.start(time); osc.stop(time + duration);
+        };
+
+        const playNoise = (time, vol, duration) => {
+            const bufferSize = this.ctx.sampleRate * duration;
+            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const src = this.ctx.createBufferSource();
+            src.buffer = buffer;
+            const g = this.ctx.createGain();
+            g.gain.setValueAtTime(vol, time);
+            g.gain.exponentialRampToValueAtTime(0.001, time + duration);
+            src.connect(g); g.connect(this.ctx.destination);
+            src.start(time); src.stop(time + duration);
+        };
+
+        let step = 0;
+        const bassNotes = [55, 55, 62, 49, 55, 55, 73, 65, 55, 55, 62, 49, 55, 55, 82, 98];
+        const melodyNotes = [110, 0, 165, 0, 110, 0, 220, 196, 110, 0, 165, 0, 110, 220, 330, 440];
+
+        setInterval(() => {
+            if (GAME.active && !GAME.paused) {
+                const now = this.ctx.currentTime;
+                playSynth(now, bassNotes[step % 16], 0.03, 0.4, 'sawtooth');
+                if (step % 2 === 0) playSynth(now, 60, 0.08, 0.2, 'sine');
+                if (step % 4 === 2) playNoise(now, 0.02, 0.15);
+                if (step % 2 === 1) playNoise(now, 0.008, 0.05);
+                if (step % 16 >= 8 && Math.random() > 0.4) playSynth(now, melodyNotes[step % 16] * 2, 0.015, 0.3, 'triangle');
+                if (Math.random() > 0.95) playSynth(now, 1000 + Math.random() * 2000, 0.005, 1.0, 'sine');
+                step++;
+            }
+        }, 150);
     }
 };
 
@@ -330,7 +401,7 @@ class Projectile {
         this.bounce = stats.bounce || 0;
         this.isCrit = stats.isCrit || false;
         
-        this.type = stats.type || 'default'; // default, laser, wall
+        this.type = stats.type || 'default';
         
         this.hitEnemies = new Set();
         this.ownerId = stats.ownerId || 'local';
@@ -635,7 +706,6 @@ class Player {
         
         this.orbitersList = [];
         
-        // Loď
         this.shipType = META.selectedShip || 1;
         this.wallRangeBonus = 0;
     }
@@ -872,9 +942,8 @@ function showLevelUp() {
 
         const possible = CONFIG.UPGRADES.filter(u => {
             if (u.id === 'kaktus' && GAME.entities.player.hasKaktus) return false;
-            // Podmínky pro Lodě
-            if (GAME.entities.player.shipType === 3 && u.id === 'pierce') return false; // Zed uz ma pierce infinity
-            if (GAME.entities.player.shipType !== 3 && u.id === 'wall_range') return false; // Ostatni nemaji Zed
+            if (GAME.entities.player.shipType === 3 && u.id === 'pierce') return false; 
+            if (GAME.entities.player.shipType !== 3 && u.id === 'wall_range') return false; 
             return u.rarity === rarity && !usedIds.has(u.id);
         });
         if (possible.length > 0) {
@@ -923,7 +992,7 @@ function applyUpgrade(id) {
             case 'xpgen': if (!p.lastXpGen) p.xpGenInterval = 60000; else p.xpGenInterval = Math.max(500, p.xpGenInterval / 2); p.lastXpGen = Date.now(); break;
             case 'ultramagnet': p.ultraMagnet = true; p.ultraMagnetPower += 1; break;
             case 'pierce': p.pierceCount += 1; break;
-            case 'wall_range': p.wallRangeBonus += 15; break; // Pro Lod 3
+            case 'wall_range': p.wallRangeBonus += 15; break; 
             case 'size': p.projSize *= 1.3; break;
             case 'crit_chance': p.critChance += 0.15; break;
             case 'crit_dmg': p.critMultiplier += 1; break;
@@ -993,6 +1062,7 @@ function togglePause() {
     }
 }
 
+// Fullscreen
 let fullscreenAttempted = false;
 function tryFullscreen() {
     if (fullscreenAttempted) return;
@@ -1021,9 +1091,11 @@ function toggleFullscreen(element, force = false) {
     }
 }
 
-// --- Menu pro Výběr Lodí ---
 function showShipsMenu() {
     const container = document.getElementById('ships-options');
+    // Může být null, pokud chybí modal v index.html! Pojišťujeme:
+    if(!container) return; 
+
     document.getElementById('ships-currency').innerText = META.currency;
     container.innerHTML = '';
     const items = [
@@ -1396,7 +1468,7 @@ function init() {
         initSocket();
         NET.serverPollingInterval = setInterval(window.requestServerList, 2000); 
     };
-
+    
     const btnShips = document.getElementById('btn-ships-menu');
     if (btnShips) btnShips.onclick = () => {
         showShipsMenu();
@@ -1407,7 +1479,7 @@ function init() {
     if (btnCloseShips) btnCloseShips.onclick = () => {
         document.getElementById('ships-modal').classList.remove('active');
     };
-    
+
     const btnCloseMP = document.getElementById('btn-close-mp');
     if (btnCloseMP) btnCloseMP.onclick = () => {
         clearInterval(NET.serverPollingInterval);
@@ -1618,9 +1690,8 @@ function update() {
                         GAME.entities.floatingTexts.push(new FloatingText(enemy.x, enemy.y - 25, "CRITICAL!", "#ef4444"));
                     }
                     
-                    // Upíří laser dává zpět HP
                     if (proj.type === 'laser' && proj.ownerId === 'local' && p && !p.dead) {
-                        p.hp = Math.min(p.maxHp, p.hp + proj.damage * 0.05); // Lifesteal 5% dmg
+                        p.hp = Math.min(p.maxHp, p.hp + proj.damage * 0.05); 
                         updateUI();
                     }
 
