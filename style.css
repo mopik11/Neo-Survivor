@@ -48,6 +48,7 @@ canvas {
   z-index: 0;
 }
 
+/* UI Layer (Stats, etc.) */
 #ui-layer {
   position: absolute;
   top: 0;
@@ -99,6 +100,17 @@ canvas {
   box-shadow: 0 4px 15px rgba(0,0,0,0.3);
   pointer-events: auto !important;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Hover efekty pro čipy v HUD */
+.stat-chip:hover {
+  background: rgba(99, 102, 241, 0.2);
+  transform: translateY(-2px);
+}
+
+.stat-chip#mobile-pause:hover {
+  background: #f87171 !important;
 }
 
 .hp-container {
@@ -123,6 +135,21 @@ canvas {
   transition: width 0.3s ease;
 }
 
+/* Hit Overlay - Jemné zčervenání obrazovky */
+#hit-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(239, 68, 68, 0.15); /* Velmi nízká průhlednost */
+  z-index: 4000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s ease-out; /* Rychlý nástup */
+}
+
+/* Modals */
 .modal {
   position: absolute;
   top: 0;
@@ -209,10 +236,12 @@ canvas {
   overflow: hidden;
 }
 
+/* Hover a Active efekty pro všechna tlačítka */
 .btn-restart:hover {
   transform: translateY(-5px) scale(1.02);
   background: var(--secondary-color);
   box-shadow: 0 15px 40px -10px rgba(139, 92, 246, 0.6);
+  cursor: pointer;
 }
 
 .btn-restart:active {
@@ -228,6 +257,7 @@ canvas {
   pointer-events: auto;
 }
 
+/* Upgrade Cards */
 .upgrade-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -291,6 +321,7 @@ canvas {
     font-weight: bold;
 }
 
+/* Misc */
 .scanlines {
   position: absolute;
   top: 0;

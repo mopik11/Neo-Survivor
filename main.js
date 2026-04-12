@@ -1321,6 +1321,16 @@ function update() {
                     } else {
                         t.hp -= (e.isBoss ? 2 : 0.5) * (t.shield || 1);
                         if (t.hp <= 0) t.dead = true;
+                        
+                        // Screen shake a flash při zásahu hráče
+                        if (t.isLocal) {
+                            shakeScreen(8);
+                            const overlay = document.getElementById('hit-overlay');
+                            if (overlay) {
+                                overlay.style.opacity = '1';
+                                setTimeout(() => overlay.style.opacity = '0', 100);
+                            }
+                        }
                     }
                 }
                 updateUI();
@@ -1345,10 +1355,20 @@ function update() {
             const alivePlayers = getAllAlivePlayers();
             alivePlayers.forEach(p => {
                 if (dist(proj.x, proj.y, p.x, p.y) < proj.radius + p.radius) {
-                    p.hp -= 10 * (p.shield || 1);
+                    p.hp -= proj.damage * (p.shield || 1);
                     if (p.hp <= 0) p.dead = true;
                     GAME.entities.projectiles.splice(pIndex, 1);
                     updateUI();
+                    
+                    // Shake a flash při zásahu projektilem
+                    if (p.isLocal) {
+                        shakeScreen(5);
+                        const overlay = document.getElementById('hit-overlay');
+                        if (overlay) {
+                            overlay.style.opacity = '1';
+                            setTimeout(() => overlay.style.opacity = '0', 100);
+                        }
+                    }
                 }
             });
         } else {
