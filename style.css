@@ -134,6 +134,7 @@ canvas {
   transition: width 0.3s ease;
 }
 
+/* Hit Overlay */
 #hit-overlay {
   position: absolute;
   top: 0;
@@ -343,7 +344,7 @@ canvas {
     margin-bottom: 1rem;
 }
 
-/* Tabulka statistik v pauze */
+/* Tabulka statistik */
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;

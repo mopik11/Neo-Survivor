@@ -1064,7 +1064,6 @@ function togglePause() {
     }
 }
 
-// Fullscreen
 let fullscreenAttempted = false;
 function tryFullscreen() {
     if (fullscreenAttempted) return;
@@ -1608,7 +1607,7 @@ function update() {
     syncPlayer();
     for (const id in NET.others) NET.others[id].update();
     
-    // Ošetření pole floatingTexts pro jistotu
+    // Ochrana proti pádu v případě starých dat
     if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
 
     GAME.entities.floatingTexts.forEach((ft, i) => {
@@ -1658,7 +1657,6 @@ function update() {
     GAME.entities.baits = GAME.entities.baits.filter(b => b.hp > 0);
     GAME.entities.baits.forEach(b => b.update());
 
-    GAME.orbiters.forEach(o => o.update());
     GAME.entities.fire.forEach((f, i) => { f.update(); if (f.life <= 0) GAME.entities.fire.splice(i, 1); });
 
     const enemies = GAME.entities.enemies;
@@ -1763,11 +1761,11 @@ function render() {
     GAME.entities.baits.forEach(b => b.draw(ctx, { x: camX, y: camY }));
     GAME.entities.gems.forEach(g => g.draw(ctx, { x: camX, y: camY }));
     GAME.entities.projectiles.forEach(p => p.draw(ctx, { x: camX, y: camY }));
-    GAME.orbiters.forEach(o => o.draw(ctx, { x: camX, y: camY }));
     GAME.entities.enemies.forEach(e => e.draw(ctx, { x: camX, y: camY }));
     for (const id in NET.others) NET.others[id].draw(ctx, { x: camX, y: camY });
     if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
     
+    // Záchrana při starých datech
     if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
     GAME.entities.floatingTexts.forEach(ft => ft.draw(ctx, {x: camX, y: camY}));
     
