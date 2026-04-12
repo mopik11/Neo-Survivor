@@ -437,7 +437,7 @@ class Projectile {
                 ctx.translate(this.x - cam.x, this.y - cam.y);
                 ctx.rotate(Math.atan2(this.vy, this.vx));
                 ctx.beginPath();
-                ctx.ellipse(0, 0, this.radius / 3, this.radius, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, 0, this.radius / 6, this.radius, 0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.restore();
             } else {
@@ -795,28 +795,60 @@ class Player {
         const sortedEnemies = [...enemies].sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y));
         const target = sortedEnemies[0];
         
-        const pType = this.shipType === 2 ? 'laser' : (this.shipType === 3 ? 'wall' : 'default');
-        const pLife = this.shipType === 3 ? 30 + this.wallRangeBonus : 200;
-        const pSpeed = this.shipType === 2 ? CONFIG.PROJECTILE_SPEED * 2.5 : CONFIG.PROJECTILE_SPEED;
-        const pPierce = this.shipType === 3 ? Infinity : this.pierceCount;
-        const pSize = this.shipType === 3 ? this.projSize * 3 : this.projSize;
-
+        // ZÁKLADNÍ ÚTOK: Proběhne vždy (u každé lodě)
         for (let i = 0; i < this.projectileCount; i++) {
             const isCrit = Math.random() < this.critChance;
             const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
             
             const proj = new Projectile(this.x, this.y, target.x, target.y, finalDamage, { 
-                size: pSize, 
-                pierce: pPierce, 
+                size: this.projSize, 
+                pierce: this.pierceCount, 
                 bounce: this.bounces, 
                 isCrit: isCrit,
-                type: pType,
-                life: pLife,
-                speed: pSpeed
+                type: 'default',
+                life: 200,
+                speed: CONFIG.PROJECTILE_SPEED
             });
             GAME.entities.projectiles.push(proj);
             if (NET.isMultiplayer) syncShot(proj);
         }
+
+        // BONUSOVÝ ÚTOK: Upíří Laser (Loď 2)
+        if (this.shipType === 2) {
+            const isCrit = Math.random() < this.critChance;
+            const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
+            
+            const laser = new Projectile(this.x, this.y, target.x, target.y, finalDamage, {
+                size: this.projSize, 
+                pierce: this.pierceCount, 
+                bounce: this.bounces, 
+                isCrit: isCrit,
+                type: 'laser', 
+                life: 200, 
+                speed: CONFIG.PROJECTILE_SPEED * 2.5
+            });
+            GAME.entities.projectiles.push(laser);
+            if (NET.isMultiplayer) syncShot(laser);
+        }
+        
+        // BONUSOVÝ ÚTOK: Drtivá Zeď (Loď 3)
+        if (this.shipType === 3) {
+            const isCrit = Math.random() < this.critChance;
+            const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
+            
+            const wall = new Projectile(this.x, this.y, target.x, target.y, finalDamage, {
+                size: this.projSize * 6, // Zeď je masivní (šířka)
+                pierce: Infinity,        // Zeď projde vším
+                bounce: 0, 
+                isCrit: isCrit,
+                type: 'wall', 
+                life: 15 + (this.wallRangeBonus / 2), // Krátký dosah
+                speed: CONFIG.PROJECTILE_SPEED
+            });
+            GAME.entities.projectiles.push(wall);
+            if (NET.isMultiplayer) syncShot(wall);
+        }
+        
         AudioEngine.play('shoot');
     }
     draw(ctx, cam) {
@@ -1100,8 +1132,8 @@ function showShipsMenu() {
     container.innerHTML = '';
     const items = [
         { id: 1, name: 'Základní Loď', desc: 'Spolehlivý standardní model', cost: 0, icon: '🚀' },
-        { id: 2, name: 'Upíří Laser', desc: 'Vysává HP z nepřátel. Střílí paprsky.', cost: 500, icon: '🩸' },
-        { id: 3, name: 'Drtivá Zeď', desc: 'Široká vlna, projde vším, malý dosah.', cost: 500, icon: '🌊' }
+        { id: 2, name: 'Upíří Laser', desc: 'Základní útok + Vysávací laser', cost: 500, icon: '🩸' },
+        { id: 3, name: 'Drtivá Zeď', desc: 'Základní útok + Průrazná vlna', cost: 500, icon: '🌊' }
     ];
 
     items.forEach(item => {
@@ -1565,7 +1597,14 @@ function resetGame() {
     GAME.entities.particles = []; 
     GAME.entities.fire = [];
     GAME.entities.baits = [];
-    GAME.entities.floatingTexts = [];
+    
+    // Zde je vytvoření textů s kontrolou proti chybám
+    if (!GAME.entities.floatingTexts) {
+        GAME.entities.floatingTexts = [];
+    } else {
+        GAME.entities.floatingTexts.length = 0;
+    }
+    
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     updateSpeedFactor(); updateUI();
 }
@@ -1607,9 +1646,11 @@ function update() {
     syncPlayer();
     for (const id in NET.others) NET.others[id].update();
     
+    // Tady byla původně chyba s orbitery - ta už tu není :)
+    
+    // Bezpečný update létajících textů
     if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
 
-    // Tady jsme museli iterovat pozpátku a ubezpečit se, že pole existuje
     for (let i = GAME.entities.floatingTexts.length - 1; i >= 0; i--) {
         const ft = GAME.entities.floatingTexts[i];
         ft.update();
