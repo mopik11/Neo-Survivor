@@ -57,7 +57,10 @@ const CONFIG = {
         rare: { chance: 20, color: '#22c55e', name: 'RARE' },
         epic: { chance: 10, color: '#a855f7', name: 'EPIC' },
         legendary: { chance: 5, color: '#eab308', name: 'LEGENDARY' }
-    }
+    },
+    SCREEN_SHAKE: 0,
+    BOSS_INTERVAL: 60,
+    SNIPER_COOLDOWN: 15000,
 };
 
 const NET = {
@@ -293,7 +296,6 @@ const AudioEngine = {
                 osc.start(); osc.stop(now + 0.1); break;
         }
     },
-    // OPRAVENO: Vrácena chybějící funkce startMusic
     startMusic() {
         if (this.musicStarted || !this.ctx) return;
         this.musicStarted = true;
@@ -1093,7 +1095,6 @@ function toggleFullscreen(element, force = false) {
 
 function showShipsMenu() {
     const container = document.getElementById('ships-options');
-    // Může být null, pokud chybí modal v index.html! Pojišťujeme:
     if(!container) return; 
 
     document.getElementById('ships-currency').innerText = META.currency;
@@ -1607,6 +1608,9 @@ function update() {
     syncPlayer();
     for (const id in NET.others) NET.others[id].update();
     
+    // Ošetření pole floatingTexts pro jistotu
+    if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+
     GAME.entities.floatingTexts.forEach((ft, i) => {
         ft.update();
         if (ft.life <= 0) GAME.entities.floatingTexts.splice(i, 1);
@@ -1764,7 +1768,7 @@ function render() {
     for (const id in NET.others) NET.others[id].draw(ctx, { x: camX, y: camY });
     if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
     
-    // Draw floating texts
+    if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
     GAME.entities.floatingTexts.forEach(ft => ft.draw(ctx, {x: camX, y: camY}));
     
     ctx.restore();
