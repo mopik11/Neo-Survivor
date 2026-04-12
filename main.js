@@ -1025,7 +1025,7 @@ function applyUpgrade(id) {
 
 function gameOver() {
     GAME.active = false;
-    META.currency += Math.floor(GAME.kills*10); saveMeta();
+    META.currency += Math.floor(GAME.kills * 500); saveMeta();
     document.getElementById('gameover-modal').classList.add('active');
     document.getElementById('final-level').innerText = GAME.entities.player.level;
     document.getElementById('final-kills').innerText = GAME.kills;
