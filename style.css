@@ -103,7 +103,6 @@ canvas {
   transition: all 0.2s ease;
 }
 
-/* Hover efekty pro čipy v HUD */
 .stat-chip:hover {
   background: rgba(99, 102, 241, 0.2);
   transform: translateY(-2px);
@@ -142,11 +141,11 @@ canvas {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(239, 68, 68, 0.15); /* Velmi nízká průhlednost */
+  background-color: rgba(239, 68, 68, 0.15); 
   z-index: 4000;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.1s ease-out; /* Rychlý nástup */
+  transition: opacity 0.1s ease-out; 
 }
 
 /* Modals */
@@ -176,7 +175,7 @@ canvas {
 
 .modal-content {
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
-  padding: 3.5rem;
+  padding: 3rem;
   border-radius: 48px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   display: flex;
@@ -184,7 +183,10 @@ canvas {
   align-items: center;
   box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.9), 
               0 0 40px rgba(99, 102, 241, 0.2);
-  min-width: 550px;
+  max-width: 650px;
+  width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
   text-align: center;
   transform: scale(0.9) translateY(20px);
   transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -195,7 +197,7 @@ canvas {
 }
 
 .logo {
-  font-size: 5.5rem;
+  font-size: 5rem;
   font-weight: 800;
   letter-spacing: -4px;
   color: white;
@@ -222,7 +224,7 @@ canvas {
   background: var(--accent-color);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 1.2rem 3.5rem;
+  padding: 1.2rem 2rem; /* Zmenšený padding pro lepší zalomení */
   font-size: 1.1rem;
   font-weight: 800;
   border-radius: 20px;
@@ -234,9 +236,13 @@ canvas {
   pointer-events: auto !important;
   position: relative;
   overflow: hidden;
+  flex: 1 1 auto;
+  white-space: nowrap;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-/* Hover a Active efekty pro všechna tlačítka */
 .btn-restart:hover {
   transform: translateY(-5px) scale(1.02);
   background: var(--secondary-color);
@@ -248,13 +254,45 @@ canvas {
   transform: translateY(0) scale(0.98);
 }
 
+/* Chytré zalamování hlavních tlačítek */
 .menu-actions {
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
   margin-top: 1rem;
   z-index: 10001;
   position: relative;
   pointer-events: auto;
+  width: 100%;
+}
+
+/* Skupina input + tlačítko připojit */
+.join-group {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+#input-join-id {
+    flex-grow: 1;
+    background: rgba(0,0,0,0.3);
+    border: 2px solid rgba(168, 85, 247, 0.4);
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 1.1rem;
+    text-align: center;
+    letter-spacing: 2px;
+    min-width: 0;
+}
+
+.btn-join {
+    padding: 15px 25px;
+    font-size: 1rem;
+    background: #6366f1;
+    margin: 0;
 }
 
 /* Upgrade Cards */
@@ -361,6 +399,7 @@ canvas {
     background: rgba(99, 102, 241, 0.8);
 }
 
+/* Mobilní responzivita */
 @media screen and (max-width: 850px) {
   .modal-content {
     min-width: unset !important;
@@ -398,10 +437,17 @@ canvas {
     font-size: 0.9rem !important;
   }
 
-  input[type="text"] {
-    padding: 10px !important;
-    font-size: 1rem !important;
-    margin-bottom: 10px !important;
+  .join-group {
+    flex-direction: column;
+  }
+
+  #input-join-id {
+    width: 100%;
+    margin-bottom: 0 !important;
+  }
+
+  .btn-join {
+    width: 100%;
   }
 
   #server-list-container {

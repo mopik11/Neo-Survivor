@@ -756,7 +756,9 @@ function spawnEnemy() {
 
     if (enemy.isBoss) { showBossWarning(); GAME.lastBossTime = GAME.time; }
     GAME.entities.enemies.push(enemy);
-    setTimeout(spawnEnemy, Math.max(100, (CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60))));
+    
+    const currentInterval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60));
+    setTimeout(spawnEnemy, currentInterval);
 }
 
 function showBossWarning() {
@@ -1322,7 +1324,6 @@ function update() {
                         t.hp -= (e.isBoss ? 2 : 0.5) * (t.shield || 1);
                         if (t.hp <= 0) t.dead = true;
                         
-                        // Screen shake a flash při zásahu hráče
                         if (t.isLocal) {
                             shakeScreen(8);
                             const overlay = document.getElementById('hit-overlay');
@@ -1355,12 +1356,11 @@ function update() {
             const alivePlayers = getAllAlivePlayers();
             alivePlayers.forEach(p => {
                 if (dist(proj.x, proj.y, p.x, p.y) < proj.radius + p.radius) {
-                    p.hp -= proj.damage * (p.shield || 1);
+                    p.hp -= 10 * (p.shield || 1);
                     if (p.hp <= 0) p.dead = true;
                     GAME.entities.projectiles.splice(pIndex, 1);
                     updateUI();
                     
-                    // Shake a flash při zásahu projektilem
                     if (p.isLocal) {
                         shakeScreen(5);
                         const overlay = document.getElementById('hit-overlay');
