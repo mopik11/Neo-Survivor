@@ -109,6 +109,7 @@ const GAME = {
     speedFactor: 1.0,
     zoom: 1.0,
     upgradeOptionsCount: 3,
+    loopStarted: false,
     entities: {
         player: null,
         enemies: [],
@@ -982,7 +983,6 @@ class Player {
     }
 }
 
-// Odstraněno automatické volání spawnEnemy(); nahoře (zabraňuje pádům před hrou)
 function spawnEnemy() {
     if (NET.isMultiplayer) return; 
     if (!GAME.active || GAME.paused) { setTimeout(spawnEnemy, 500); return; }
@@ -1490,8 +1490,14 @@ function syncShot(proj) {
         x: proj.x, y: proj.y, 
         tx: proj.x + Math.cos(angle) * 100, 
         ty: proj.y + Math.sin(angle) * 100, 
-        dmg: proj.damage, speed: speed, size: proj.radius, pierce: proj.pierce,
-        bounce: proj.bounce, isCrit: proj.isCrit, type: proj.type, life: proj.life
+        dmg: proj.damage,
+        speed: speed,
+        size: proj.radius,
+        pierce: proj.pierce,
+        bounce: proj.bounce,
+        isCrit: proj.isCrit,
+        type: proj.type,
+        life: proj.life
     });
 }
 
@@ -1552,7 +1558,6 @@ function savePlayerName(inputId) {
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     document.getElementById('menu-modal').classList.add('active');
     
-    // Teprve teď můžeme s jistotou říct, že smyčka může běžet
     if (!GAME.loopStarted) {
         GAME.loopStarted = true;
         requestAnimationFrame(loop);
@@ -1562,13 +1567,12 @@ function savePlayerName(inputId) {
 function init() {
     GAME.canvas = document.getElementById('game-canvas');
     GAME.ctx = GAME.canvas.getContext('2d');
-    GAME.loopStarted = false; // Pomocná proměnná
+    GAME.loopStarted = false; 
 
     updateSpeedFactor();
     window.addEventListener('resize', () => { GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight; updateSpeedFactor(); });
     GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight;
     
-    // Nejprve vyčistíme mapu, aby nebyla černá
     GAME.ctx.fillStyle = '#020617';
     GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
 
@@ -1581,6 +1585,8 @@ function init() {
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('name-modal').classList.add('active');
     } else {
+        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+        document.getElementById('menu-modal').classList.add('active');
         document.getElementById('display-player-name').innerText = META.playerName;
         if (NET.socket && NET.socket.connected) {
             NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
@@ -1966,6 +1972,8 @@ function render() {
         GAME.entities.enemies.forEach(e => e.draw(ctx, { x: camX, y: camY }));
         for (const id in NET.others) NET.others[id].draw(ctx, { x: camX, y: camY });
         if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
+        
+        if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
         GAME.entities.floatingTexts.forEach(ft => ft.draw(ctx, {x: camX, y: camY}));
     }
     
