@@ -41,7 +41,6 @@ const CONFIG = {
 
         { id: 'regen', name: 'Regenerace', desc: 'Obnova 1 HP/s', icon: '💊', rarity: 'epic' },
         { id: 'ultramagnet', name: 'Ultra Magnet', desc: 'Pomalý sběr z celé mapy', icon: '🌌', rarity: 'epic' },
-        { id: 'orbit', name: 'Orbitální Štít', desc: 'Vypustí rotující projektil', icon: '🪐', rarity: 'epic' },
         { id: 'lifesteal', name: 'Lifesteal', desc: '5% šance na heal při killu', icon: '🧛', rarity: 'epic' },
         { id: 'fire', name: 'Ohnivá Stopa', desc: 'Zanecháváš za sebou oheň', icon: '🔥', rarity: 'epic' },
         { id: 'kaktus', name: 'Kaktus', desc: 'Zabíjí dotykem (10s on, 30s off)', icon: '🌵', rarity: 'epic' },
@@ -426,19 +425,18 @@ class Projectile {
             ctx.fillStyle = this.isCrit ? '#fbbf24' : '#f8fafc';
             ctx.strokeStyle = ctx.fillStyle;
 
-            if (this.type === 'laser') {
-                ctx.lineWidth = this.radius;
-                ctx.beginPath();
-                ctx.moveTo(this.x - cam.x, this.y - cam.y);
-                ctx.lineTo(this.x - cam.x - this.vx * 1.5, this.y - cam.y - this.vy * 1.5);
-                ctx.stroke();
-            } else if (this.type === 'wall') {
+            if (this.type === 'wall') {
+                ctx.lineCap = 'round';
+                ctx.lineWidth = this.radius * 2;
+                ctx.shadowBlur = 20;
+                
                 ctx.save();
                 ctx.translate(this.x - cam.x, this.y - cam.y);
                 ctx.rotate(Math.atan2(this.vy, this.vx));
                 ctx.beginPath();
-                ctx.ellipse(0, 0, this.radius / 6, this.radius, 0, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.moveTo(0, -this.radius * 4); // Celková šířka 8x radius
+                ctx.lineTo(0, this.radius * 4);
+                ctx.stroke();
                 ctx.restore();
             } else {
                 ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
@@ -475,47 +473,6 @@ class Gem {
         ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
     }
-}
-
-class Orbiter {
-    constructor(owner, index, total) {
-        this.owner = owner; this.index = index; this.total = total;
-        this.angle = (index / total) * Math.PI * 2; this.radius = 120; this.size = 15;
-    }
-    update() { this.angle += 0.05 * GAME.speedFactor; }
-    draw(ctx, cam) {
-        if (this.owner.dead) return;
-        const x = this.owner.x + Math.cos(this.angle) * this.radius, y = this.owner.y + Math.sin(this.angle) * this.radius;
-        ctx.shadowBlur = 20; ctx.shadowColor = '#fbbf24'; ctx.fillStyle = '#f59e0b';
-        ctx.beginPath(); ctx.arc(x - cam.x, y - cam.y, this.size, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-        
-        if (this.owner.isLocal) {
-            GAME.entities.enemies.forEach(e => { 
-                if (dist(x, y, e.x, e.y) < this.size + e.radius) { 
-                    e.hp -= this.owner.damage * 0.3 * 3; 
-                    if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: this.owner.damage * 0.3 * 3 });
-                } 
-            });
-        }
-    }
-}
-
-function getAllAlivePlayers() {
-    const list = [];
-    if (GAME.entities.player && !GAME.entities.player.dead) list.push(GAME.entities.player);
-    for (const id in NET.others) {
-        if (!NET.others[id].dead) list.push(NET.others[id]);
-    }
-    return list;
-}
-
-function getAllTargets() {
-    const list = getAllAlivePlayers();
-    GAME.entities.baits.forEach(b => {
-        if (b.hp > 0) list.push({ x: b.x, y: b.y, radius: b.radius, isBait: true, obj: b });
-    });
-    return list;
 }
 
 class Bait {
@@ -686,8 +643,8 @@ class Player {
         this.critMultiplier = 3; 
         
         this.luckFactor = 1.0 + (isLocal ? (META.upgrades.luck * 0.05) : 0);
-        this.orbitals = 0; this.knockbackForce = 6; this.xpMultiplier = 1.0;
-        this.lifestealChance = 0; this.aura = false; this.auraRange = 150;
+        this.knockbackForce = 6; this.xpMultiplier = 1.0;
+        this.aura = false; this.auraRange = 150;
         this.bounces = 0; this.fireTrail = false;
         
         this.hasKaktus = false; 
@@ -706,19 +663,13 @@ class Player {
         this.baitHpMult = 5;
         this.auraPower = 0.5; 
         
-        this.orbitersList = [];
-        
         this.shipType = META.selectedShip || 1;
         this.wallRangeBonus = 0;
+        this.laserTargetId = null;
+        this.lastLaserCrit = 0;
     }
-    update() {
+    update(dt) {
         if (this.dead) return;
-        
-        if (this.orbitals !== this.orbitersList.length) {
-            this.orbitersList = [];
-            for (let i = 0; i < this.orbitals; i++) this.orbitersList.push(new Orbiter(this, i, this.orbitals));
-        }
-        this.orbitersList.forEach(o => o.update());
 
         if (this.hasKaktus) {
             const now = Date.now();
@@ -751,6 +702,53 @@ class Player {
             return;
         }
 
+        // Logic for Vampire Laser (Ship 2)
+        if (this.shipType === 2) {
+            const enemies = GAME.entities.enemies;
+            if (enemies.length > 0) {
+                const target = [...enemies].sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0];
+                const d = dist(this.x, this.y, target.x, target.y);
+                if (d < 400) {
+                    this.laserTargetId = target.id;
+                    const dps = this.damage * (1000 / Math.max(100, this.fireRate));
+                    const dmgThisFrame = dps * (dt / 1000);
+                    
+                    let isCrit = false;
+                    const now = Date.now();
+                    if (Math.random() < this.critChance && now - this.lastLaserCrit > 1000) {
+                        isCrit = true;
+                        this.lastLaserCrit = now;
+                    }
+                    
+                    const finalDmg = isCrit ? dmgThisFrame * this.critMultiplier : dmgThisFrame;
+                    
+                    target.hp -= finalDmg;
+                    this.hp = Math.min(this.maxHp, this.hp + finalDmg * 0.1); // Lifesteal
+                    
+                    if (isCrit) {
+                        if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                        GAME.entities.floatingTexts.push(new FloatingText(target.x, target.y - 25, "CRITICAL!", "#ef4444"));
+                    }
+                    
+                    if (NET.isMultiplayer) {
+                        NET.socket.emit('enemyHit', { id: target.id, damage: finalDmg });
+                    }
+                    if (target.hp <= 0) {
+                        AudioEngine.play('hit');
+                        if (!NET.isMultiplayer) GAME.entities.gems.push(new Gem(target.x, target.y));
+                        GAME.kills++;
+                        updateUI();
+                    }
+                } else {
+                    this.laserTargetId = null;
+                }
+            } else {
+                this.laserTargetId = null;
+            }
+        } else {
+            this.laserTargetId = null;
+        }
+
         if (this.bait && Date.now() - this.lastBait > 10000) {
             const baitHp = this.maxHp * this.baitHpMult;
             if (NET.isMultiplayer) {
@@ -760,25 +758,30 @@ class Player {
             }
             this.lastBait = Date.now();
         }
+
         let dx = 0, dy = 0;
         if (GAME.joystick.active) {
             const jdx = GAME.joystick.currentX - GAME.joystick.startX;
             const jdy = GAME.joystick.currentY - GAME.joystick.startY;
-            const d = dist(0, 0, jdx, jdy);
-            if (d > 5) { dx = jdx / d; dy = jdy / d; }
+            const distJoy = dist(0, 0, jdx, jdy);
+            if (distJoy > 5) { dx = jdx / distJoy; dy = jdy / distJoy; }
         } else {
             if (GAME.input.w) dy -= 1; if (GAME.input.s) dy += 1;
             if (GAME.input.a) dx -= 1; if (GAME.input.d) dx += 1;
         }
+
         if (dx !== 0 || dy !== 0) {
             const angle = Math.atan2(dy, dx);
-            this.x += Math.cos(angle) * this.speed * GAME.speedFactor; this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
+            this.x += Math.cos(angle) * this.speed * GAME.speedFactor; 
+            this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
+            
             const now = Date.now();
             if (this.fireTrail && now - this.lastFireTrail > 150) {
                 GAME.entities.fire.push(new Fire(this.x, this.y, this.damage * this.fireDamageMult, true));
                 this.lastFireTrail = now;
             }
         }
+
         const now = Date.now();
         if (this.regen > 0 && now - this.lastRegen > 1000) {
             this.hp = Math.min(this.maxHp, this.hp + this.regen); this.lastRegen = now; updateUI();
@@ -795,7 +798,7 @@ class Player {
         const sortedEnemies = [...enemies].sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y));
         const target = sortedEnemies[0];
         
-        // ZÁKLADNÍ ÚTOK: Proběhne vždy (u každé lodě)
+        // VZDY vystřelí standardní projektily
         for (let i = 0; i < this.projectileCount; i++) {
             const isCrit = Math.random() < this.critChance;
             const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
@@ -812,37 +815,19 @@ class Player {
             GAME.entities.projectiles.push(proj);
             if (NET.isMultiplayer) syncShot(proj);
         }
-
-        // BONUSOVÝ ÚTOK: Upíří Laser (Loď 2)
-        if (this.shipType === 2) {
-            const isCrit = Math.random() < this.critChance;
-            const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
-            
-            const laser = new Projectile(this.x, this.y, target.x, target.y, finalDamage, {
-                size: this.projSize, 
-                pierce: this.pierceCount, 
-                bounce: this.bounces, 
-                isCrit: isCrit,
-                type: 'laser', 
-                life: 200, 
-                speed: CONFIG.PROJECTILE_SPEED * 2.5
-            });
-            GAME.entities.projectiles.push(laser);
-            if (NET.isMultiplayer) syncShot(laser);
-        }
         
-        // BONUSOVÝ ÚTOK: Drtivá Zeď (Loď 3)
+        // Drtivá Zeď
         if (this.shipType === 3) {
             const isCrit = Math.random() < this.critChance;
             const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
             
             const wall = new Projectile(this.x, this.y, target.x, target.y, finalDamage, {
-                size: this.projSize * 6, // Zeď je masivní (šířka)
-                pierce: Infinity,        // Zeď projde vším
+                size: this.projSize * 4, // Upravuje sirku hitboxu (v draw se jeste zvetsi visual)
+                pierce: Infinity, 
                 bounce: 0, 
                 isCrit: isCrit,
                 type: 'wall', 
-                life: 15 + (this.wallRangeBonus / 2), // Krátký dosah
+                life: 15 + (this.wallRangeBonus / 2), 
                 speed: CONFIG.PROJECTILE_SPEED
             });
             GAME.entities.projectiles.push(wall);
@@ -887,7 +872,27 @@ class Player {
         ctx.strokeStyle = this.isLocal ? '#6366f1' : '#f43f5e'; ctx.lineWidth = 4; ctx.stroke();
         ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
         
-        this.orbitersList.forEach(o => o.draw(ctx, cam));
+        // Kreslení upířího laseru
+        if (this.shipType === 2 && this.laserTargetId) {
+            const target = GAME.entities.enemies.find(e => e.id === this.laserTargetId);
+            if (target) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(this.x - cam.x, this.y - cam.y);
+                ctx.lineTo(target.x - cam.x, target.y - cam.y);
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 6;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#ef4444';
+                ctx.stroke();
+                
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 0;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
     }
     addXp(amount) {
         if (this.dead) return;
@@ -1031,10 +1036,8 @@ function applyUpgrade(id) {
             case 'crit_chance': p.critChance += 0.15; break;
             case 'crit_dmg': p.critMultiplier += 1; break;
             case 'luck': GAME.upgradeOptionsCount += 1; break;
-            case 'orbit': p.orbitals += 1; break;
             case 'knockback': p.knockbackForce *= 1.5; break;
             case 'xpboost': p.xpMultiplier += 0.2; break;
-            case 'lifesteal': p.lifestealChance += 0.05; break;
             case 'aura': p.aura = true; p.auraRange += 20; p.auraPower *= 0.8; break;
             case 'bounce': p.bounces += 1; break;
             case 'fire': p.fireTrail = true; p.fireDamageMult += 0.5; break;
@@ -1079,7 +1082,6 @@ function togglePause() {
         document.getElementById('stat-crit-dmg').innerText = p.critMultiplier + 'x';
         document.getElementById('stat-shield').innerText = Math.floor((1 - p.shield) * 100) + '%';
         document.getElementById('stat-regen').innerText = p.regen + ' HP/s';
-        document.getElementById('stat-lifesteal').innerText = Math.floor(p.lifestealChance * 100) + '%';
     }
     
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
@@ -1132,8 +1134,8 @@ function showShipsMenu() {
     container.innerHTML = '';
     const items = [
         { id: 1, name: 'Základní Loď', desc: 'Spolehlivý standardní model', cost: 0, icon: '🚀' },
-        { id: 2, name: 'Upíří Laser', desc: 'Základní útok + Vysávací laser', cost: 500, icon: '🩸' },
-        { id: 3, name: 'Drtivá Zeď', desc: 'Základní útok + Průrazná vlna', cost: 500, icon: '🌊' }
+        { id: 2, name: 'Upíří Laser', desc: 'Vysává HP z nepřátel. Střílí paprsky.', cost: 500, icon: '🩸' },
+        { id: 3, name: 'Drtivá Zeď', desc: 'Široká vlna, projde vším, malý dosah.', cost: 500, icon: '🌊' }
     ];
 
     items.forEach(item => {
@@ -1322,6 +1324,8 @@ function initSocket() {
                 newOthers[pId].fireTrail = data.players[pId].fireTrail;
                 newOthers[pId].hasKaktus = data.players[pId].kaktus; 
                 newOthers[pId].kaktus = data.players[pId].kaktus;
+                newOthers[pId].shipType = data.players[pId].shipType;
+                newOthers[pId].laserTargetId = data.players[pId].laserTargetId;
             }
             NET.others = newOthers;
             GAME.time = data.time;
@@ -1389,7 +1393,9 @@ function syncPlayer() {
         auraRange: GAME.entities.player.auraRange,
         orbitals: GAME.entities.player.orbitals,
         fireTrail: GAME.entities.player.fireTrail,
-        kaktus: GAME.entities.player.hasKaktus
+        kaktus: GAME.entities.player.hasKaktus,
+        shipType: GAME.entities.player.shipType,
+        laserTargetId: GAME.entities.player.laserTargetId
     });
 }
 
@@ -1598,7 +1604,6 @@ function resetGame() {
     GAME.entities.fire = [];
     GAME.entities.baits = [];
     
-    // Zde je vytvoření textů s kontrolou proti chybám
     if (!GAME.entities.floatingTexts) {
         GAME.entities.floatingTexts = [];
     } else {
@@ -1623,7 +1628,7 @@ function loop(time) {
     if (GAME.active && !GAME.paused) {
         accumulator += dt;
         while (accumulator >= timeStep) {
-            update();
+            update(timeStep);
             accumulator -= timeStep;
         }
         render();
@@ -1634,21 +1639,23 @@ function loop(time) {
     requestAnimationFrame(loop); 
 }
 
-function update() {
+function update(dt) {
     if (GAME.paused) return;
     
     if(!NET.isMultiplayer) GAME.time += 1 / 60; 
     
-    const p = GAME.entities.player; p.update();
+    const p = GAME.entities.player; 
+    p.update(dt);
+    
     GAME.camera.x = (p.x * GAME.zoom) - GAME.canvas.width / 2; GAME.camera.y = (p.y * GAME.zoom) - GAME.canvas.height / 2;
     if (CONFIG.SCREEN_SHAKE > 0) { GAME.camera.x += (Math.random() - 0.5) * CONFIG.SCREEN_SHAKE; GAME.camera.y += (Math.random() - 0.5) * CONFIG.SCREEN_SHAKE; CONFIG.SCREEN_SHAKE *= 0.9; }
 
     syncPlayer();
-    for (const id in NET.others) NET.others[id].update();
     
-    // Tady byla původně chyba s orbitery - ta už tu není :)
+    for (const id in NET.others) {
+        NET.others[id].update(dt);
+    }
     
-    // Bezpečný update létajících textů
     if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
 
     for (let i = GAME.entities.floatingTexts.length - 1; i >= 0; i--) {
@@ -1699,12 +1706,23 @@ function update() {
     GAME.entities.baits = GAME.entities.baits.filter(b => b.hp > 0);
     GAME.entities.baits.forEach(b => b.update());
 
-    GAME.entities.fire.forEach((f, i) => { f.update(); if (f.life <= 0) GAME.entities.fire.splice(i, 1); });
+    for (let i = GAME.entities.fire.length - 1; i >= 0; i--) {
+        const f = GAME.entities.fire[i];
+        f.update();
+        if (f.life <= 0) {
+            GAME.entities.fire.splice(i, 1);
+        }
+    }
 
     const enemies = GAME.entities.enemies;
-    GAME.entities.projectiles.forEach((proj, pIndex) => {
+    for (let pIndex = GAME.entities.projectiles.length - 1; pIndex >= 0; pIndex--) {
+        const proj = GAME.entities.projectiles[pIndex];
         proj.update();
-        if (proj.life <= 0) { GAME.entities.projectiles.splice(pIndex, 1); return; }
+        
+        if (proj.life <= 0) { 
+            GAME.entities.projectiles.splice(pIndex, 1); 
+            continue; 
+        }
 
         if (proj.isEnemy) {
             const alivePlayers = getAllAlivePlayers();
@@ -1726,18 +1744,17 @@ function update() {
                 }
             });
         } else {
-            enemies.forEach((enemy, eIndex) => {
-                if (!proj.hitEnemies.has(enemy) && dist(proj.x, proj.y, enemy.x, enemy.y) < proj.radius + enemy.radius) {
-                    enemy.hp -= proj.damage; proj.hitEnemies.add(enemy);
+            enemies.forEach((enemy) => {
+                let hitDist = proj.radius + enemy.radius;
+                if (proj.type === 'wall') hitDist = (proj.radius * 6) + enemy.radius; // Opraveny hitbox zdi!
+
+                if (!proj.hitEnemies.has(enemy) && dist(proj.x, proj.y, enemy.x, enemy.y) < hitDist) {
+                    enemy.hp -= proj.damage; 
+                    proj.hitEnemies.add(enemy);
                     
                     if (proj.isCrit) {
                         if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
                         GAME.entities.floatingTexts.push(new FloatingText(enemy.x, enemy.y - 25, "CRITICAL!", "#ef4444"));
-                    }
-                    
-                    if (proj.type === 'laser' && proj.ownerId === 'local' && p && !p.dead) {
-                        p.hp = Math.min(p.maxHp, p.hp + proj.damage * 0.05); 
-                        updateUI();
                     }
 
                     if (NET.isMultiplayer) {
@@ -1761,7 +1778,7 @@ function update() {
                 }
             });
         }
-    });
+    }
 
     const pForGems = GAME.entities.player;
     for (let i = GAME.entities.gems.length - 1; i >= 0; i--) {
