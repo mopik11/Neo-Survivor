@@ -154,13 +154,12 @@ const AudioEngine = {
         if (this.ctx.state === 'suspended') this.ctx.resume();
         this.menuPlaying = true;
 
-        // Synth pad / Drone pro hutnou atmosféru
         const bassOsc = this.ctx.createOscillator();
         const bassGain = this.ctx.createGain();
         const bassFilter = this.ctx.createBiquadFilter();
 
         bassOsc.type = 'sawtooth';
-        bassOsc.frequency.setValueAtTime(55, this.ctx.currentTime); // Nízké A
+        bassOsc.frequency.setValueAtTime(55, this.ctx.currentTime); 
 
         bassFilter.type = 'lowpass';
         bassFilter.frequency.setValueAtTime(300, this.ctx.currentTime);
@@ -175,8 +174,7 @@ const AudioEngine = {
         bassOsc.start();
         this.droneNodes = [bassOsc, bassGain, bassFilter];
 
-        // Rychlý Synthwave Arpeggiator
-        const notes = [220, 261.63, 329.63, 440, 329.63, 261.63, 164.81, 196.00]; // A Minor arp pattern
+        const notes = [220, 261.63, 329.63, 440, 329.63, 261.63, 164.81, 196.00]; 
         let step = 0;
 
         const playArp = () => {
@@ -205,7 +203,7 @@ const AudioEngine = {
             osc.stop(now + 0.2);
 
             step++;
-            this.menuInterval = setTimeout(playArp, 140); // Rychlé tempo (cca 107 BPM 16-tiny)
+            this.menuInterval = setTimeout(playArp, 140); 
         };
         playArp();
     },
@@ -218,6 +216,31 @@ const AudioEngine = {
             });
             this.droneNodes = null;
         }
+    },
+    piano(freq, dur) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, now);
+        filter.frequency.exponentialRampToValueAtTime(400, now + dur + 0.5);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur + 1.2);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + dur + 1.5);
     },
     play(type) {
         if (!this.ctx) return;
@@ -327,18 +350,21 @@ class Particle {
 }
 
 class Fire {
-    constructor(x, y, damage) {
+    constructor(x, y, damage, isLocal = true) {
         this.x = x; this.y = y; this.damage = damage;
         this.radius = 25; this.life = 1.5;
+        this.isLocal = isLocal;
     }
     update() {
         this.life -= 1 / 60;
-        GAME.entities.enemies.forEach(e => {
-            if (dist(this.x, this.y, e.x, e.y) < this.radius + e.radius) {
-                e.hp -= this.damage * (1 / 60);
-                if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: this.damage * (1 / 60) });
-            }
-        });
+        if (this.isLocal) {
+            GAME.entities.enemies.forEach(e => {
+                if (dist(this.x, this.y, e.x, e.y) < this.radius + e.radius) {
+                    e.hp -= this.damage * (1 / 60);
+                    if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: this.damage * (1 / 60) });
+                }
+            });
+        }
     }
     draw(ctx, cam) {
         ctx.globalAlpha = this.life / 1.5;
@@ -420,12 +446,15 @@ class Orbiter {
         ctx.shadowBlur = 20; ctx.shadowColor = '#fbbf24'; ctx.fillStyle = '#f59e0b';
         ctx.beginPath(); ctx.arc(x - cam.x, y - cam.y, this.size, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
-        GAME.entities.enemies.forEach(e => { 
-            if (dist(x, y, e.x, e.y) < this.size + e.radius) { 
-                e.hp -= this.owner.damage * 0.3 * (3); 
-                if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: this.owner.damage * 0.3 * 3 });
-            } 
-        });
+        
+        if (this.owner.isLocal) {
+            GAME.entities.enemies.forEach(e => { 
+                if (dist(x, y, e.x, e.y) < this.size + e.radius) { 
+                    e.hp -= this.owner.damage * 0.3 * 3; 
+                    if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: this.owner.damage * 0.3 * 3 });
+                } 
+            });
+        }
     }
 }
 
@@ -624,12 +653,31 @@ class Player {
         this.fireDamageMult = 0.5;
         this.baitHpMult = 5;
         this.auraPower = 0.5; 
+        
+        this.orbitersList = [];
     }
     update() {
         if (this.dead) return;
+        
+        if (this.orbitals !== this.orbitersList.length) {
+            this.orbitersList = [];
+            for (let i = 0; i < this.orbitals; i++) this.orbitersList.push(new Orbiter(this, i, this.orbitals));
+        }
+        this.orbitersList.forEach(o => o.update());
+
         if (!this.isLocal) {
+            const oldX = this.x;
+            const oldY = this.y;
             this.x += (this.targetX - this.x) * 0.25;
             this.y += (this.targetY - this.y) * 0.25;
+            
+            if (this.fireTrail) {
+                const now = Date.now();
+                if (now - (this.lastFireTrail || 0) > 150 && dist(oldX, oldY, this.x, this.y) > 0.5) {
+                    GAME.entities.fire.push(new Fire(this.x, this.y, 0, false));
+                    this.lastFireTrail = now;
+                }
+            }
             return;
         }
 
@@ -657,7 +705,7 @@ class Player {
             this.x += Math.cos(angle) * this.speed * GAME.speedFactor; this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
             const now = Date.now();
             if (this.fireTrail && now - this.lastFireTrail > 150) {
-                GAME.entities.fire.push(new Fire(this.x, this.y, this.damage * this.fireDamageMult));
+                GAME.entities.fire.push(new Fire(this.x, this.y, this.damage * this.fireDamageMult, true));
                 this.lastFireTrail = now;
             }
         }
@@ -681,13 +729,32 @@ class Player {
             GAME.entities.projectiles.push(proj);
             if (NET.isMultiplayer) syncShot(proj);
         }
-        if (this.orbitals !== GAME.orbiters.length) {
-            GAME.orbiters = []; for (let i = 0; i < this.orbitals; i++) GAME.orbiters.push(new Orbiter(this, i, this.orbitals));
-        }
         AudioEngine.play('shoot');
     }
     draw(ctx, cam) {
         if (this.dead) ctx.globalAlpha = 0.2;
+        
+        if (this.aura) {
+            const range = this.auraRange || 150;
+            ctx.fillStyle = 'rgba(165, 243, 252, 0.1)';
+            ctx.strokeStyle = 'rgba(165, 243, 252, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(this.x - cam.x, this.y - cam.y, range, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        if (this.kaktus) {
+            ctx.fillStyle = '#22c55e';
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * Math.PI * 2 + (Date.now() / 1000);
+                ctx.beginPath();
+                ctx.arc(this.x - cam.x + Math.cos(a) * (this.radius + 5), this.y - cam.y + Math.sin(a) * (this.radius + 5), 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
         ctx.shadowBlur = 30; ctx.shadowColor = this.isLocal ? '#6366f1' : '#f43f5e';
         ctx.fillStyle = this.isLocal ? '#f8fafc' : '#fca5a5';
         ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
@@ -699,6 +766,8 @@ class Player {
         }
         ctx.strokeStyle = this.isLocal ? '#6366f1' : '#f43f5e'; ctx.lineWidth = 4; ctx.stroke();
         ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
+        
+        this.orbitersList.forEach(o => o.draw(ctx, cam));
     }
     addXp(amount) {
         if (this.dead) return;
@@ -854,7 +923,8 @@ function applyUpgrade(id) {
     document.getElementById('levelup-modal').classList.remove('active');
     
     if (NET.isMultiplayer) {
-        document.getElementById('waiting-modal').classList.add('active'); // Zobrazí čekací pop-up
+        const waitModal = document.getElementById('waiting-modal');
+        if (waitModal) waitModal.classList.add('active');
         NET.socket.emit('upgradePicked');
     } else {
         GAME.paused = false;
@@ -1047,6 +1117,12 @@ function initSocket() {
                 newOthers[pId].targetY = data.players[pId].y;
                 newOthers[pId].dead = data.players[pId].dead;
                 newOthers[pId].remoteHat = data.players[pId].hat;
+                
+                newOthers[pId].aura = data.players[pId].aura;
+                newOthers[pId].auraRange = data.players[pId].auraRange;
+                newOthers[pId].orbitals = data.players[pId].orbitals || 0;
+                newOthers[pId].fireTrail = data.players[pId].fireTrail;
+                newOthers[pId].kaktus = data.players[pId].kaktus;
             }
             NET.others = newOthers;
             GAME.time = data.time;
@@ -1074,15 +1150,16 @@ function initSocket() {
             showLevelUp();
         });
         
-        // Jakmile server pošle, že všichni vybrali, skryjeme čekací popup a pokračujeme
         NET.socket.on('resumeGame', () => {
-            document.getElementById('waiting-modal').classList.remove('active');
+            const waitModal = document.getElementById('waiting-modal');
+            if (waitModal) waitModal.classList.remove('active');
             GAME.paused = false;
         });
         
         NET.socket.on('teamGameOver', () => {
             GAME.entities.player.dead = true;
-            document.getElementById('waiting-modal').classList.remove('active'); // Pro jistotu skryjeme
+            const waitModal = document.getElementById('waiting-modal');
+            if (waitModal) waitModal.classList.remove('active');
             gameOver();
         });
 
@@ -1109,7 +1186,9 @@ function syncPlayer() {
         level: GAME.entities.player.level,
         aura: GAME.entities.player.aura,
         auraRange: GAME.entities.player.auraRange,
-        auraPower: GAME.entities.player.auraPower
+        orbitals: GAME.entities.player.orbitals,
+        fireTrail: GAME.entities.player.fireTrail,
+        kaktus: GAME.entities.player.kaktus
     });
 }
 
