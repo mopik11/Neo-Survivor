@@ -29,6 +29,7 @@ const CONFIG = {
 
         { id: 'count', name: 'Více Střel', desc: '+1 projektil navíc', icon: '🌀', rarity: 'uncommon' },
         { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřátely', icon: '🏹', rarity: 'uncommon' },
+        { id: 'wall_range', name: 'Dosah Zdi', desc: 'Zvětší dolet a životnost tvé zdi', icon: '🌊', rarity: 'uncommon' }, // Nový pro loď 3
         { id: 'size', name: 'Obří Střely', desc: '+30% velikost projektilu', icon: '🌕', rarity: 'uncommon' },
         { id: 'xpboost', name: 'XP Multiplikátor', desc: '+20% bonus k XP', icon: '📈', rarity: 'uncommon' },
         { id: 'bounce', name: 'Odraz', desc: 'Střely se odráží k dalšímu cíli', icon: '🪃', rarity: 'uncommon' },
@@ -56,10 +57,7 @@ const CONFIG = {
         rare: { chance: 20, color: '#22c55e', name: 'RARE' },
         epic: { chance: 10, color: '#a855f7', name: 'EPIC' },
         legendary: { chance: 5, color: '#eab308', name: 'LEGENDARY' }
-    },
-    SCREEN_SHAKE: 0,
-    BOSS_INTERVAL: 60,
-    SNIPER_COOLDOWN: 15000,
+    }
 };
 
 const NET = {
@@ -78,13 +76,20 @@ if (!myPlayerId) {
 
 const META = {
     currency: 0,
-    upgrades: { hp: 0, speed: 0, luck: 0, hat: null }
+    upgrades: { hp: 0, speed: 0, luck: 0, hat: null },
+    ships: { 1: true, 2: false, 3: false },
+    selectedShip: 1
 };
 
 const saveMeta = () => localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
 const loadMeta = () => {
     const data = localStorage.getItem('neoSurvivor_meta');
-    if (data) Object.assign(META, JSON.parse(data));
+    if (data) {
+        const parsed = JSON.parse(data);
+        Object.assign(META, parsed);
+        if (!META.ships) META.ships = { 1: true, 2: false, 3: false };
+        if (!META.selectedShip) META.selectedShip = 1;
+    }
 };
 
 const GAME = {
@@ -119,7 +124,6 @@ const GAME = {
         radius: 75
     },
     stars: [],
-    orbiters: [],
     lastSniperTime: 0,
     canvas: null,
     ctx: null
@@ -225,31 +229,6 @@ const AudioEngine = {
             this.droneNodes = null;
         }
     },
-    piano(freq, dur) {
-        if (!this.ctx) return;
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        const filter = this.ctx.createBiquadFilter();
-
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, now);
-
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(1200, now);
-        filter.frequency.exponentialRampToValueAtTime(400, now + dur + 0.5);
-
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + dur + 1.2);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.ctx.destination);
-
-        osc.start(now);
-        osc.stop(now + dur + 1.5);
-    },
     play(type) {
         if (!this.ctx) return;
         if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -288,71 +267,25 @@ const AudioEngine = {
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
                 osc.start(); osc.stop(now + 0.1); break;
         }
-    },
-    startMusic() {
-        if (this.musicStarted || !this.ctx) return;
-        this.musicStarted = true;
-
-        const playSynth = (time, freq, vol, duration, type = 'square') => {
-            const osc = this.ctx.createOscillator();
-            const g = this.ctx.createGain();
-            osc.type = type; osc.frequency.setValueAtTime(freq, time);
-            g.gain.setValueAtTime(vol, time);
-            g.gain.exponentialRampToValueAtTime(0.001, time + duration);
-            osc.connect(g); g.connect(this.ctx.destination);
-            osc.start(time); osc.stop(time + duration);
-        };
-
-        const playNoise = (time, vol, duration) => {
-            const bufferSize = this.ctx.sampleRate * duration;
-            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-            const src = this.ctx.createBufferSource();
-            src.buffer = buffer;
-            const g = this.ctx.createGain();
-            g.gain.setValueAtTime(vol, time);
-            g.gain.exponentialRampToValueAtTime(0.001, time + duration);
-            src.connect(g); g.connect(this.ctx.destination);
-            src.start(time); src.stop(time + duration);
-        };
-
-        let step = 0;
-        const bassNotes = [55, 55, 62, 49, 55, 55, 73, 65, 55, 55, 62, 49, 55, 55, 82, 98];
-        const melodyNotes = [110, 0, 165, 0, 110, 0, 220, 196, 110, 0, 165, 0, 110, 220, 330, 440];
-
-        setInterval(() => {
-            if (GAME.active && !GAME.paused) {
-                const now = this.ctx.currentTime;
-                playSynth(now, bassNotes[step % 16], 0.03, 0.4, 'sawtooth');
-                if (step % 2 === 0) playSynth(now, 60, 0.08, 0.2, 'sine');
-                if (step % 4 === 2) playNoise(now, 0.02, 0.15);
-                if (step % 2 === 1) playNoise(now, 0.008, 0.05);
-                if (step % 16 >= 8 && Math.random() > 0.4) playSynth(now, melodyNotes[step % 16] * 2, 0.015, 0.3, 'triangle');
-                if (Math.random() > 0.95) playSynth(now, 1000 + Math.random() * 2000, 0.005, 1.0, 'sine');
-                step++;
-            }
-        }, 150);
     }
 };
 
-class Particle {
-    constructor(x, y, color) {
-        this.x = x; this.y = y; this.color = color;
-        this.size = randomRange(2, 5);
-        this.angle = Math.random() * Math.PI * 2;
-        this.speed = randomRange(1, 3);
-        this.life = 1.0; this.decay = randomRange(0.01, 0.03);
+class FloatingText {
+    constructor(x, y, text, color) {
+        this.x = x; this.y = y; this.text = text; this.color = color;
+        this.life = 1.0;
+        this.vy = -1;
     }
     update() {
-        this.x += Math.cos(this.angle) * this.speed * GAME.speedFactor;
-        this.y += Math.sin(this.angle) * this.speed * GAME.speedFactor;
-        this.life -= this.decay;
+        this.y += this.vy;
+        this.life -= 0.02;
     }
     draw(ctx, cam) {
-        ctx.globalAlpha = this.life;
+        ctx.globalAlpha = Math.max(0, this.life);
         ctx.fillStyle = this.color;
-        ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.size, 0, Math.PI * 2); ctx.fill();
+        ctx.font = 'bold 16px Outfit, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.text, this.x - cam.x, this.y - cam.y);
         ctx.globalAlpha = 1.0;
     }
 }
@@ -396,6 +329,9 @@ class Projectile {
         this.pierce = stats.pierce || 1;
         this.bounce = stats.bounce || 0;
         this.isCrit = stats.isCrit || false;
+        
+        this.type = stats.type || 'default'; // default, laser, wall
+        
         this.hitEnemies = new Set();
         this.ownerId = stats.ownerId || 'local';
         this.isEnemy = stats.isEnemy || false;
@@ -411,12 +347,30 @@ class Projectile {
         if (this.isEnemy) {
             ctx.shadowColor = this.color || '#ff00ff';
             ctx.fillStyle = this.color || '#ff00ff';
+            ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
         } else {
-            // Kritické střely mohou být barevnější
             ctx.shadowColor = this.isCrit ? '#fbbf24' : (this.ownerId === 'local' ? '#6366f1' : '#f43f5e');
             ctx.fillStyle = this.isCrit ? '#fbbf24' : '#f8fafc';
+            ctx.strokeStyle = ctx.fillStyle;
+
+            if (this.type === 'laser') {
+                ctx.lineWidth = this.radius;
+                ctx.beginPath();
+                ctx.moveTo(this.x - cam.x, this.y - cam.y);
+                ctx.lineTo(this.x - cam.x - this.vx * 1.5, this.y - cam.y - this.vy * 1.5);
+                ctx.stroke();
+            } else if (this.type === 'wall') {
+                ctx.save();
+                ctx.translate(this.x - cam.x, this.y - cam.y);
+                ctx.rotate(Math.atan2(this.vy, this.vx));
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.radius / 3, this.radius, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            } else {
+                ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
+            }
         }
-        ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
     }
 }
@@ -447,26 +401,6 @@ class Gem {
         ctx.fillStyle = '#34d399';
         ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
-    }
-}
-
-class FloatingText {
-    constructor(x, y, text, color) {
-        this.x = x; this.y = y; this.text = text; this.color = color;
-        this.life = 1.0;
-        this.vy = -1;
-    }
-    update() {
-        this.y += this.vy;
-        this.life -= 0.02;
-    }
-    draw(ctx, cam) {
-        ctx.globalAlpha = Math.max(0, this.life);
-        ctx.fillStyle = this.color;
-        ctx.font = 'bold 16px Outfit, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.text, this.x - cam.x, this.y - cam.y);
-        ctx.globalAlpha = 1.0;
     }
 }
 
@@ -700,6 +634,10 @@ class Player {
         this.auraPower = 0.5; 
         
         this.orbitersList = [];
+        
+        // Loď
+        this.shipType = META.selectedShip || 1;
+        this.wallRangeBonus = 0;
     }
     update() {
         if (this.dead) return;
@@ -785,12 +723,24 @@ class Player {
         const sortedEnemies = [...enemies].sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y));
         const target = sortedEnemies[0];
         
+        const pType = this.shipType === 2 ? 'laser' : (this.shipType === 3 ? 'wall' : 'default');
+        const pLife = this.shipType === 3 ? 30 + this.wallRangeBonus : 200;
+        const pSpeed = this.shipType === 2 ? CONFIG.PROJECTILE_SPEED * 2.5 : CONFIG.PROJECTILE_SPEED;
+        const pPierce = this.shipType === 3 ? Infinity : this.pierceCount;
+        const pSize = this.shipType === 3 ? this.projSize * 3 : this.projSize;
+
         for (let i = 0; i < this.projectileCount; i++) {
             const isCrit = Math.random() < this.critChance;
             const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
             
             const proj = new Projectile(this.x, this.y, target.x, target.y, finalDamage, { 
-                size: this.projSize, pierce: this.pierceCount, bounce: this.bounces, isCrit: isCrit 
+                size: pSize, 
+                pierce: pPierce, 
+                bounce: this.bounces, 
+                isCrit: isCrit,
+                type: pType,
+                life: pLife,
+                speed: pSpeed
             });
             GAME.entities.projectiles.push(proj);
             if (NET.isMultiplayer) syncShot(proj);
@@ -922,6 +872,9 @@ function showLevelUp() {
 
         const possible = CONFIG.UPGRADES.filter(u => {
             if (u.id === 'kaktus' && GAME.entities.player.hasKaktus) return false;
+            // Podmínky pro Lodě
+            if (GAME.entities.player.shipType === 3 && u.id === 'pierce') return false; // Zed uz ma pierce infinity
+            if (GAME.entities.player.shipType !== 3 && u.id === 'wall_range') return false; // Ostatni nemaji Zed
             return u.rarity === rarity && !usedIds.has(u.id);
         });
         if (possible.length > 0) {
@@ -970,12 +923,10 @@ function applyUpgrade(id) {
             case 'xpgen': if (!p.lastXpGen) p.xpGenInterval = 60000; else p.xpGenInterval = Math.max(500, p.xpGenInterval / 2); p.lastXpGen = Date.now(); break;
             case 'ultramagnet': p.ultraMagnet = true; p.ultraMagnetPower += 1; break;
             case 'pierce': p.pierceCount += 1; break;
+            case 'wall_range': p.wallRangeBonus += 15; break; // Pro Lod 3
             case 'size': p.projSize *= 1.3; break;
-            
-            // Nové kritické upgrady
             case 'crit_chance': p.critChance += 0.15; break;
             case 'crit_dmg': p.critMultiplier += 1; break;
-            
             case 'luck': GAME.upgradeOptionsCount += 1; break;
             case 'orbit': p.orbitals += 1; break;
             case 'knockback': p.knockbackForce *= 1.5; break;
@@ -1021,15 +972,11 @@ function togglePause() {
         document.getElementById('stat-speed').innerText = p.speed.toFixed(1);
         document.getElementById('stat-count').innerText = p.projectileCount;
         document.getElementById('stat-firerate').innerText = (p.fireRate / 1000).toFixed(2) + 's';
-        
-        // Změněné ID prvků z index.html
         document.getElementById('stat-crit-chance').innerText = Math.floor(p.critChance * 100) + '%';
         document.getElementById('stat-crit-dmg').innerText = p.critMultiplier + 'x';
-        
         document.getElementById('stat-shield').innerText = Math.floor((1 - p.shield) * 100) + '%';
         document.getElementById('stat-regen').innerText = p.regen + ' HP/s';
         document.getElementById('stat-lifesteal').innerText = Math.floor(p.lifestealChance * 100) + '%';
-        document.getElementById('stat-magnet').innerText = Math.floor(p.magnetRange);
     }
     
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
@@ -1063,12 +1010,57 @@ function tryFullscreen() {
 function toggleFullscreen(element, force = false) {
     const isFS = document.fullscreenElement || document.webkitFullscreenElement;
     if (!isFS || force) {
-        if (element.requestFullscreen) element.requestFullscreen().catch(e=>{});
-        else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
+        if (element.requestFullscreen) {
+            element.requestFullscreen().catch(e => console.warn("FS error:", e));
+        } else if (element.webkitRequestFullscreen) {
+            element.webkitRequestFullscreen();
+        }
     } else if (!force) {
         if (document.exitFullscreen) document.exitFullscreen();
         else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
     }
+}
+
+// --- Menu pro Výběr Lodí ---
+function showShipsMenu() {
+    const container = document.getElementById('ships-options');
+    document.getElementById('ships-currency').innerText = META.currency;
+    container.innerHTML = '';
+    const items = [
+        { id: 1, name: 'Základní Loď', desc: 'Spolehlivý standardní model', cost: 0, icon: '🚀' },
+        { id: 2, name: 'Upíří Laser', desc: 'Vysává HP z nepřátel. Střílí paprsky.', cost: 500, icon: '🩸' },
+        { id: 3, name: 'Drtivá Zeď', desc: 'Široká vlna, projde vším, malý dosah.', cost: 500, icon: '🌊' }
+    ];
+
+    items.forEach(item => {
+        const card = document.createElement('div'); 
+        const owned = META.ships[item.id];
+        const selected = META.selectedShip === item.id;
+        
+        card.className = 'upgrade-card' + (selected ? ' selected' : '');
+        card.innerHTML = `
+            <div class="upgrade-icon">${item.icon}</div>
+            <h3>${item.name}</h3>
+            <p>${item.desc}</p>
+            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? 'VYBRÁNO' : (owned ? 'VLASTNĚNO (Klikni)' : item.cost + ' DOGE')}</span>
+        `;
+        card.onclick = () => {
+            if (owned) {
+                META.selectedShip = item.id;
+                saveMeta();
+                showShipsMenu();
+            } else if (META.currency >= item.cost) {
+                META.currency -= item.cost;
+                META.ships[item.id] = true;
+                META.selectedShip = item.id;
+                saveMeta();
+                showShipsMenu();
+            } else {
+                alert("Nemáš dost Dogecoinu!");
+            }
+        };
+        container.appendChild(card);
+    });
 }
 
 function showMetaMenu() {
@@ -1238,7 +1230,8 @@ function initSocket() {
                 size: data.size,
                 pierce: data.pierce,
                 bounce: data.bounce,
-                isCrit: data.isCrit
+                type: data.type,
+                life: data.life
             });
             GAME.entities.projectiles.push(proj);
         });
@@ -1309,7 +1302,9 @@ function syncShot(proj) {
         size: proj.radius,
         pierce: proj.pierce,
         bounce: proj.bounce,
-        isCrit: proj.isCrit
+        isCrit: proj.isCrit,
+        type: proj.type,
+        life: proj.life
     });
 }
 
@@ -1400,6 +1395,17 @@ function init() {
         AudioEngine.init(); 
         initSocket();
         NET.serverPollingInterval = setInterval(window.requestServerList, 2000); 
+    };
+
+    const btnShips = document.getElementById('btn-ships-menu');
+    if (btnShips) btnShips.onclick = () => {
+        showShipsMenu();
+        document.getElementById('ships-modal').classList.add('active');
+    };
+
+    const btnCloseShips = document.getElementById('btn-close-ships');
+    if (btnCloseShips) btnCloseShips.onclick = () => {
+        document.getElementById('ships-modal').classList.remove('active');
     };
     
     const btnCloseMP = document.getElementById('btn-close-mp');
@@ -1612,6 +1618,12 @@ function update() {
                         GAME.entities.floatingTexts.push(new FloatingText(enemy.x, enemy.y - 25, "CRITICAL!", "#ef4444"));
                     }
                     
+                    // Upíří laser dává zpět HP
+                    if (proj.type === 'laser' && proj.ownerId === 'local' && p && !p.dead) {
+                        p.hp = Math.min(p.maxHp, p.hp + proj.damage * 0.05); // Lifesteal 5% dmg
+                        updateUI();
+                    }
+
                     if (NET.isMultiplayer) {
                         NET.socket.emit('enemyHit', { id: enemy.id, damage: proj.damage });
                     }

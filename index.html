@@ -50,6 +50,7 @@
           <div class="menu-actions">
             <button class="btn-restart" id="btn-start">SOLO</button>
             <button class="btn-restart" id="btn-multiplayer" style="background: linear-gradient(to right, #6366f1, #a855f7);">MULTIPLAYER</button>
+            <button class="btn-restart" id="btn-ships-menu" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4);">LODĚ</button>
             <button class="btn-restart" id="btn-meta-menu" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.05);">VYLEPŠENÍ</button>
           </div>
           <div class="controls-hint">
@@ -57,6 +58,15 @@
             <span>KLIK: SNIPER</span>
             <span>ESC: PAUZA</span>
           </div>
+        </div>
+      </div>
+
+      <div id="ships-modal" class="modal">
+        <div class="modal-content">
+          <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">VÝBĚR LODĚ</h2>
+          <div class="stat-chip" style="margin-bottom:20px; display:inline-flex;">DOGECOIN: <span id="ships-currency">0</span></div>
+          <div id="ships-options" class="upgrade-grid"></div>
+          <button class="btn-restart" id="btn-close-ships" style="margin-top:2.5rem">ZAVŘÍT</button>
         </div>
       </div>
 
