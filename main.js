@@ -42,7 +42,7 @@ const CONFIG = {
         { id: 'orbit', name: 'Orbitální Štít', desc: 'Vypustí rotující projektil', icon: '🪐', rarity: 'epic' },
         { id: 'lifesteal', name: 'Lifesteal', desc: '5% šance na heal při killu', icon: '🧛', rarity: 'epic' },
         { id: 'fire', name: 'Ohnivá Stopa', desc: 'Zanecháváš za sebou oheň', icon: '🔥', rarity: 'epic' },
-        { id: 'kaktus', name: 'Kaktus', desc: 'Sáhni si a umřeš! (1x)', icon: '🌵', rarity: 'epic' },
+        { id: 'kaktus', name: 'Kaktus', desc: 'Zabíjí dotykem (10s on, 30s off)', icon: '🌵', rarity: 'epic' },
 
         { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎', rarity: 'legendary' },
         { id: 'luck', name: 'Větší Výběr', desc: '+1 možnost při levelu', icon: '🍀', rarity: 'legendary' },
@@ -69,7 +69,6 @@ const NET = {
     serverPollingInterval: null
 };
 
-// Generování a ukládání trvalého ID Hráče
 let myPlayerId = localStorage.getItem('neoSurvivor_pid');
 if (!myPlayerId) {
     myPlayerId = Math.random().toString(36).substr(2, 9);
@@ -223,6 +222,31 @@ const AudioEngine = {
             });
             this.droneNodes = null;
         }
+    },
+    piano(freq, dur) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, now);
+        filter.frequency.exponentialRampToValueAtTime(400, now + dur + 0.5);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur + 1.2);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + dur + 1.5);
     },
     play(type) {
         if (!this.ctx) return;
@@ -624,7 +648,12 @@ class Player {
         this.orbitals = 0; this.knockbackForce = 6; this.xpMultiplier = 1.0;
         this.lifestealChance = 0; this.aura = false; this.auraRange = 150;
         this.bounces = 0; this.fireTrail = false;
-        this.kaktus = false; this.bait = false; this.lastBait = 0;
+        
+        this.hasKaktus = false; 
+        this.kaktus = false; 
+        this.lastKaktusToggle = 0;
+        
+        this.bait = false; this.lastBait = 0;
         this.lastFireTrail = 0; this.lastFired = 0; this.lastRegen = 0;
         this.level = 1; this.xp = 0; this.nextLevelXp = CONFIG.XP_PER_LEVEL;
         this.remoteHat = null;
@@ -646,6 +675,22 @@ class Player {
             for (let i = 0; i < this.orbitals; i++) this.orbitersList.push(new Orbiter(this, i, this.orbitals));
         }
         this.orbitersList.forEach(o => o.update());
+
+        // KAKTUS LOGIKA - 10s on, 30s off (Pokud hráč upgrade má)
+        if (this.hasKaktus) {
+            const now = Date.now();
+            if (this.kaktus) {
+                if (now - this.lastKaktusToggle > 10000) { 
+                    this.kaktus = false;
+                    this.lastKaktusToggle = now;
+                }
+            } else {
+                if (now - this.lastKaktusToggle > 30000) { 
+                    this.kaktus = true;
+                    this.lastKaktusToggle = now;
+                }
+            }
+        }
 
         if (!this.isLocal) {
             const oldX = this.x;
@@ -837,7 +882,7 @@ function showLevelUp() {
         else if (rand < 60) rarity = 'uncommon';
 
         const possible = CONFIG.UPGRADES.filter(u => {
-            if (u.id === 'kaktus' && GAME.entities.player.kaktus) return false;
+            if (u.id === 'kaktus' && GAME.entities.player.hasKaktus) return false;
             return u.rarity === rarity && !usedIds.has(u.id);
         });
         if (possible.length > 0) {
@@ -896,7 +941,7 @@ function applyUpgrade(id) {
             case 'aura': p.aura = true; p.auraRange += 20; p.auraPower *= 0.8; break;
             case 'bounce': p.bounces += 1; break;
             case 'fire': p.fireTrail = true; p.fireDamageMult += 0.5; break;
-            case 'kaktus': p.kaktus = true; break;
+            case 'kaktus': p.hasKaktus = true; p.kaktus = true; p.lastKaktusToggle = Date.now(); break;
             case 'bait': p.bait = true; p.baitHpMult += 5; p.lastBait = Date.now(); break;
             case 'growth': p.maxHp += Math.floor(p.maxHp * 0.1); p.hp = p.maxHp; break;
         }
@@ -1042,7 +1087,6 @@ function initSocket() {
             if (!GAME.active) {
                 startGame();
                 
-                // Pokud hráč už v místnosti byl, obnovíme jeho pozici
                 if (playerState && (playerState.x !== 0 || playerState.y !== 0)) {
                     GAME.entities.player.x = playerState.x;
                     GAME.entities.player.y = playerState.y;
