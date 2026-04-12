@@ -676,7 +676,6 @@ class Player {
         }
         this.orbitersList.forEach(o => o.update());
 
-        // KAKTUS LOGIKA - 10s on, 30s off (Pokud hráč upgrade má)
         if (this.hasKaktus) {
             const now = Date.now();
             if (this.kaktus) {
@@ -1002,8 +1001,11 @@ function togglePause() {
 function toggleFullscreen(element, force = false) {
     const isFS = document.fullscreenElement || document.webkitFullscreenElement;
     if (!isFS || force) {
-        if (element.requestFullscreen) element.requestFullscreen().catch(e=>{});
-        else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
+        if (element.requestFullscreen) {
+            element.requestFullscreen().catch(e => console.warn("FS error:", e));
+        } else if (element.webkitRequestFullscreen) {
+            element.webkitRequestFullscreen();
+        }
     } else if (!force) {
         if (document.exitFullscreen) document.exitFullscreen();
         else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
@@ -1163,6 +1165,7 @@ function initSocket() {
                 newOthers[pId].auraRange = data.players[pId].auraRange;
                 newOthers[pId].orbitals = data.players[pId].orbitals || 0;
                 newOthers[pId].fireTrail = data.players[pId].fireTrail;
+                newOthers[pId].hasKaktus = data.players[pId].kaktus; 
                 newOthers[pId].kaktus = data.players[pId].kaktus;
             }
             NET.others = newOthers;
@@ -1229,7 +1232,7 @@ function syncPlayer() {
         auraRange: GAME.entities.player.auraRange,
         orbitals: GAME.entities.player.orbitals,
         fireTrail: GAME.entities.player.fireTrail,
-        kaktus: GAME.entities.player.kaktus
+        kaktus: GAME.entities.player.hasKaktus
     });
 }
 
@@ -1359,7 +1362,10 @@ function init() {
     if (mobilePause) mobilePause.onclick = (e) => { e.stopPropagation(); togglePause(); };
 
     const fsToggle = document.getElementById('fs-toggle');
-    if (fsToggle) fsToggle.onclick = (e) => { e.stopPropagation(); toggleFullscreen(document.documentElement); };
+    if (fsToggle) fsToggle.onclick = (e) => { 
+        e.stopPropagation(); 
+        toggleFullscreen(document.documentElement); 
+    };
 
     const btnRestart = document.getElementById('btn-restart-game');
     if (btnRestart) btnRestart.onclick = () => { 
