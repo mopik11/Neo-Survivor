@@ -731,6 +731,7 @@ class Player {
         this.lastFireTrail = 0; this.lastFired = 0; this.lastRegen = 0;
         this.level = 1; this.xp = 0; this.nextLevelXp = CONFIG.XP_PER_LEVEL;
         this.remoteHat = null;
+        this.remoteName = null; // Tady bude uloženo jméno ostatních hráčů
         this.targetX = 0; this.targetY = 0;
         this.dead = false;
         
@@ -972,12 +973,26 @@ class Player {
         ctx.shadowBlur = 30; ctx.shadowColor = this.isLocal ? '#6366f1' : '#f43f5e';
         ctx.fillStyle = this.isLocal ? '#f8fafc' : '#fca5a5';
         ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
+        
+        // Zde je kreslení jména hráče!
+        const displayName = this.isLocal ? META.playerName : this.remoteName;
         const hat = this.isLocal ? META.upgrades.hat : this.remoteHat;
+
+        if (displayName) {
+            ctx.fillStyle = this.isLocal ? '#818cf8' : '#fb7185';
+            ctx.font = 'bold 12px Outfit, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            const yOffset = hat ? 40 : 15; // Jméno uhne klobouku
+            ctx.fillText(displayName, this.x - cam.x, this.y - cam.y - this.radius - yOffset);
+        }
+
         if (hat) {
             ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
             const h = { 'crown': '👑', 'wizard': '🧙', 'ninja': '🥷', 'cap': '🧢' }[hat];
             ctx.fillText(h || '🎩', this.x - cam.x, this.y - cam.y - this.radius + 8);
         }
+        
         ctx.strokeStyle = this.isLocal ? '#6366f1' : '#f43f5e'; ctx.lineWidth = 4; ctx.stroke();
         ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
         
@@ -1041,38 +1056,6 @@ class Player {
     }
 }
 
-function spawnEnemy() {
-    if (NET.isMultiplayer) return; 
-    if (!GAME.active || GAME.paused) { setTimeout(spawnEnemy, 500); return; }
-    const alive = getAllAlivePlayers();
-    if (alive.length === 0) { setTimeout(spawnEnemy, 1000); return; }
-    const a = Math.random() * Math.PI * 2;
-    const pivot = alive[Math.floor(Math.random() * alive.length)];
-    const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
-    const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
-    const mod = Math.floor(GAME.time / 60) + 1;
-
-    let enemy;
-    if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
-        enemy = new Boss(x, y, mod);
-    } else {
-        let type = 1;
-        if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
-        enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
-    }
-
-    if (enemy.isBoss) { showBossWarning(); GAME.lastBossTime = GAME.time; }
-    if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
-    
-    const currentInterval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60));
-    setTimeout(spawnEnemy, currentInterval);
-}
-
-function showBossWarning() {
-    const el = document.getElementById('boss-warning'); if (el) el.style.display = 'block';
-    setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
-}
-
 function updateUI() {
     const p = GAME.entities.player;
     if (!p) return;
@@ -1108,7 +1091,7 @@ function showLevelUp() {
         if (pShip === 1) {
             if (['wall_range', 'wall_width', 'laser_range'].includes(u.id)) return false; 
         } else if (pShip === 2) {
-            if (['wall_range', 'wall_width', 'bounce', 'firerate'].includes(u.id)) return false;
+            if (['wall_range', 'wall_width', 'bounce'].includes(u.id)) return false;
         } else if (pShip === 3) {
             if (['count', 'pierce', 'bounce', 'laser_range'].includes(u.id)) return false;
         }
@@ -1487,6 +1470,9 @@ function initSocket() {
                 newOthers[pId].kaktus = data.players[pId].kaktus;
                 newOthers[pId].shipType = data.players[pId].shipType;
                 newOthers[pId].laserTargetsIds = data.players[pId].laserTargetsIds || [];
+                
+                // PŘIJETÍ JMÉNA Z MULTIPLAYERU
+                newOthers[pId].remoteName = data.players[pId].name || "Hráč";
             }
             NET.others = newOthers;
             GAME.time = data.time;
@@ -1553,6 +1539,7 @@ function syncPlayer() {
         safeLaserTargets = GAME.entities.player.laserTargets.map(chain => chain.map(e => e ? e.id : null).filter(id => id));
     }
 
+    // ODESLÁNÍ JMÉNA DO MULTIPLAYERU
     NET.socket.emit('playerUpdate', {
         x: GAME.entities.player.x, 
         y: GAME.entities.player.y,
@@ -1567,7 +1554,8 @@ function syncPlayer() {
         fireTrail: GAME.entities.player.fireTrail,
         kaktus: GAME.entities.player.hasKaktus,
         shipType: GAME.entities.player.shipType,
-        laserTargetsIds: safeLaserTargets 
+        laserTargetsIds: safeLaserTargets,
+        name: META.playerName 
     });
 }
 
@@ -1949,7 +1937,6 @@ function update(dt) {
                             }
                         }
                     }
-                    updateUI();
                 }
             });
         });
