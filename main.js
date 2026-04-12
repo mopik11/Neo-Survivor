@@ -41,6 +41,7 @@ const CONFIG = {
 
         { id: 'regen', name: 'Regenerace', desc: 'Obnova 1 HP/s', icon: '💊', rarity: 'epic' },
         { id: 'ultramagnet', name: 'Ultra Magnet', desc: 'Pomalý sběr z celé mapy', icon: '🌌', rarity: 'epic' },
+        { id: 'orbit', name: 'Orbitální Štít', desc: 'Vypustí rotující projektil', icon: '🪐', rarity: 'epic' },
         { id: 'lifesteal', name: 'Lifesteal', desc: '5% šance na heal při killu', icon: '🧛', rarity: 'epic' },
         { id: 'fire', name: 'Ohnivá Stopa', desc: 'Zanecháváš za sebou oheň', icon: '🔥', rarity: 'epic' },
         { id: 'kaktus', name: 'Kaktus', desc: 'Zabíjí dotykem (10s on, 30s off)', icon: '🌵', rarity: 'epic' },
@@ -425,7 +426,13 @@ class Projectile {
             ctx.fillStyle = this.isCrit ? '#fbbf24' : '#f8fafc';
             ctx.strokeStyle = ctx.fillStyle;
 
-            if (this.type === 'wall') {
+            if (this.type === 'laser') {
+                ctx.lineWidth = this.radius;
+                ctx.beginPath();
+                ctx.moveTo(this.x - cam.x, this.y - cam.y);
+                ctx.lineTo(this.x - cam.x - this.vx * 1.5, this.y - cam.y - this.vy * 1.5);
+                ctx.stroke();
+            } else if (this.type === 'wall') {
                 ctx.lineCap = 'round';
                 ctx.lineWidth = this.radius * 2;
                 ctx.shadowBlur = 20;
@@ -434,7 +441,7 @@ class Projectile {
                 ctx.translate(this.x - cam.x, this.y - cam.y);
                 ctx.rotate(Math.atan2(this.vy, this.vx));
                 ctx.beginPath();
-                ctx.moveTo(0, -this.radius * 4); // Celková šířka 8x radius
+                ctx.moveTo(0, -this.radius * 4); // Celková šířka je masivní (8x radius)
                 ctx.lineTo(0, this.radius * 4);
                 ctx.stroke();
                 ctx.restore();
@@ -473,6 +480,53 @@ class Gem {
         ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
     }
+}
+
+// ---------------------------------------------------------------------------------
+// ZDE JSOU TY FUNKCE A TŘÍDY, KTERÉ JSEM V MINULÉM KROKU OMYLEM VYMAZAL:
+// Orbiter, getAllAlivePlayers, getAllTargets, Bait, Boss, Enemy
+// Nyní jsou na 100 % zpět a hra nelehne na "getAllTargets is not defined"!
+// ---------------------------------------------------------------------------------
+
+class Orbiter {
+    constructor(owner, index, total) {
+        this.owner = owner; this.index = index; this.total = total;
+        this.angle = (index / total) * Math.PI * 2; this.radius = 120; this.size = 15;
+    }
+    update() { this.angle += 0.05 * GAME.speedFactor; }
+    draw(ctx, cam) {
+        if (this.owner.dead) return;
+        const x = this.owner.x + Math.cos(this.angle) * this.radius, y = this.owner.y + Math.sin(this.angle) * this.radius;
+        ctx.shadowBlur = 20; ctx.shadowColor = '#fbbf24'; ctx.fillStyle = '#f59e0b';
+        ctx.beginPath(); ctx.arc(x - cam.x, y - cam.y, this.size, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        if (this.owner.isLocal) {
+            GAME.entities.enemies.forEach(e => { 
+                if (dist(x, y, e.x, e.y) < this.size + e.radius) { 
+                    e.hp -= this.owner.damage * 0.3 * 3; 
+                    if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: this.owner.damage * 0.3 * 3 });
+                } 
+            });
+        }
+    }
+}
+
+function getAllAlivePlayers() {
+    const list = [];
+    if (GAME.entities.player && !GAME.entities.player.dead) list.push(GAME.entities.player);
+    for (const id in NET.others) {
+        if (!NET.others[id].dead) list.push(NET.others[id]);
+    }
+    return list;
+}
+
+function getAllTargets() {
+    const list = getAllAlivePlayers();
+    GAME.entities.baits.forEach(b => {
+        if (b.hp > 0) list.push({ x: b.x, y: b.y, radius: b.radius, isBait: true, obj: b });
+    });
+    return list;
 }
 
 class Bait {
@@ -628,6 +682,8 @@ class Enemy {
     }
 }
 
+// ---------------------------------------------------------------------------------
+
 class Player {
     constructor(isLocal = true) {
         this.x = 0; this.y = 0; this.radius = 22; this.isLocal = isLocal;
@@ -644,7 +700,7 @@ class Player {
         
         this.luckFactor = 1.0 + (isLocal ? (META.upgrades.luck * 0.05) : 0);
         this.knockbackForce = 6; this.xpMultiplier = 1.0;
-        this.aura = false; this.auraRange = 150;
+        this.lifestealChance = 0; this.aura = false; this.auraRange = 150;
         this.bounces = 0; this.fireTrail = false;
         
         this.hasKaktus = false; 
@@ -663,6 +719,8 @@ class Player {
         this.baitHpMult = 5;
         this.auraPower = 0.5; 
         
+        this.orbitersList = [];
+        
         this.shipType = META.selectedShip || 1;
         this.wallRangeBonus = 0;
         this.laserTargetId = null;
@@ -670,6 +728,12 @@ class Player {
     }
     update(dt) {
         if (this.dead) return;
+        
+        if (this.orbitals !== this.orbitersList.length) {
+            this.orbitersList = [];
+            for (let i = 0; i < this.orbitals; i++) this.orbitersList.push(new Orbiter(this, i, this.orbitals));
+        }
+        this.orbitersList.forEach(o => o.update());
 
         if (this.hasKaktus) {
             const now = Date.now();
@@ -822,7 +886,7 @@ class Player {
             const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
             
             const wall = new Projectile(this.x, this.y, target.x, target.y, finalDamage, {
-                size: this.projSize * 4, // Upravuje sirku hitboxu (v draw se jeste zvetsi visual)
+                size: this.projSize * 4, 
                 pierce: Infinity, 
                 bounce: 0, 
                 isCrit: isCrit,
@@ -893,6 +957,8 @@ class Player {
                 ctx.restore();
             }
         }
+        
+        this.orbitersList.forEach(o => o.draw(ctx, cam));
     }
     addXp(amount) {
         if (this.dead) return;
@@ -1038,6 +1104,7 @@ function applyUpgrade(id) {
             case 'luck': GAME.upgradeOptionsCount += 1; break;
             case 'knockback': p.knockbackForce *= 1.5; break;
             case 'xpboost': p.xpMultiplier += 0.2; break;
+            case 'lifesteal': p.lifestealChance += 0.05; break;
             case 'aura': p.aura = true; p.auraRange += 20; p.auraPower *= 0.8; break;
             case 'bounce': p.bounces += 1; break;
             case 'fire': p.fireTrail = true; p.fireDamageMult += 0.5; break;
@@ -1082,6 +1149,7 @@ function togglePause() {
         document.getElementById('stat-crit-dmg').innerText = p.critMultiplier + 'x';
         document.getElementById('stat-shield').innerText = Math.floor((1 - p.shield) * 100) + '%';
         document.getElementById('stat-regen').innerText = p.regen + ' HP/s';
+        document.getElementById('stat-lifesteal').innerText = Math.floor(p.lifestealChance * 100) + '%';
     }
     
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
@@ -1134,8 +1202,8 @@ function showShipsMenu() {
     container.innerHTML = '';
     const items = [
         { id: 1, name: 'Základní Loď', desc: 'Spolehlivý standardní model', cost: 0, icon: '🚀' },
-        { id: 2, name: 'Upíří Laser', desc: 'Vysává HP z nepřátel. Střílí paprsky.', cost: 500, icon: '🩸' },
-        { id: 3, name: 'Drtivá Zeď', desc: 'Široká vlna, projde vším, malý dosah.', cost: 500, icon: '🌊' }
+        { id: 2, name: 'Upíří Laser', desc: 'Základní útok + Vysávací laser', cost: 500, icon: '🩸' },
+        { id: 3, name: 'Drtivá Zeď', desc: 'Základní útok + Průrazná vlna', cost: 500, icon: '🌊' }
     ];
 
     items.forEach(item => {
@@ -1658,6 +1726,7 @@ function update(dt) {
     
     if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
 
+    // Zde byly zpět implementovány bezpečné iterace a kontroly existence
     for (let i = GAME.entities.floatingTexts.length - 1; i >= 0; i--) {
         const ft = GAME.entities.floatingTexts[i];
         ft.update();
@@ -1746,7 +1815,7 @@ function update(dt) {
         } else {
             enemies.forEach((enemy) => {
                 let hitDist = proj.radius + enemy.radius;
-                if (proj.type === 'wall') hitDist = (proj.radius * 6) + enemy.radius; // Opraveny hitbox zdi!
+                if (proj.type === 'wall') hitDist = (proj.radius * 6) + enemy.radius; 
 
                 if (!proj.hitEnemies.has(enemy) && dist(proj.x, proj.y, enemy.x, enemy.y) < hitDist) {
                     enemy.hp -= proj.damage; 
