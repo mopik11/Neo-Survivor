@@ -1566,8 +1566,11 @@ function resetGame() {
     GAME.entities.fire = [];
     GAME.entities.baits = [];
     
-    // Zde byla ta kritická oprava – přidáno pole pro texty:
-    GAME.entities.floatingTexts = [];
+    if (!GAME.entities.floatingTexts) {
+        GAME.entities.floatingTexts = [];
+    } else {
+        GAME.entities.floatingTexts.length = 0;
+    }
     
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     updateSpeedFactor(); updateUI();
@@ -1610,13 +1613,13 @@ function update() {
     syncPlayer();
     for (const id in NET.others) NET.others[id].update();
     
-    // Ochrana pro případ, že by bylo něco z paměti ještě načtené
     if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
 
-    GAME.entities.floatingTexts.forEach((ft, i) => {
+    for (let i = GAME.entities.floatingTexts.length - 1; i >= 0; i--) {
+        const ft = GAME.entities.floatingTexts[i];
         ft.update();
         if (ft.life <= 0) GAME.entities.floatingTexts.splice(i, 1);
-    });
+    }
 
     const targets = getAllTargets();
     const alivePlayers = getAllAlivePlayers();
@@ -1660,7 +1663,6 @@ function update() {
     GAME.entities.baits = GAME.entities.baits.filter(b => b.hp > 0);
     GAME.entities.baits.forEach(b => b.update());
 
-    GAME.orbiters.forEach(o => o.update());
     GAME.entities.fire.forEach((f, i) => { f.update(); if (f.life <= 0) GAME.entities.fire.splice(i, 1); });
 
     const enemies = GAME.entities.enemies;
