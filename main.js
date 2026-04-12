@@ -153,48 +153,61 @@ const AudioEngine = {
         if (!this.ctx || this.menuPlaying) return;
         if (this.ctx.state === 'suspended') this.ctx.resume();
         this.menuPlaying = true;
-        this.menuDrone();
-        const melody = [
-            { n: 329.63, d: 0.15, r: 0.25 }, 
-            { n: 349.23, d: 0.15, r: 0.25 }, 
-            { n: 392.00, d: 0.20, r: 0.50 }, 
-            { n: 329.63, d: 0.15, r: 0.25 }, 
-            { n: 349.23, d: 0.15, r: 0.25 }, 
-            { n: 392.00, d: 0.15, r: 0.25 }, 
-            { n: 293.66, d: 0.15, r: 0.25 }, 
-            { n: 261.63, d: 0.25, r: 0.60 }  
-        ];
-        let idx = 0;
-        const playNext = () => {
+
+        // Synth pad / Drone pro hutnou atmosféru
+        const bassOsc = this.ctx.createOscillator();
+        const bassGain = this.ctx.createGain();
+        const bassFilter = this.ctx.createBiquadFilter();
+
+        bassOsc.type = 'sawtooth';
+        bassOsc.frequency.setValueAtTime(55, this.ctx.currentTime); // Nízké A
+
+        bassFilter.type = 'lowpass';
+        bassFilter.frequency.setValueAtTime(300, this.ctx.currentTime);
+
+        bassGain.gain.setValueAtTime(0, this.ctx.currentTime);
+        bassGain.gain.linearRampToValueAtTime(0.06, this.ctx.currentTime + 2);
+
+        bassOsc.connect(bassFilter);
+        bassFilter.connect(bassGain);
+        bassGain.connect(this.ctx.destination);
+
+        bassOsc.start();
+        this.droneNodes = [bassOsc, bassGain, bassFilter];
+
+        // Rychlý Synthwave Arpeggiator
+        const notes = [220, 261.63, 329.63, 440, 329.63, 261.63, 164.81, 196.00]; // A Minor arp pattern
+        let step = 0;
+
+        const playArp = () => {
             if (!this.menuPlaying) return;
-            const note = melody[idx];
-            this.piano(note.n, note.d);
-            idx = (idx + 1) % melody.length;
-            this.menuInterval = setTimeout(playNext, note.r * 1000);
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const filter = this.ctx.createBiquadFilter();
+
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(notes[step % notes.length], now);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(2500, now);
+            filter.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.04, now + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.2);
+
+            step++;
+            this.menuInterval = setTimeout(playArp, 140); // Rychlé tempo (cca 107 BPM 16-tiny)
         };
-        playNext();
-    },
-    menuDrone() {
-        if (!this.ctx) return;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        const filter = this.ctx.createBiquadFilter();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(55, this.ctx.currentTime);
-
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(200, this.ctx.currentTime);
-
-        gain.gain.setValueAtTime(0, this.ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.04, this.ctx.currentTime + 3);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.ctx.destination);
-
-        osc.start();
-        this.droneNodes = [osc, gain];
+        playArp();
     },
     stopMenuMusic() {
         this.menuPlaying = false;
@@ -205,31 +218,6 @@ const AudioEngine = {
             });
             this.droneNodes = null;
         }
-    },
-    piano(freq, dur) {
-        if (!this.ctx) return;
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        const filter = this.ctx.createBiquadFilter();
-
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, now);
-
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(1200, now);
-        filter.frequency.exponentialRampToValueAtTime(400, now + dur + 0.5);
-
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + dur + 1.2);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.ctx.destination);
-
-        osc.start(now);
-        osc.stop(now + dur + 1.5);
     },
     play(type) {
         if (!this.ctx) return;
@@ -866,6 +854,7 @@ function applyUpgrade(id) {
     document.getElementById('levelup-modal').classList.remove('active');
     
     if (NET.isMultiplayer) {
+        document.getElementById('waiting-modal').classList.add('active'); // Zobrazí čekací pop-up
         NET.socket.emit('upgradePicked');
     } else {
         GAME.paused = false;
@@ -994,8 +983,7 @@ function initSocket() {
         NET.socket.on('joined', (id) => {
             NET.roomId = id;
             NET.isMultiplayer = true;
-            document.getElementById('multiplayer-modal').classList.remove('active');
-            document.getElementById('host-modal').classList.remove('active');
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
             clearInterval(NET.serverPollingInterval);
             startGame();
         });
@@ -1086,12 +1074,15 @@ function initSocket() {
             showLevelUp();
         });
         
+        // Jakmile server pošle, že všichni vybrali, skryjeme čekací popup a pokračujeme
         NET.socket.on('resumeGame', () => {
+            document.getElementById('waiting-modal').classList.remove('active');
             GAME.paused = false;
         });
         
         NET.socket.on('teamGameOver', () => {
             GAME.entities.player.dead = true;
+            document.getElementById('waiting-modal').classList.remove('active'); // Pro jistotu skryjeme
             gameOver();
         });
 
@@ -1138,14 +1129,12 @@ function syncShot(proj) {
     });
 }
 
-// Logika pro nové Host okno
 window.showHostModal = () => {
     const roomName = Math.random().toString(36).substr(2, 6).toUpperCase();
     document.getElementById('host-code-display').innerText = roomName;
     document.getElementById('multiplayer-modal').classList.remove('active');
     document.getElementById('host-modal').classList.add('active');
 
-    // Tlačítko kopírovat
     document.getElementById('btn-copy-code').onclick = () => {
         navigator.clipboard.writeText(roomName).then(() => {
             const btn = document.getElementById('btn-copy-code');
@@ -1158,7 +1147,6 @@ window.showHostModal = () => {
         });
     };
 
-    // Tlačítko start
     document.getElementById('btn-start-hosted').onclick = () => {
         document.getElementById('host-modal').classList.remove('active');
         joinCloudServer(roomName);
@@ -1255,7 +1243,7 @@ function init() {
 
     const btnRestart = document.getElementById('btn-restart-game');
     if (btnRestart) btnRestart.onclick = () => { 
-        document.getElementById('gameover-modal').classList.remove('active'); 
+        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         toggleFullscreen(document.documentElement, true);
         startGame(); 
     };
