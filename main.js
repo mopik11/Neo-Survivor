@@ -78,6 +78,8 @@ if (!myPlayerId) {
 }
 
 const META = {
+    playerName: null,
+    maxLevel: 1,
     currency: 0,
     upgrades: { hp: 0, speed: 0, luck: 0, hat: null },
     ships: { 1: true, 2: false, 3: false },
@@ -92,6 +94,8 @@ const loadMeta = () => {
         Object.assign(META, parsed);
         if (!META.ships) META.ships = { 1: true, 2: false, 3: false };
         if (!META.selectedShip) META.selectedShip = 1;
+        if (!META.playerName) META.playerName = null;
+        if (!META.maxLevel) META.maxLevel = 1;
     }
 };
 
@@ -427,8 +431,6 @@ class Projectile {
             ctx.strokeStyle = ctx.fillStyle;
 
             if (this.type === 'laser') {
-                // Tento blok se uz nepoužije, protože loď 2 nestřílí lasery jako projektily
-                // ale nechávám ho zde pro jistotu, kdyby přišla ze serveru stará střela
                 ctx.lineWidth = this.radius;
                 ctx.beginPath();
                 ctx.moveTo(this.x - cam.x, this.y - cam.y);
@@ -443,7 +445,7 @@ class Projectile {
                 ctx.translate(this.x - cam.x, this.y - cam.y);
                 ctx.rotate(Math.atan2(this.vy, this.vx));
                 ctx.beginPath();
-                ctx.moveTo(0, -this.radius * 4); // Celková šířka 8x radius
+                ctx.moveTo(0, -this.radius * 4); 
                 ctx.lineTo(0, this.radius * 4);
                 ctx.stroke();
                 ctx.restore();
@@ -760,7 +762,7 @@ class Player {
             return;
         }
 
-        // Logic for Vampire Laser (Ship 2) - OPRAVENO, neukládá HP za sekundu ale rovnou
+        // Logic for Vampire Laser (Ship 2)
         if (this.shipType === 2) {
             const enemies = GAME.entities.enemies;
             if (enemies.length > 0) {
@@ -770,13 +772,11 @@ class Player {
                     this.laserTargetId = target.id;
                     
                     const now = Date.now();
-                    if (now - this.lastFired > (this.fireRate / 2)) { // Tika rychleji nez normalni strelba
+                    if (now - this.lastFired > (this.fireRate / 2)) {
                         let isCrit = Math.random() < this.critChance;
-                        
                         const finalDmg = isCrit ? this.damage * this.critMultiplier : this.damage;
                         
                         target.hp -= finalDmg;
-                        // Záměrně bez Lifestealu, jak jsi psal v poslední zprávě
                         
                         if (isCrit) {
                             if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
@@ -968,6 +968,14 @@ class Player {
     }
     levelUp() {
         this.level++;
+        if (this.level > META.maxLevel) {
+            META.maxLevel = this.level;
+            saveMeta();
+            if (NET.socket && NET.socket.connected && META.playerName) {
+                NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
+            }
+        }
+        
         this.xp = Math.max(0, this.xp - this.nextLevelXp);
         this.nextLevelXp = Math.floor(this.nextLevelXp * 1.25);
         AudioEngine.play('lvlup');
@@ -1271,7 +1279,37 @@ function initSocket() {
         
         NET.socket.on('connect', () => {
             console.warn("CLOUD: Připojeno k hernímu serveru!");
+            
+            // Hned po připojení chceme žebříček a místnosti
+            NET.socket.emit('requestLeaderboard');
             window.requestServerList();
+        });
+        
+        NET.socket.on('leaderboardData', (data) => {
+            const list = document.getElementById('leaderboard-list');
+            if(!list) return;
+            list.innerHTML = '';
+            
+            if(data.length === 0) {
+                list.innerHTML = '<div style="text-align: center; color: gray; padding: 20px;">Zatím žádné záznamy. Buď první!</div>';
+                return;
+            }
+            
+            data.forEach((p, index) => {
+                let medalClass = '';
+                let rank = index + 1 + '.';
+                if (index === 0) { medalClass = 'gold'; rank = '🥇'; }
+                if (index === 1) { medalClass = 'silver'; rank = '🥈'; }
+                if (index === 2) { medalClass = 'bronze'; rank = '🥉'; }
+                
+                const row = document.createElement('div');
+                row.className = `lb-row ${medalClass}`;
+                row.innerHTML = `
+                    <span><span style="display:inline-block; width: 30px;">${rank}</span> ${p.name}</span>
+                    <span>LVL ${p.level}</span>
+                `;
+                list.appendChild(row);
+            });
         });
 
         NET.socket.on('roomList', (rooms) => {
@@ -1412,6 +1450,15 @@ function initSocket() {
         
         NET.socket.on('teamLevelUp', (data) => {
             GAME.entities.player.level = data.level; 
+            
+            if (GAME.entities.player.level > META.maxLevel) {
+                META.maxLevel = GAME.entities.player.level;
+                saveMeta();
+                if (NET.socket && NET.socket.connected && META.playerName) {
+                    NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
+                }
+            }
+
             AudioEngine.play('lvlup');
             GAME.paused = true;
             showLevelUp();
@@ -1520,12 +1567,63 @@ window.connectToId = (id) => {
     if (input) input.value = id;
 };
 
+// Funkce pro zápis jména
+function savePlayerName(inputId) {
+    const nameVal = document.getElementById(inputId).value.trim();
+    if (nameVal.length < 3) {
+        alert("Jméno musí mít alespoň 3 znaky!");
+        return;
+    }
+    META.playerName = nameVal;
+    saveMeta();
+    
+    document.getElementById('display-player-name').innerText = META.playerName;
+    
+    if (NET.socket && NET.socket.connected) {
+        NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
+    }
+
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('menu-modal').classList.add('active');
+}
+
 function init() {
     GAME.canvas = document.getElementById('game-canvas');
     GAME.ctx = GAME.canvas.getContext('2d');
     updateSpeedFactor();
     window.addEventListener('resize', () => { GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight; updateSpeedFactor(); });
     GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight;
+    
+    // Load meta prvni
+    loadMeta();
+    document.getElementById('display-max-level').innerText = META.maxLevel || 0;
+    
+    // Spuštění socketu už tady, abychom načetli žebříček
+    initSocket();
+
+    // Kontrola jména pro první spuštění
+    if (!META.playerName) {
+        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+        document.getElementById('name-modal').classList.add('active');
+    } else {
+        document.getElementById('display-player-name').innerText = META.playerName;
+        if (NET.socket && NET.socket.connected) {
+            NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
+        }
+    }
+
+    document.getElementById('btn-save-first-name').onclick = () => savePlayerName('input-player-name');
+    document.getElementById('btn-save-new-name').onclick = () => savePlayerName('input-change-name');
+
+    // Reset Progress
+    document.getElementById('btn-reset-progress').onclick = () => {
+        if (confirm("Opravdu chceš smazat všechen svůj postup, Dogecoiny i nakoupené lodě? Toto nelze vzít zpět!")) {
+            localStorage.removeItem('neoSurvivor_meta');
+            localStorage.removeItem('neoSurvivor_pid');
+            location.reload();
+        }
+    };
+
     resetGame();
 
     window.addEventListener('keydown', (e) => { GAME.input[e.key.toLowerCase()] = true; if (e.key === 'Escape') togglePause(); });
@@ -1564,35 +1662,43 @@ function init() {
         if (e) e.preventDefault();
         document.getElementById('menu-modal').classList.remove('active');
         document.getElementById('multiplayer-modal').classList.add('active');
-        AudioEngine.init(); 
-        initSocket();
         NET.serverPollingInterval = setInterval(window.requestServerList, 2000); 
     };
     
+    // Tlačítka Menu (Lodě, Vylepšení, Žebříček, Nastavení)
     const btnShips = document.getElementById('btn-ships-menu');
     if (btnShips) btnShips.onclick = () => {
         showShipsMenu();
         document.getElementById('ships-modal').classList.add('active');
     };
-
     const btnCloseShips = document.getElementById('btn-close-ships');
-    if (btnCloseShips) btnCloseShips.onclick = () => {
-        document.getElementById('ships-modal').classList.remove('active');
+    if (btnCloseShips) btnCloseShips.onclick = () => document.getElementById('ships-modal').classList.remove('active');
+
+    const btnMeta = document.getElementById('btn-meta-menu');
+    if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+    const btnCloseMeta = document.getElementById('btn-close-meta');
+    if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
+
+    const btnLeaderboard = document.getElementById('btn-leaderboard');
+    if (btnLeaderboard) btnLeaderboard.onclick = () => {
+        if (NET.socket && NET.socket.connected) NET.socket.emit('requestLeaderboard');
+        document.getElementById('leaderboard-modal').classList.add('active');
     };
+    const btnCloseLB = document.getElementById('btn-close-leaderboard');
+    if (btnCloseLB) btnCloseLB.onclick = () => document.getElementById('leaderboard-modal').classList.remove('active');
+
+    const btnSettings = document.getElementById('btn-settings');
+    if (btnSettings) btnSettings.onclick = () => {
+        document.getElementById('settings-modal').classList.add('active');
+    };
+    const btnCloseSettings = document.getElementById('btn-close-settings');
+    if (btnCloseSettings) btnCloseSettings.onclick = () => document.getElementById('settings-modal').classList.remove('active');
 
     const btnCloseMP = document.getElementById('btn-close-mp');
     if (btnCloseMP) btnCloseMP.onclick = () => {
         clearInterval(NET.serverPollingInterval);
         document.getElementById('multiplayer-modal').classList.remove('active');
         document.getElementById('menu-modal').classList.add('active');
-    };
-
-    const btnMeta = document.getElementById('btn-meta-menu');
-    if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
-
-    const btnCloseMeta = document.getElementById('btn-close-meta');
-    if (btnCloseMeta) btnCloseMeta.onclick = () => {
-        document.getElementById('meta-modal').classList.remove('active');
     };
 
     const btnResume = document.getElementById('btn-resume');
@@ -1635,7 +1741,7 @@ function init() {
     }, { passive: true });
     GAME.canvas.addEventListener('touchend', () => { GAME.joystick.active = false; GAME.joystick.currentX = GAME.joystick.startX; GAME.joystick.currentY = GAME.joystick.startY; });
 
-    spawnEnemy(); loadMeta(); requestAnimationFrame(loop);
+    spawnEnemy(); requestAnimationFrame(loop);
 }
 
 function fireSniper(cx, cy) {
@@ -1665,7 +1771,12 @@ function resetGame() {
     GAME.entities.particles = []; 
     GAME.entities.fire = [];
     GAME.entities.baits = [];
-    GAME.entities.floatingTexts = [];
+    
+    if (!GAME.entities.floatingTexts) {
+        GAME.entities.floatingTexts = [];
+    } else {
+        GAME.entities.floatingTexts.length = 0;
+    }
     
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     updateSpeedFactor(); updateUI();
@@ -1936,7 +2047,7 @@ function render() {
 
 const initAudio = () => {
     AudioEngine.init();
-    if (document.getElementById('menu-modal').classList.contains('active')) {
+    if (document.getElementById('menu-modal') && document.getElementById('menu-modal').classList.contains('active')) {
         AudioEngine.startMenuMusic();
     }
 };

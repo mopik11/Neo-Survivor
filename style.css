@@ -134,7 +134,7 @@ canvas {
   transition: width 0.3s ease;
 }
 
-/* Hit Overlay - Jemné zčervenání obrazovky */
+/* Hit Overlay */
 #hit-overlay {
   position: absolute;
   top: 0;
@@ -272,7 +272,7 @@ canvas {
     width: 100%;
 }
 
-#input-join-id {
+#input-join-id, #input-player-name, #input-change-name {
     flex-grow: 1;
     background: rgba(0,0,0,0.3);
     border: 2px solid rgba(168, 85, 247, 0.4);
@@ -372,6 +372,21 @@ canvas {
     font-weight: bold;
 }
 
+/* Leaderboard */
+.lb-row {
+    display: flex; 
+    justify-content: space-between; 
+    padding: 12px 20px;
+    background: rgba(0,0,0,0.4); 
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; 
+    font-weight: 600;
+}
+.lb-row.gold { border-color: #fbbf24; color: #fbbf24; background: rgba(245, 158, 11, 0.1);}
+.lb-row.silver { border-color: #cbd5e1; color: #f8fafc; background: rgba(203, 213, 225, 0.1);}
+.lb-row.bronze { border-color: #b45309; color: #d97706; background: rgba(180, 83, 9, 0.1);}
+
+
 /* Loading animace */
 .loader {
     border: 4px solid rgba(255, 255, 255, 0.1);
@@ -469,7 +484,7 @@ canvas {
     flex-direction: column;
   }
 
-  #input-join-id {
+  #input-join-id, #input-player-name, #input-change-name {
     width: 100%;
     margin-bottom: 0 !important;
   }
@@ -619,7 +634,7 @@ canvas {
         flex-direction: row !important;
     }
 
-    #input-join-id {
+    #input-join-id, #input-player-name, #input-change-name {
         padding: 8px !important;
         font-size: 0.9rem !important;
         margin-bottom: 0 !important;
