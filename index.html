@@ -82,9 +82,26 @@
                 <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart btn-join">PŘIPOJIT</button>
             </div>
             
-            <button onclick="joinCloudServer()" class="btn-restart" style="width: 100%; background: #a855f7; margin-top: 10px;">ZALOŽIT NOVOU MÍSTNOST</button>
+            <button onclick="showHostModal()" class="btn-restart" style="width: 100%; background: #a855f7; margin-top: 10px;">ZALOŽIT NOVOU MÍSTNOST</button>
           </div>
           <button class="btn-restart" id="btn-close-mp" style="margin-top:2.5rem; background: rgba(255, 255, 255, 0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZPĚT DO MENU</button>
+        </div>
+      </div>
+
+      <div id="host-modal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+          <h2 style="font-size: 2.2rem; margin-bottom: 0.5rem; background: linear-gradient(to right, #10b981, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">MÍSTNOST ZALOŽENA</h2>
+          <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem;">Pošli tento kód spoluhráčům:</p>
+
+          <div style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; border: 1px solid rgba(16, 185, 129, 0.3); margin-bottom: 20px; width: 100%;">
+              <div id="host-code-display">XXXXXX</div>
+              <button id="btn-copy-code" class="btn-restart" style="width: 100%; padding: 12px; font-size: 0.9rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">📋 KOPÍROVAT KÓD</button>
+          </div>
+
+          <div class="menu-actions" style="width: 100%;">
+              <button id="btn-start-hosted" class="btn-restart" style="width: 100%; background: #10b981;">🚀 VSTOUPIT DO HRY</button>
+              <button onclick="document.getElementById('host-modal').classList.remove('active'); document.getElementById('multiplayer-modal').classList.add('active');" class="btn-restart" style="width: 100%; background: rgba(255,255,255,0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZRUŠIT</button>
+          </div>
         </div>
       </div>
 

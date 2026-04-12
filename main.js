@@ -995,6 +995,7 @@ function initSocket() {
             NET.roomId = id;
             NET.isMultiplayer = true;
             document.getElementById('multiplayer-modal').classList.remove('active');
+            document.getElementById('host-modal').classList.remove('active');
             clearInterval(NET.serverPollingInterval);
             startGame();
         });
@@ -1137,12 +1138,38 @@ function syncShot(proj) {
     });
 }
 
+// Logika pro nové Host okno
+window.showHostModal = () => {
+    const roomName = Math.random().toString(36).substr(2, 6).toUpperCase();
+    document.getElementById('host-code-display').innerText = roomName;
+    document.getElementById('multiplayer-modal').classList.remove('active');
+    document.getElementById('host-modal').classList.add('active');
+
+    // Tlačítko kopírovat
+    document.getElementById('btn-copy-code').onclick = () => {
+        navigator.clipboard.writeText(roomName).then(() => {
+            const btn = document.getElementById('btn-copy-code');
+            btn.innerText = "✅ ZKOPÍROVÁNO!";
+            btn.style.background = "#10b981";
+            setTimeout(() => {
+                btn.innerText = "📋 KOPÍROVAT KÓD";
+                btn.style.background = "rgba(255,255,255,0.1)";
+            }, 2000);
+        });
+    };
+
+    // Tlačítko start
+    document.getElementById('btn-start-hosted').onclick = () => {
+        document.getElementById('host-modal').classList.remove('active');
+        joinCloudServer(roomName);
+    };
+};
+
 window.joinCloudServer = (roomName) => {
     toggleFullscreen(document.documentElement, true);
-    if(!roomName) {
-        roomName = Math.random().toString(36).substr(2, 6).toUpperCase();
-        const input = document.getElementById('input-join-id');
-        if (input) input.value = roomName;
+    if(!roomName || roomName.trim() === '') {
+        alert("Zadej platný kód!");
+        return;
     }
     initSocket();
     NET.socket.emit('joinRoom', roomName.trim().toUpperCase());
@@ -1356,7 +1383,7 @@ function update() {
             const alivePlayers = getAllAlivePlayers();
             alivePlayers.forEach(p => {
                 if (dist(proj.x, proj.y, p.x, p.y) < proj.radius + p.radius) {
-                    p.hp -= 10 * (p.shield || 1);
+                    p.hp -= proj.damage * (p.shield || 1);
                     if (p.hp <= 0) p.dead = true;
                     GAME.entities.projectiles.splice(pIndex, 1);
                     updateUI();

@@ -266,7 +266,6 @@ canvas {
   width: 100%;
 }
 
-/* Skupina input + tlačítko připojit */
 .join-group {
     display: flex;
     gap: 10px;
@@ -292,6 +291,15 @@ canvas {
     font-size: 1rem;
     background: #6366f1;
     margin: 0;
+}
+
+#host-code-display {
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: 12px;
+    color: #f8fafc;
+    margin-bottom: 15px;
+    text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
 }
 
 /* Upgrade Cards */
@@ -455,6 +463,11 @@ canvas {
     max-height: 120px !important;
   }
 
+  #host-code-display {
+    font-size: 2.2rem !important;
+    letter-spacing: 6px !important;
+  }
+
   .upgrade-grid {
     grid-template-columns: 1fr;
     max-height: 45vh;
@@ -510,7 +523,6 @@ canvas {
 
 /* =========================================
    MOBILNÍ OPTIMALIZACE: TELEFON NA ŠÍŘKU (LANDSCAPE)
-   - Extrémně nízká výška obrazovky 
    ========================================= */
 @media screen and (max-height: 600px) {
     .modal-content {
@@ -533,7 +545,6 @@ canvas {
         margin-bottom: 0.5rem !important;
     }
 
-    /* Tlačítka se rozloží vedle sebe, pokud je místo */
     .menu-actions {
         flex-direction: row !important;
         flex-wrap: wrap !important;
@@ -545,10 +556,9 @@ canvas {
     .btn-restart {
         padding: 0.7rem 1.2rem !important;
         font-size: 0.85rem !important;
-        flex: 1 1 auto; /* Tlačítka se automaticky roztáhnou */
+        flex: 1 1 auto; 
     }
 
-    /* Mřížka statistik: Více sloupců do šířky, méně do výšky */
     .stats-grid {
         grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
         gap: 5px !important;
@@ -561,7 +571,6 @@ canvas {
         font-size: 0.75rem !important;
     }
 
-    /* Mřížka vylepšení: Karty se poskládají vedle sebe */
     .upgrade-grid {
         grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
         gap: 8px !important;
@@ -586,7 +595,6 @@ canvas {
         font-size: 0.7rem !important;
     }
 
-    /* Servery */
     #server-list-container {
         max-height: 70px !important;
     }
@@ -599,6 +607,12 @@ canvas {
         padding: 8px !important;
         font-size: 0.9rem !important;
         margin-bottom: 0 !important;
+    }
+
+    #host-code-display {
+        font-size: 1.5rem !important;
+        letter-spacing: 4px !important;
+        margin-bottom: 10px !important;
     }
 
     .btn-join {
