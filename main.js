@@ -676,7 +676,6 @@ class Player {
         }
         this.orbitersList.forEach(o => o.update());
 
-        // KAKTUS LOGIKA - 10s on, 30s off (Pokud hráč upgrade má)
         if (this.hasKaktus) {
             const now = Date.now();
             if (this.kaktus) {
@@ -999,6 +998,28 @@ function togglePause() {
     }
 }
 
+// Spustí fullscreen až při prvním kliknutí kamkoli na stránku
+let fullscreenAttempted = false;
+function tryFullscreen() {
+    if (fullscreenAttempted) return;
+    const isFS = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!isFS) {
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e=>{});
+        } else if (document.documentElement.webkitRequestFullscreen) {
+            document.documentElement.webkitRequestFullscreen();
+        }
+    }
+    fullscreenAttempted = true;
+    // Odebéřeme listener, aby se to nespouštělo při každém kliknutí
+    document.removeEventListener('click', tryFullscreen);
+    document.removeEventListener('touchstart', tryFullscreen);
+}
+
+// Přidáme listener na celou stránku
+document.addEventListener('click', tryFullscreen);
+document.addEventListener('touchstart', tryFullscreen);
+
 function toggleFullscreen(element, force = false) {
     const isFS = document.fullscreenElement || document.webkitFullscreenElement;
     if (!isFS || force) {
@@ -1163,6 +1184,7 @@ function initSocket() {
                 newOthers[pId].auraRange = data.players[pId].auraRange;
                 newOthers[pId].orbitals = data.players[pId].orbitals || 0;
                 newOthers[pId].fireTrail = data.players[pId].fireTrail;
+                newOthers[pId].hasKaktus = data.players[pId].kaktus; // Vizuálně stačí vědět jestli ho vůbec má
                 newOthers[pId].kaktus = data.players[pId].kaktus;
             }
             NET.others = newOthers;
@@ -1229,7 +1251,7 @@ function syncPlayer() {
         auraRange: GAME.entities.player.auraRange,
         orbitals: GAME.entities.player.orbitals,
         fireTrail: GAME.entities.player.fireTrail,
-        kaktus: GAME.entities.player.kaktus
+        kaktus: GAME.entities.player.hasKaktus
     });
 }
 
@@ -1274,7 +1296,7 @@ window.showHostModal = () => {
 };
 
 window.joinCloudServer = (roomName) => {
-    toggleFullscreen(document.documentElement, true);
+    tryFullscreen(); // Pojištění pro mobily
     if(!roomName || roomName.trim() === '') {
         alert("Zadej platný kód!");
         return;
@@ -1323,7 +1345,7 @@ function init() {
     const btnStart = document.getElementById('btn-start');
     if (btnStart) btnStart.onclick = () => {
         NET.isMultiplayer = false;
-        toggleFullscreen(document.documentElement, true);
+        tryFullscreen();
         AudioEngine.init(); AudioEngine.stopMenuMusic(); AudioEngine.startMusic(); startGame();
     };
     
@@ -1364,7 +1386,7 @@ function init() {
     const btnRestart = document.getElementById('btn-restart-game');
     if (btnRestart) btnRestart.onclick = () => { 
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        toggleFullscreen(document.documentElement, true);
+        tryFullscreen();
         startGame(); 
     };
     document.querySelectorAll('.btn-reload').forEach(btn => btn.onclick = () => location.reload());
