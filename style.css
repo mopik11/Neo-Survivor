@@ -224,7 +224,7 @@ canvas {
   background: var(--accent-color);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 1.2rem 2rem; /* Zmenšený padding pro lepší zalomení */
+  padding: 1.2rem 2rem; 
   font-size: 1.1rem;
   font-weight: 800;
   border-radius: 20px;
@@ -254,7 +254,6 @@ canvas {
   transform: translateY(0) scale(0.98);
 }
 
-/* Chytré zalamování hlavních tlačítek */
 .menu-actions {
   display: flex;
   flex-wrap: wrap;
@@ -399,7 +398,9 @@ canvas {
     background: rgba(99, 102, 241, 0.8);
 }
 
-/* Mobilní responzivita */
+/* =========================================
+   MOBILNÍ OPTIMALIZACE: KLASICKÝ TELEFON (NA VÝŠKU)
+   ========================================= */
 @media screen and (max-width: 850px) {
   .modal-content {
     min-width: unset !important;
@@ -419,7 +420,7 @@ canvas {
     margin-bottom: 1.5rem !important;
   }
 
-  .modal-content h2 {
+  .modal-content h2, #levelup-modal h2 {
     font-size: 1.6rem !important;
     margin-bottom: 1rem !important;
   }
@@ -505,6 +506,110 @@ canvas {
   .fs-button {
       display: none !important;
   }
+}
+
+/* =========================================
+   MOBILNÍ OPTIMALIZACE: TELEFON NA ŠÍŘKU (LANDSCAPE)
+   - Extrémně nízká výška obrazovky 
+   ========================================= */
+@media screen and (max-height: 600px) {
+    .modal-content {
+        padding: 1rem !important;
+        border-radius: 20px !important;
+    }
+
+    .logo {
+        font-size: 2rem !important;
+        margin-bottom: 0 !important;
+    }
+
+    .subtitle {
+        font-size: 0.7rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .modal-content h2, #levelup-modal h2 {
+        font-size: 1.4rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* Tlačítka se rozloží vedle sebe, pokud je místo */
+    .menu-actions {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 10px !important;
+        margin-top: 0.5rem !important;
+    }
+
+    .btn-restart {
+        padding: 0.7rem 1.2rem !important;
+        font-size: 0.85rem !important;
+        flex: 1 1 auto; /* Tlačítka se automaticky roztáhnou */
+    }
+
+    /* Mřížka statistik: Více sloupců do šířky, méně do výšky */
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+        gap: 5px !important;
+        padding: 5px !important;
+        margin: 5px 0 !important;
+    }
+
+    .stat-item {
+        padding: 4px 8px !important;
+        font-size: 0.75rem !important;
+    }
+
+    /* Mřížka vylepšení: Karty se poskládají vedle sebe */
+    .upgrade-grid {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+        gap: 8px !important;
+        margin-top: 0.5rem !important;
+    }
+
+    .upgrade-card {
+        min-height: 80px !important;
+        padding: 0.5rem !important;
+    }
+
+    .upgrade-icon {
+        font-size: 1.2rem !important;
+        margin-bottom: 0.2rem !important;
+    }
+
+    .upgrade-card h3 {
+        font-size: 0.9rem !important;
+    }
+
+    .upgrade-card p {
+        font-size: 0.7rem !important;
+    }
+
+    /* Servery */
+    #server-list-container {
+        max-height: 70px !important;
+    }
+
+    .join-group {
+        flex-direction: row !important;
+    }
+
+    #input-join-id {
+        padding: 8px !important;
+        font-size: 0.9rem !important;
+        margin-bottom: 0 !important;
+    }
+
+    .btn-join {
+        padding: 8px 15px !important;
+    }
+
+    .controls-hint {
+        margin-top: 0.5rem !important;
+        flex-direction: row !important;
+        justify-content: center;
+    }
 }
 
 #mobile-pause:active {
