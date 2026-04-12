@@ -236,6 +236,31 @@ const AudioEngine = {
             this.droneNodes = null;
         }
     },
+    piano(freq, dur) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, now);
+        filter.frequency.exponentialRampToValueAtTime(400, now + dur + 0.5);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur + 1.2);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + dur + 1.5);
+    },
     play(type) {
         if (!this.ctx) return;
         if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -406,7 +431,6 @@ class Projectile {
             ctx.strokeStyle = ctx.fillStyle;
 
             if (this.type === 'laser') {
-                // Nepoužívá se u lodě 2, ale nechávám ho zde kvůli kompatibilitě v multiplayeru
                 ctx.lineWidth = this.radius;
                 ctx.beginPath();
                 ctx.moveTo(this.x - cam.x, this.y - cam.y);
@@ -421,7 +445,7 @@ class Projectile {
                 ctx.translate(this.x - cam.x, this.y - cam.y);
                 ctx.rotate(Math.atan2(this.vy, this.vx));
                 ctx.beginPath();
-                ctx.moveTo(0, -this.radius * 4); // Celková šířka 8x radius
+                ctx.moveTo(0, -this.radius * 4); 
                 ctx.lineTo(0, this.radius * 4);
                 ctx.stroke();
                 ctx.restore();
@@ -656,8 +680,6 @@ class Enemy {
     }
 }
 
-// ---------------------------------------------------------------------------------
-
 class Player {
     constructor(isLocal = true) {
         this.x = 0; this.y = 0; this.radius = 22; this.isLocal = isLocal;
@@ -740,7 +762,6 @@ class Player {
             return;
         }
 
-        // Logic for Vampire Laser (Ship 2)
         if (this.shipType === 2) {
             const enemies = GAME.entities.enemies;
             if (enemies.length > 0) {
@@ -750,7 +771,7 @@ class Player {
                     this.laserTargetId = target.id;
                     
                     const now = Date.now();
-                    if (now - this.lastFired > (this.fireRate / 2)) {
+                    if (now - this.lastFired > (this.fireRate / 2)) { 
                         let isCrit = Math.random() < this.critChance;
                         const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
                         
@@ -822,7 +843,6 @@ class Player {
             this.addXp(1); this.lastXpGen = now;
         }
         
-        // Loď 1 a 3 střílí. Loď 2 nestřílí (používá jen laser)
         if (this.shipType !== 2 && now - this.lastFired > this.fireRate) { 
             this.attack(); 
             this.lastFired = now; 
@@ -962,6 +982,7 @@ class Player {
     }
 }
 
+// Odstraněno automatické volání spawnEnemy(); nahoře (zabraňuje pádům před hrou)
 function spawnEnemy() {
     if (NET.isMultiplayer) return; 
     if (!GAME.active || GAME.paused) { setTimeout(spawnEnemy, 500); return; }
@@ -1182,7 +1203,7 @@ function showShipsMenu() {
     container.innerHTML = '';
     const items = [
         { id: 1, name: 'Základní Loď', desc: 'Spolehlivý standardní model', cost: 0, icon: '🚀' },
-        { id: 2, name: 'Laserová Loď', desc: 'Automatický paprsek, léčí, nestřílí', cost: 500, icon: '🩸' },
+        { id: 2, name: 'Laserová Loď', desc: 'Automatický paprsek na blízko.', cost: 500, icon: '🩸' },
         { id: 3, name: 'Drtivá Zeď', desc: 'Průrazná vlna bez základní palby.', cost: 500, icon: '🌊' }
     ];
 
@@ -1350,8 +1371,12 @@ function initSocket() {
                 .filter(hg => !GAME.entities.pickedGems.has(hg.id))
                 .map(hg => {
                     let g = currentGems.get(hg.id);
-                    if (!g) g = new Gem(hg.x, hg.y, hg.id);
-                    else if (!g.attracted && !g.ultraAttracted) { g.x = hg.x; g.y = hg.y; }
+                    if (!g) {
+                        g = new Gem(hg.x, hg.y, hg.id);
+                    } else if (!g.attracted && !g.ultraAttracted) {
+                        g.x = hg.x;
+                        g.y = hg.y;
+                    }
                     return g;
                 });
                 
@@ -1526,15 +1551,27 @@ function savePlayerName(inputId) {
 
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     document.getElementById('menu-modal').classList.add('active');
+    
+    // Teprve teď můžeme s jistotou říct, že smyčka může běžet
+    if (!GAME.loopStarted) {
+        GAME.loopStarted = true;
+        requestAnimationFrame(loop);
+    }
 }
 
 function init() {
     GAME.canvas = document.getElementById('game-canvas');
     GAME.ctx = GAME.canvas.getContext('2d');
+    GAME.loopStarted = false; // Pomocná proměnná
+
     updateSpeedFactor();
     window.addEventListener('resize', () => { GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight; updateSpeedFactor(); });
     GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight;
     
+    // Nejprve vyčistíme mapu, aby nebyla černá
+    GAME.ctx.fillStyle = '#020617';
+    GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
+
     loadMeta();
     document.getElementById('display-max-level').innerText = META.maxLevel || 0;
     
@@ -1548,6 +1585,8 @@ function init() {
         if (NET.socket && NET.socket.connected) {
             NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
         }
+        GAME.loopStarted = true;
+        requestAnimationFrame(loop);
     }
 
     document.getElementById('btn-save-first-name').onclick = () => savePlayerName('input-player-name');
@@ -1676,8 +1715,6 @@ function init() {
         GAME.joystick.currentY = GAME.joystick.startY + Math.sin(angle) * d;
     }, { passive: true });
     GAME.canvas.addEventListener('touchend', () => { GAME.joystick.active = false; GAME.joystick.currentX = GAME.joystick.startX; GAME.joystick.currentY = GAME.joystick.startY; });
-
-    spawnEnemy(); requestAnimationFrame(loop);
 }
 
 function fireSniper(cx, cy) {
@@ -1695,12 +1732,12 @@ function startGame() {
     AudioEngine.stopMenuMusic();
     AudioEngine.startMusic();
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    spawnEnemy();
 }
 
 function resetGame() {
     GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0;
     
-    // TÍMTO SE NAVŽDY A ABSOLUTNĚ PŘEDCHÁZÍ PÁDŮM:
     GAME.entities = {
         player: new Player(true),
         enemies: [],
@@ -1739,7 +1776,6 @@ function loop(time) {
         }
     } 
     
-    // Vykreslujeme porad, i v menu, aby bezely hvezdy na pozadi a cerna obrazovka se uz nikdy neobjevila
     render();
     
     requestAnimationFrame(loop); 
@@ -1857,6 +1893,7 @@ function update(dt) {
                     proj.hitEnemies.add(enemy);
                     
                     if (proj.isCrit) {
+                        if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
                         GAME.entities.floatingTexts.push(new FloatingText(enemy.x, enemy.y - 25, "CRITICAL!", "#ef4444"));
                     }
 
@@ -1921,7 +1958,6 @@ function render() {
     }
     ctx.stroke();
     
-    // Tyto entity se kreslí jen když hra běží
     if (GAME.active) {
         GAME.entities.fire.forEach(f => f.draw(ctx, { x: camX, y: camY }));
         GAME.entities.baits.forEach(b => b.draw(ctx, { x: camX, y: camY }));
