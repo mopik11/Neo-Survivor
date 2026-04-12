@@ -427,6 +427,8 @@ class Projectile {
             ctx.strokeStyle = ctx.fillStyle;
 
             if (this.type === 'laser') {
+                // Tento blok se uz nepoužije, protože loď 2 nestřílí lasery jako projektily
+                // ale nechávám ho zde pro jistotu, kdyby přišla ze serveru stará střela
                 ctx.lineWidth = this.radius;
                 ctx.beginPath();
                 ctx.moveTo(this.x - cam.x, this.y - cam.y);
@@ -441,7 +443,7 @@ class Projectile {
                 ctx.translate(this.x - cam.x, this.y - cam.y);
                 ctx.rotate(Math.atan2(this.vy, this.vx));
                 ctx.beginPath();
-                ctx.moveTo(0, -this.radius * 4); // Celková šířka je masivní (8x radius)
+                ctx.moveTo(0, -this.radius * 4); // Celková šířka 8x radius
                 ctx.lineTo(0, this.radius * 4);
                 ctx.stroke();
                 ctx.restore();
@@ -481,12 +483,6 @@ class Gem {
         ctx.shadowBlur = 0;
     }
 }
-
-// ---------------------------------------------------------------------------------
-// ZDE JSOU TY FUNKCE A TŘÍDY, KTERÉ JSEM V MINULÉM KROKU OMYLEM VYMAZAL:
-// Orbiter, getAllAlivePlayers, getAllTargets, Bait, Boss, Enemy
-// Nyní jsou na 100 % zpět a hra nelehne na "getAllTargets is not defined"!
-// ---------------------------------------------------------------------------------
 
 class Orbiter {
     constructor(owner, index, total) {
@@ -682,8 +678,6 @@ class Enemy {
     }
 }
 
-// ---------------------------------------------------------------------------------
-
 class Player {
     constructor(isLocal = true) {
         this.x = 0; this.y = 0; this.radius = 22; this.isLocal = isLocal;
@@ -699,7 +693,7 @@ class Player {
         this.critMultiplier = 3; 
         
         this.luckFactor = 1.0 + (isLocal ? (META.upgrades.luck * 0.05) : 0);
-        this.knockbackForce = 6; this.xpMultiplier = 1.0;
+        this.orbitals = 0; this.knockbackForce = 6; this.xpMultiplier = 1.0;
         this.lifestealChance = 0; this.aura = false; this.auraRange = 150;
         this.bounces = 0; this.fireTrail = false;
         
@@ -766,7 +760,7 @@ class Player {
             return;
         }
 
-        // Logic for Vampire Laser (Ship 2)
+        // Logic for Vampire Laser (Ship 2) - OPRAVENO, neukládá HP za sekundu ale rovnou
         if (this.shipType === 2) {
             const enemies = GAME.entities.enemies;
             if (enemies.length > 0) {
@@ -774,34 +768,31 @@ class Player {
                 const d = dist(this.x, this.y, target.x, target.y);
                 if (d < 400) {
                     this.laserTargetId = target.id;
-                    const dps = this.damage * (1000 / Math.max(100, this.fireRate));
-                    const dmgThisFrame = dps * (dt / 1000);
                     
-                    let isCrit = false;
                     const now = Date.now();
-                    if (Math.random() < this.critChance && now - this.lastLaserCrit > 1000) {
-                        isCrit = true;
-                        this.lastLaserCrit = now;
-                    }
-                    
-                    const finalDmg = isCrit ? dmgThisFrame * this.critMultiplier : dmgThisFrame;
-                    
-                    target.hp -= finalDmg;
-                    this.hp = Math.min(this.maxHp, this.hp + finalDmg * 0.1); // Lifesteal
-                    
-                    if (isCrit) {
-                        if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
-                        GAME.entities.floatingTexts.push(new FloatingText(target.x, target.y - 25, "CRITICAL!", "#ef4444"));
-                    }
-                    
-                    if (NET.isMultiplayer) {
-                        NET.socket.emit('enemyHit', { id: target.id, damage: finalDmg });
-                    }
-                    if (target.hp <= 0) {
-                        AudioEngine.play('hit');
-                        if (!NET.isMultiplayer) GAME.entities.gems.push(new Gem(target.x, target.y));
-                        GAME.kills++;
-                        updateUI();
+                    if (now - this.lastFired > (this.fireRate / 2)) { // Tika rychleji nez normalni strelba
+                        let isCrit = Math.random() < this.critChance;
+                        
+                        const finalDmg = isCrit ? this.damage * this.critMultiplier : this.damage;
+                        
+                        target.hp -= finalDmg;
+                        // Záměrně bez Lifestealu, jak jsi psal v poslední zprávě
+                        
+                        if (isCrit) {
+                            if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                            GAME.entities.floatingTexts.push(new FloatingText(target.x, target.y - 25, "CRITICAL!", "#ef4444"));
+                        }
+                        
+                        if (NET.isMultiplayer) {
+                            NET.socket.emit('enemyHit', { id: target.id, damage: finalDmg });
+                        }
+                        if (target.hp <= 0) {
+                            AudioEngine.play('hit');
+                            if (!NET.isMultiplayer) GAME.entities.gems.push(new Gem(target.x, target.y));
+                            GAME.kills++;
+                            updateUI();
+                        }
+                        this.lastFired = now;
                     }
                 } else {
                     this.laserTargetId = null;
@@ -809,8 +800,6 @@ class Player {
             } else {
                 this.laserTargetId = null;
             }
-        } else {
-            this.laserTargetId = null;
         }
 
         if (this.bait && Date.now() - this.lastBait > 10000) {
@@ -853,7 +842,12 @@ class Player {
         if (this.xpGenInterval > 0 && now - this.lastXpGen > this.xpGenInterval) {
             this.addXp(1); this.lastXpGen = now;
         }
-        if (now - this.lastFired > this.fireRate) { this.attack(); this.lastFired = now; }
+        
+        // Attack for Ship 1 and Ship 3
+        if (this.shipType !== 2 && now - this.lastFired > this.fireRate) { 
+            this.attack(); 
+            this.lastFired = now; 
+        }
     }
     attack() {
         if (this.dead) return;
@@ -862,25 +856,25 @@ class Player {
         const sortedEnemies = [...enemies].sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y));
         const target = sortedEnemies[0];
         
-        // VZDY vystřelí standardní projektily
-        for (let i = 0; i < this.projectileCount; i++) {
-            const isCrit = Math.random() < this.critChance;
-            const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
-            
-            const proj = new Projectile(this.x, this.y, target.x, target.y, finalDamage, { 
-                size: this.projSize, 
-                pierce: this.pierceCount, 
-                bounce: this.bounces, 
-                isCrit: isCrit,
-                type: 'default',
-                life: 200,
-                speed: CONFIG.PROJECTILE_SPEED
-            });
-            GAME.entities.projectiles.push(proj);
-            if (NET.isMultiplayer) syncShot(proj);
+        if (this.shipType === 1) {
+            for (let i = 0; i < this.projectileCount; i++) {
+                const isCrit = Math.random() < this.critChance;
+                const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
+                
+                const proj = new Projectile(this.x, this.y, target.x, target.y, finalDamage, { 
+                    size: this.projSize, 
+                    pierce: this.pierceCount, 
+                    bounce: this.bounces, 
+                    isCrit: isCrit,
+                    type: 'default',
+                    life: 200,
+                    speed: CONFIG.PROJECTILE_SPEED
+                });
+                GAME.entities.projectiles.push(proj);
+                if (NET.isMultiplayer) syncShot(proj);
+            }
         }
         
-        // Drtivá Zeď
         if (this.shipType === 3) {
             const isCrit = Math.random() < this.critChance;
             const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
@@ -1202,8 +1196,8 @@ function showShipsMenu() {
     container.innerHTML = '';
     const items = [
         { id: 1, name: 'Základní Loď', desc: 'Spolehlivý standardní model', cost: 0, icon: '🚀' },
-        { id: 2, name: 'Upíří Laser', desc: 'Základní útok + Vysávací laser', cost: 500, icon: '🩸' },
-        { id: 3, name: 'Drtivá Zeď', desc: 'Základní útok + Průrazná vlna', cost: 500, icon: '🌊' }
+        { id: 2, name: 'Laserová Loď', desc: 'Automatický paprsek na blízko.', cost: 500, icon: '🩸' },
+        { id: 3, name: 'Drtivá Zeď', desc: 'Průrazná vlna bez základní palby.', cost: 500, icon: '🌊' }
     ];
 
     items.forEach(item => {
@@ -1671,12 +1665,7 @@ function resetGame() {
     GAME.entities.particles = []; 
     GAME.entities.fire = [];
     GAME.entities.baits = [];
-    
-    if (!GAME.entities.floatingTexts) {
-        GAME.entities.floatingTexts = [];
-    } else {
-        GAME.entities.floatingTexts.length = 0;
-    }
+    GAME.entities.floatingTexts = [];
     
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     updateSpeedFactor(); updateUI();
@@ -1726,7 +1715,6 @@ function update(dt) {
     
     if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
 
-    // Zde byly zpět implementovány bezpečné iterace a kontroly existence
     for (let i = GAME.entities.floatingTexts.length - 1; i >= 0; i--) {
         const ft = GAME.entities.floatingTexts[i];
         ft.update();
