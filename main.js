@@ -1565,13 +1565,7 @@ function resetGame() {
     GAME.entities.particles = []; 
     GAME.entities.fire = [];
     GAME.entities.baits = [];
-    
-    if (!GAME.entities.floatingTexts) {
-        GAME.entities.floatingTexts = [];
-    } else {
-        GAME.entities.floatingTexts.length = 0;
-    }
-    
+    GAME.entities.floatingTexts = [];
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     updateSpeedFactor(); updateUI();
 }
@@ -1615,6 +1609,7 @@ function update() {
     
     if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
 
+    // Tady jsme museli iterovat pozpátku a ubezpečit se, že pole existuje
     for (let i = GAME.entities.floatingTexts.length - 1; i >= 0; i--) {
         const ft = GAME.entities.floatingTexts[i];
         ft.update();
