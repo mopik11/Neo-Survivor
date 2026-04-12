@@ -28,8 +28,10 @@ const CONFIG = {
         { id: 'growth', name: 'Růst', desc: '+10% max HP a plný heal', icon: '🥗', rarity: 'common' },
 
         { id: 'count', name: 'Více Střel', desc: '+1 projektil navíc', icon: '🌀', rarity: 'uncommon' },
-        { id: 'pierce', name: 'Průraznost', desc: 'Střely projdou více nepřátely', icon: '🏹', rarity: 'uncommon' },
+        { id: 'pierce', name: 'Průraznost', desc: 'Paprsek/Střela projde více nepřátely', icon: '🏹', rarity: 'uncommon' },
         { id: 'wall_range', name: 'Dosah Zdi', desc: 'Zvětší dolet a životnost tvé zdi', icon: '🌊', rarity: 'uncommon' }, 
+        { id: 'laser_range', name: 'Zaměřovač', desc: '+150 dosah laseru', icon: '🔭', rarity: 'uncommon' },
+        { id: 'wall_width', name: 'Širší Zeď', desc: '+50% šířka zdi', icon: '📏', rarity: 'uncommon' },
         { id: 'size', name: 'Obří Střely', desc: '+30% velikost projektilu', icon: '🌕', rarity: 'uncommon' },
         { id: 'xpboost', name: 'XP Multiplikátor', desc: '+20% bonus k XP', icon: '📈', rarity: 'uncommon' },
         { id: 'bounce', name: 'Odraz', desc: 'Střely se odráží k dalšímu cíli', icon: '🪃', rarity: 'uncommon' },
@@ -37,7 +39,7 @@ const CONFIG = {
         { id: 'magnet', name: 'Magnet na XP', desc: '+50% dosah sběru', icon: '🧲', rarity: 'rare' },
         { id: 'crit_chance', name: 'Zlepšená Muška', desc: '+15% šance na kritický zásah', icon: '🎯', rarity: 'rare' },
         { id: 'crit_dmg', name: 'Kritické Poškození', desc: 'Zvyšuje násobič krit. zásahu (+1x)', icon: '💥', rarity: 'rare' },
-        { id: 'knockback', name: 'Silný Odhoz', desc: '+50% sýla odhozu', icon: '💢', rarity: 'rare' },
+        { id: 'knockback', name: 'Silný Odhoz', desc: '+50% síla odhozu', icon: '💢', rarity: 'rare' },
 
         { id: 'regen', name: 'Regenerace', desc: 'Obnova 1 HP/s', icon: '💊', rarity: 'epic' },
         { id: 'ultramagnet', name: 'Ultra Magnet', desc: 'Pomalý sběr z celé mapy', icon: '🌌', rarity: 'epic' },
@@ -155,6 +157,25 @@ const randomRange = (min, max) => Math.random() * (max - min) + min;
 
 function shakeScreen(amount = 5) {
     CONFIG.SCREEN_SHAKE = amount;
+}
+
+function updateKaktusUI(isActive, pct) {
+    const ui = document.getElementById('kaktus-ui');
+    const bar = document.getElementById('kaktus-bar');
+    if (!ui || !bar) return;
+    
+    if (!GAME.entities.player || !GAME.entities.player.hasKaktus) {
+        ui.style.display = 'none';
+        return;
+    }
+    
+    ui.style.display = 'flex';
+    bar.style.width = `${pct}%`;
+    if (isActive) {
+        bar.style.background = '#22c55e'; // Zelená (aktivní)
+    } else {
+        bar.style.background = '#f59e0b'; // Oranžová (cooldown)
+    }
 }
 
 const AudioEngine = {
@@ -522,9 +543,11 @@ function getAllAlivePlayers() {
 
 function getAllTargets() {
     const list = getAllAlivePlayers();
-    GAME.entities.baits.forEach(b => {
-        if (b.hp > 0) list.push({ x: b.x, y: b.y, radius: b.radius, isBait: true, obj: b });
-    });
+    if (GAME.entities.baits) {
+        GAME.entities.baits.forEach(b => {
+            if (b.hp > 0) list.push({ x: b.x, y: b.y, radius: b.radius, isBait: true, obj: b });
+        });
+    }
     return list;
 }
 
@@ -720,8 +743,10 @@ class Player {
         
         this.shipType = META.selectedShip || 1;
         this.wallRangeBonus = 0;
-        this.laserTargetId = null;
-        this.lastLaserCrit = 0;
+        this.wallWidthBonus = 0;
+        this.laserRangeBonus = 0;
+        
+        this.laserTargets = []; 
     }
     update(dt) {
         if (this.dead) return;
@@ -735,15 +760,21 @@ class Player {
         if (this.hasKaktus) {
             const now = Date.now();
             if (this.kaktus) {
-                if (now - this.lastKaktusToggle > 10000) { 
+                const elapsed = now - this.lastKaktusToggle;
+                if (elapsed > 10000) { 
                     this.kaktus = false;
                     this.lastKaktusToggle = now;
                 }
+                const pct = Math.max(0, 100 - (elapsed / 10000) * 100);
+                if(this.isLocal) updateKaktusUI(true, pct);
             } else {
-                if (now - this.lastKaktusToggle > 30000) { 
+                const elapsed = now - this.lastKaktusToggle;
+                if (elapsed > 30000) { 
                     this.kaktus = true;
                     this.lastKaktusToggle = now;
                 }
+                const pct = Math.min(100, (elapsed / 30000) * 100);
+                if(this.isLocal) updateKaktusUI(false, pct);
             }
         }
 
@@ -756,7 +787,7 @@ class Player {
             if (this.fireTrail) {
                 const now = Date.now();
                 if (now - (this.lastFireTrail || 0) > 150 && dist(oldX, oldY, this.x, this.y) > 0.5) {
-                    GAME.entities.fire.push(new Fire(this.x, this.y, 0, false));
+                    if (GAME.entities.fire) GAME.entities.fire.push(new Fire(this.x, this.y, 0, false));
                     this.lastFireTrail = now;
                 }
             }
@@ -764,42 +795,61 @@ class Player {
         }
 
         if (this.shipType === 2) {
+            this.laserTargets = [];
             const enemies = GAME.entities.enemies;
-            if (enemies.length > 0) {
-                const target = [...enemies].sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0];
-                const d = dist(this.x, this.y, target.x, target.y);
-                if (d < 400) {
-                    this.laserTargetId = target.id;
+            if (enemies && enemies.length > 0) {
+                const range = 400 + this.laserRangeBonus;
+                const inRange = enemies.filter(e => dist(this.x, this.y, e.x, e.y) < range);
+                inRange.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y));
+                
+                const primaryTargets = inRange.slice(0, this.projectileCount);
+                const hitSet = new Set(primaryTargets.map(t => t.id));
+                
+                primaryTargets.forEach(target => {
+                    const chain = [target];
+                    let current = target;
+                    let jumpsLeft = this.pierceCount - 1; 
                     
-                    const now = Date.now();
-                    if (now - this.lastFired > (this.fireRate / 2)) { 
-                        let isCrit = Math.random() < this.critChance;
-                        const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
-                        
-                        target.hp -= finalDamage;
-                        this.hp = Math.min(this.maxHp, this.hp + finalDamage * 0.1); 
-                        
-                        if (isCrit) {
-                            if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
-                            GAME.entities.floatingTexts.push(new FloatingText(target.x, target.y - 25, "CRITICAL!", "#ef4444"));
-                        }
-                        
-                        if (NET.isMultiplayer) {
-                            NET.socket.emit('enemyHit', { id: target.id, damage: finalDamage });
-                        }
-                        if (target.hp <= 0) {
-                            AudioEngine.play('hit');
-                            if (!NET.isMultiplayer) GAME.entities.gems.push(new Gem(target.x, target.y));
-                            GAME.kills++;
-                            updateUI();
-                        }
-                        this.lastFired = now;
+                    while(jumpsLeft > 0) {
+                        const nextTargets = enemies.filter(e => !hitSet.has(e.id) && dist(current.x, current.y, e.x, e.y) < 300);
+                        if (nextTargets.length === 0) break;
+                        nextTargets.sort((a, b) => dist(current.x, current.y, a.x, a.y) - dist(current.x, current.y, b.x, b.y));
+                        const next = nextTargets[0];
+                        chain.push(next);
+                        hitSet.add(next.id);
+                        current = next;
+                        jumpsLeft--;
                     }
-                } else {
-                    this.laserTargetId = null;
+                    this.laserTargets.push(chain);
+                });
+
+                const now = Date.now();
+                if (now - this.lastFired > (this.fireRate / 2) && this.laserTargets.length > 0) {
+                    let isCrit = Math.random() < this.critChance;
+                    const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
+                    
+                    this.laserTargets.forEach(chain => {
+                        chain.forEach(target => {
+                            target.hp -= finalDamage;
+                            
+                            if (isCrit) {
+                                if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                                GAME.entities.floatingTexts.push(new FloatingText(target.x, target.y - 25, "CRITICAL!", "#ef4444"));
+                            }
+                            
+                            if (NET.isMultiplayer) {
+                                NET.socket.emit('enemyHit', { id: target.id, damage: finalDamage });
+                            }
+                            if (target.hp <= 0) {
+                                AudioEngine.play('hit');
+                                if (!NET.isMultiplayer && GAME.entities.gems) GAME.entities.gems.push(new Gem(target.x, target.y));
+                                GAME.kills++;
+                                updateUI();
+                            }
+                        });
+                    });
+                    this.lastFired = now;
                 }
-            } else {
-                this.laserTargetId = null;
             }
         }
 
@@ -808,7 +858,7 @@ class Player {
             if (NET.isMultiplayer) {
                 NET.socket.emit('spawnBait', { x: this.x, y: this.y, hp: baitHp });
             } else {
-                GAME.entities.baits.push(new Bait(this.x, this.y, baitHp));
+                if (GAME.entities.baits) GAME.entities.baits.push(new Bait(this.x, this.y, baitHp));
             }
             this.lastBait = Date.now();
         }
@@ -831,7 +881,7 @@ class Player {
             
             const now = Date.now();
             if (this.fireTrail && now - this.lastFireTrail > 150) {
-                GAME.entities.fire.push(new Fire(this.x, this.y, this.damage * this.fireDamageMult, true));
+                if (GAME.entities.fire) GAME.entities.fire.push(new Fire(this.x, this.y, this.damage * this.fireDamageMult, true));
                 this.lastFireTrail = now;
             }
         }
@@ -852,7 +902,7 @@ class Player {
     attack() {
         if (this.dead) return;
         const enemies = GAME.entities.enemies;
-        if (enemies.length === 0) return;
+        if (!enemies || enemies.length === 0) return;
         const sortedEnemies = [...enemies].sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y));
         const target = sortedEnemies[0];
         
@@ -870,7 +920,7 @@ class Player {
                     life: 200,
                     speed: CONFIG.PROJECTILE_SPEED
                 });
-                GAME.entities.projectiles.push(proj);
+                if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
                 if (NET.isMultiplayer) syncShot(proj);
             }
         }
@@ -878,9 +928,10 @@ class Player {
         if (this.shipType === 3) {
             const isCrit = Math.random() < this.critChance;
             const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
+            const widthMult = 4 * (1 + this.wallWidthBonus);
             
             const wall = new Projectile(this.x, this.y, target.x, target.y, finalDamage, {
-                size: this.projSize * 4, 
+                size: this.projSize * widthMult, 
                 pierce: Infinity, 
                 bounce: 0, 
                 isCrit: isCrit,
@@ -888,7 +939,7 @@ class Player {
                 life: 15 + (this.wallRangeBonus / 2), 
                 speed: CONFIG.PROJECTILE_SPEED
             });
-            GAME.entities.projectiles.push(wall);
+            if (GAME.entities.projectiles) GAME.entities.projectiles.push(wall);
             if (NET.isMultiplayer) syncShot(wall);
         }
         
@@ -930,25 +981,32 @@ class Player {
         ctx.strokeStyle = this.isLocal ? '#6366f1' : '#f43f5e'; ctx.lineWidth = 4; ctx.stroke();
         ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
         
-        if (this.shipType === 2 && this.laserTargetId) {
-            const target = GAME.entities.enemies.find(e => e.id === this.laserTargetId);
-            if (target) {
+        if (this.shipType === 2 && this.laserTargets && this.laserTargets.length > 0) {
+            this.laserTargets.forEach(chain => {
+                if (!chain || chain.length === 0) return;
                 ctx.save();
                 ctx.beginPath();
                 ctx.moveTo(this.x - cam.x, this.y - cam.y);
-                ctx.lineTo(target.x - cam.x, target.y - cam.y);
+                chain.forEach(target => {
+                    if (target) ctx.lineTo(target.x - cam.x, target.y - cam.y);
+                });
                 ctx.strokeStyle = '#ef4444';
-                ctx.lineWidth = 6;
+                ctx.lineWidth = 6 + (this.projSize - 6);
                 ctx.shadowBlur = 20;
                 ctx.shadowColor = '#ef4444';
                 ctx.stroke();
                 
+                ctx.beginPath();
+                ctx.moveTo(this.x - cam.x, this.y - cam.y);
+                chain.forEach(target => {
+                    if (target) ctx.lineTo(target.x - cam.x, target.y - cam.y);
+                });
                 ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 2 + (this.projSize - 6) * 0.3;
                 ctx.shadowBlur = 0;
                 ctx.stroke();
                 ctx.restore();
-            }
+            });
         }
         
         this.orbitersList.forEach(o => o.draw(ctx, cam));
@@ -983,38 +1041,6 @@ class Player {
     }
 }
 
-function spawnEnemy() {
-    if (NET.isMultiplayer) return; 
-    if (!GAME.active || GAME.paused) { setTimeout(spawnEnemy, 500); return; }
-    const alive = getAllAlivePlayers();
-    if (alive.length === 0) { setTimeout(spawnEnemy, 1000); return; }
-    const a = Math.random() * Math.PI * 2;
-    const pivot = alive[Math.floor(Math.random() * alive.length)];
-    const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
-    const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
-    const mod = Math.floor(GAME.time / 60) + 1;
-
-    let enemy;
-    if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
-        enemy = new Boss(x, y, mod);
-    } else {
-        let type = 1;
-        if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
-        enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
-    }
-
-    if (enemy.isBoss) { showBossWarning(); GAME.lastBossTime = GAME.time; }
-    GAME.entities.enemies.push(enemy);
-    
-    const currentInterval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60));
-    setTimeout(spawnEnemy, currentInterval);
-}
-
-function showBossWarning() {
-    const el = document.getElementById('boss-warning'); if (el) el.style.display = 'block';
-    setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
-}
-
 function updateUI() {
     const p = GAME.entities.player;
     if (!p) return;
@@ -1026,6 +1052,11 @@ function updateUI() {
     const sRatio = Math.min(1, (Date.now() - GAME.lastSniperTime) / CONFIG.SNIPER_COOLDOWN);
     const sBar = document.getElementById('sniper-bar');
     if (sBar) sBar.style.width = `${sRatio * 100}%`;
+
+    if (!p.hasKaktus) {
+        const kUI = document.getElementById('kaktus-ui');
+        if (kUI) kUI.style.display = 'none';
+    }
 }
 
 function showLevelUp() {
@@ -1038,6 +1069,20 @@ function showLevelUp() {
     const selected = [];
     const usedIds = new Set();
 
+    const isUpgradeValid = (u) => {
+        const pShip = GAME.entities.player.shipType;
+        if (u.id === 'kaktus' && GAME.entities.player.hasKaktus) return false;
+        
+        if (pShip === 1) {
+            if (['wall_range', 'wall_width', 'laser_range'].includes(u.id)) return false; 
+        } else if (pShip === 2) {
+            if (['wall_range', 'wall_width', 'bounce'].includes(u.id)) return false;
+        } else if (pShip === 3) {
+            if (['count', 'pierce', 'bounce', 'laser_range'].includes(u.id)) return false;
+        }
+        return true;
+    };
+
     while (selected.length < count && usedIds.size < CONFIG.UPGRADES.length) {
         const rand = Math.random() * 100;
         let rarity = 'common';
@@ -1046,18 +1091,14 @@ function showLevelUp() {
         else if (rand < 35) rarity = 'rare';
         else if (rand < 60) rarity = 'uncommon';
 
-        const possible = CONFIG.UPGRADES.filter(u => {
-            if (u.id === 'kaktus' && GAME.entities.player.hasKaktus) return false;
-            if (GAME.entities.player.shipType === 3 && u.id === 'pierce') return false; 
-            if (GAME.entities.player.shipType !== 3 && u.id === 'wall_range') return false; 
-            return u.rarity === rarity && !usedIds.has(u.id);
-        });
+        const possible = CONFIG.UPGRADES.filter(u => isUpgradeValid(u) && u.rarity === rarity && !usedIds.has(u.id));
+        
         if (possible.length > 0) {
             const pick = possible[Math.floor(Math.random() * possible.length)];
             selected.push(pick);
             usedIds.add(pick.id);
         } else {
-            const remaining = CONFIG.UPGRADES.filter(u => !usedIds.has(u.id));
+            const remaining = CONFIG.UPGRADES.filter(u => isUpgradeValid(u) && !usedIds.has(u.id));
             if (remaining.length === 0) break;
             const pick = remaining[Math.floor(Math.random() * remaining.length)];
             selected.push(pick);
@@ -1099,6 +1140,8 @@ function applyUpgrade(id) {
             case 'ultramagnet': p.ultraMagnet = true; p.ultraMagnetPower += 1; break;
             case 'pierce': p.pierceCount += 1; break;
             case 'wall_range': p.wallRangeBonus += 15; break; 
+            case 'laser_range': p.laserRangeBonus += 150; break;
+            case 'wall_width': p.wallWidthBonus += 0.5; break;
             case 'size': p.projSize *= 1.3; break;
             case 'crit_chance': p.critChance += 0.15; break;
             case 'crit_dmg': p.critMultiplier += 1; break;
@@ -1203,7 +1246,7 @@ function showShipsMenu() {
     container.innerHTML = '';
     const items = [
         { id: 1, name: 'Základní Loď', desc: 'Spolehlivý standardní model', cost: 0, icon: '🚀' },
-        { id: 2, name: 'Laserová Loď', desc: 'Automatický paprsek na blízko.', cost: 500, icon: '🩸' },
+        { id: 2, name: 'Laserová Loď', desc: 'Automatický paprsek, nestřílí', cost: 500, icon: '🩸' },
         { id: 3, name: 'Drtivá Zeď', desc: 'Průrazná vlna bez základní palby.', cost: 500, icon: '🌊' }
     ];
 
@@ -1417,14 +1460,17 @@ function initSocket() {
                 ownerId: 'remote', speed: data.speed, size: data.size, pierce: data.pierce,
                 bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life
             });
-            GAME.entities.projectiles.push(proj);
+            if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
         });
 
         NET.socket.on('gemCollected', (data) => {
-            GAME.entities.gems = GAME.entities.gems.filter(g => g.id !== data.gemId);
+            if (GAME.entities.gems) {
+                GAME.entities.gems = GAME.entities.gems.filter(g => g.id !== data.gemId);
+            }
         });
         
         NET.socket.on('teamLevelUp', (data) => {
+            if (!GAME.entities.player) return;
             GAME.entities.player.level = data.level; 
             if (GAME.entities.player.level > META.maxLevel) {
                 META.maxLevel = GAME.entities.player.level;
@@ -1445,7 +1491,7 @@ function initSocket() {
         });
         
         NET.socket.on('teamGameOver', () => {
-            GAME.entities.player.dead = true;
+            if (GAME.entities.player) GAME.entities.player.dead = true;
             const waitModal = document.getElementById('waiting-modal');
             if (waitModal) waitModal.classList.remove('active');
             gameOver();
@@ -1463,7 +1509,7 @@ window.requestServerList = () => {
 }
 
 function syncPlayer() {
-    if (!NET.isMultiplayer || !NET.socket) return;
+    if (!NET.isMultiplayer || !NET.socket || !GAME.entities.player) return;
     NET.socket.emit('playerUpdate', {
         x: GAME.entities.player.x, 
         y: GAME.entities.player.y,
@@ -1490,14 +1536,8 @@ function syncShot(proj) {
         x: proj.x, y: proj.y, 
         tx: proj.x + Math.cos(angle) * 100, 
         ty: proj.y + Math.sin(angle) * 100, 
-        dmg: proj.damage,
-        speed: speed,
-        size: proj.radius,
-        pierce: proj.pierce,
-        bounce: proj.bounce,
-        isCrit: proj.isCrit,
-        type: proj.type,
-        life: proj.life
+        dmg: proj.damage, speed: speed, size: proj.radius, pierce: proj.pierce,
+        bounce: proj.bounce, isCrit: proj.isCrit, type: proj.type, life: proj.life
     });
 }
 
@@ -1606,13 +1646,24 @@ function init() {
         }
     };
 
-    resetGame();
+    // Vytvoříme prázdný stav entit rovnou, abychom zamezili jakémukoli pádu v background smyčce
+    GAME.entities = {
+        player: new Player(true),
+        enemies: [],
+        projectiles: [],
+        gems: [],
+        pickedGems: new Set(),
+        particles: [],
+        fire: [],
+        baits: [],
+        floatingTexts: []
+    };
 
     window.addEventListener('keydown', (e) => { GAME.input[e.key.toLowerCase()] = true; if (e.key === 'Escape') togglePause(); });
     window.addEventListener('keyup', (e) => { GAME.input[e.key.toLowerCase()] = false; });
 
     GAME.canvas.addEventListener('mousedown', (e) => {
-        if (!GAME.active || GAME.paused || GAME.entities.player.dead) return;
+        if (!GAME.active || GAME.paused || !GAME.entities.player || GAME.entities.player.dead) return;
         const rect = GAME.canvas.getBoundingClientRect();
         const sx = (e.clientX - rect.left) / GAME.zoom;
         const sy = (e.clientY - rect.top) / GAME.zoom;
@@ -1644,6 +1695,11 @@ function init() {
         if (e) e.preventDefault();
         document.getElementById('menu-modal').classList.remove('active');
         document.getElementById('multiplayer-modal').classList.add('active');
+        
+        if (!NET.socket) {
+            initSocket();
+        }
+        
         NET.serverPollingInterval = setInterval(window.requestServerList, 2000); 
     };
     
@@ -1662,6 +1718,7 @@ function init() {
 
     const btnLeaderboard = document.getElementById('btn-leaderboard');
     if (btnLeaderboard) btnLeaderboard.onclick = () => {
+        if (!NET.socket) initSocket();
         if (NET.socket && NET.socket.connected) NET.socket.emit('requestLeaderboard');
         document.getElementById('leaderboard-modal').classList.add('active');
     };
@@ -1703,7 +1760,7 @@ function init() {
     document.querySelectorAll('.btn-reload').forEach(btn => btn.onclick = () => location.reload());
 
     GAME.canvas.addEventListener('touchstart', (e) => {
-        if (!GAME.active || GAME.paused || (GAME.entities.player && GAME.entities.player.dead)) return;
+        if (!GAME.active || GAME.paused || !GAME.entities.player || GAME.entities.player.dead) return;
         const t = e.touches[0];
         const rect = GAME.canvas.getBoundingClientRect();
         const sx = (t.clientX - rect.left) / GAME.zoom;
@@ -1724,11 +1781,13 @@ function init() {
 }
 
 function fireSniper(cx, cy) {
+    if (!GAME.entities.player) return;
     const p = GAME.entities.player, cam = GAME.camera;
     const worldTargetX = cx + (cam.x / GAME.zoom);
     const worldTargetY = cy + (cam.y / GAME.zoom);
     const proj = new Projectile(p.x, p.y, worldTargetX, worldTargetY, p.damage * 10, { size: 12, pierce: Infinity });
-    GAME.entities.projectiles.push(proj); shakeScreen(15);
+    if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj); 
+    shakeScreen(15);
     if (NET.isMultiplayer) syncShot(proj);
 }
 
@@ -1760,7 +1819,8 @@ function resetGame() {
     for (let i = 0; i < 150; i++) {
         GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     }
-    updateSpeedFactor(); updateUI();
+    updateSpeedFactor(); 
+    updateUI();
 }
 
 let lastTime = 0;
@@ -1783,12 +1843,11 @@ function loop(time) {
     } 
     
     render();
-    
     requestAnimationFrame(loop); 
 }
 
 function update(dt) {
-    if (GAME.paused) return;
+    if (GAME.paused || !GAME.entities || !GAME.entities.player) return;
     
     if(!NET.isMultiplayer) GAME.time += 1 / 60; 
     
@@ -1801,39 +1860,102 @@ function update(dt) {
     syncPlayer();
     
     for (const id in NET.others) {
-        NET.others[id].update(dt);
+        if (NET.others[id]) NET.others[id].update(dt);
     }
 
-    for (let i = GAME.entities.floatingTexts.length - 1; i >= 0; i--) {
-        const ft = GAME.entities.floatingTexts[i];
-        ft.update();
-        if (ft.life <= 0) GAME.entities.floatingTexts.splice(i, 1);
+    if (GAME.entities.floatingTexts) {
+        for (let i = GAME.entities.floatingTexts.length - 1; i >= 0; i--) {
+            const ft = GAME.entities.floatingTexts[i];
+            if (ft) {
+                ft.update();
+                if (ft.life <= 0) GAME.entities.floatingTexts.splice(i, 1);
+            }
+        }
     }
 
     const targets = getAllTargets();
     const alivePlayers = getAllAlivePlayers();
     if (alivePlayers.length === 0 && GAME.active) gameOver();
 
-    GAME.entities.enemies.forEach((e) => {
-        e.update();
-        targets.forEach(t => {
-            if (dist(t.x, t.y, e.x, e.y) < t.radius + e.radius) {
-                if (t.isBait) {
-                    if (NET.isMultiplayer) {
-                        NET.socket.emit('baitHit', { id: t.obj.id, damage: (e.isBoss ? 5 : 1) * GAME.speedFactor });
+    if (GAME.entities.enemies) {
+        GAME.entities.enemies.forEach((e) => {
+            if (!e) return;
+            e.update();
+            targets.forEach(t => {
+                if (dist(t.x, t.y, e.x, e.y) < t.radius + e.radius) {
+                    if (t.isBait) {
+                        if (NET.isMultiplayer) {
+                            NET.socket.emit('baitHit', { id: t.obj.id, damage: (e.isBoss ? 5 : 1) * GAME.speedFactor });
+                        } else {
+                            t.obj.hp -= (e.isBoss ? 5 : 1) * GAME.speedFactor;
+                        }
                     } else {
-                        t.obj.hp -= (e.isBoss ? 5 : 1) * GAME.speedFactor;
+                        if (t.kaktus) {
+                            e.hp = 0; e.dead = true;
+                            if(NET.isMultiplayer) NET.socket.emit('enemyHit', {id: e.id, damage: 99999});
+                        } else {
+                            t.hp -= (e.isBoss ? 2 : 0.5) * (t.shield || 1);
+                            if (t.hp <= 0) t.dead = true;
+                            
+                            if (t.isLocal) {
+                                shakeScreen(8);
+                                const overlay = document.getElementById('hit-overlay');
+                                if (overlay) {
+                                    overlay.style.opacity = '1';
+                                    setTimeout(() => overlay.style.opacity = '0', 100);
+                                }
+                            }
+                        }
                     }
-                } else {
-                    if (t.kaktus) {
-                        e.hp = 0; e.dead = true;
-                        if(NET.isMultiplayer) NET.socket.emit('enemyHit', {id: e.id, damage: 99999});
-                    } else {
-                        t.hp -= (e.isBoss ? 2 : 0.5) * (t.shield || 1);
-                        if (t.hp <= 0) t.dead = true;
+                    updateUI();
+                }
+            });
+        });
+
+        if (!NET.isMultiplayer) {
+            GAME.entities.enemies = GAME.entities.enemies.filter(e => e && e.hp > 0 && !e.dead);
+        }
+    }
+
+    if (GAME.entities.baits) {
+        GAME.entities.baits = GAME.entities.baits.filter(b => b && b.hp > 0);
+        GAME.entities.baits.forEach(b => b.update());
+    }
+
+    if (GAME.entities.fire) {
+        for (let i = GAME.entities.fire.length - 1; i >= 0; i--) {
+            const f = GAME.entities.fire[i];
+            if (f) {
+                f.update();
+                if (f.life <= 0) {
+                    GAME.entities.fire.splice(i, 1);
+                }
+            }
+        }
+    }
+
+    if (GAME.entities.projectiles && GAME.entities.enemies) {
+        const enemies = GAME.entities.enemies;
+        for (let pIndex = GAME.entities.projectiles.length - 1; pIndex >= 0; pIndex--) {
+            const proj = GAME.entities.projectiles[pIndex];
+            if (!proj) continue;
+            proj.update();
+            
+            if (proj.life <= 0) { 
+                GAME.entities.projectiles.splice(pIndex, 1); 
+                continue; 
+            }
+
+            if (proj.isEnemy) {
+                alivePlayers.forEach(pl => {
+                    if (dist(proj.x, proj.y, pl.x, pl.y) < proj.radius + pl.radius) {
+                        pl.hp -= proj.damage * (pl.shield || 1);
+                        if (pl.hp <= 0) pl.dead = true;
+                        GAME.entities.projectiles.splice(pIndex, 1);
+                        updateUI();
                         
-                        if (t.isLocal) {
-                            shakeScreen(8);
+                        if (pl.isLocal) {
+                            shakeScreen(5);
                             const overlay = document.getElementById('hit-overlay');
                             if (overlay) {
                                 overlay.style.opacity = '1';
@@ -1841,104 +1963,60 @@ function update(dt) {
                             }
                         }
                     }
-                }
-                updateUI();
-            }
-        });
-    });
-
-    if (!NET.isMultiplayer) GAME.entities.enemies = GAME.entities.enemies.filter(e => e.hp > 0 && !e.dead);
-
-    GAME.entities.baits = GAME.entities.baits.filter(b => b.hp > 0);
-    GAME.entities.baits.forEach(b => b.update());
-
-    for (let i = GAME.entities.fire.length - 1; i >= 0; i--) {
-        const f = GAME.entities.fire[i];
-        f.update();
-        if (f.life <= 0) {
-            GAME.entities.fire.splice(i, 1);
-        }
-    }
-
-    const enemies = GAME.entities.enemies;
-    for (let pIndex = GAME.entities.projectiles.length - 1; pIndex >= 0; pIndex--) {
-        const proj = GAME.entities.projectiles[pIndex];
-        proj.update();
-        
-        if (proj.life <= 0) { 
-            GAME.entities.projectiles.splice(pIndex, 1); 
-            continue; 
-        }
-
-        if (proj.isEnemy) {
-            const alivePlayers = getAllAlivePlayers();
-            alivePlayers.forEach(p => {
-                if (dist(proj.x, proj.y, p.x, p.y) < proj.radius + p.radius) {
-                    p.hp -= proj.damage * (p.shield || 1);
-                    if (p.hp <= 0) p.dead = true;
-                    GAME.entities.projectiles.splice(pIndex, 1);
-                    updateUI();
-                    
-                    if (p.isLocal) {
-                        shakeScreen(5);
-                        const overlay = document.getElementById('hit-overlay');
-                        if (overlay) {
-                            overlay.style.opacity = '1';
-                            setTimeout(() => overlay.style.opacity = '0', 100);
-                        }
-                    }
-                }
-            });
-        } else {
-            enemies.forEach((enemy) => {
-                let hitDist = proj.radius + enemy.radius;
-                if (proj.type === 'wall') hitDist = (proj.radius * 6) + enemy.radius; 
-
-                if (!proj.hitEnemies.has(enemy) && dist(proj.x, proj.y, enemy.x, enemy.y) < hitDist) {
-                    enemy.hp -= proj.damage; 
-                    proj.hitEnemies.add(enemy);
-                    
-                    if (proj.isCrit) {
-                        if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
-                        GAME.entities.floatingTexts.push(new FloatingText(enemy.x, enemy.y - 25, "CRITICAL!", "#ef4444"));
-                    }
-
-                    if (NET.isMultiplayer) {
-                        NET.socket.emit('enemyHit', { id: enemy.id, damage: proj.damage });
-                    }
-                    if (proj.bounce > 0) {
-                        const targets = enemies.filter(e => e !== enemy && !proj.hitEnemies.has(e));
-                        if (targets.length > 0) {
-                            const next = targets.sort((a, b) => dist(proj.x, proj.y, a.x, a.y) - dist(proj.x, proj.y, b.x, b.y))[0];
-                            const angle = Math.atan2(next.y - proj.y, next.x - proj.x);
-                            proj.vx = Math.cos(angle) * CONFIG.PROJECTILE_SPEED; proj.vy = Math.sin(angle) * CONFIG.PROJECTILE_SPEED; proj.bounce--;
-                        }
-                    }
-                    if (proj.pierce > 1) proj.pierce--; else if (proj.pierce !== Infinity && proj.bounce <= 0) GAME.entities.projectiles.splice(pIndex, 1);
-                    if (enemy.hp <= 0) { 
-                        AudioEngine.play('hit'); 
-                        if (!NET.isMultiplayer) GAME.entities.gems.push(new Gem(enemy.x, enemy.y)); 
-                        GAME.kills++; 
-                        updateUI(); 
-                    }
-                }
-            });
-        }
-    }
-
-    const pForGems = GAME.entities.player;
-    for (let i = GAME.entities.gems.length - 1; i >= 0; i--) {
-        const g = GAME.entities.gems[i];
-        g.update(pForGems);
-        if (!pForGems.dead && dist(pForGems.x, pForGems.y, g.x, g.y) < pForGems.radius + g.radius) {
-            AudioEngine.play('gem');
-            if(NET.isMultiplayer) {
-                GAME.entities.pickedGems.add(g.id);
-                NET.socket.emit('gemPickup', g.id);
+                });
             } else {
-                pForGems.addXp(Math.round(10 * (pForGems.luckFactor || 1)));
+                enemies.forEach((enemy) => {
+                    let hitDist = proj.radius + enemy.radius;
+                    if (proj.type === 'wall') hitDist = (proj.radius * 6) + enemy.radius; 
+
+                    if (!proj.hitEnemies.has(enemy) && dist(proj.x, proj.y, enemy.x, enemy.y) < hitDist) {
+                        enemy.hp -= proj.damage; 
+                        proj.hitEnemies.add(enemy);
+                        
+                        if (proj.isCrit) {
+                            if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                            GAME.entities.floatingTexts.push(new FloatingText(enemy.x, enemy.y - 25, "CRITICAL!", "#ef4444"));
+                        }
+
+                        if (NET.isMultiplayer) {
+                            NET.socket.emit('enemyHit', { id: enemy.id, damage: proj.damage });
+                        }
+                        if (proj.bounce > 0) {
+                            const validTargets = enemies.filter(e => e !== enemy && !proj.hitEnemies.has(e));
+                            if (validTargets.length > 0) {
+                                const next = validTargets.sort((a, b) => dist(proj.x, proj.y, a.x, a.y) - dist(proj.x, proj.y, b.x, b.y))[0];
+                                const angle = Math.atan2(next.y - proj.y, next.x - proj.x);
+                                proj.vx = Math.cos(angle) * CONFIG.PROJECTILE_SPEED; proj.vy = Math.sin(angle) * CONFIG.PROJECTILE_SPEED; proj.bounce--;
+                            }
+                        }
+                        if (proj.pierce > 1) proj.pierce--; else if (proj.pierce !== Infinity && proj.bounce <= 0) GAME.entities.projectiles.splice(pIndex, 1);
+                        if (enemy.hp <= 0) { 
+                            AudioEngine.play('hit'); 
+                            if (!NET.isMultiplayer && GAME.entities.gems) GAME.entities.gems.push(new Gem(enemy.x, enemy.y)); 
+                            GAME.kills++; 
+                            updateUI(); 
+                        }
+                    }
+                });
             }
-            GAME.entities.gems.splice(i, 1);
+        }
+    }
+
+    if (GAME.entities.gems) {
+        for (let i = GAME.entities.gems.length - 1; i >= 0; i--) {
+            const g = GAME.entities.gems[i];
+            if (!g) continue;
+            g.update(p);
+            if (!p.dead && dist(p.x, p.y, g.x, g.y) < p.radius + g.radius) {
+                AudioEngine.play('gem');
+                if(NET.isMultiplayer) {
+                    GAME.entities.pickedGems.add(g.id);
+                    NET.socket.emit('gemPickup', g.id);
+                } else {
+                    p.addXp(Math.round(10 * (p.luckFactor || 1)));
+                }
+                GAME.entities.gems.splice(i, 1);
+            }
         }
     }
     updateUI();
@@ -1946,12 +2024,19 @@ function update(dt) {
 
 function render() {
     const ctx = GAME.ctx, cam = GAME.camera;
+    if (!ctx) return;
+    
     ctx.save(); ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height); ctx.scale(GAME.zoom, GAME.zoom);
     const camX = cam.x / GAME.zoom, camY = cam.y / GAME.zoom;
-    GAME.stars.forEach(s => {
-        const sx = (s.x - camX * 0.1) % (GAME.canvas.width / GAME.zoom), sy = (s.y - camY * 0.1) % (GAME.canvas.height / GAME.zoom);
-        ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`; ctx.beginPath(); ctx.arc(sx < 0 ? sx + (GAME.canvas.width / GAME.zoom) : sx, sy < 0 ? sy + (GAME.canvas.height / GAME.zoom) : sy, s.size, 0, Math.PI * 2); ctx.fill();
-    });
+    
+    if (GAME.stars) {
+        GAME.stars.forEach(s => {
+            if (!s) return;
+            const sx = (s.x - camX * 0.1) % (GAME.canvas.width / GAME.zoom), sy = (s.y - camY * 0.1) % (GAME.canvas.height / GAME.zoom);
+            ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`; ctx.beginPath(); ctx.arc(sx < 0 ? sx + (GAME.canvas.width / GAME.zoom) : sx, sy < 0 ? sy + (GAME.canvas.height / GAME.zoom) : sy, s.size, 0, Math.PI * 2); ctx.fill();
+        });
+    }
+    
     ctx.strokeStyle = 'rgba(99, 102, 241, 0.15)'; ctx.lineWidth = 1; ctx.beginPath();
     const hexRadius = 60, hexHeight = hexRadius * Math.sqrt(3);
     const startCol = Math.floor(camX / (hexRadius * 1.5)) - 1, endCol = startCol + Math.ceil((GAME.canvas.width / GAME.zoom) / (hexRadius * 1.5)) + 2;
@@ -1964,22 +2049,27 @@ function render() {
     }
     ctx.stroke();
     
-    if (GAME.active) {
-        GAME.entities.fire.forEach(f => f.draw(ctx, { x: camX, y: camY }));
-        GAME.entities.baits.forEach(b => b.draw(ctx, { x: camX, y: camY }));
-        GAME.entities.gems.forEach(g => g.draw(ctx, { x: camX, y: camY }));
-        GAME.entities.projectiles.forEach(p => p.draw(ctx, { x: camX, y: camY }));
-        GAME.entities.enemies.forEach(e => e.draw(ctx, { x: camX, y: camY }));
-        for (const id in NET.others) NET.others[id].draw(ctx, { x: camX, y: camY });
+    if (GAME.active && GAME.entities) {
+        if (GAME.entities.fire) GAME.entities.fire.forEach(f => { if(f) f.draw(ctx, { x: camX, y: camY }); });
+        if (GAME.entities.baits) GAME.entities.baits.forEach(b => { if(b) b.draw(ctx, { x: camX, y: camY }); });
+        if (GAME.entities.gems) GAME.entities.gems.forEach(g => { if(g) g.draw(ctx, { x: camX, y: camY }); });
+        if (GAME.entities.projectiles) GAME.entities.projectiles.forEach(p => { if(p) p.draw(ctx, { x: camX, y: camY }); });
+        if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => { if(e) e.draw(ctx, { x: camX, y: camY }); });
+        
+        for (const id in NET.others) {
+            if (NET.others[id]) NET.others[id].draw(ctx, { x: camX, y: camY });
+        }
+        
         if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
         
-        if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
-        GAME.entities.floatingTexts.forEach(ft => ft.draw(ctx, {x: camX, y: camY}));
+        if (GAME.entities.floatingTexts) {
+            GAME.entities.floatingTexts.forEach(ft => { if(ft) ft.draw(ctx, {x: camX, y: camY}); });
+        }
     }
     
     ctx.restore();
     
-    if (GAME.active && GAME.entities.player && !GAME.entities.player.dead) {
+    if (GAME.active && GAME.entities && GAME.entities.player && !GAME.entities.player.dead) {
         const mapSize = 150;
         const padding = 20;
         const startX = GAME.canvas.width - mapSize - padding;
@@ -2008,21 +2098,21 @@ function render() {
             }
         };
 
-        GAME.entities.gems.forEach(g => drawDot(g.x, g.y, '#34d399', 1));
-        GAME.entities.enemies.forEach(e => drawDot(e.x, e.y, e.isBoss ? '#ef4444' : (e.type===2 ? '#a855f7' : '#f59e0b'), e.isBoss ? 4 : 2));
+        if (GAME.entities.gems) GAME.entities.gems.forEach(g => { if(g) drawDot(g.x, g.y, '#34d399', 1); });
+        if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => { if(e) drawDot(e.x, e.y, e.isBoss ? '#ef4444' : (e.type===2 ? '#a855f7' : '#f59e0b'), e.isBoss ? 4 : 2); });
         for (const id in NET.others) {
             const op = NET.others[id];
-            if (!op.dead) drawDot(op.x, op.y, '#3b82f6', 3);
+            if (op && !op.dead) drawDot(op.x, op.y, '#3b82f6', 3);
         }
         drawDot(cx, cy, '#10b981', 3);
 
         ctx.restore();
     }
 
-    if (window.innerWidth < 850) {
-        ctx.save(); const sx = GAME.joystick.startX, sy = GAME.joystick.startY, cx = GAME.joystick.currentX, cy = GAME.joystick.currentY;
+    if (window.innerWidth < 850 && GAME.joystick) {
+        ctx.save(); const sx = GAME.joystick.startX, sy = GAME.joystick.startY, jcx = GAME.joystick.currentX, jcy = GAME.joystick.currentY;
         ctx.beginPath(); ctx.arc(sx, sy, 75, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI * 2); ctx.fillStyle = 'rgba(99, 102, 241, 0.5)'; ctx.shadowBlur = 20; ctx.shadowColor = '#6366f1'; ctx.fill(); ctx.restore();
+        ctx.beginPath(); ctx.arc(jcx, jcy, 32, 0, Math.PI * 2); ctx.fillStyle = 'rgba(99, 102, 241, 0.5)'; ctx.shadowBlur = 20; ctx.shadowColor = '#6366f1'; ctx.fill(); ctx.restore();
     }
 }
 

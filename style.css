@@ -134,7 +134,20 @@ canvas {
   transition: width 0.3s ease;
 }
 
-/* Boss Warning */
+/* Hit Overlay */
+#hit-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(239, 68, 68, 0.15); 
+  z-index: 4000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s ease-out; 
+}
+
 .boss-warning {
   position: absolute;
   top: 15%;
@@ -149,20 +162,6 @@ canvas {
   letter-spacing: 4px;
   text-align: center;
   width: 100%;
-}
-
-/* Hit Overlay */
-#hit-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(239, 68, 68, 0.15); 
-  z-index: 4000;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.1s ease-out; 
 }
 
 /* Modals */
