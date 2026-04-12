@@ -69,6 +69,13 @@ const NET = {
     serverPollingInterval: null
 };
 
+// Generování a ukládání trvalého ID Hráče
+let myPlayerId = localStorage.getItem('neoSurvivor_pid');
+if (!myPlayerId) {
+    myPlayerId = Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('neoSurvivor_pid', myPlayerId);
+}
+
 const META = {
     currency: 0,
     upgrades: { hp: 0, speed: 0, luck: 0, hat: null }
@@ -216,31 +223,6 @@ const AudioEngine = {
             });
             this.droneNodes = null;
         }
-    },
-    piano(freq, dur) {
-        if (!this.ctx) return;
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        const filter = this.ctx.createBiquadFilter();
-
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, now);
-
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(1200, now);
-        filter.frequency.exponentialRampToValueAtTime(400, now + dur + 0.5);
-
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + dur + 1.2);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.ctx.destination);
-
-        osc.start(now);
-        osc.stop(now + dur + 1.5);
     },
     play(type) {
         if (!this.ctx) return;
@@ -966,7 +948,7 @@ function togglePause() {
         } else {
             if (NET.socket) {
                 NET.socket.connect();
-                NET.socket.emit('joinRoom', NET.roomId);
+                NET.socket.emit('joinRoom', { roomId: NET.roomId, playerId: myPlayerId });
             }
         }
     }
@@ -1050,12 +1032,25 @@ function initSocket() {
             });
         });
 
-        NET.socket.on('joined', (id) => {
-            NET.roomId = id;
+        NET.socket.on('joined', (data) => {
+            const { roomId, playerState } = data;
+            NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
             clearInterval(NET.serverPollingInterval);
-            startGame();
+            
+            if (!GAME.active) {
+                startGame();
+                
+                // Pokud hráč už v místnosti byl, obnovíme jeho pozici
+                if (playerState && (playerState.x !== 0 || playerState.y !== 0)) {
+                    GAME.entities.player.x = playerState.x;
+                    GAME.entities.player.y = playerState.y;
+                    GAME.entities.player.hp = playerState.hp;
+                    GAME.entities.player.maxHp = playerState.maxHp;
+                    GAME.entities.player.level = playerState.level;
+                }
+            }
         });
 
         NET.socket.on('stateUpdate', (data) => {
@@ -1107,7 +1102,9 @@ function initSocket() {
 
             const newOthers = {};
             for(let pId in data.players) {
-                if(pId === NET.socket.id) continue;
+                if(pId === myPlayerId) continue;
+                if(data.players[pId].disconnected) continue;
+                
                 if(!NET.others[pId]) {
                     newOthers[pId] = new Player(false);
                 } else {
@@ -1239,7 +1236,7 @@ window.joinCloudServer = (roomName) => {
         return;
     }
     initSocket();
-    NET.socket.emit('joinRoom', roomName.trim().toUpperCase());
+    NET.socket.emit('joinRoom', { roomId: roomName.trim().toUpperCase(), playerId: myPlayerId });
 };
 
 window.connectToId = (id) => {
