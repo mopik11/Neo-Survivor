@@ -232,6 +232,31 @@ const AudioEngine = {
             this.droneNodes = null;
         }
     },
+    piano(freq, dur) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, now);
+        filter.frequency.exponentialRampToValueAtTime(400, now + dur + 0.5);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur + 1.2);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + dur + 1.5);
+    },
     play(type) {
         if (!this.ctx) return;
         if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -770,45 +795,28 @@ class Player {
         const sortedEnemies = [...enemies].sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y));
         const target = sortedEnemies[0];
         
+        const pType = this.shipType === 2 ? 'laser' : (this.shipType === 3 ? 'wall' : 'default');
+        const pLife = this.shipType === 3 ? 30 + this.wallRangeBonus : 200;
+        const pSpeed = this.shipType === 2 ? CONFIG.PROJECTILE_SPEED * 2.5 : CONFIG.PROJECTILE_SPEED;
+        const pPierce = this.shipType === 3 ? Infinity : this.pierceCount;
+        const pSize = this.shipType === 3 ? this.projSize * 3 : this.projSize;
+
         for (let i = 0; i < this.projectileCount; i++) {
             const isCrit = Math.random() < this.critChance;
             const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
             
             const proj = new Projectile(this.x, this.y, target.x, target.y, finalDamage, { 
-                size: this.projSize, 
-                pierce: this.pierceCount, 
+                size: pSize, 
+                pierce: pPierce, 
                 bounce: this.bounces, 
                 isCrit: isCrit,
-                type: 'default',
-                life: 200,
-                speed: CONFIG.PROJECTILE_SPEED
+                type: pType,
+                life: pLife,
+                speed: pSpeed
             });
             GAME.entities.projectiles.push(proj);
             if (NET.isMultiplayer) syncShot(proj);
         }
-        
-        if (this.shipType === 2) {
-            const isCrit = Math.random() < this.critChance;
-            const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
-            const laser = new Projectile(this.x, this.y, target.x, target.y, finalDamage, {
-                size: this.projSize, pierce: this.pierceCount, bounce: this.bounces, isCrit: isCrit,
-                type: 'laser', life: 200, speed: CONFIG.PROJECTILE_SPEED * 2.5
-            });
-            GAME.entities.projectiles.push(laser);
-            if (NET.isMultiplayer) syncShot(laser);
-        }
-        
-        if (this.shipType === 3) {
-            const isCrit = Math.random() < this.critChance;
-            const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
-            const wall = new Projectile(this.x, this.y, target.x, target.y, finalDamage, {
-                size: this.projSize * 3, pierce: Infinity, bounce: 0, isCrit: isCrit,
-                type: 'wall', life: 30 + this.wallRangeBonus, speed: CONFIG.PROJECTILE_SPEED
-            });
-            GAME.entities.projectiles.push(wall);
-            if (NET.isMultiplayer) syncShot(wall);
-        }
-        
         AudioEngine.play('shoot');
     }
     draw(ctx, cam) {
@@ -1557,7 +1565,10 @@ function resetGame() {
     GAME.entities.particles = []; 
     GAME.entities.fire = [];
     GAME.entities.baits = [];
+    
+    // Zde byla ta kritická oprava – přidáno pole pro texty:
     GAME.entities.floatingTexts = [];
+    
     GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     updateSpeedFactor(); updateUI();
 }
@@ -1599,7 +1610,7 @@ function update() {
     syncPlayer();
     for (const id in NET.others) NET.others[id].update();
     
-    // Záchrana pro stará data
+    // Ochrana pro případ, že by bylo něco z paměti ještě načtené
     if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
 
     GAME.entities.floatingTexts.forEach((ft, i) => {
@@ -1755,12 +1766,10 @@ function render() {
     GAME.entities.baits.forEach(b => b.draw(ctx, { x: camX, y: camY }));
     GAME.entities.gems.forEach(g => g.draw(ctx, { x: camX, y: camY }));
     GAME.entities.projectiles.forEach(p => p.draw(ctx, { x: camX, y: camY }));
-    GAME.orbiters.forEach(o => o.draw(ctx, { x: camX, y: camY }));
     GAME.entities.enemies.forEach(e => e.draw(ctx, { x: camX, y: camY }));
     for (const id in NET.others) NET.others[id].draw(ctx, { x: camX, y: camY });
     if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
     
-    // Záchrana pro stará data
     if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
     GAME.entities.floatingTexts.forEach(ft => ft.draw(ctx, {x: camX, y: camY}));
     
