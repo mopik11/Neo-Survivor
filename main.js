@@ -236,31 +236,6 @@ const AudioEngine = {
             this.droneNodes = null;
         }
     },
-    piano(freq, dur) {
-        if (!this.ctx) return;
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        const filter = this.ctx.createBiquadFilter();
-
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, now);
-
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(1200, now);
-        filter.frequency.exponentialRampToValueAtTime(400, now + dur + 0.5);
-
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + dur + 1.2);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.ctx.destination);
-
-        osc.start(now);
-        osc.stop(now + dur + 1.5);
-    },
     play(type) {
         if (!this.ctx) return;
         if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -431,6 +406,7 @@ class Projectile {
             ctx.strokeStyle = ctx.fillStyle;
 
             if (this.type === 'laser') {
+                // Nepoužívá se u lodě 2, ale nechávám ho zde kvůli kompatibilitě v multiplayeru
                 ctx.lineWidth = this.radius;
                 ctx.beginPath();
                 ctx.moveTo(this.x - cam.x, this.y - cam.y);
@@ -445,7 +421,7 @@ class Projectile {
                 ctx.translate(this.x - cam.x, this.y - cam.y);
                 ctx.rotate(Math.atan2(this.vy, this.vx));
                 ctx.beginPath();
-                ctx.moveTo(0, -this.radius * 4); 
+                ctx.moveTo(0, -this.radius * 4); // Celková šířka 8x radius
                 ctx.lineTo(0, this.radius * 4);
                 ctx.stroke();
                 ctx.restore();
@@ -680,6 +656,8 @@ class Enemy {
     }
 }
 
+// ---------------------------------------------------------------------------------
+
 class Player {
     constructor(isLocal = true) {
         this.x = 0; this.y = 0; this.radius = 22; this.isLocal = isLocal;
@@ -774,9 +752,10 @@ class Player {
                     const now = Date.now();
                     if (now - this.lastFired > (this.fireRate / 2)) {
                         let isCrit = Math.random() < this.critChance;
-                        const finalDmg = isCrit ? this.damage * this.critMultiplier : this.damage;
+                        const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
                         
-                        target.hp -= finalDmg;
+                        target.hp -= finalDamage;
+                        this.hp = Math.min(this.maxHp, this.hp + finalDamage * 0.1); 
                         
                         if (isCrit) {
                             if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
@@ -784,7 +763,7 @@ class Player {
                         }
                         
                         if (NET.isMultiplayer) {
-                            NET.socket.emit('enemyHit', { id: target.id, damage: finalDmg });
+                            NET.socket.emit('enemyHit', { id: target.id, damage: finalDamage });
                         }
                         if (target.hp <= 0) {
                             AudioEngine.play('hit');
@@ -843,7 +822,7 @@ class Player {
             this.addXp(1); this.lastXpGen = now;
         }
         
-        // Attack for Ship 1 and Ship 3
+        // Loď 1 a 3 střílí. Loď 2 nestřílí (používá jen laser)
         if (this.shipType !== 2 && now - this.lastFired > this.fireRate) { 
             this.attack(); 
             this.lastFired = now; 
@@ -930,7 +909,6 @@ class Player {
         ctx.strokeStyle = this.isLocal ? '#6366f1' : '#f43f5e'; ctx.lineWidth = 4; ctx.stroke();
         ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
         
-        // Kreslení upířího laseru
         if (this.shipType === 2 && this.laserTargetId) {
             const target = GAME.entities.enemies.find(e => e.id === this.laserTargetId);
             if (target) {
@@ -1204,7 +1182,7 @@ function showShipsMenu() {
     container.innerHTML = '';
     const items = [
         { id: 1, name: 'Základní Loď', desc: 'Spolehlivý standardní model', cost: 0, icon: '🚀' },
-        { id: 2, name: 'Laserová Loď', desc: 'Automatický paprsek na blízko.', cost: 500, icon: '🩸' },
+        { id: 2, name: 'Laserová Loď', desc: 'Automatický paprsek, léčí, nestřílí', cost: 500, icon: '🩸' },
         { id: 3, name: 'Drtivá Zeď', desc: 'Průrazná vlna bez základní palby.', cost: 500, icon: '🌊' }
     ];
 
@@ -1268,19 +1246,14 @@ function buyMetaUpgrade(item, cost) {
     META.currency -= cost; saveMeta(); showMetaMenu();
 }
 
-// MULTIPLAYER LOGIC NODE.JS
 function initSocket() {
     if (NET.socket && NET.socket.connected) return;
-    
     const SERVER_URL = "https://neo-survivor-server.onrender.com"; 
-    
     try {
         NET.socket = io(SERVER_URL);
         
         NET.socket.on('connect', () => {
             console.warn("CLOUD: Připojeno k hernímu serveru!");
-            
-            // Hned po připojení chceme žebříček a místnosti
             NET.socket.emit('requestLeaderboard');
             window.requestServerList();
         });
@@ -1315,13 +1288,11 @@ function initSocket() {
         NET.socket.on('roomList', (rooms) => {
             const container = document.getElementById('server-list-container');
             if (!container) return;
-            
             container.innerHTML = '';
             if (rooms.length === 0) {
                 container.innerHTML = '<div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">Žádné aktivní servery</div>';
                 return;
             }
-            
             rooms.forEach(room => {
                 const btn = document.createElement('div');
                 btn.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);";
@@ -1345,7 +1316,6 @@ function initSocket() {
             
             if (!GAME.active) {
                 startGame();
-                
                 if (playerState && (playerState.x !== 0 || playerState.y !== 0)) {
                     GAME.entities.player.x = playerState.x;
                     GAME.entities.player.y = playerState.y;
@@ -1358,25 +1328,20 @@ function initSocket() {
 
         NET.socket.on('stateUpdate', (data) => {
             if (!GAME.active) return;
-            
             if (data.roomInfo) {
                 GAME.entities.player.level = data.roomInfo.level;
                 GAME.entities.player.xp = data.roomInfo.xp;
                 GAME.entities.player.nextLevelXp = data.roomInfo.nextLevelXp;
             }
-            
             const currentEnemies = new Map(GAME.entities.enemies.map(e => [e.id, e]));
             GAME.entities.enemies = data.enemies.map(he => {
                 let e = currentEnemies.get(he.id);
                 if (!e) {
                     e = he.isBoss ? new Boss(he.x, he.y, 1, he.id) : new Enemy(he.x, he.y, 1, he.id, he.type);
-                    e.x = he.x; 
-                    e.y = he.y;
+                    e.x = he.x; e.y = he.y;
                 }
-                e.targetX = he.x;
-                e.targetY = he.y;
-                e.hp = he.hp; 
-                e.maxHp = he.maxHp;
+                e.targetX = he.x; e.targetY = he.y;
+                e.hp = he.hp; e.maxHp = he.maxHp;
                 return e;
             });
 
@@ -1385,21 +1350,15 @@ function initSocket() {
                 .filter(hg => !GAME.entities.pickedGems.has(hg.id))
                 .map(hg => {
                     let g = currentGems.get(hg.id);
-                    if (!g) {
-                        g = new Gem(hg.x, hg.y, hg.id);
-                    } else if (!g.attracted && !g.ultraAttracted) {
-                        g.x = hg.x;
-                        g.y = hg.y;
-                    }
+                    if (!g) g = new Gem(hg.x, hg.y, hg.id);
+                    else if (!g.attracted && !g.ultraAttracted) { g.x = hg.x; g.y = hg.y; }
                     return g;
                 });
                 
             if (data.baits) {
                 GAME.entities.baits = data.baits.map(b => {
                     let bait = new Bait(b.x, b.y, b.hp);
-                    bait.id = b.id;
-                    bait.maxHp = b.maxHp;
-                    return bait;
+                    bait.id = b.id; bait.maxHp = b.maxHp; return bait;
                 });
             }
 
@@ -1408,16 +1367,13 @@ function initSocket() {
                 if(pId === myPlayerId) continue;
                 if(data.players[pId].disconnected) continue;
                 
-                if(!NET.others[pId]) {
-                    newOthers[pId] = new Player(false);
-                } else {
-                    newOthers[pId] = NET.others[pId];
-                }
+                if(!NET.others[pId]) newOthers[pId] = new Player(false);
+                else newOthers[pId] = NET.others[pId];
+                
                 newOthers[pId].targetX = data.players[pId].x;
                 newOthers[pId].targetY = data.players[pId].y;
                 newOthers[pId].dead = data.players[pId].dead;
                 newOthers[pId].remoteHat = data.players[pId].hat;
-                
                 newOthers[pId].aura = data.players[pId].aura;
                 newOthers[pId].auraRange = data.players[pId].auraRange;
                 newOthers[pId].orbitals = data.players[pId].orbitals || 0;
@@ -1433,13 +1389,8 @@ function initSocket() {
 
         NET.socket.on('enemyShoot', (data) => {
             const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, { 
-                ownerId: 'remote',
-                speed: data.speed,
-                size: data.size,
-                pierce: data.pierce,
-                bounce: data.bounce,
-                type: data.type,
-                life: data.life
+                ownerId: 'remote', speed: data.speed, size: data.size, pierce: data.pierce,
+                bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life
             });
             GAME.entities.projectiles.push(proj);
         });
@@ -1450,7 +1401,6 @@ function initSocket() {
         
         NET.socket.on('teamLevelUp', (data) => {
             GAME.entities.player.level = data.level; 
-            
             if (GAME.entities.player.level > META.maxLevel) {
                 META.maxLevel = GAME.entities.player.level;
                 saveMeta();
@@ -1458,7 +1408,6 @@ function initSocket() {
                     NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
                 }
             }
-
             AudioEngine.play('lvlup');
             GAME.paused = true;
             showLevelUp();
@@ -1516,14 +1465,8 @@ function syncShot(proj) {
         x: proj.x, y: proj.y, 
         tx: proj.x + Math.cos(angle) * 100, 
         ty: proj.y + Math.sin(angle) * 100, 
-        dmg: proj.damage,
-        speed: speed,
-        size: proj.radius,
-        pierce: proj.pierce,
-        bounce: proj.bounce,
-        isCrit: proj.isCrit,
-        type: proj.type,
-        life: proj.life
+        dmg: proj.damage, speed: speed, size: proj.radius, pierce: proj.pierce,
+        bounce: proj.bounce, isCrit: proj.isCrit, type: proj.type, life: proj.life
     });
 }
 
@@ -1567,7 +1510,6 @@ window.connectToId = (id) => {
     if (input) input.value = id;
 };
 
-// Funkce pro zápis jména
 function savePlayerName(inputId) {
     const nameVal = document.getElementById(inputId).value.trim();
     if (nameVal.length < 3) {
@@ -1578,7 +1520,6 @@ function savePlayerName(inputId) {
     saveMeta();
     
     document.getElementById('display-player-name').innerText = META.playerName;
-    
     if (NET.socket && NET.socket.connected) {
         NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
     }
@@ -1594,14 +1535,11 @@ function init() {
     window.addEventListener('resize', () => { GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight; updateSpeedFactor(); });
     GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight;
     
-    // Load meta prvni
     loadMeta();
     document.getElementById('display-max-level').innerText = META.maxLevel || 0;
     
-    // Spuštění socketu už tady, abychom načetli žebříček
     initSocket();
 
-    // Kontrola jména pro první spuštění
     if (!META.playerName) {
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('name-modal').classList.add('active');
@@ -1615,7 +1553,6 @@ function init() {
     document.getElementById('btn-save-first-name').onclick = () => savePlayerName('input-player-name');
     document.getElementById('btn-save-new-name').onclick = () => savePlayerName('input-change-name');
 
-    // Reset Progress
     document.getElementById('btn-reset-progress').onclick = () => {
         if (confirm("Opravdu chceš smazat všechen svůj postup, Dogecoiny i nakoupené lodě? Toto nelze vzít zpět!")) {
             localStorage.removeItem('neoSurvivor_meta');
@@ -1665,7 +1602,6 @@ function init() {
         NET.serverPollingInterval = setInterval(window.requestServerList, 2000); 
     };
     
-    // Tlačítka Menu (Lodě, Vylepšení, Žebříček, Nastavení)
     const btnShips = document.getElementById('btn-ships-menu');
     if (btnShips) btnShips.onclick = () => {
         showShipsMenu();
@@ -1763,22 +1699,24 @@ function startGame() {
 
 function resetGame() {
     GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0;
-    GAME.entities.player = new Player(true); 
-    GAME.entities.enemies = []; 
-    GAME.entities.projectiles = []; 
-    GAME.entities.gems = []; 
-    GAME.entities.pickedGems = new Set(); 
-    GAME.entities.particles = []; 
-    GAME.entities.fire = [];
-    GAME.entities.baits = [];
     
-    if (!GAME.entities.floatingTexts) {
-        GAME.entities.floatingTexts = [];
-    } else {
-        GAME.entities.floatingTexts.length = 0;
+    // TÍMTO SE NAVŽDY A ABSOLUTNĚ PŘEDCHÁZÍ PÁDŮM:
+    GAME.entities = {
+        player: new Player(true),
+        enemies: [],
+        projectiles: [],
+        gems: [],
+        pickedGems: new Set(),
+        particles: [],
+        fire: [],
+        baits: [],
+        floatingTexts: []
+    };
+    
+    GAME.stars = []; 
+    for (let i = 0; i < 150; i++) {
+        GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     }
-    
-    GAME.stars = []; for (let i = 0; i < 150; i++) GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
     updateSpeedFactor(); updateUI();
 }
 
@@ -1799,10 +1737,10 @@ function loop(time) {
             update(timeStep);
             accumulator -= timeStep;
         }
-        render();
-    } else {
-        if (GAME.active) render();
-    }
+    } 
+    
+    // Vykreslujeme porad, i v menu, aby bezely hvezdy na pozadi a cerna obrazovka se uz nikdy neobjevila
+    render();
     
     requestAnimationFrame(loop); 
 }
@@ -1823,8 +1761,6 @@ function update(dt) {
     for (const id in NET.others) {
         NET.others[id].update(dt);
     }
-    
-    if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
 
     for (let i = GAME.entities.floatingTexts.length - 1; i >= 0; i--) {
         const ft = GAME.entities.floatingTexts[i];
@@ -1921,7 +1857,6 @@ function update(dt) {
                     proj.hitEnemies.add(enemy);
                     
                     if (proj.isCrit) {
-                        if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
                         GAME.entities.floatingTexts.push(new FloatingText(enemy.x, enemy.y - 25, "CRITICAL!", "#ef4444"));
                     }
 
@@ -1985,16 +1920,18 @@ function render() {
         }
     }
     ctx.stroke();
-    GAME.entities.fire.forEach(f => f.draw(ctx, { x: camX, y: camY }));
-    GAME.entities.baits.forEach(b => b.draw(ctx, { x: camX, y: camY }));
-    GAME.entities.gems.forEach(g => g.draw(ctx, { x: camX, y: camY }));
-    GAME.entities.projectiles.forEach(p => p.draw(ctx, { x: camX, y: camY }));
-    GAME.entities.enemies.forEach(e => e.draw(ctx, { x: camX, y: camY }));
-    for (const id in NET.others) NET.others[id].draw(ctx, { x: camX, y: camY });
-    if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
     
-    if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
-    GAME.entities.floatingTexts.forEach(ft => ft.draw(ctx, {x: camX, y: camY}));
+    // Tyto entity se kreslí jen když hra běží
+    if (GAME.active) {
+        GAME.entities.fire.forEach(f => f.draw(ctx, { x: camX, y: camY }));
+        GAME.entities.baits.forEach(b => b.draw(ctx, { x: camX, y: camY }));
+        GAME.entities.gems.forEach(g => g.draw(ctx, { x: camX, y: camY }));
+        GAME.entities.projectiles.forEach(p => p.draw(ctx, { x: camX, y: camY }));
+        GAME.entities.enemies.forEach(e => e.draw(ctx, { x: camX, y: camY }));
+        for (const id in NET.others) NET.others[id].draw(ctx, { x: camX, y: camY });
+        if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
+        GAME.entities.floatingTexts.forEach(ft => ft.draw(ctx, {x: camX, y: camY}));
+    }
     
     ctx.restore();
     
