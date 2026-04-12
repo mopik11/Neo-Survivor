@@ -172,9 +172,9 @@ function updateKaktusUI(isActive, pct) {
     ui.style.display = 'flex';
     bar.style.width = `${pct}%`;
     if (isActive) {
-        bar.style.background = '#22c55e'; // Zelená (aktivní)
+        bar.style.background = '#22c55e'; 
     } else {
-        bar.style.background = '#f59e0b'; // Oranžová (cooldown)
+        bar.style.background = '#f59e0b'; 
     }
 }
 
@@ -669,7 +669,7 @@ class Enemy {
 
         if (this.type === 2 && Date.now() - this.lastShot > this.shotInterval) {
             const pSpeed = CONFIG.ENEMY_BASE_SPEED * 1.2;
-            GAME.entities.projectiles.push(new Projectile(this.x, this.y, target.x, target.y, 10, {
+            if (GAME.entities.projectiles) GAME.entities.projectiles.push(new Projectile(this.x, this.y, target.x, target.y, 10, {
                 isEnemy: true,
                 color: '#ff00ff',
                 speed: pSpeed,
@@ -1041,6 +1041,38 @@ class Player {
     }
 }
 
+function spawnEnemy() {
+    if (NET.isMultiplayer) return; 
+    if (!GAME.active || GAME.paused) { setTimeout(spawnEnemy, 500); return; }
+    const alive = getAllAlivePlayers();
+    if (alive.length === 0) { setTimeout(spawnEnemy, 1000); return; }
+    const a = Math.random() * Math.PI * 2;
+    const pivot = alive[Math.floor(Math.random() * alive.length)];
+    const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
+    const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
+    const mod = Math.floor(GAME.time / 60) + 1;
+
+    let enemy;
+    if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
+        enemy = new Boss(x, y, mod);
+    } else {
+        let type = 1;
+        if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
+        enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
+    }
+
+    if (enemy.isBoss) { showBossWarning(); GAME.lastBossTime = GAME.time; }
+    if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
+    
+    const currentInterval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60));
+    setTimeout(spawnEnemy, currentInterval);
+}
+
+function showBossWarning() {
+    const el = document.getElementById('boss-warning'); if (el) el.style.display = 'block';
+    setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
+}
+
 function updateUI() {
     const p = GAME.entities.player;
     if (!p) return;
@@ -1076,7 +1108,7 @@ function showLevelUp() {
         if (pShip === 1) {
             if (['wall_range', 'wall_width', 'laser_range'].includes(u.id)) return false; 
         } else if (pShip === 2) {
-            if (['wall_range', 'wall_width', 'bounce'].includes(u.id)) return false;
+            if (['wall_range', 'wall_width', 'bounce', 'firerate'].includes(u.id)) return false;
         } else if (pShip === 3) {
             if (['count', 'pierce', 'bounce', 'laser_range'].includes(u.id)) return false;
         }
@@ -1318,6 +1350,11 @@ function initSocket() {
         
         NET.socket.on('connect', () => {
             console.warn("CLOUD: Připojeno k hernímu serveru!");
+            
+            if (META.playerName) {
+                NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
+            }
+            
             NET.socket.emit('requestLeaderboard');
             window.requestServerList();
         });
@@ -1449,7 +1486,7 @@ function initSocket() {
                 newOthers[pId].hasKaktus = data.players[pId].kaktus; 
                 newOthers[pId].kaktus = data.players[pId].kaktus;
                 newOthers[pId].shipType = data.players[pId].shipType;
-                newOthers[pId].laserTargetId = data.players[pId].laserTargetId;
+                newOthers[pId].laserTargetsIds = data.players[pId].laserTargetsIds || [];
             }
             NET.others = newOthers;
             GAME.time = data.time;
@@ -1510,6 +1547,12 @@ window.requestServerList = () => {
 
 function syncPlayer() {
     if (!NET.isMultiplayer || !NET.socket || !GAME.entities.player) return;
+    
+    let safeLaserTargets = [];
+    if (GAME.entities.player.laserTargets) {
+        safeLaserTargets = GAME.entities.player.laserTargets.map(chain => chain.map(e => e ? e.id : null).filter(id => id));
+    }
+
     NET.socket.emit('playerUpdate', {
         x: GAME.entities.player.x, 
         y: GAME.entities.player.y,
@@ -1524,7 +1567,7 @@ function syncPlayer() {
         fireTrail: GAME.entities.player.fireTrail,
         kaktus: GAME.entities.player.hasKaktus,
         shipType: GAME.entities.player.shipType,
-        laserTargetId: GAME.entities.player.laserTargetId
+        laserTargetsIds: safeLaserTargets 
     });
 }
 
@@ -1628,9 +1671,7 @@ function init() {
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('menu-modal').classList.add('active');
         document.getElementById('display-player-name').innerText = META.playerName;
-        if (NET.socket && NET.socket.connected) {
-            NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
-        }
+        
         GAME.loopStarted = true;
         requestAnimationFrame(loop);
     }
@@ -1646,7 +1687,6 @@ function init() {
         }
     };
 
-    // Vytvoříme prázdný stav entit rovnou, abychom zamezili jakémukoli pádu v background smyčce
     GAME.entities = {
         player: new Player(true),
         enemies: [],
@@ -1719,7 +1759,9 @@ function init() {
     const btnLeaderboard = document.getElementById('btn-leaderboard');
     if (btnLeaderboard) btnLeaderboard.onclick = () => {
         if (!NET.socket) initSocket();
-        if (NET.socket && NET.socket.connected) NET.socket.emit('requestLeaderboard');
+        if (NET.socket && NET.socket.connected) {
+            NET.socket.emit('requestLeaderboard');
+        }
         document.getElementById('leaderboard-modal').classList.add('active');
     };
     const btnCloseLB = document.getElementById('btn-close-leaderboard');
@@ -2057,7 +2099,43 @@ function render() {
         if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => { if(e) e.draw(ctx, { x: camX, y: camY }); });
         
         for (const id in NET.others) {
-            if (NET.others[id]) NET.others[id].draw(ctx, { x: camX, y: camY });
+            if (NET.others[id]) {
+                const op = NET.others[id];
+                
+                if (op.shipType === 2 && op.laserTargetsIds && op.laserTargetsIds.length > 0 && GAME.entities.enemies) {
+                    const chainsToDraw = op.laserTargetsIds.map(chainIds => {
+                        return chainIds.map(eid => GAME.entities.enemies.find(e => e && e.id === eid)).filter(e => e);
+                    }).filter(chain => chain.length > 0);
+                    
+                    chainsToDraw.forEach(chain => {
+                        if (!chain || chain.length === 0) return;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.moveTo(op.x - camX, op.y - camY);
+                        chain.forEach(target => {
+                            if (target) ctx.lineTo(target.x - camX, target.y - camY);
+                        });
+                        ctx.strokeStyle = '#ef4444';
+                        ctx.lineWidth = 6 + (op.projSize - 6);
+                        ctx.shadowBlur = 20;
+                        ctx.shadowColor = '#ef4444';
+                        ctx.stroke();
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(op.x - camX, op.y - camY);
+                        chain.forEach(target => {
+                            if (target) ctx.lineTo(target.x - camX, target.y - camY);
+                        });
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 2 + (op.projSize - 6) * 0.3;
+                        ctx.shadowBlur = 0;
+                        ctx.stroke();
+                        ctx.restore();
+                    });
+                }
+                
+                op.draw(ctx, { x: camX, y: camY });
+            }
         }
         
         if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
