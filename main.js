@@ -27,9 +27,9 @@ const CONFIG = {
 
         { id: 'count', name: 'Více Střel', desc: '+1 projektil navíc', icon: '🌀', rarity: 'uncommon' },
         { id: 'pierce', name: 'Průraznost', desc: 'Paprsek/Střela projde více nepřátely', icon: '🏹', rarity: 'uncommon' },
-        { id: 'wall_range', name: 'Dosah Zdi', desc: 'Zvětší dolet a životnost tvé zdi', icon: '🌊', rarity: 'uncommon' }, 
+        { id: 'wall_range', name: 'Dosah Zdi', desc: '+25% dolet a životnost tvé zdi', icon: '🌊', rarity: 'uncommon' }, 
         { id: 'laser_range', name: 'Zaměřovač', desc: '+150 dosah laseru', icon: '🔭', rarity: 'uncommon' },
-        { id: 'wall_width', name: 'Širší Zeď', desc: '+50% šířka zdi', icon: '📏', rarity: 'uncommon' },
+        { id: 'wall_width', name: 'Širší Zeď', desc: '+25% šířka zdi', icon: '📏', rarity: 'uncommon' },
         { id: 'size', name: 'Obří Střely', desc: '+30% velikost projektilu', icon: '🌕', rarity: 'uncommon' },
         { id: 'xpboost', name: 'XP Multiplikátor', desc: '+20% bonus k XP', icon: '📈', rarity: 'uncommon' },
         { id: 'bounce', name: 'Odraz', desc: 'Střely se odráží k dalšímu cíli', icon: '🪃', rarity: 'uncommon' },
@@ -57,8 +57,7 @@ const CONFIG = {
         rare: { chance: 20, color: '#22c55e', name: 'RARE' },
         epic: { chance: 10, color: '#a855f7', name: 'EPIC' },
         legendary: { chance: 5, color: '#eab308', name: 'LEGENDARY' }
-    },
-    SCREEN_SHAKE: 0
+    }
 };
 
 const NET = {
@@ -104,6 +103,7 @@ const GAME = {
     kills: 0,
     time: 0,
     lastBossTime: 0,
+    lastSpawnTime: 0,
     speedFactor: 1.0,
     zoom: 1.0,
     upgradeOptionsCount: 3,
@@ -393,9 +393,9 @@ class Fire {
     }
     update() {
         this.life -= 1 / 60;
-        if (this.isLocal) {
+        if (this.isLocal && GAME.entities && GAME.entities.enemies) {
             GAME.entities.enemies.forEach(e => {
-                if (e.hp > 0 && dist(this.x, this.y, e.x, e.y) < this.radius + e.radius) {
+                if (e && e.hp > 0 && dist(this.x, this.y, e.x, e.y) < this.radius + e.radius) {
                     const dmg = this.damage * (1 / 60);
                     e.hp -= dmg;
                     if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: dmg });
@@ -460,15 +460,16 @@ class Projectile {
                 ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
             } else if (this.type === 'wall') {
                 ctx.lineCap = 'round';
-                ctx.lineWidth = this.radius * 2;
+                ctx.lineWidth = 30; // Šířka kreslené čáry stěny
                 ctx.shadowBlur = 20;
                 
                 ctx.save();
                 ctx.translate(this.x - cam.x, this.y - cam.y);
                 ctx.rotate(Math.atan2(this.vy, this.vx));
                 ctx.beginPath();
-                ctx.moveTo(0, -this.radius * 4); 
-                ctx.lineTo(0, this.radius * 4);
+                // Kreslí čáru odshora dolů rovnající se celkovému radiusu
+                ctx.moveTo(0, -this.radius); 
+                ctx.lineTo(0, this.radius);
                 ctx.stroke();
                 ctx.restore();
             } else {
@@ -757,6 +758,7 @@ class Player {
         this.laserRangeBonus = 0;
         
         this.laserTargets = []; 
+        this.laserTargetsIds = [];
     }
     update(dt) {
         if (this.dead) return;
@@ -948,7 +950,7 @@ class Player {
                 bounce: 0, 
                 isCrit: isCrit,
                 type: 'wall', 
-                life: 15 + (this.wallRangeBonus / 2), 
+                life: 15 * (1 + this.wallRangeBonus), 
                 speed: CONFIG.PROJECTILE_SPEED
             });
             if (GAME.entities.projectiles) GAME.entities.projectiles.push(wall);
@@ -1078,10 +1080,8 @@ class Player {
 }
 
 function spawnEnemy() {
-    if (NET.isMultiplayer) return; 
-    if (!GAME.active || GAME.paused) { setTimeout(spawnEnemy, 500); return; }
     const alive = getAllAlivePlayers();
-    if (alive.length === 0) { setTimeout(spawnEnemy, 1000); return; }
+    if (alive.length === 0) return;
     const a = Math.random() * Math.PI * 2;
     const pivot = alive[Math.floor(Math.random() * alive.length)];
     const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
@@ -1091,17 +1091,15 @@ function spawnEnemy() {
     let enemy;
     if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
         enemy = new Boss(x, y, mod);
+        showBossWarning(); 
+        GAME.lastBossTime = GAME.time;
     } else {
         let type = 1;
         if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
         enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
     }
 
-    if (enemy.isBoss) { showBossWarning(); GAME.lastBossTime = GAME.time; }
     if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
-    
-    const currentInterval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60));
-    setTimeout(spawnEnemy, currentInterval);
 }
 
 function showBossWarning() {
@@ -1207,9 +1205,9 @@ function applyUpgrade(id) {
             case 'xpgen': if (!p.lastXpGen) p.xpGenInterval = 60000; else p.xpGenInterval = Math.max(500, p.xpGenInterval / 2); p.lastXpGen = Date.now(); break;
             case 'ultramagnet': p.ultraMagnet = true; p.ultraMagnetPower += 1; break;
             case 'pierce': p.pierceCount += 1; break;
-            case 'wall_range': p.wallRangeBonus += 15; break; 
+            case 'wall_range': p.wallRangeBonus += 0.25; break; 
             case 'laser_range': p.laserRangeBonus += 150; break;
-            case 'wall_width': p.wallWidthBonus += 0.5; break;
+            case 'wall_width': p.wallWidthBonus += 0.25; break;
             case 'size': p.projSize *= 1.3; break;
             case 'crit_chance': p.critChance += 0.15; break;
             case 'crit_dmg': p.critMultiplier += 1; break;
@@ -1279,6 +1277,19 @@ function togglePause() {
     }
 }
 
+// Opravená funkce softReset, která brání pádům do černé obrazovky při odchodu z pauzy/mrtva
+window.softResetToMenu = () => {
+    GAME.active = false;
+    GAME.paused = false;
+    if (NET.socket) NET.socket.disconnect();
+    NET.isMultiplayer = false;
+    NET.roomId = null;
+    NET.others = {};
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('menu-modal').classList.add('active');
+    resetGame();
+};
+
 let fullscreenAttempted = false;
 function tryFullscreen() {
     if (fullscreenAttempted) return;
@@ -1307,19 +1318,6 @@ function toggleFullscreen(element, force = false) {
     }
 }
 
-// TOTO JE TA CHYBĚJÍCÍ FUNKCE, KTEROU JSEM OMYLEM VYMAZAL A ZPŮSOBOVALA ČERNOU OBRAZOVKU PŘI KLIKNUTÍ NA MENU!
-window.softResetToMenu = () => {
-    GAME.active = false;
-    GAME.paused = false;
-    if (NET.socket) NET.socket.disconnect();
-    NET.isMultiplayer = false;
-    NET.roomId = null;
-    NET.others = {};
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('menu-modal').classList.add('active');
-    resetGame();
-};
-
 function showShipsMenu() {
     const container = document.getElementById('ships-options');
     if(!container) return; 
@@ -1328,8 +1326,8 @@ function showShipsMenu() {
     container.innerHTML = '';
     const items = [
         { id: 1, name: 'Základní Loď', desc: 'Spolehlivý standardní model', cost: 0, icon: '🚀' },
-        { id: 2, name: 'Laserová Loď', desc: 'Automatický paprsek na blízko.', cost: 500, icon: '🩸' },
-        { id: 3, name: 'Drtivá Zeď', desc: 'Průrazná vlna bez základní palby.', cost: 500, icon: '🌊' }
+        { id: 2, name: 'Laserová Loď', desc: 'Automatický paprsek, nestřílí', cost: 500, icon: '🩸' },
+        { id: 3, name: 'Drtivá Zeď', desc: 'Průrazná vlna bez základní palby.', cost: 1000, icon: '🌊' }
     ];
 
     items.forEach(item => {
@@ -1754,7 +1752,7 @@ function init() {
         floatingTexts: []
     };
 
-    // Tlačítko MENU NEREFREŠUJE, ale použije soft reset, aby se hra nebugla
+    // Tlačítko MENU
     document.querySelectorAll('.btn-reload').forEach(btn => {
         btn.onclick = () => window.softResetToMenu();
     });
@@ -1898,13 +1896,11 @@ function startGame() {
     AudioEngine.stopMenuMusic();
     AudioEngine.startMusic();
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    
-    // TADY JE TA OPRAVENÁ FUNKCE, CO PŘEDTÍM CHYBĚLA!
-    spawnEnemy();
 }
 
 function resetGame() {
     GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0;
+    GAME.lastSpawnTime = Date.now();
     
     GAME.entities = {
         player: new Player(true),
@@ -1952,7 +1948,31 @@ function loop(time) {
 function update(dt) {
     if (GAME.paused || !GAME.entities || !GAME.entities.player) return;
     
-    if(!NET.isMultiplayer) GAME.time += 1 / 60; 
+    if(!NET.isMultiplayer) {
+        GAME.time += 1 / 60; 
+        
+        // Zcela nová, bezpečná a neprůstřelná logika rození nepřátel pro SOLO
+        const currentInterval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60));
+        if (Date.now() - GAME.lastSpawnTime > currentInterval) {
+            const a = Math.random() * Math.PI * 2;
+            const x = GAME.entities.player.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
+            const y = GAME.entities.player.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
+            const mod = Math.floor(GAME.time / 60) + 1;
+
+            let enemy;
+            if (GAME.entities.player.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
+                enemy = new Boss(x, y, mod);
+                showBossWarning(); 
+                GAME.lastBossTime = GAME.time;
+            } else {
+                let type = 1;
+                if (GAME.entities.player.level >= 3 && Math.random() < 0.1) type = 2;
+                enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
+            }
+            if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
+            GAME.lastSpawnTime = Date.now();
+        }
+    }
     
     const p = GAME.entities.player; 
     p.update(dt);
@@ -2068,10 +2088,40 @@ function update(dt) {
                 });
             } else {
                 enemies.forEach((enemy) => {
-                    let hitDist = proj.radius + enemy.radius;
-                    if (proj.type === 'wall') hitDist = (proj.radius * 6) + enemy.radius; 
+                    let hitDist = 0;
+                    let d = 0;
+                    
+                    if (proj.type === 'wall') {
+                        // EXTRÉMNĚ PRECIZNÍ VÝPOČET KOLIZE ZDI (ÚSEČKY)
+                        const vMag = Math.hypot(proj.vx, proj.vy) || 1;
+                        const nx = -proj.vy / vMag;
+                        const ny = proj.vx / vMag;
+                        const halfLen = proj.radius; // Vizuální šířka je 2x radius
+                        
+                        const ax = proj.x - nx * halfLen;
+                        const ay = proj.y - ny * halfLen;
+                        const bx = proj.x + nx * halfLen;
+                        const by = proj.y + ny * halfLen;
+                        
+                        const px = enemy.x - ax;
+                        const py = enemy.y - ay;
+                        const dx = bx - ax;
+                        const dy = by - ay;
+                        const l2 = dx*dx + dy*dy;
+                        
+                        let t = 0;
+                        if (l2 > 0) t = Math.max(0, Math.min(1, (px * dx + py * dy) / l2));
+                        
+                        const closeX = ax + t * dx;
+                        const closeY = ay + t * dy;
+                        d = dist(enemy.x, enemy.y, closeX, closeY);
+                        hitDist = enemy.radius + 15; // 15px je polovina tloušťky čáry zdi
+                    } else {
+                        d = dist(proj.x, proj.y, enemy.x, enemy.y);
+                        hitDist = proj.radius + enemy.radius;
+                    }
 
-                    if (!proj.hitEnemies.has(enemy) && dist(proj.x, proj.y, enemy.x, enemy.y) < hitDist) {
+                    if (!proj.hitEnemies.has(enemy) && d < hitDist) {
                         enemy.hp -= proj.damage; 
                         proj.hitEnemies.add(enemy);
                         
@@ -2162,7 +2212,6 @@ function render() {
             if (NET.others[id]) {
                 const op = NET.others[id];
                 
-                // MULTIPLAYER KRESLENÍ LASERU PRO OSTATNÍ HRÁČE (TÍMTO BYLO OPRAVENO ZACYKLENÍ)
                 if (op.shipType === 2 && op.laserTargetsIds && op.laserTargetsIds.length > 0 && GAME.entities.enemies) {
                     const chainsToDraw = op.laserTargetsIds.map(chainIds => {
                         return chainIds.map(eid => GAME.entities.enemies.find(e => e && e.id === eid)).filter(e => e);
