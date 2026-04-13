@@ -1083,34 +1083,6 @@ class Player {
     }
 }
 
-function spawnEnemy() {
-    const alive = getAllAlivePlayers();
-    if (alive.length === 0) return;
-    const a = Math.random() * Math.PI * 2;
-    const pivot = alive[Math.floor(Math.random() * alive.length)];
-    const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
-    const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
-    const mod = Math.floor(GAME.time / 60) + 1;
-
-    let enemy;
-    if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
-        enemy = new Boss(x, y, mod);
-        showBossWarning(); 
-        GAME.lastBossTime = GAME.time;
-    } else {
-        let type = 1;
-        if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
-        enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
-    }
-
-    if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
-}
-
-function showBossWarning() {
-    const el = document.getElementById('boss-warning'); if (el) el.style.display = 'block';
-    setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
-}
-
 function updateUI() {
     const p = GAME.entities.player;
     if (!p) return;
@@ -1309,19 +1281,7 @@ function toggleFullscreen(element, force = false) {
     }
 }
 
-window.softResetToMenu = () => {
-    GAME.active = false;
-    GAME.paused = false;
-    if (NET.socket) NET.socket.disconnect();
-    NET.isMultiplayer = false;
-    NET.roomId = null;
-    NET.others = {};
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('menu-modal').classList.add('active');
-    resetGame();
-};
-
-function showShipsMenu() {
+window.showShipsMenu = () => {
     const container = document.getElementById('ships-options');
     if(!container) return; 
 
@@ -1362,9 +1322,9 @@ function showShipsMenu() {
         };
         container.appendChild(card);
     });
-}
+};
 
-function showMetaMenu() {
+window.showMetaMenu = () => {
     const container = document.getElementById('meta-options');
     document.getElementById('meta-currency').innerText = META.currency;
     container.innerHTML = '';
@@ -1389,7 +1349,19 @@ function showMetaMenu() {
         };
         container.appendChild(card);
     });
-}
+};
+
+window.softResetToMenu = () => {
+    GAME.active = false;
+    GAME.paused = false;
+    if (NET.socket) NET.socket.disconnect();
+    NET.isMultiplayer = false;
+    NET.roomId = null;
+    NET.others = {};
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('menu-modal').classList.add('active');
+    resetGame();
+};
 
 function initSocket() {
     if (NET.socket && NET.socket.connected) return;
@@ -2263,12 +2235,14 @@ function render() {
     ctx.restore();
     
     if (GAME.active && GAME.entities && GAME.entities.player && !GAME.entities.player.dead) {
-        // TADY JSOU TY NOVÉ ŠIPKY K OSTATNÍM HRÁČŮM!
         const cx = GAME.canvas.width / 2;
         const cy = GAME.canvas.height / 2;
-        const margin = 30;
-        const boundX = cx - margin;
-        const boundY = cy - margin;
+        
+        // ZDE BYL OPRAVEN BOUNDING BOX PRO ŠIPKY NA OKRAJI OBRAZOVKY
+        const marginX = 50;
+        const marginY = 100; // Tato hodnota dostatečně oddálí šipky od horní lišty a joysticku
+        const boundX = cx - marginX;
+        const boundY = cy - marginY;
 
         for (const id in NET.others) {
             const op = NET.others[id];
@@ -2276,7 +2250,8 @@ function render() {
                 const screenX = (op.x * GAME.zoom) - GAME.camera.x;
                 const screenY = (op.y * GAME.zoom) - GAME.camera.y;
 
-                if (screenX < 0 || screenX > GAME.canvas.width || screenY < 0 || screenY > GAME.canvas.height) {
+                // Zkontroluje, zda je hráč MIMO zorné pole (včetně horní rezervy pro UI)
+                if (screenX < marginX || screenX > GAME.canvas.width - marginX || screenY < marginY || screenY > GAME.canvas.height - marginY) {
                     const dx = screenX - cx;
                     const dy = screenY - cy;
                     const angle = Math.atan2(dy, dx);
