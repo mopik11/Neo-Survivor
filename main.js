@@ -13,7 +13,7 @@ const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
     ENEMY_BASE_HEALTH: 20,
-    ENEMY_BASE_SPEED: 1.5,
+    ENEMY_BASE_SPEED: 1.5, 
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
     SPAWN_RADIUS: 700,
@@ -60,8 +60,7 @@ const CONFIG = {
         rare: { chance: 20, color: '#22c55e', name: 'RARE' },
         epic: { chance: 10, color: '#a855f7', name: 'EPIC' },
         legendary: { chance: 5, color: '#eab308', name: 'LEGENDARY' }
-    },
-    SCREEN_SHAKE: 0
+    }
 };
 
 const NET = {
@@ -743,6 +742,7 @@ class Player {
         
         this.luckFactor = 1.0 + (isLocal ? (META.upgrades.luck * 0.05) : 0);
         this.orbitals = 0; this.knockbackForce = 6; this.xpMultiplier = 1.0;
+        this.lifestealChance = 0;
         this.aura = false; this.auraRange = 150;
         this.bounces = 0; this.fireTrail = false;
         
@@ -1091,34 +1091,6 @@ class Player {
     }
 }
 
-function spawnEnemy() {
-    const alive = getAllAlivePlayers();
-    if (alive.length === 0) return;
-    const a = Math.random() * Math.PI * 2;
-    const pivot = alive[Math.floor(Math.random() * alive.length)];
-    const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
-    const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
-    const mod = Math.floor(GAME.time / 60) + 1;
-
-    let enemy;
-    if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
-        enemy = new Boss(x, y, mod);
-        showBossWarning(); 
-        GAME.lastBossTime = GAME.time;
-    } else {
-        let type = 1;
-        if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
-        enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
-    }
-
-    if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
-}
-
-function showBossWarning() {
-    const el = document.getElementById('boss-warning'); if (el) el.style.display = 'block';
-    setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
-}
-
 function updateUI() {
     const p = GAME.entities.player;
     if (!p) return;
@@ -1289,40 +1261,6 @@ function togglePause() {
     }
 }
 
-// ZCELA NOVÁ A BEZPEČNÁ LOGIKA PRO NÁVRAT DO MENU
-window.softResetToMenu = () => {
-    GAME.active = false;
-    GAME.paused = false;
-    
-    if (NET.socket) {
-        NET.socket.disconnect();
-        NET.socket = null; // Toto zajistí, že se nevytvoří duplicitní spojení!
-    }
-    
-    if (NET.serverPollingInterval) {
-        clearInterval(NET.serverPollingInterval);
-        NET.serverPollingInterval = null;
-    }
-
-    NET.isMultiplayer = false;
-    NET.roomId = null;
-    NET.others = {};
-    
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('menu-modal').classList.add('active');
-    
-    resetGame();
-    AudioEngine.startMenuMusic();
-};
-
-// GLOBALNÍ POSLUCHAČ PRO VŠECHNA TLAČÍTKA "MENU" a "UKONČIT DO MENU" (třída .btn-reload)
-document.addEventListener('click', (e) => {
-    if (e.target.closest('.btn-reload')) {
-        e.preventDefault();
-        window.softResetToMenu();
-    }
-});
-
 let fullscreenAttempted = false;
 function tryFullscreen() {
     if (fullscreenAttempted) return;
@@ -1350,6 +1288,38 @@ function toggleFullscreen(element, force = false) {
         else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
     }
 }
+
+window.softResetToMenu = () => {
+    GAME.active = false;
+    GAME.paused = false;
+    
+    if (NET.socket) {
+        NET.socket.disconnect();
+        NET.socket = null; 
+    }
+    
+    if (NET.serverPollingInterval) {
+        clearInterval(NET.serverPollingInterval);
+        NET.serverPollingInterval = null;
+    }
+
+    NET.isMultiplayer = false;
+    NET.roomId = null;
+    NET.others = {};
+    
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('menu-modal').classList.add('active');
+    
+    resetGame();
+    AudioEngine.startMenuMusic();
+};
+
+document.addEventListener('click', (e) => {
+    if (e.target.closest('.btn-reload')) {
+        e.preventDefault();
+        window.softResetToMenu();
+    }
+});
 
 function showShipsMenu() {
     const container = document.getElementById('ships-options');
@@ -1592,7 +1562,10 @@ function initSocket() {
             GAME.entities.player.level = data.level; 
             if (GAME.entities.player.level > META.maxLevel) {
                 META.maxLevel = GAME.entities.player.level;
-                saveMeta();
+                saveMetaLocalOnly();
+                if (NET.socket && NET.socket.connected && META.playerName) {
+                    NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
+                }
             }
             AudioEngine.play('lvlup');
             GAME.paused = true;
@@ -2108,6 +2081,10 @@ function update(dt) {
                                     overlay.style.opacity = '1';
                                     setTimeout(() => overlay.style.opacity = '0', 100);
                                 }
+                                // LIFESTEAL ZDE
+                                if (p.lifestealChance > 0 && Math.random() < p.lifestealChance) {
+                                    p.hp = Math.min(p.maxHp, p.hp + 1);
+                                }
                             }
                         }
                     }
@@ -2226,6 +2203,9 @@ function update(dt) {
                             AudioEngine.play('hit'); 
                             if (!NET.isMultiplayer && GAME.entities.gems) GAME.entities.gems.push(new Gem(enemy.x, enemy.y)); 
                             GAME.kills++; 
+                            if (p.lifestealChance > 0 && Math.random() < p.lifestealChance) {
+                                p.hp = Math.min(p.maxHp, p.hp + 1);
+                            }
                             updateUI(); 
                         }
                     }
