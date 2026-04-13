@@ -142,7 +142,7 @@ const GAME = {
 const updateSpeedFactor = () => {
     const baseWidth = 1200;
     const isMobile = window.innerWidth < 850;
-    GAME.speedFactor = Math.max(0.4, Math.min(1.2, window.innerWidth / baseWidth));
+    GAME.speedFactor = Math.max(1.2, 1.2);
     GAME.zoom = isMobile ? 0.7 : 1.0;
     GAME.joystick.startX = 80;
     GAME.joystick.startY = window.innerHeight - 80;
