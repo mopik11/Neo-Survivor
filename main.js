@@ -16,6 +16,9 @@ const CONFIG = {
     ENEMY_BASE_SPEED: 2.5,
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
+    SPAWN_RADIUS: 700,     // TOTO ZPŮSOBOVALO TY PAŘEZY V LEVÉM HORNÍM ROHU!
+    GEM_VALUES: 10,
+    XP_PER_LEVEL: 100,     // A TOTO ROZBÍJELO LEVELOVÁNÍ
     BOSS_INTERVAL: 60,
     SNIPER_COOLDOWN: 15000,
     UPGRADES: [
@@ -57,7 +60,8 @@ const CONFIG = {
         rare: { chance: 20, color: '#22c55e', name: 'RARE' },
         epic: { chance: 10, color: '#a855f7', name: 'EPIC' },
         legendary: { chance: 5, color: '#eab308', name: 'LEGENDARY' }
-    }
+    },
+    SCREEN_SHAKE: 0
 };
 
 const NET = {
@@ -460,14 +464,13 @@ class Projectile {
                 ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
             } else if (this.type === 'wall') {
                 ctx.lineCap = 'round';
-                ctx.lineWidth = 30; // Šířka kreslené čáry stěny
+                ctx.lineWidth = 16; 
                 ctx.shadowBlur = 20;
                 
                 ctx.save();
                 ctx.translate(this.x - cam.x, this.y - cam.y);
                 ctx.rotate(Math.atan2(this.vy, this.vx));
                 ctx.beginPath();
-                // Kreslí čáru odshora dolů rovnající se celkovému radiusu
                 ctx.moveTo(0, -this.radius); 
                 ctx.lineTo(0, this.radius);
                 ctx.stroke();
@@ -944,8 +947,10 @@ class Player {
             const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
             const widthMult = 4 * (1 + this.wallWidthBonus);
             
+            const wallRadius = this.projSize * 8 * (1 + this.wallWidthBonus);
+            
             const wall = new Projectile(this.x, this.y, target.x, target.y, finalDamage, {
-                size: this.projSize * widthMult, 
+                size: wallRadius, 
                 pierce: Infinity, 
                 bounce: 0, 
                 isCrit: isCrit,
@@ -1077,34 +1082,6 @@ class Player {
         GAME.paused = true;
         showLevelUp();
     }
-}
-
-function spawnEnemy() {
-    const alive = getAllAlivePlayers();
-    if (alive.length === 0) return;
-    const a = Math.random() * Math.PI * 2;
-    const pivot = alive[Math.floor(Math.random() * alive.length)];
-    const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
-    const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
-    const mod = Math.floor(GAME.time / 60) + 1;
-
-    let enemy;
-    if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
-        enemy = new Boss(x, y, mod);
-        showBossWarning(); 
-        GAME.lastBossTime = GAME.time;
-    } else {
-        let type = 1;
-        if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
-        enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
-    }
-
-    if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
-}
-
-function showBossWarning() {
-    const el = document.getElementById('boss-warning'); if (el) el.style.display = 'block';
-    setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
 }
 
 function updateUI() {
@@ -1277,19 +1254,6 @@ function togglePause() {
     }
 }
 
-// Opravená funkce softReset, která brání pádům do černé obrazovky při odchodu z pauzy/mrtva
-window.softResetToMenu = () => {
-    GAME.active = false;
-    GAME.paused = false;
-    if (NET.socket) NET.socket.disconnect();
-    NET.isMultiplayer = false;
-    NET.roomId = null;
-    NET.others = {};
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('menu-modal').classList.add('active');
-    resetGame();
-};
-
 let fullscreenAttempted = false;
 function tryFullscreen() {
     if (fullscreenAttempted) return;
@@ -1318,7 +1282,7 @@ function toggleFullscreen(element, force = false) {
     }
 }
 
-function showShipsMenu() {
+window.showShipsMenu = () => {
     const container = document.getElementById('ships-options');
     if(!container) return; 
 
@@ -1346,22 +1310,22 @@ function showShipsMenu() {
             if (owned) {
                 META.selectedShip = item.id;
                 saveMeta();
-                showShipsMenu();
+                window.showShipsMenu();
             } else if (META.currency >= item.cost) {
                 META.currency -= item.cost;
                 META.ships[item.id] = true;
                 META.selectedShip = item.id;
                 saveMeta();
-                showShipsMenu();
+                window.showShipsMenu();
             } else {
                 alert("Nemáš dost Dogecoinu!");
             }
         };
         container.appendChild(card);
     });
-}
+};
 
-function showMetaMenu() {
+window.showMetaMenu = () => {
     const container = document.getElementById('meta-options');
     document.getElementById('meta-currency').innerText = META.currency;
     container.innerHTML = '';
@@ -1378,17 +1342,27 @@ function showMetaMenu() {
         const cost = item.isHat ? item.cost : Math.floor(item.cost * (1 + item.val * 0.5));
         const owned = item.isHat && META.upgrades.hat === item.type;
         card.innerHTML = `<h3>${item.name}</h3><p>${item.desc}</p><span class="cost">${owned ? 'VLASTNĚNO' : cost + ' DOGE'}</span>`;
-        card.onclick = () => buyMetaUpgrade(item, cost);
+        card.onclick = () => {
+            if (META.currency < cost) { alert("Nemáš dost Dogecoinu!"); return; }
+            if (item.isHat) { META.upgrades.hat = item.type; }
+            else { META.upgrades[item.id]++; }
+            META.currency -= cost; saveMeta(); window.showMetaMenu();
+        };
         container.appendChild(card);
     });
-}
+};
 
-function buyMetaUpgrade(item, cost) {
-    if (META.currency < cost) { alert("Nemáš dost Dogecoinu!"); return; }
-    if (item.isHat) { META.upgrades.hat = item.type; }
-    else { META.upgrades[item.id]++; }
-    META.currency -= cost; saveMeta(); showMetaMenu();
-}
+window.softResetToMenu = () => {
+    GAME.active = false;
+    GAME.paused = false;
+    if (NET.socket) NET.socket.disconnect();
+    NET.isMultiplayer = false;
+    NET.roomId = null;
+    NET.others = {};
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('menu-modal').classList.add('active');
+    resetGame();
+};
 
 function initSocket() {
     if (NET.socket && NET.socket.connected) return;
@@ -1450,7 +1424,7 @@ function initSocket() {
                         <strong style="color: #a5b4fc; font-size: 1.1rem; letter-spacing: 2px;">${room.id}</strong>
                         <div style="font-size: 0.75rem; color: gray; margin-top: 4px;">LVL ${room.level} | Hráči: ${room.players}</div>
                     </div>
-                    <button class="btn-restart" style="padding: 8px 15px; font-size: 0.8rem; background: #10b981; margin: 0;" onclick="joinCloudServer('${room.id}')">HRÁT</button>
+                    <button class="btn-restart" style="padding: 8px 15px; font-size: 0.8rem; background: #10b981; margin: 0;" onclick="window.joinCloudServer('${room.id}')">HRÁT</button>
                 `;
                 container.appendChild(btn);
             });
@@ -1592,7 +1566,7 @@ window.requestServerList = () => {
     if (NET.socket && NET.socket.connected) {
         NET.socket.emit('requestRooms');
     }
-}
+};
 
 function syncPlayer() {
     if (!NET.isMultiplayer || !NET.socket || !GAME.entities.player) return;
@@ -1655,7 +1629,7 @@ window.showHostModal = () => {
     document.getElementById('btn-start-hosted').onclick = () => {
         document.getElementById('host-modal').classList.remove('active');
         tryFullscreen();
-        joinCloudServer(roomName);
+        window.joinCloudServer(roomName);
     };
 };
 
@@ -1739,7 +1713,6 @@ function init() {
         }
     };
 
-    // Vytvoříme prázdný stav entit rovnou, abychom zamezili jakémukoli pádu v background smyčce
     GAME.entities = {
         player: new Player(true),
         enemies: [],
@@ -1752,7 +1725,6 @@ function init() {
         floatingTexts: []
     };
 
-    // Tlačítko MENU
     document.querySelectorAll('.btn-reload').forEach(btn => {
         btn.onclick = () => window.softResetToMenu();
     });
@@ -1803,14 +1775,14 @@ function init() {
     
     const btnShips = document.getElementById('btn-ships-menu');
     if (btnShips) btnShips.onclick = () => {
-        showShipsMenu();
+        window.showShipsMenu();
         document.getElementById('ships-modal').classList.add('active');
     };
     const btnCloseShips = document.getElementById('btn-close-ships');
     if (btnCloseShips) btnCloseShips.onclick = () => document.getElementById('ships-modal').classList.remove('active');
 
     const btnMeta = document.getElementById('btn-meta-menu');
-    if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+    if (btnMeta) btnMeta.onclick = () => { window.showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
     const btnCloseMeta = document.getElementById('btn-close-meta');
     if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
 
@@ -1951,7 +1923,6 @@ function update(dt) {
     if(!NET.isMultiplayer) {
         GAME.time += 1 / 60; 
         
-        // Zcela nová, bezpečná a neprůstřelná logika rození nepřátel pro SOLO
         const currentInterval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60));
         if (Date.now() - GAME.lastSpawnTime > currentInterval) {
             const a = Math.random() * Math.PI * 2;
@@ -2092,11 +2063,10 @@ function update(dt) {
                     let d = 0;
                     
                     if (proj.type === 'wall') {
-                        // EXTRÉMNĚ PRECIZNÍ VÝPOČET KOLIZE ZDI (ÚSEČKY)
                         const vMag = Math.hypot(proj.vx, proj.vy) || 1;
                         const nx = -proj.vy / vMag;
                         const ny = proj.vx / vMag;
-                        const halfLen = proj.radius; // Vizuální šířka je 2x radius
+                        const halfLen = proj.radius;
                         
                         const ax = proj.x - nx * halfLen;
                         const ay = proj.y - ny * halfLen;
@@ -2115,7 +2085,7 @@ function update(dt) {
                         const closeX = ax + t * dx;
                         const closeY = ay + t * dy;
                         d = dist(enemy.x, enemy.y, closeX, closeY);
-                        hitDist = enemy.radius + 15; // 15px je polovina tloušťky čáry zdi
+                        hitDist = enemy.radius + 8;
                     } else {
                         d = dist(proj.x, proj.y, enemy.x, enemy.y);
                         hitDist = proj.radius + enemy.radius;
