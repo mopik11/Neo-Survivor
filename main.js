@@ -13,7 +13,7 @@ const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
     ENEMY_BASE_HEALTH: 20,
-    ENEMY_BASE_SPEED: 4.5, 
+    ENEMY_BASE_SPEED: 4.5, // ZRYCHLENO NA PC ÚROVEŇ (4.5)
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
     SPAWN_RADIUS: 700,
@@ -1051,7 +1051,7 @@ class Player {
                     ctx.beginPath();
                     ctx.moveTo(this.x - cam.x, this.y - cam.y);
                     chain.forEach(target => {
-                        if (target) ctx.lineTo(target.x - cam.x, target.y - cam.y);
+                        if (target) ctx.lineTo(target.x - camX, target.y - cam.y);
                     });
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 2 + (this.projSize - 6) * 0.3;
@@ -1089,6 +1089,34 @@ class Player {
         GAME.paused = true;
         showLevelUp();
     }
+}
+
+function spawnEnemy() {
+    const alive = getAllAlivePlayers();
+    if (alive.length === 0) return;
+    const a = Math.random() * Math.PI * 2;
+    const pivot = alive[Math.floor(Math.random() * alive.length)];
+    const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
+    const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
+    const mod = Math.floor(GAME.time / 60) + 1;
+
+    let enemy;
+    if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
+        enemy = new Boss(x, y, mod);
+        showBossWarning(); 
+        GAME.lastBossTime = GAME.time;
+    } else {
+        let type = 1;
+        if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
+        enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
+    }
+
+    if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
+}
+
+function showBossWarning() {
+    const el = document.getElementById('boss-warning'); if (el) el.style.display = 'block';
+    setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
 }
 
 function updateUI() {
@@ -1261,6 +1289,40 @@ function togglePause() {
     }
 }
 
+// ZCELA NOVÁ A BEZPEČNÁ LOGIKA PRO NÁVRAT DO MENU
+window.softResetToMenu = () => {
+    GAME.active = false;
+    GAME.paused = false;
+    
+    if (NET.socket) {
+        NET.socket.disconnect();
+        NET.socket = null; // Toto zajistí, že se nevytvoří duplicitní spojení!
+    }
+    
+    if (NET.serverPollingInterval) {
+        clearInterval(NET.serverPollingInterval);
+        NET.serverPollingInterval = null;
+    }
+
+    NET.isMultiplayer = false;
+    NET.roomId = null;
+    NET.others = {};
+    
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('menu-modal').classList.add('active');
+    
+    resetGame();
+    AudioEngine.startMenuMusic();
+};
+
+// GLOBALNÍ POSLUCHAČ PRO VŠECHNA TLAČÍTKA "MENU" a "UKONČIT DO MENU" (třída .btn-reload)
+document.addEventListener('click', (e) => {
+    if (e.target.closest('.btn-reload')) {
+        e.preventDefault();
+        window.softResetToMenu();
+    }
+});
+
 let fullscreenAttempted = false;
 function tryFullscreen() {
     if (fullscreenAttempted) return;
@@ -1368,12 +1430,13 @@ function initSocket() {
         NET.socket.on('connect', () => {
             console.warn("CLOUD: Připojeno k hernímu serveru!");
             
-            if (META.playerName) {
-                NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
+            const savedUser = localStorage.getItem('neoSurvivor_user');
+            if (savedUser) {
+                NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel });
             }
             
             NET.socket.emit('requestLeaderboard');
-            window.requestServerList();
+            if (NET.serverPollingInterval) window.requestServerList();
         });
         
         NET.socket.on('leaderboardData', (data) => {
@@ -1430,7 +1493,7 @@ function initSocket() {
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-            clearInterval(NET.serverPollingInterval);
+            if (NET.serverPollingInterval) clearInterval(NET.serverPollingInterval);
             
             if (!GAME.active) {
                 startGame();
@@ -1529,10 +1592,7 @@ function initSocket() {
             GAME.entities.player.level = data.level; 
             if (GAME.entities.player.level > META.maxLevel) {
                 META.maxLevel = GAME.entities.player.level;
-                saveMetaLocalOnly();
-                if (NET.socket && NET.socket.connected && META.playerName) {
-                    NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
-                }
+                saveMeta();
             }
             AudioEngine.play('lvlup');
             GAME.paused = true;
@@ -1571,6 +1631,8 @@ function syncPlayer() {
         safeLaserTargets = GAME.entities.player.laserTargets.map(chain => chain.map(e => e ? e.id : null).filter(id => id));
     }
 
+    const savedUser = localStorage.getItem('neoSurvivor_user') || "Hráč";
+
     NET.socket.emit('playerUpdate', {
         x: GAME.entities.player.x, 
         y: GAME.entities.player.y,
@@ -1586,7 +1648,7 @@ function syncPlayer() {
         kaktus: GAME.entities.player.hasKaktus,
         shipType: GAME.entities.player.shipType,
         laserTargetsIds: safeLaserTargets,
-        name: META.playerName 
+        name: savedUser 
     });
 }
 
@@ -1769,10 +1831,6 @@ function init() {
         floatingTexts: []
     };
 
-    document.querySelectorAll('.btn-reload').forEach(btn => {
-        btn.onclick = () => window.softResetToMenu();
-    });
-
     window.addEventListener('keydown', (e) => { GAME.input[e.key.toLowerCase()] = true; if (e.key === 'Escape') togglePause(); });
     window.addEventListener('keyup', (e) => { GAME.input[e.key.toLowerCase()] = false; });
 
@@ -1817,7 +1875,6 @@ function init() {
         NET.serverPollingInterval = setInterval(window.requestServerList, 2000); 
     };
     
-    // OPRAVENA TLAČÍTKA NA VÝBĚR LODÍ A VYLEPŠENÍ
     const btnShips = document.getElementById('btn-ships-menu');
     if (btnShips) btnShips.onclick = () => {
         showShipsMenu();
@@ -1851,7 +1908,7 @@ function init() {
 
     const btnCloseMP = document.getElementById('btn-close-mp');
     if (btnCloseMP) btnCloseMP.onclick = () => {
-        clearInterval(NET.serverPollingInterval);
+        if (NET.serverPollingInterval) clearInterval(NET.serverPollingInterval);
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('menu-modal').classList.add('active');
     };
