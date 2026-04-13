@@ -13,7 +13,7 @@ const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
     ENEMY_BASE_HEALTH: 20,
-    ENEMY_BASE_SPEED: 2.5,
+    ENEMY_BASE_SPEED: 4.5, // ZRYCHLENO NA PC ÚROVEŇ (4.5)
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
     SPAWN_RADIUS: 700,
@@ -1651,7 +1651,11 @@ window.joinCloudServer = (roomName) => {
     NET.socket.emit('joinRoom', { roomId: roomName.trim().toUpperCase(), playerId: myPlayerId });
 };
 
-// Správa přihlášení a registrace přes server
+window.connectToId = (id) => {
+    const input = document.getElementById('input-join-id');
+    if (input) input.value = id;
+};
+
 function handleAuth(isLogin) {
     const nameVal = document.getElementById('input-login-name').value.trim();
     const passVal = document.getElementById('input-login-pass').value.trim();
@@ -1691,7 +1695,6 @@ function handleAuth(isLogin) {
             }
         });
     } else {
-        // Offline záloha
         META.playerName = nameVal;
         localStorage.setItem('neoSurvivor_user', nameVal);
         localStorage.setItem('neoSurvivor_pass', passVal);

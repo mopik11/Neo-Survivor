@@ -48,6 +48,7 @@ canvas {
   z-index: 0;
 }
 
+/* UI Layer (Stats, etc.) */
 #ui-layer {
   position: absolute;
   top: 0;
@@ -133,6 +134,7 @@ canvas {
   transition: width 0.3s ease;
 }
 
+/* Hit Overlay */
 #hit-overlay {
   position: absolute;
   top: 0;
@@ -162,6 +164,7 @@ canvas {
   width: 100%;
 }
 
+/* Modals */
 .modal {
   position: absolute;
   top: 0;
@@ -316,6 +319,7 @@ canvas {
     text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
 }
 
+/* Upgrade Cards */
 .upgrade-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -357,6 +361,7 @@ canvas {
     margin-bottom: 1rem;
 }
 
+/* Tabulka statistik */
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -384,6 +389,7 @@ canvas {
     font-weight: bold;
 }
 
+/* Leaderboard */
 .lb-row {
     display: flex; 
     justify-content: space-between; 
@@ -398,6 +404,7 @@ canvas {
 .lb-row.bronze { border-color: #b45309; color: #d97706; background: rgba(180, 83, 9, 0.1);}
 
 
+/* Loading animace */
 .loader {
     border: 4px solid rgba(255, 255, 255, 0.1);
     border-top: 4px solid var(--accent-color);
@@ -413,6 +420,7 @@ canvas {
     100% { transform: rotate(360deg); } 
 }
 
+/* Misc */
 .scanlines {
   position: absolute;
   top: 0;
