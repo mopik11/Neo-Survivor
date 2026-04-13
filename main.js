@@ -13,7 +13,7 @@ const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
     ENEMY_BASE_HEALTH: 20,
-    ENEMY_BASE_SPEED: 2.5,
+    ENEMY_BASE_SPEED: 4.5,
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
     SPAWN_RADIUS: 700,
@@ -141,13 +141,8 @@ const GAME = {
 
 const updateSpeedFactor = () => {
     const isMobile = window.innerWidth < 850;
-    
-    // Fyzika a pohyb je nyní absolutně stejný (rychlý) pro PC i mobil
     GAME.speedFactor = 1.0; 
-    
-    // Mobilní hráči dostanou mírné oddálení kamery, aby se v té rychlosti vyznali
     GAME.zoom = isMobile ? 0.6 : 1.0; 
-    
     GAME.joystick.startX = 80;
     GAME.joystick.startY = window.innerHeight - 80;
     if (!GAME.joystick.active) {
@@ -1088,6 +1083,34 @@ class Player {
     }
 }
 
+function spawnEnemy() {
+    const alive = getAllAlivePlayers();
+    if (alive.length === 0) return;
+    const a = Math.random() * Math.PI * 2;
+    const pivot = alive[Math.floor(Math.random() * alive.length)];
+    const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
+    const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
+    const mod = Math.floor(GAME.time / 60) + 1;
+
+    let enemy;
+    if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
+        enemy = new Boss(x, y, mod);
+        showBossWarning(); 
+        GAME.lastBossTime = GAME.time;
+    } else {
+        let type = 1;
+        if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
+        enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
+    }
+
+    if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
+}
+
+function showBossWarning() {
+    const el = document.getElementById('boss-warning'); if (el) el.style.display = 'block';
+    setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
+}
+
 function updateUI() {
     const p = GAME.entities.player;
     if (!p) return;
@@ -1326,13 +1349,13 @@ function showShipsMenu() {
             if (owned) {
                 META.selectedShip = item.id;
                 saveMeta();
-                showShipsMenu();
+                window.showShipsMenu();
             } else if (META.currency >= item.cost) {
                 META.currency -= item.cost;
                 META.ships[item.id] = true;
                 META.selectedShip = item.id;
                 saveMeta();
-                showShipsMenu();
+                window.showShipsMenu();
             } else {
                 alert("Nemáš dost Dogecoinu!");
             }
@@ -1358,16 +1381,14 @@ function showMetaMenu() {
         const cost = item.isHat ? item.cost : Math.floor(item.cost * (1 + item.val * 0.5));
         const owned = item.isHat && META.upgrades.hat === item.type;
         card.innerHTML = `<h3>${item.name}</h3><p>${item.desc}</p><span class="cost">${owned ? 'VLASTNĚNO' : cost + ' DOGE'}</span>`;
-        card.onclick = () => buyMetaUpgrade(item, cost);
+        card.onclick = () => {
+            if (META.currency < cost) { alert("Nemáš dost Dogecoinu!"); return; }
+            if (item.isHat) { META.upgrades.hat = item.type; }
+            else { META.upgrades[item.id]++; }
+            META.currency -= cost; saveMeta(); window.showMetaMenu();
+        };
         container.appendChild(card);
     });
-}
-
-function buyMetaUpgrade(item, cost) {
-    if (META.currency < cost) { alert("Nemáš dost Dogecoinu!"); return; }
-    if (item.isHat) { META.upgrades.hat = item.type; }
-    else { META.upgrades[item.id]++; }
-    META.currency -= cost; saveMeta(); showMetaMenu();
 }
 
 function initSocket() {
@@ -1430,7 +1451,7 @@ function initSocket() {
                         <strong style="color: #a5b4fc; font-size: 1.1rem; letter-spacing: 2px;">${room.id}</strong>
                         <div style="font-size: 0.75rem; color: gray; margin-top: 4px;">LVL ${room.level} | Hráči: ${room.players}</div>
                     </div>
-                    <button class="btn-restart" style="padding: 8px 15px; font-size: 0.8rem; background: #10b981; margin: 0;" onclick="joinCloudServer('${room.id}')">HRÁT</button>
+                    <button class="btn-restart" style="padding: 8px 15px; font-size: 0.8rem; background: #10b981; margin: 0;" onclick="window.joinCloudServer('${room.id}')">HRÁT</button>
                 `;
                 container.appendChild(btn);
             });
@@ -1572,7 +1593,7 @@ window.requestServerList = () => {
     if (NET.socket && NET.socket.connected) {
         NET.socket.emit('requestRooms');
     }
-}
+};
 
 function syncPlayer() {
     if (!NET.isMultiplayer || !NET.socket || !GAME.entities.player) return;
@@ -1635,7 +1656,7 @@ window.showHostModal = () => {
     document.getElementById('btn-start-hosted').onclick = () => {
         document.getElementById('host-modal').classList.remove('active');
         tryFullscreen();
-        joinCloudServer(roomName);
+        window.joinCloudServer(roomName);
     };
 };
 
@@ -1875,7 +1896,6 @@ function startGame() {
     AudioEngine.startMusic();
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     
-    // Spustime smyčku zrození pro SOLO
     if (!NET.isMultiplayer) {
         GAME.lastSpawnTime = Date.now();
     }
@@ -1934,7 +1954,6 @@ function update(dt) {
     if(!NET.isMultiplayer) {
         GAME.time += 1 / 60; 
         
-        // Pevně a bezpečně zabudované spawnování do hlavní smyčky!
         const currentInterval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60));
         if (Date.now() - GAME.lastSpawnTime > currentInterval) {
             const alive = getAllAlivePlayers();
@@ -1946,13 +1965,13 @@ function update(dt) {
                 const mod = Math.floor(GAME.time / 60) + 1;
 
                 let enemy;
-                if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
+                if (GAME.entities.player.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
                     enemy = new Boss(x, y, mod);
                     showBossWarning(); 
                     GAME.lastBossTime = GAME.time;
                 } else {
                     let type = 1;
-                    if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
+                    if (GAME.entities.player.level >= 3 && Math.random() < 0.1) type = 2;
                     enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
                 }
                 if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
@@ -2101,7 +2120,7 @@ function update(dt) {
                         const closeX = ax + t * dx;
                         const closeY = ay + t * dy;
                         d = dist(enemy.x, enemy.y, closeX, closeY);
-                        hitDist = enemy.radius + 8; // Opravený hitbox, těsně u zdi!
+                        hitDist = enemy.radius + 8;
                     } else {
                         d = dist(proj.x, proj.y, enemy.x, enemy.y);
                         hitDist = proj.radius + enemy.radius;
@@ -2244,6 +2263,64 @@ function render() {
     ctx.restore();
     
     if (GAME.active && GAME.entities && GAME.entities.player && !GAME.entities.player.dead) {
+        // TADY JSOU TY NOVÉ ŠIPKY K OSTATNÍM HRÁČŮM!
+        const cx = GAME.canvas.width / 2;
+        const cy = GAME.canvas.height / 2;
+        const margin = 30;
+        const boundX = cx - margin;
+        const boundY = cy - margin;
+
+        for (const id in NET.others) {
+            const op = NET.others[id];
+            if (op && !op.dead) {
+                const screenX = (op.x * GAME.zoom) - GAME.camera.x;
+                const screenY = (op.y * GAME.zoom) - GAME.camera.y;
+
+                if (screenX < 0 || screenX > GAME.canvas.width || screenY < 0 || screenY > GAME.canvas.height) {
+                    const dx = screenX - cx;
+                    const dy = screenY - cy;
+                    const angle = Math.atan2(dy, dx);
+                    const tanTheta = Math.tan(angle);
+
+                    let edgeX, edgeY;
+                    if (Math.abs(tanTheta) < boundY / boundX) {
+                        edgeX = cx + (dx > 0 ? boundX : -boundX);
+                        edgeY = cy + (dx > 0 ? boundX : -boundX) * tanTheta;
+                    } else {
+                        edgeY = cy + (dy > 0 ? boundY : -boundY);
+                        edgeX = cx + (dy > 0 ? boundY : -boundY) / tanTheta;
+                    }
+
+                    ctx.save();
+                    ctx.translate(edgeX, edgeY);
+                    
+                    ctx.save();
+                    ctx.rotate(angle);
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#3b82f6';
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.beginPath();
+                    ctx.moveTo(12, 0);
+                    ctx.lineTo(-8, 8);
+                    ctx.lineTo(-4, 0);
+                    ctx.lineTo(-8, -8);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                    
+                    if (op.remoteName) {
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                        ctx.font = 'bold 10px Outfit, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(op.remoteName, -Math.cos(angle) * 25, -Math.sin(angle) * 25);
+                    }
+                    
+                    ctx.restore();
+                }
+            }
+        }
+
         const mapSize = 150;
         const padding = 20;
         const startX = GAME.canvas.width - mapSize - padding;
@@ -2258,12 +2335,12 @@ function render() {
 
         const viewDist = 4000;
         const scale = mapSize / viewDist;
-        const cx = GAME.entities.player.x;
-        const cy = GAME.entities.player.y;
+        const pCx = GAME.entities.player.x;
+        const pCy = GAME.entities.player.y;
 
         const drawDot = (x, y, color, size) => {
-            const relX = (x - cx) * scale + mapSize / 2;
-            const relY = (y - cy) * scale + mapSize / 2;
+            const relX = (x - pCx) * scale + mapSize / 2;
+            const relY = (y - pCy) * scale + mapSize / 2;
             if (relX >= 0 && relX <= mapSize && relY >= 0 && relY <= mapSize) {
                 ctx.fillStyle = color;
                 ctx.beginPath();
@@ -2278,7 +2355,7 @@ function render() {
             const op = NET.others[id];
             if (op && !op.dead) drawDot(op.x, op.y, '#3b82f6', 3);
         }
-        drawDot(cx, cy, '#10b981', 3);
+        drawDot(pCx, pCy, '#10b981', 3);
 
         ctx.restore();
     }
