@@ -13,7 +13,7 @@ const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
     ENEMY_BASE_HEALTH: 20,
-    ENEMY_BASE_SPEED: 2.5,
+    ENEMY_BASE_SPEED: 4.5, // ZRYCHLENO NA PC ÚROVEŇ (4.5)
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
     SPAWN_RADIUS: 700,
@@ -60,7 +60,8 @@ const CONFIG = {
         rare: { chance: 20, color: '#22c55e', name: 'RARE' },
         epic: { chance: 10, color: '#a855f7', name: 'EPIC' },
         legendary: { chance: 5, color: '#eab308', name: 'LEGENDARY' }
-    }
+    },
+    SCREEN_SHAKE: 0
 };
 
 const NET = {
@@ -86,13 +87,16 @@ const META = {
     selectedShip: 1
 };
 
+// Správná synchronizace účtu se serverem pomocí uloženého hesla
 const saveMetaLocalOnly = () => localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
 const saveMeta = () => {
     saveMetaLocalOnly();
-    const u = localStorage.getItem('neoSurvivor_user');
-    const p = localStorage.getItem('neoSurvivor_pass');
-    if (u && p && NET.socket && NET.socket.connected) {
-        NET.socket.emit('syncAccount', { user: u, pass: p, meta: META });
+    const savedUser = localStorage.getItem('neoSurvivor_user');
+    const savedPass = localStorage.getItem('neoSurvivor_pass');
+    
+    if (savedUser && savedPass && NET.socket && NET.socket.connected) {
+        NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META });
+        NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel });
     }
 };
 
@@ -1078,9 +1082,6 @@ class Player {
         if (this.level > META.maxLevel) {
             META.maxLevel = this.level;
             saveMeta();
-            if (NET.socket && NET.socket.connected && META.playerName) {
-                NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
-            }
         }
         
         this.xp = Math.max(0, this.xp - this.nextLevelXp);
@@ -1541,7 +1542,7 @@ function initSocket() {
             GAME.entities.player.level = data.level; 
             if (GAME.entities.player.level > META.maxLevel) {
                 META.maxLevel = GAME.entities.player.level;
-                saveMeta();
+                saveMetaLocalOnly();
                 if (NET.socket && NET.socket.connected && META.playerName) {
                     NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
                 }
@@ -1650,33 +1651,28 @@ window.joinCloudServer = (roomName) => {
     NET.socket.emit('joinRoom', { roomId: roomName.trim().toUpperCase(), playerId: myPlayerId });
 };
 
-window.connectToId = (id) => {
-    const input = document.getElementById('input-join-id');
-    if (input) input.value = id;
-};
-
-// Funkce pro prvni registraci a zaroven pro ulozeni noveho jmena v nastaveni
-function savePlayerName(inputId) {
-    const nameVal = document.getElementById(inputId).value.trim();
-    if (nameVal.length < 3) {
-        alert("Jméno musí mít alespoň 3 znaky!");
-        return;
-    }
+// Správa přihlášení a registrace přes server
+function handleAuth(isLogin) {
+    const nameVal = document.getElementById('input-login-name').value.trim();
+    const passVal = document.getElementById('input-login-pass').value.trim();
     
-    // Posleme rovnou jako registraci / login pres socket
+    if (nameVal.length < 3) { alert("Jméno musí mít alespoň 3 znaky!"); return; }
+    if (passVal.length < 1) { alert("Zadej heslo!"); return; }
+
     if (NET.socket && NET.socket.connected) {
         document.getElementById('login-loader').style.display = 'block';
-        // Nastavili jsme, že heslo je stejne jako jmeno pro zjednoduseni pro hrace
-        NET.socket.emit('register', { user: nameVal, pass: '123' }); 
+        const eventName = isLogin ? 'login' : 'register';
         
-        // Zpracujeme odpoved od serveru
-        NET.socket.once('registerResponse', (res) => {
+        NET.socket.emit(eventName, { user: nameVal, pass: passVal });
+        
+        NET.socket.once(eventName + 'Response', (res) => {
             document.getElementById('login-loader').style.display = 'none';
             if (res.success) {
-                // Pokud to proslo, ulozime to lokalne
                 META.playerName = nameVal;
-                // Zkopirujeme progress ze serveru (pokud je novy, budou to zaklady)
                 Object.assign(META, res.meta);
+                
+                localStorage.setItem('neoSurvivor_user', nameVal);
+                localStorage.setItem('neoSurvivor_pass', passVal);
                 saveMetaLocalOnly();
                 
                 document.getElementById('display-player-name').innerText = META.playerName;
@@ -1690,39 +1686,18 @@ function savePlayerName(inputId) {
                     requestAnimationFrame(loop);
                 }
             } else {
-                // Pokud jmeno existuje, zkusime se pod nim prihlasit (mozna je to on, kdo se vraci z jine relace)
-                NET.socket.emit('login', { user: nameVal, pass: '123' });
-                NET.socket.once('loginResponse', (loginRes) => {
-                    if (loginRes.success) {
-                        META.playerName = nameVal;
-                        Object.assign(META, loginRes.meta);
-                        saveMetaLocalOnly();
-                        
-                        document.getElementById('display-player-name').innerText = META.playerName;
-                        document.getElementById('display-max-level').innerText = META.maxLevel || 1;
-
-                        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-                        document.getElementById('menu-modal').classList.add('active');
-                        
-                        if (!GAME.loopStarted) {
-                            GAME.loopStarted = true;
-                            requestAnimationFrame(loop);
-                        }
-                    } else {
-                        // Pokud ani to ne, napiseme chybu
-                        const err = document.getElementById('login-error');
-                        if (err) err.innerText = res.msg;
-                    }
-                });
+                const err = document.getElementById('login-error');
+                if (err) err.innerText = res.msg;
             }
         });
     } else {
-        // Pokud nema spojeni se serverem (offline), dame mu ho aspon lokalne
+        // Offline záloha
         META.playerName = nameVal;
+        localStorage.setItem('neoSurvivor_user', nameVal);
+        localStorage.setItem('neoSurvivor_pass', passVal);
         saveMetaLocalOnly();
         
         document.getElementById('display-player-name').innerText = META.playerName;
-
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('menu-modal').classList.add('active');
         
@@ -1748,35 +1723,46 @@ function init() {
     loadMeta();
     document.getElementById('display-max-level').innerText = META.maxLevel || 0;
     
-    // Spustime socket hned na startu pro ucty
     initSocket();
 
-    // Pokusime se o auto-login
-    if (!META.playerName) {
+    const savedUser = localStorage.getItem('neoSurvivor_user');
+    const savedPass = localStorage.getItem('neoSurvivor_pass');
+
+    if (!savedUser || !savedPass) {
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('login-modal').classList.add('active');
     } else {
-        // Ma jmeno ulozene lokalne, zkusime ho nacist do serveru
+        document.getElementById('display-player-name').innerText = savedUser;
+        if (NET.socket) {
+            NET.socket.emit('login', { user: savedUser, pass: savedPass });
+            NET.socket.once('loginResponse', (res) => {
+                if(res.success) {
+                    META.playerName = savedUser;
+                    Object.assign(META, res.meta);
+                    saveMetaLocalOnly();
+                    document.getElementById('display-max-level').innerText = META.maxLevel || 1;
+                }
+            });
+        }
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('menu-modal').classList.add('active');
-        document.getElementById('display-player-name').innerText = META.playerName;
-        
-        if (NET.socket) {
-            // Posleme jako login s tajnym heslem
-            NET.socket.emit('login', { user: META.playerName, pass: '123' });
-        }
         
         GAME.loopStarted = true;
         requestAnimationFrame(loop);
     }
 
-    document.getElementById('btn-login').onclick = () => savePlayerName('input-login-name');
-    document.getElementById('btn-register').onclick = () => savePlayerName('input-login-name');
+    const btnLogin = document.getElementById('btn-login');
+    if (btnLogin) btnLogin.onclick = () => handleAuth(true);
+    
+    const btnRegister = document.getElementById('btn-register');
+    if (btnRegister) btnRegister.onclick = () => handleAuth(false);
 
     document.getElementById('btn-reset-progress').onclick = () => {
         if (confirm("Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?")) {
             localStorage.removeItem('neoSurvivor_meta');
             localStorage.removeItem('neoSurvivor_pid');
+            localStorage.removeItem('neoSurvivor_user');
+            localStorage.removeItem('neoSurvivor_pass');
             location.reload();
         }
     };
@@ -1831,7 +1817,7 @@ function init() {
     const btnMP = document.getElementById('btn-multiplayer');
     if (btnMP) btnMP.onclick = (e) => {
         if (e) e.preventDefault();
-        document.getElementById('menu-modal').classList.remove('active');
+        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('multiplayer-modal').classList.add('active');
         
         if (!NET.socket) {
@@ -1875,7 +1861,7 @@ function init() {
     const btnCloseMP = document.getElementById('btn-close-mp');
     if (btnCloseMP) btnCloseMP.onclick = () => {
         clearInterval(NET.serverPollingInterval);
-        document.getElementById('multiplayer-modal').classList.remove('active');
+        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('menu-modal').classList.add('active');
     };
 
@@ -2307,8 +2293,8 @@ function render() {
         const cx = GAME.canvas.width / 2;
         const cy = GAME.canvas.height / 2;
         
-        const marginX = 30;
-        const marginY = 30;
+        const marginX = 50;
+        const marginY = 100;
         const boundX = cx - marginX;
         const boundY = cy - marginY;
 
