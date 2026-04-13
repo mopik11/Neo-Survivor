@@ -60,8 +60,7 @@ const CONFIG = {
         rare: { chance: 20, color: '#22c55e', name: 'RARE' },
         epic: { chance: 10, color: '#a855f7', name: 'EPIC' },
         legendary: { chance: 5, color: '#eab308', name: 'LEGENDARY' }
-    },
-    SCREEN_SHAKE: 0
+    }
 };
 
 const NET = {
@@ -87,7 +86,16 @@ const META = {
     selectedShip: 1
 };
 
-const saveMeta = () => localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
+const saveMetaLocalOnly = () => localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
+const saveMeta = () => {
+    saveMetaLocalOnly();
+    const u = localStorage.getItem('neoSurvivor_user');
+    const p = localStorage.getItem('neoSurvivor_pass');
+    if (u && p && NET.socket && NET.socket.connected) {
+        NET.socket.emit('syncAccount', { user: u, pass: p, meta: META });
+    }
+};
+
 const loadMeta = () => {
     const data = localStorage.getItem('neoSurvivor_meta');
     if (data) {
@@ -1281,7 +1289,19 @@ function toggleFullscreen(element, force = false) {
     }
 }
 
-window.showShipsMenu = () => {
+window.softResetToMenu = () => {
+    GAME.active = false;
+    GAME.paused = false;
+    if (NET.socket) NET.socket.disconnect();
+    NET.isMultiplayer = false;
+    NET.roomId = null;
+    NET.others = {};
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('menu-modal').classList.add('active');
+    resetGame();
+};
+
+function showShipsMenu() {
     const container = document.getElementById('ships-options');
     if(!container) return; 
 
@@ -1322,9 +1342,9 @@ window.showShipsMenu = () => {
         };
         container.appendChild(card);
     });
-};
+}
 
-window.showMetaMenu = () => {
+function showMetaMenu() {
     const container = document.getElementById('meta-options');
     document.getElementById('meta-currency').innerText = META.currency;
     container.innerHTML = '';
@@ -1349,19 +1369,7 @@ window.showMetaMenu = () => {
         };
         container.appendChild(card);
     });
-};
-
-window.softResetToMenu = () => {
-    GAME.active = false;
-    GAME.paused = false;
-    if (NET.socket) NET.socket.disconnect();
-    NET.isMultiplayer = false;
-    NET.roomId = null;
-    NET.others = {};
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('menu-modal').classList.add('active');
-    resetGame();
-};
+}
 
 function initSocket() {
     if (NET.socket && NET.socket.connected) return;
@@ -1647,26 +1655,81 @@ window.connectToId = (id) => {
     if (input) input.value = id;
 };
 
+// Funkce pro prvni registraci a zaroven pro ulozeni noveho jmena v nastaveni
 function savePlayerName(inputId) {
     const nameVal = document.getElementById(inputId).value.trim();
     if (nameVal.length < 3) {
         alert("Jméno musí mít alespoň 3 znaky!");
         return;
     }
-    META.playerName = nameVal;
-    saveMeta();
     
-    document.getElementById('display-player-name').innerText = META.playerName;
+    // Posleme rovnou jako registraci / login pres socket
     if (NET.socket && NET.socket.connected) {
-        NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
-    }
+        document.getElementById('login-loader').style.display = 'block';
+        // Nastavili jsme, že heslo je stejne jako jmeno pro zjednoduseni pro hrace
+        NET.socket.emit('register', { user: nameVal, pass: '123' }); 
+        
+        // Zpracujeme odpoved od serveru
+        NET.socket.once('registerResponse', (res) => {
+            document.getElementById('login-loader').style.display = 'none';
+            if (res.success) {
+                // Pokud to proslo, ulozime to lokalne
+                META.playerName = nameVal;
+                // Zkopirujeme progress ze serveru (pokud je novy, budou to zaklady)
+                Object.assign(META, res.meta);
+                saveMetaLocalOnly();
+                
+                document.getElementById('display-player-name').innerText = META.playerName;
+                document.getElementById('display-max-level').innerText = META.maxLevel || 1;
 
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('menu-modal').classList.add('active');
-    
-    if (!GAME.loopStarted) {
-        GAME.loopStarted = true;
-        requestAnimationFrame(loop);
+                document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+                document.getElementById('menu-modal').classList.add('active');
+                
+                if (!GAME.loopStarted) {
+                    GAME.loopStarted = true;
+                    requestAnimationFrame(loop);
+                }
+            } else {
+                // Pokud jmeno existuje, zkusime se pod nim prihlasit (mozna je to on, kdo se vraci z jine relace)
+                NET.socket.emit('login', { user: nameVal, pass: '123' });
+                NET.socket.once('loginResponse', (loginRes) => {
+                    if (loginRes.success) {
+                        META.playerName = nameVal;
+                        Object.assign(META, loginRes.meta);
+                        saveMetaLocalOnly();
+                        
+                        document.getElementById('display-player-name').innerText = META.playerName;
+                        document.getElementById('display-max-level').innerText = META.maxLevel || 1;
+
+                        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+                        document.getElementById('menu-modal').classList.add('active');
+                        
+                        if (!GAME.loopStarted) {
+                            GAME.loopStarted = true;
+                            requestAnimationFrame(loop);
+                        }
+                    } else {
+                        // Pokud ani to ne, napiseme chybu
+                        const err = document.getElementById('login-error');
+                        if (err) err.innerText = res.msg;
+                    }
+                });
+            }
+        });
+    } else {
+        // Pokud nema spojeni se serverem (offline), dame mu ho aspon lokalne
+        META.playerName = nameVal;
+        saveMetaLocalOnly();
+        
+        document.getElementById('display-player-name').innerText = META.playerName;
+
+        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+        document.getElementById('menu-modal').classList.add('active');
+        
+        if (!GAME.loopStarted) {
+            GAME.loopStarted = true;
+            requestAnimationFrame(loop);
+        }
     }
 }
 
@@ -1685,27 +1748,33 @@ function init() {
     loadMeta();
     document.getElementById('display-max-level').innerText = META.maxLevel || 0;
     
+    // Spustime socket hned na startu pro ucty
     initSocket();
 
+    // Pokusime se o auto-login
     if (!META.playerName) {
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        document.getElementById('name-modal').classList.add('active');
+        document.getElementById('login-modal').classList.add('active');
     } else {
+        // Ma jmeno ulozene lokalne, zkusime ho nacist do serveru
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('menu-modal').classList.add('active');
         document.getElementById('display-player-name').innerText = META.playerName;
-        if (NET.socket && NET.socket.connected) {
-            NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
+        
+        if (NET.socket) {
+            // Posleme jako login s tajnym heslem
+            NET.socket.emit('login', { user: META.playerName, pass: '123' });
         }
+        
         GAME.loopStarted = true;
         requestAnimationFrame(loop);
     }
 
-    document.getElementById('btn-save-first-name').onclick = () => savePlayerName('input-player-name');
-    document.getElementById('btn-save-new-name').onclick = () => savePlayerName('input-change-name');
+    document.getElementById('btn-login').onclick = () => savePlayerName('input-login-name');
+    document.getElementById('btn-register').onclick = () => savePlayerName('input-login-name');
 
     document.getElementById('btn-reset-progress').onclick = () => {
-        if (confirm("Opravdu chceš smazat všechen svůj postup, Dogecoiny i nakoupené lodě? Toto nelze vzít zpět!")) {
+        if (confirm("Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?")) {
             localStorage.removeItem('neoSurvivor_meta');
             localStorage.removeItem('neoSurvivor_pid');
             location.reload();
@@ -2238,9 +2307,8 @@ function render() {
         const cx = GAME.canvas.width / 2;
         const cy = GAME.canvas.height / 2;
         
-        // ZDE BYL OPRAVEN BOUNDING BOX PRO ŠIPKY NA OKRAJI OBRAZOVKY
-        const marginX = 50;
-        const marginY = 100; // Tato hodnota dostatečně oddálí šipky od horní lišty a joysticku
+        const marginX = 30;
+        const marginY = 30;
         const boundX = cx - marginX;
         const boundY = cy - marginY;
 
@@ -2250,7 +2318,6 @@ function render() {
                 const screenX = (op.x * GAME.zoom) - GAME.camera.x;
                 const screenY = (op.y * GAME.zoom) - GAME.camera.y;
 
-                // Zkontroluje, zda je hráč MIMO zorné pole (včetně horní rezervy pro UI)
                 if (screenX < marginX || screenX > GAME.canvas.width - marginX || screenY < marginY || screenY > GAME.canvas.height - marginY) {
                     const dx = screenX - cx;
                     const dy = screenY - cy;
