@@ -13,7 +13,7 @@ const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
     ENEMY_BASE_HEALTH: 20,
-    ENEMY_BASE_SPEED: 4.5, // ZRYCHLENO NA PC ÚROVEŇ (4.5)
+    ENEMY_BASE_SPEED: 4.5, 
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
     SPAWN_RADIUS: 700,
@@ -87,7 +87,6 @@ const META = {
     selectedShip: 1
 };
 
-// Správná synchronizace účtu se serverem pomocí uloženého hesla
 const saveMetaLocalOnly = () => localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
 const saveMeta = () => {
     saveMetaLocalOnly();
@@ -1290,18 +1289,6 @@ function toggleFullscreen(element, force = false) {
     }
 }
 
-window.softResetToMenu = () => {
-    GAME.active = false;
-    GAME.paused = false;
-    if (NET.socket) NET.socket.disconnect();
-    NET.isMultiplayer = false;
-    NET.roomId = null;
-    NET.others = {};
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('menu-modal').classList.add('active');
-    resetGame();
-};
-
 function showShipsMenu() {
     const container = document.getElementById('ships-options');
     if(!container) return; 
@@ -1330,13 +1317,13 @@ function showShipsMenu() {
             if (owned) {
                 META.selectedShip = item.id;
                 saveMeta();
-                window.showShipsMenu();
+                showShipsMenu();
             } else if (META.currency >= item.cost) {
                 META.currency -= item.cost;
                 META.ships[item.id] = true;
                 META.selectedShip = item.id;
                 saveMeta();
-                window.showShipsMenu();
+                showShipsMenu();
             } else {
                 alert("Nemáš dost Dogecoinu!");
             }
@@ -1366,7 +1353,7 @@ function showMetaMenu() {
             if (META.currency < cost) { alert("Nemáš dost Dogecoinu!"); return; }
             if (item.isHat) { META.upgrades.hat = item.type; }
             else { META.upgrades[item.id]++; }
-            META.currency -= cost; saveMeta(); window.showMetaMenu();
+            META.currency -= cost; saveMeta(); showMetaMenu();
         };
         container.appendChild(card);
     });
@@ -1830,16 +1817,17 @@ function init() {
         NET.serverPollingInterval = setInterval(window.requestServerList, 2000); 
     };
     
+    // OPRAVENA TLAČÍTKA NA VÝBĚR LODÍ A VYLEPŠENÍ
     const btnShips = document.getElementById('btn-ships-menu');
     if (btnShips) btnShips.onclick = () => {
-        window.showShipsMenu();
+        showShipsMenu();
         document.getElementById('ships-modal').classList.add('active');
     };
     const btnCloseShips = document.getElementById('btn-close-ships');
     if (btnCloseShips) btnCloseShips.onclick = () => document.getElementById('ships-modal').classList.remove('active');
 
     const btnMeta = document.getElementById('btn-meta-menu');
-    if (btnMeta) btnMeta.onclick = () => { window.showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+    if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
     const btnCloseMeta = document.getElementById('btn-close-meta');
     if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
 
