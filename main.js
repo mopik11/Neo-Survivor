@@ -16,9 +16,9 @@ const CONFIG = {
     ENEMY_BASE_SPEED: 2.5,
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
-    SPAWN_RADIUS: 700,
+    SPAWN_RADIUS: 700,     // TOTO ZPŮSOBOVALO TY PAŘEZY V LEVÉM HORNÍM ROHU!
     GEM_VALUES: 10,
-    XP_PER_LEVEL: 100,
+    XP_PER_LEVEL: 100,     // A TOTO ROZBÍJELO LEVELOVÁNÍ
     BOSS_INTERVAL: 60,
     SNIPER_COOLDOWN: 15000,
     UPGRADES: [
@@ -108,6 +108,7 @@ const GAME = {
     time: 0,
     lastBossTime: 0,
     lastSpawnTime: 0,
+    speedFactor: 1.0,
     zoom: 1.0,
     upgradeOptionsCount: 3,
     loopStarted: false,
@@ -138,8 +139,10 @@ const GAME = {
     ctx: null
 };
 
-const updateLayout = () => {
+const updateSpeedFactor = () => {
+    const baseWidth = 1200;
     const isMobile = window.innerWidth < 850;
+    GAME.speedFactor = Math.max(0.4, Math.min(1.2, window.innerWidth / baseWidth));
     GAME.zoom = isMobile ? 0.7 : 1.0;
     GAME.joystick.startX = 80;
     GAME.joystick.startY = window.innerHeight - 80;
@@ -442,8 +445,8 @@ class Projectile {
         this.color = stats.color || null;
     }
     update() {
-        this.x += this.vx;
-        this.y += this.vy;
+        this.x += this.vx * GAME.speedFactor;
+        this.y += this.vy * GAME.speedFactor;
         this.life--;
     }
     draw(ctx, cam) {
@@ -492,13 +495,13 @@ class Gem {
         
         if (this.attracted) {
             const angle = Math.atan2(player.y - this.y, player.x - this.x);
-            this.x += Math.cos(angle) * 14; 
-            this.y += Math.sin(angle) * 14;
+            this.x += Math.cos(angle) * 14 * GAME.speedFactor; 
+            this.y += Math.sin(angle) * 14 * GAME.speedFactor;
         } else if (this.ultraAttracted) {
             const angle = Math.atan2(player.y - this.y, player.x - this.x);
             const umSpeed = 0.8 * (player.ultraMagnetPower || 1);
-            this.x += Math.cos(angle) * umSpeed; 
-            this.y += Math.sin(angle) * umSpeed;
+            this.x += Math.cos(angle) * umSpeed * GAME.speedFactor; 
+            this.y += Math.sin(angle) * umSpeed * GAME.speedFactor;
         }
     }
     draw(ctx, cam) {
@@ -514,7 +517,7 @@ class Orbiter {
         this.owner = owner; this.index = index; this.total = total;
         this.angle = (index / total) * Math.PI * 2; this.radius = 120; this.size = 15;
     }
-    update() { this.angle += 0.05; }
+    update() { this.angle += 0.05 * GAME.speedFactor; }
     draw(ctx, cam) {
         if (this.owner.dead) return;
         const x = this.owner.x + Math.cos(this.angle) * this.radius, y = this.owner.y + Math.sin(this.angle) * this.radius;
@@ -608,7 +611,7 @@ class Boss {
                 speedScale *= (p.auraPower || 0.5); 
             } 
         });
-        const currentSpeed = this.speed * speedScale;
+        const currentSpeed = this.speed * speedScale * GAME.speedFactor;
         this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
         this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
         this.knockback.x *= 0.9; this.knockback.y *= 0.9;
@@ -672,7 +675,7 @@ class Enemy {
                 speedScale *= (p.auraPower || 0.5);
             } 
         });
-        const currentSpeed = this.speed * speedScale;
+        const currentSpeed = this.speed * speedScale * GAME.speedFactor;
         this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
         this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
         this.knockback.x *= 0.8; this.knockback.y *= 0.8;
@@ -730,7 +733,7 @@ class Player {
         
         this.luckFactor = 1.0 + (isLocal ? (META.upgrades.luck * 0.05) : 0);
         this.orbitals = 0; this.knockbackForce = 6; this.xpMultiplier = 1.0;
-        this.lifestealChance = 0; this.aura = false; this.auraRange = 150;
+        this.aura = false; this.auraRange = 150;
         this.bounces = 0; this.fireTrail = false;
         
         this.hasKaktus = false; 
@@ -889,8 +892,8 @@ class Player {
 
         if (dx !== 0 || dy !== 0) {
             const angle = Math.atan2(dy, dx);
-            this.x += Math.cos(angle) * this.speed; 
-            this.y += Math.sin(angle) * this.speed;
+            this.x += Math.cos(angle) * this.speed * GAME.speedFactor; 
+            this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
             
             const now = Date.now();
             if (this.fireTrail && now - this.lastFireTrail > 150) {
@@ -944,7 +947,7 @@ class Player {
             const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
             const widthMult = 4 * (1 + this.wallWidthBonus);
             
-            const wallRadius = this.projSize * 8 * widthMult;
+            const wallRadius = this.projSize * 8 * (1 + this.wallWidthBonus);
             
             const wall = new Projectile(this.x, this.y, target.x, target.y, finalDamage, {
                 size: wallRadius, 
@@ -1279,18 +1282,6 @@ function toggleFullscreen(element, force = false) {
     }
 }
 
-window.softResetToMenu = () => {
-    GAME.active = false;
-    GAME.paused = false;
-    if (NET.socket) NET.socket.disconnect();
-    NET.isMultiplayer = false;
-    NET.roomId = null;
-    NET.others = {};
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('menu-modal').classList.add('active');
-    resetGame();
-};
-
 window.showShipsMenu = () => {
     const container = document.getElementById('ships-options');
     if(!container) return; 
@@ -1359,6 +1350,18 @@ window.showMetaMenu = () => {
         };
         container.appendChild(card);
     });
+};
+
+window.softResetToMenu = () => {
+    GAME.active = false;
+    GAME.paused = false;
+    if (NET.socket) NET.socket.disconnect();
+    NET.isMultiplayer = false;
+    NET.roomId = null;
+    NET.others = {};
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('menu-modal').classList.add('active');
+    resetGame();
 };
 
 function initSocket() {
@@ -1865,8 +1868,6 @@ function startGame() {
     AudioEngine.stopMenuMusic();
     AudioEngine.startMusic();
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    
-    spawnEnemy();
 }
 
 function resetGame() {
