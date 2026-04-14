@@ -13,7 +13,7 @@ const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
     ENEMY_BASE_HEALTH: 20,
-    ENEMY_BASE_SPEED: 1.5, 
+    ENEMY_BASE_SPEED: 4.5, 
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
     SPAWN_RADIUS: 700,
@@ -60,7 +60,8 @@ const CONFIG = {
         rare: { chance: 20, color: '#22c55e', name: 'RARE' },
         epic: { chance: 10, color: '#a855f7', name: 'EPIC' },
         legendary: { chance: 5, color: '#eab308', name: 'LEGENDARY' }
-    }
+    },
+    SCREEN_SHAKE: 0
 };
 
 const NET = {
@@ -689,15 +690,27 @@ class Enemy {
         this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
         this.knockback.x *= 0.8; this.knockback.y *= 0.8;
 
-        if (this.type === 2 && Date.now() - this.lastShot > this.shotInterval) {
-            const pSpeed = CONFIG.ENEMY_BASE_SPEED * 1.2;
-            if (GAME.entities.projectiles) GAME.entities.projectiles.push(new Projectile(this.x, this.y, target.x, target.y, 10, {
-                isEnemy: true,
-                color: '#ff00ff',
-                speed: pSpeed,
-                size: 8
-            }));
-            this.lastShot = Date.now();
+        if (this.type === 2) {
+            let playerLvl = GAME.entities.player ? GAME.entities.player.level : 1;
+            let dynamicInterval = Math.max(1500, 5000 - (playerLvl * 150));
+            
+            if (Date.now() - this.lastShot > dynamicInterval) {
+                let inaccuracy = Math.max(0, 0.6 - (playerLvl * 0.03));
+                let baseAngle = Math.atan2(target.y - this.y, target.x - this.x);
+                let shootAngle = baseAngle + (Math.random() - 0.5) * inaccuracy;
+                
+                let tx = this.x + Math.cos(shootAngle) * 100;
+                let ty = this.y + Math.sin(shootAngle) * 100;
+
+                const pSpeed = CONFIG.ENEMY_BASE_SPEED * 1.2;
+                if (GAME.entities.projectiles) GAME.entities.projectiles.push(new Projectile(this.x, this.y, tx, ty, 10, {
+                    isEnemy: true,
+                    color: '#ff00ff',
+                    speed: pSpeed,
+                    size: 8
+                }));
+                this.lastShot = Date.now();
+            }
         }
     }
     draw(ctx, cam) {
@@ -1091,6 +1104,34 @@ class Player {
     }
 }
 
+function spawnEnemy() {
+    const alive = getAllAlivePlayers();
+    if (alive.length === 0) return;
+    const a = Math.random() * Math.PI * 2;
+    const pivot = alive[Math.floor(Math.random() * alive.length)];
+    const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
+    const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
+    const mod = Math.floor(GAME.time / 60) + 1;
+
+    let enemy;
+    if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
+        enemy = new Boss(x, y, mod);
+        showBossWarning(); 
+        GAME.lastBossTime = GAME.time;
+    } else {
+        let type = 1;
+        if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
+        enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
+    }
+
+    if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
+}
+
+function showBossWarning() {
+    const el = document.getElementById('boss-warning'); if (el) el.style.display = 'block';
+    setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
+}
+
 function updateUI() {
     const p = GAME.entities.player;
     if (!p) return;
@@ -1289,39 +1330,7 @@ function toggleFullscreen(element, force = false) {
     }
 }
 
-window.softResetToMenu = () => {
-    GAME.active = false;
-    GAME.paused = false;
-    
-    if (NET.socket) {
-        NET.socket.disconnect();
-        NET.socket = null; 
-    }
-    
-    if (NET.serverPollingInterval) {
-        clearInterval(NET.serverPollingInterval);
-        NET.serverPollingInterval = null;
-    }
-
-    NET.isMultiplayer = false;
-    NET.roomId = null;
-    NET.others = {};
-    
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('menu-modal').classList.add('active');
-    
-    resetGame();
-    AudioEngine.startMenuMusic();
-};
-
-document.addEventListener('click', (e) => {
-    if (e.target.closest('.btn-reload')) {
-        e.preventDefault();
-        window.softResetToMenu();
-    }
-});
-
-function showShipsMenu() {
+window.showShipsMenu = () => {
     const container = document.getElementById('ships-options');
     if(!container) return; 
 
@@ -1349,22 +1358,22 @@ function showShipsMenu() {
             if (owned) {
                 META.selectedShip = item.id;
                 saveMeta();
-                showShipsMenu();
+                window.showShipsMenu();
             } else if (META.currency >= item.cost) {
                 META.currency -= item.cost;
                 META.ships[item.id] = true;
                 META.selectedShip = item.id;
                 saveMeta();
-                showShipsMenu();
+                window.showShipsMenu();
             } else {
                 alert("Nemáš dost Dogecoinu!");
             }
         };
         container.appendChild(card);
     });
-}
+};
 
-function showMetaMenu() {
+window.showMetaMenu = () => {
     const container = document.getElementById('meta-options');
     document.getElementById('meta-currency').innerText = META.currency;
     container.innerHTML = '';
@@ -1385,11 +1394,38 @@ function showMetaMenu() {
             if (META.currency < cost) { alert("Nemáš dost Dogecoinu!"); return; }
             if (item.isHat) { META.upgrades.hat = item.type; }
             else { META.upgrades[item.id]++; }
-            META.currency -= cost; saveMeta(); showMetaMenu();
+            META.currency -= cost; saveMeta(); window.showMetaMenu();
         };
         container.appendChild(card);
     });
-}
+};
+
+window.softResetToMenu = () => {
+    GAME.active = false;
+    GAME.paused = false;
+    if (NET.socket) {
+        NET.socket.disconnect();
+        NET.socket = null;
+    }
+    if (NET.serverPollingInterval) {
+        clearInterval(NET.serverPollingInterval);
+        NET.serverPollingInterval = null;
+    }
+    NET.isMultiplayer = false;
+    NET.roomId = null;
+    NET.others = {};
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('menu-modal').classList.add('active');
+    resetGame();
+    AudioEngine.startMenuMusic();
+};
+
+document.addEventListener('click', (e) => {
+    if (e.target.closest('.btn-reload')) {
+        e.preventDefault();
+        window.softResetToMenu();
+    }
+});
 
 function initSocket() {
     if (NET.socket && NET.socket.connected) return;
@@ -1604,8 +1640,6 @@ function syncPlayer() {
         safeLaserTargets = GAME.entities.player.laserTargets.map(chain => chain.map(e => e ? e.id : null).filter(id => id));
     }
 
-    const savedUser = localStorage.getItem('neoSurvivor_user') || "Hráč";
-
     NET.socket.emit('playerUpdate', {
         x: GAME.entities.player.x, 
         y: GAME.entities.player.y,
@@ -1621,7 +1655,7 @@ function syncPlayer() {
         kaktus: GAME.entities.player.hasKaktus,
         shipType: GAME.entities.player.shipType,
         laserTargetsIds: safeLaserTargets,
-        name: savedUser 
+        name: META.playerName 
     });
 }
 
@@ -1850,14 +1884,14 @@ function init() {
     
     const btnShips = document.getElementById('btn-ships-menu');
     if (btnShips) btnShips.onclick = () => {
-        showShipsMenu();
+        window.showShipsMenu();
         document.getElementById('ships-modal').classList.add('active');
     };
     const btnCloseShips = document.getElementById('btn-close-ships');
     if (btnCloseShips) btnCloseShips.onclick = () => document.getElementById('ships-modal').classList.remove('active');
 
     const btnMeta = document.getElementById('btn-meta-menu');
-    if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+    if (btnMeta) btnMeta.onclick = () => { window.showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
     const btnCloseMeta = document.getElementById('btn-close-meta');
     if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
 
@@ -2080,10 +2114,6 @@ function update(dt) {
                                 if (overlay) {
                                     overlay.style.opacity = '1';
                                     setTimeout(() => overlay.style.opacity = '0', 100);
-                                }
-                                // LIFESTEAL ZDE
-                                if (p.lifestealChance > 0 && Math.random() < p.lifestealChance) {
-                                    p.hp = Math.min(p.maxHp, p.hp + 1);
                                 }
                             }
                         }
