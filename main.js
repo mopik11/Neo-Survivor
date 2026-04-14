@@ -51,7 +51,7 @@ const CONFIG = {
 
         { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎', rarity: 'legendary' },
         { id: 'luck', name: 'Větší Výběr', desc: '+1 možnost při levelu', icon: '🍀', rarity: 'legendary' },
-        { id: 'aura', name: 'Mrazivá Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' },
+        { id: 'aura', name: 'Mraziv Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' },
         { id: 'bait', name: 'Návnada', desc: 'Vypouští chutné cíle pro ufony', icon: '🪤', rarity: 'legendary' }
     ],
     RARITIES: {
@@ -1173,19 +1173,10 @@ function updateUI() {
     const p = GAME.entities.player;
     if (!p) return;
     const xpStr = `LVL ${p.level}`;
-    
-    const lvlDisp = document.getElementById('level-display');
-    if (lvlDisp && lvlDisp.innerText !== xpStr) lvlDisp.innerText = xpStr;
-    
-    const xpFill = document.getElementById('xp-bar-fill');
-    if (xpFill) xpFill.style.width = `${(p.xp / p.nextLevelXp) * 100}%`;
-    
-    const hpFill = document.getElementById('hp-bar-fill');
-    if (hpFill) hpFill.style.width = `${(p.hp / p.maxHp) * 100}%`;
-    
-    const kc = document.getElementById('kill-count');
-    if (kc) kc.innerText = GAME.kills;
-    
+    if (document.getElementById('level-display').innerText !== xpStr) document.getElementById('level-display').innerText = xpStr;
+    document.getElementById('xp-bar-fill').style.width = `${(p.xp / p.nextLevelXp) * 100}%`;
+    document.getElementById('hp-bar-fill').style.width = `${(p.hp / p.maxHp) * 100}%`;
+    document.getElementById('kill-count').innerText = GAME.kills;
     const sRatio = Math.min(1, (Date.now() - GAME.lastSniperTime) / CONFIG.SNIPER_COOLDOWN);
     const sBar = document.getElementById('sniper-bar');
     if (sBar) sBar.style.width = `${sRatio * 100}%`;
@@ -1206,11 +1197,7 @@ function updateUI() {
 function showLevelUp() {
     if (!NET.isMultiplayer) GAME.entities.enemies = []; 
     const modal = document.getElementById('levelup-modal');
-    if (!modal) return;
-    
     const container = document.getElementById('upgrade-options');
-    if (!container) return;
-    
     container.innerHTML = '';
 
     const count = GAME.entities.player.level === 1 ? 3 : GAME.upgradeOptionsCount;
@@ -1307,8 +1294,7 @@ function applyUpgrade(id) {
         }
     } catch (e) { console.error("Upgrade error:", e); }
 
-    const mod = document.getElementById('levelup-modal');
-    if(mod) mod.classList.remove('active');
+    document.getElementById('levelup-modal').classList.remove('active');
     
     if (NET.isMultiplayer) {
         const waitModal = document.getElementById('waiting-modal');
@@ -1322,15 +1308,9 @@ function applyUpgrade(id) {
 function gameOver() {
     GAME.active = false;
     META.currency += Math.floor(GAME.kills / 10); saveMeta();
-    
-    const goMod = document.getElementById('gameover-modal');
-    if(goMod) goMod.classList.add('active');
-    
-    const fl = document.getElementById('final-level');
-    if(fl) fl.innerText = GAME.entities.player.level;
-    
-    const fk = document.getElementById('final-kills');
-    if(fk) fk.innerText = GAME.kills;
+    document.getElementById('gameover-modal').classList.add('active');
+    document.getElementById('final-level').innerText = GAME.entities.player.level;
+    document.getElementById('final-kills').innerText = GAME.kills;
 }
 
 function togglePause() {
@@ -1340,39 +1320,19 @@ function togglePause() {
     
     if (GAME.paused) {
         const p = GAME.entities.player;
-        const shp = document.getElementById('stat-hp');
-        if(shp) shp.innerText = Math.floor(p.hp) + ' / ' + p.maxHp;
-        
-        const sdmg = document.getElementById('stat-dmg');
-        if(sdmg) sdmg.innerText = p.damage.toFixed(1);
-        
-        const sspd = document.getElementById('stat-speed');
-        if(sspd) sspd.innerText = p.speed.toFixed(1);
-        
-        const scnt = document.getElementById('stat-count');
-        if(scnt) scnt.innerText = p.projectileCount;
-        
-        const sfr = document.getElementById('stat-firerate');
-        if(sfr) sfr.innerText = (p.fireRate / 1000).toFixed(2) + 's';
-        
-        const scc = document.getElementById('stat-crit-chance');
-        if(scc) scc.innerText = Math.floor(p.critChance * 100) + '%';
-        
-        const scd = document.getElementById('stat-crit-dmg');
-        if(scd) scd.innerText = p.critMultiplier + 'x';
-        
-        const ssh = document.getElementById('stat-shield');
-        if(ssh) ssh.innerText = Math.floor((1 - p.shield) * 100) + '%';
-        
-        const sreg = document.getElementById('stat-regen');
-        if(sreg) sreg.innerText = p.regen + ' HP/s';
-        
-        const slife = document.getElementById('stat-lifesteal');
-        if(slife) slife.innerText = Math.floor(p.lifestealChance * 100) + '%';
+        document.getElementById('stat-hp').innerText = Math.floor(p.hp) + ' / ' + p.maxHp;
+        document.getElementById('stat-dmg').innerText = p.damage.toFixed(1);
+        document.getElementById('stat-speed').innerText = p.speed.toFixed(1);
+        document.getElementById('stat-count').innerText = p.projectileCount;
+        document.getElementById('stat-firerate').innerText = (p.fireRate / 1000).toFixed(2) + 's';
+        document.getElementById('stat-crit-chance').innerText = Math.floor(p.critChance * 100) + '%';
+        document.getElementById('stat-crit-dmg').innerText = p.critMultiplier + 'x';
+        document.getElementById('stat-shield').innerText = Math.floor((1 - p.shield) * 100) + '%';
+        document.getElementById('stat-regen').innerText = p.regen + ' HP/s';
+        document.getElementById('stat-lifesteal').innerText = Math.floor(p.lifestealChance * 100) + '%';
     }
     
-    const pmod = document.getElementById('pause-modal');
-    if(pmod) pmod.classList.toggle('active', GAME.paused);
+    document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
     
     if (NET.isMultiplayer) {
         if (GAME.paused) {
@@ -1386,14 +1346,39 @@ function togglePause() {
     }
 }
 
-// DEFINICE PŘIDÁNA DO WINDOW, ABY SE DALA ZAVOLAT ODKUDKOLI
-window.showShipsMenu = function() {
+let fullscreenAttempted = false;
+function tryFullscreen() {
+    if (fullscreenAttempted) return;
+    const isFS = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!isFS) {
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e=>{});
+        } else if (document.documentElement.webkitRequestFullscreen) {
+            document.documentElement.webkitRequestFullscreen();
+        }
+    }
+    fullscreenAttempted = true;
+}
+
+function toggleFullscreen(element, force = false) {
+    const isFS = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!isFS || force) {
+        if (element.requestFullscreen) {
+            element.requestFullscreen().catch(e => console.warn("FS error:", e));
+        } else if (element.webkitRequestFullscreen) {
+            element.webkitRequestFullscreen();
+        }
+    } else if (!force) {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+}
+
+function showShipsMenu() {
     const container = document.getElementById('ships-options');
     if(!container) return; 
 
-    const cDisplay = document.getElementById('ships-currency');
-    if (cDisplay) cDisplay.innerText = META.currency;
-    
+    document.getElementById('ships-currency').innerText = META.currency;
     container.innerHTML = `
         <h3 style="width:100%; text-align:left; color:#a5b4fc; margin-bottom:10px;">LODĚ</h3>
         <div id="ships-grid" class="upgrade-grid"></div>
@@ -1408,37 +1393,35 @@ window.showShipsMenu = function() {
         { id: 3, name: 'Drtivá Zeď', desc: 'Průrazná vlna bez základní palby.', cost: 1000, icon: '🌊' }
     ];
 
-    if (shipsGrid) {
-        ships.forEach(item => {
-            const card = document.createElement('div'); 
-            const owned = META.ships[item.id];
-            const selected = META.selectedShip === item.id;
-            
-            card.className = 'upgrade-card' + (selected ? ' selected' : '');
-            card.innerHTML = `
-                <div class="upgrade-icon">${item.icon}</div>
-                <h3>${item.name}</h3>
-                <p>${item.desc}</p>
-                <span class="cost" style="margin-top:10px; display:inline-block">${selected ? 'VYBRÁNO' : (owned ? 'VLASTNĚNO (Klikni)' : item.cost + ' DOGE')}</span>
-            `;
-            card.onclick = () => {
-                if (owned) {
-                    META.selectedShip = item.id;
-                    saveMeta();
-                    window.showShipsMenu();
-                } else if (META.currency >= item.cost) {
-                    META.currency -= item.cost;
-                    META.ships[item.id] = true;
-                    META.selectedShip = item.id;
-                    saveMeta();
-                    window.showShipsMenu();
-                } else {
-                    alert("Nemáš dost Dogecoinu!");
-                }
-            };
-            shipsGrid.appendChild(card);
-        });
-    }
+    ships.forEach(item => {
+        const card = document.createElement('div'); 
+        const owned = META.ships[item.id];
+        const selected = META.selectedShip === item.id;
+        
+        card.className = 'upgrade-card' + (selected ? ' selected' : '');
+        card.innerHTML = `
+            <div class="upgrade-icon">${item.icon}</div>
+            <h3>${item.name}</h3>
+            <p>${item.desc}</p>
+            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? 'VYBRÁNO' : (owned ? 'VLASTNĚNO (Klikni)' : item.cost + ' DOGE')}</span>
+        `;
+        card.onclick = () => {
+            if (owned) {
+                META.selectedShip = item.id;
+                saveMeta();
+                showShipsMenu();
+            } else if (META.currency >= item.cost) {
+                META.currency -= item.cost;
+                META.ships[item.id] = true;
+                META.selectedShip = item.id;
+                saveMeta();
+                showShipsMenu();
+            } else {
+                alert("Nemáš dost Dogecoinu!");
+            }
+        };
+        shipsGrid.appendChild(card);
+    });
 
     const abilitiesGrid = document.getElementById('abilities-grid');
     const abilities = [
@@ -1447,47 +1430,40 @@ window.showShipsMenu = function() {
         { id: 3, name: 'Posednutí', desc: '10 nejbližších ufounů přejde na tvou stranu', cost: 1200, icon: '👻' }
     ];
 
-    if (abilitiesGrid) {
-        abilities.forEach(item => {
-            const card = document.createElement('div'); 
-            const owned = META.abilities[item.id];
-            const selected = META.selectedAbility === item.id;
-            
-            card.className = 'upgrade-card' + (selected ? ' selected' : '');
-            card.innerHTML = `
-                <div class="upgrade-icon">${item.icon}</div>
-                <h3>${item.name}</h3>
-                <p>${item.desc}</p>
-                <span class="cost" style="margin-top:10px; display:inline-block">${selected ? 'VYBRÁNO' : (owned ? 'VLASTNĚNO (Klikni)' : item.cost + ' DOGE')}</span>
-            `;
-            card.onclick = () => {
-                if (owned) {
-                    META.selectedAbility = item.id;
-                    saveMeta();
-                    window.showShipsMenu();
-                } else if (META.currency >= item.cost) {
-                    META.currency -= item.cost;
-                    META.abilities[item.id] = true;
-                    META.selectedAbility = item.id;
-                    saveMeta();
-                    window.showShipsMenu();
-                } else {
-                    alert("Nemáš dost Dogecoinu!");
-                }
-            };
-            abilitiesGrid.appendChild(card);
-        });
-    }
+    abilities.forEach(item => {
+        const card = document.createElement('div'); 
+        const owned = META.abilities[item.id];
+        const selected = META.selectedAbility === item.id;
+        
+        card.className = 'upgrade-card' + (selected ? ' selected' : '');
+        card.innerHTML = `
+            <div class="upgrade-icon">${item.icon}</div>
+            <h3>${item.name}</h3>
+            <p>${item.desc}</p>
+            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? 'VYBRÁNO' : (owned ? 'VLASTNĚNO (Klikni)' : item.cost + ' DOGE')}</span>
+        `;
+        card.onclick = () => {
+            if (owned) {
+                META.selectedAbility = item.id;
+                saveMeta();
+                showShipsMenu();
+            } else if (META.currency >= item.cost) {
+                META.currency -= item.cost;
+                META.abilities[item.id] = true;
+                META.selectedAbility = item.id;
+                saveMeta();
+                showShipsMenu();
+            } else {
+                alert("Nemáš dost Dogecoinu!");
+            }
+        };
+        abilitiesGrid.appendChild(card);
+    });
 }
 
-// DEFINICE PŘIDÁNA DO WINDOW, ABY SE DALA ZAVOLAT ODKUDKOLI
-window.showMetaMenu = function() {
+function showMetaMenu() {
     const container = document.getElementById('meta-options');
-    if(!container) return;
-    
-    const metaCurr = document.getElementById('meta-currency');
-    if(metaCurr) metaCurr.innerText = META.currency;
-    
+    document.getElementById('meta-currency').innerText = META.currency;
     container.innerHTML = '';
     const items = [
         { id: 'hp', name: 'Extra HP', desc: 'Počáteční HP +10', cost: 10, val: META.upgrades.hp },
@@ -1506,7 +1482,7 @@ window.showMetaMenu = function() {
             if (META.currency < cost) { alert("Nemáš dost Dogecoinu!"); return; }
             if (item.isHat) { META.upgrades.hat = item.type; }
             else { META.upgrades[item.id]++; }
-            META.currency -= cost; saveMeta(); window.showMetaMenu();
+            META.currency -= cost; saveMeta(); showMetaMenu();
         };
         container.appendChild(card);
     });
@@ -1515,21 +1491,23 @@ window.showMetaMenu = function() {
 window.softResetToMenu = () => {
     GAME.active = false;
     GAME.paused = false;
+    
     if (NET.socket) {
         NET.socket.disconnect();
         NET.socket = null;
     }
+    
     if (NET.serverPollingInterval) {
         clearInterval(NET.serverPollingInterval);
         NET.serverPollingInterval = null;
     }
+
     NET.isMultiplayer = false;
     NET.roomId = null;
     NET.others = {};
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     
-    const menuMod = document.getElementById('menu-modal');
-    if(menuMod) menuMod.classList.add('active');
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('menu-modal').classList.add('active');
     
     resetGame();
     AudioEngine.startMenuMusic();
@@ -1637,7 +1615,7 @@ function initSocket() {
             }
             
             if (data.frozen) {
-                GAME.frozenUntil = Date.now() + 100; 
+                GAME.frozenUntil = Date.now() + 100; // Krátký buffer na vizuální efekt
                 const overlay = document.getElementById('freeze-overlay');
                 if(overlay) overlay.classList.add('active');
             } else {
@@ -1802,37 +1780,27 @@ function syncShot(proj) {
 
 window.showHostModal = () => {
     const roomName = Math.random().toString(36).substr(2, 6).toUpperCase();
-    const hostCodeDisp = document.getElementById('host-code-display');
-    if(hostCodeDisp) hostCodeDisp.innerText = roomName;
-    
-    const mpModal = document.getElementById('multiplayer-modal');
-    if(mpModal) mpModal.classList.remove('active');
-    
-    const hModal = document.getElementById('host-modal');
-    if(hModal) hModal.classList.add('active');
+    document.getElementById('host-code-display').innerText = roomName;
+    document.getElementById('multiplayer-modal').classList.remove('active');
+    document.getElementById('host-modal').classList.add('active');
 
-    const copyBtn = document.getElementById('btn-copy-code');
-    if (copyBtn) {
-        copyBtn.onclick = () => {
-            navigator.clipboard.writeText(roomName).then(() => {
-                copyBtn.innerText = "✅ ZKOPÍROVÁNO!";
-                copyBtn.style.background = "#10b981";
-                setTimeout(() => {
-                    copyBtn.innerText = "📋 KOPÍROVAT KÓD";
-                    copyBtn.style.background = "rgba(255,255,255,0.1)";
-                }, 2000);
-            });
-        };
-    }
+    document.getElementById('btn-copy-code').onclick = () => {
+        navigator.clipboard.writeText(roomName).then(() => {
+            const btn = document.getElementById('btn-copy-code');
+            btn.innerText = "✅ ZKOPÍROVÁNO!";
+            btn.style.background = "#10b981";
+            setTimeout(() => {
+                btn.innerText = "📋 KOPÍROVAT KÓD";
+                btn.style.background = "rgba(255,255,255,0.1)";
+            }, 2000);
+        });
+    };
 
-    const shBtn = document.getElementById('btn-start-hosted');
-    if (shBtn) {
-        shBtn.onclick = () => {
-            if(hModal) hModal.classList.remove('active');
-            tryFullscreen();
-            window.joinCloudServer(roomName);
-        };
-    }
+    document.getElementById('btn-start-hosted').onclick = () => {
+        document.getElementById('host-modal').classList.remove('active');
+        tryFullscreen();
+        window.joinCloudServer(roomName);
+    };
 };
 
 window.joinCloudServer = (roomName) => {
@@ -1851,27 +1819,20 @@ window.connectToId = (id) => {
 };
 
 function handleAuth(isLogin) {
-    const nameInput = document.getElementById('input-login-name');
-    const passInput = document.getElementById('input-login-pass');
-    
-    if(!nameInput || !passInput) return;
-    
-    const nameVal = nameInput.value.trim();
-    const passVal = passInput.value.trim();
+    const nameVal = document.getElementById('input-login-name').value.trim();
+    const passVal = document.getElementById('input-login-pass').value.trim();
     
     if (nameVal.length < 3) { alert("Jméno musí mít alespoň 3 znaky!"); return; }
     if (passVal.length < 1) { alert("Zadej heslo!"); return; }
 
-    const loader = document.getElementById('login-loader');
-
     if (NET.socket && NET.socket.connected) {
-        if(loader) loader.style.display = 'block';
+        document.getElementById('login-loader').style.display = 'block';
         const eventName = isLogin ? 'login' : 'register';
         
         NET.socket.emit(eventName, { user: nameVal, pass: passVal });
         
         NET.socket.once(eventName + 'Response', (res) => {
-            if(loader) loader.style.display = 'none';
+            document.getElementById('login-loader').style.display = 'none';
             if (res.success) {
                 META.playerName = nameVal;
                 Object.assign(META, res.meta);
@@ -1880,15 +1841,11 @@ function handleAuth(isLogin) {
                 localStorage.setItem('neoSurvivor_pass', passVal);
                 saveMetaLocalOnly();
                 
-                const pn = document.getElementById('display-player-name');
-                if(pn) pn.innerText = META.playerName;
-                
-                const ml = document.getElementById('display-max-level');
-                if(ml) ml.innerText = META.maxLevel || 1;
+                document.getElementById('display-player-name').innerText = META.playerName;
+                document.getElementById('display-max-level').innerText = META.maxLevel || 1;
 
                 document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-                const menuModal = document.getElementById('menu-modal');
-                if(menuModal) menuModal.classList.add('active');
+                document.getElementById('menu-modal').classList.add('active');
                 
                 if (!GAME.loopStarted) {
                     GAME.loopStarted = true;
@@ -1905,12 +1862,9 @@ function handleAuth(isLogin) {
         localStorage.setItem('neoSurvivor_pass', passVal);
         saveMetaLocalOnly();
         
-        const pn = document.getElementById('display-player-name');
-        if(pn) pn.innerText = META.playerName;
-        
+        document.getElementById('display-player-name').innerText = META.playerName;
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        const menuModal = document.getElementById('menu-modal');
-        if(menuModal) menuModal.classList.add('active');
+        document.getElementById('menu-modal').classList.add('active');
         
         if (!GAME.loopStarted) {
             GAME.loopStarted = true;
@@ -1921,29 +1875,18 @@ function handleAuth(isLogin) {
 
 function init() {
     GAME.canvas = document.getElementById('game-canvas');
-    if(!GAME.canvas) return; // Ochrana proti pádu
-    
     GAME.ctx = GAME.canvas.getContext('2d');
     GAME.loopStarted = false; 
 
     updateSpeedFactor();
-    window.addEventListener('resize', () => { 
-        if(GAME.canvas) {
-            GAME.canvas.width = window.innerWidth; 
-            GAME.canvas.height = window.innerHeight; 
-            updateSpeedFactor(); 
-        }
-    });
-    GAME.canvas.width = window.innerWidth; 
-    GAME.canvas.height = window.innerHeight;
+    window.addEventListener('resize', () => { GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight; updateSpeedFactor(); });
+    GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight;
     
     GAME.ctx.fillStyle = '#020617';
     GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
 
     loadMeta();
-    
-    const mlDisp = document.getElementById('display-max-level');
-    if(mlDisp) mlDisp.innerText = META.maxLevel || 0;
+    document.getElementById('display-max-level').innerText = META.maxLevel || 0;
     
     initSocket();
 
@@ -1952,12 +1895,9 @@ function init() {
 
     if (!savedUser || !savedPass) {
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        const loginModal = document.getElementById('login-modal');
-        if(loginModal) loginModal.classList.add('active');
+        document.getElementById('login-modal').classList.add('active');
     } else {
-        const pnDisp = document.getElementById('display-player-name');
-        if(pnDisp) pnDisp.innerText = savedUser;
-        
+        document.getElementById('display-player-name').innerText = savedUser;
         if (NET.socket) {
             NET.socket.emit('login', { user: savedUser, pass: savedPass });
             NET.socket.once('loginResponse', (res) => {
@@ -1965,13 +1905,12 @@ function init() {
                     META.playerName = savedUser;
                     Object.assign(META, res.meta);
                     saveMetaLocalOnly();
-                    if(mlDisp) mlDisp.innerText = META.maxLevel || 1;
+                    document.getElementById('display-max-level').innerText = META.maxLevel || 1;
                 }
             });
         }
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        const menuModal = document.getElementById('menu-modal');
-        if(menuModal) menuModal.classList.add('active');
+        document.getElementById('menu-modal').classList.add('active');
         
         GAME.loopStarted = true;
         requestAnimationFrame(loop);
@@ -1983,18 +1922,15 @@ function init() {
     const btnRegister = document.getElementById('btn-register');
     if (btnRegister) btnRegister.onclick = () => handleAuth(false);
 
-    const btnResetProgress = document.getElementById('btn-reset-progress');
-    if(btnResetProgress) {
-        btnResetProgress.onclick = () => {
-            if (confirm("Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?")) {
-                localStorage.removeItem('neoSurvivor_meta');
-                localStorage.removeItem('neoSurvivor_pid');
-                localStorage.removeItem('neoSurvivor_user');
-                localStorage.removeItem('neoSurvivor_pass');
-                location.reload();
-            }
-        };
-    }
+    document.getElementById('btn-reset-progress').onclick = () => {
+        if (confirm("Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?")) {
+            localStorage.removeItem('neoSurvivor_meta');
+            localStorage.removeItem('neoSurvivor_pid');
+            localStorage.removeItem('neoSurvivor_user');
+            localStorage.removeItem('neoSurvivor_pass');
+            location.reload();
+        }
+    };
 
     GAME.entities = {
         player: new Player(true),
@@ -2046,8 +1982,7 @@ function init() {
     if (btnMP) btnMP.onclick = (e) => {
         if (e) e.preventDefault();
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        const mpModal = document.getElementById('multiplayer-modal');
-        if(mpModal) mpModal.classList.add('active');
+        document.getElementById('multiplayer-modal').classList.add('active');
         
         if (!NET.socket) {
             initSocket();
@@ -2058,29 +1993,16 @@ function init() {
     
     const btnShips = document.getElementById('btn-ships-menu');
     if (btnShips) btnShips.onclick = () => {
-        window.showShipsMenu();
-        const shipsModal = document.getElementById('ships-modal');
-        if(shipsModal) shipsModal.classList.add('active');
+        showShipsMenu();
+        document.getElementById('ships-modal').classList.add('active');
     };
-    
     const btnCloseShips = document.getElementById('btn-close-ships');
-    if (btnCloseShips) btnCloseShips.onclick = () => {
-        const shipsModal = document.getElementById('ships-modal');
-        if(shipsModal) shipsModal.classList.remove('active');
-    }
+    if (btnCloseShips) btnCloseShips.onclick = () => document.getElementById('ships-modal').classList.remove('active');
 
     const btnMeta = document.getElementById('btn-meta-menu');
-    if (btnMeta) btnMeta.onclick = () => { 
-        window.showMetaMenu(); 
-        const metaMod = document.getElementById('meta-modal');
-        if(metaMod) metaMod.classList.add('active'); 
-    };
-    
+    if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
     const btnCloseMeta = document.getElementById('btn-close-meta');
-    if (btnCloseMeta) btnCloseMeta.onclick = () => {
-        const metaMod = document.getElementById('meta-modal');
-        if(metaMod) metaMod.classList.remove('active');
-    }
+    if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
 
     const btnLeaderboard = document.getElementById('btn-leaderboard');
     if (btnLeaderboard) btnLeaderboard.onclick = () => {
@@ -2088,32 +2010,23 @@ function init() {
         if (NET.socket && NET.socket.connected) {
             NET.socket.emit('requestLeaderboard');
         }
-        const lbMod = document.getElementById('leaderboard-modal');
-        if(lbMod) lbMod.classList.add('active');
+        document.getElementById('leaderboard-modal').classList.add('active');
     };
     const btnCloseLB = document.getElementById('btn-close-leaderboard');
-    if (btnCloseLB) btnCloseLB.onclick = () => {
-        const lbMod = document.getElementById('leaderboard-modal');
-        if(lbMod) lbMod.classList.remove('active');
-    }
+    if (btnCloseLB) btnCloseLB.onclick = () => document.getElementById('leaderboard-modal').classList.remove('active');
 
     const btnSettings = document.getElementById('btn-settings');
     if (btnSettings) btnSettings.onclick = () => {
-        const setMod = document.getElementById('settings-modal');
-        if(setMod) setMod.classList.add('active');
+        document.getElementById('settings-modal').classList.add('active');
     };
     const btnCloseSettings = document.getElementById('btn-close-settings');
-    if (btnCloseSettings) btnCloseSettings.onclick = () => {
-        const setMod = document.getElementById('settings-modal');
-        if(setMod) setMod.classList.remove('active');
-    }
+    if (btnCloseSettings) btnCloseSettings.onclick = () => document.getElementById('settings-modal').classList.remove('active');
 
     const btnCloseMP = document.getElementById('btn-close-mp');
     if (btnCloseMP) btnCloseMP.onclick = () => {
         if (NET.serverPollingInterval) clearInterval(NET.serverPollingInterval);
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        const menuMod = document.getElementById('menu-modal');
-        if(menuMod) menuMod.classList.add('active');
+        document.getElementById('menu-modal').classList.add('active');
     };
 
     const btnResume = document.getElementById('btn-resume');
@@ -2166,7 +2079,7 @@ function useUltimate(cx, cy) {
     const ability = META.selectedAbility || 1;
     const p = GAME.entities.player;
     
-    if (ability === 1) { 
+    if (ability === 1) { // SNIPER
         const cam = GAME.camera;
         const worldTargetX = cx + (cam.x / GAME.zoom);
         const worldTargetY = cy + (cam.y / GAME.zoom);
@@ -2175,7 +2088,7 @@ function useUltimate(cx, cy) {
         shakeScreen(15);
         if (NET.isMultiplayer) syncShot(proj);
     } 
-    else if (ability === 2) { 
+    else if (ability === 2) { // ZMRAZENÍ ČASU
         GAME.frozenUntil = Date.now() + 5000;
         const overlay = document.getElementById('freeze-overlay');
         if(overlay) {
@@ -2186,7 +2099,7 @@ function useUltimate(cx, cy) {
             NET.socket.emit('useAbility', { type: 2 });
         }
     }
-    else if (ability === 3) { 
+    else if (ability === 3) { // POSEDNUTÍ 10 NEJBLIŽŠÍCH
         if (GAME.entities.enemies) {
             const normalEnemies = GAME.entities.enemies.filter(e => !e.possessed && !e.isBoss);
             const closest = normalEnemies.sort((a,b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y)).slice(0, 10);
