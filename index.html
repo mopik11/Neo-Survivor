@@ -11,6 +11,7 @@
       <div class="scanlines"></div>
       
       <div id="hit-overlay"></div>
+      <div id="freeze-overlay"></div>
       
       <canvas id="game-canvas"></canvas>
       
@@ -27,7 +28,7 @@
           </div>
           
           <div class="stat-chip sniper-chip" id="sniper-ui" style="flex-grow: 1; max-width: 150px; justify-content: flex-start;">
-            🎯 <div class="sniper-cooldown" style="flex-grow: 1; height: 8px; margin-left: 8px; background: rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden;"><div id="sniper-bar" style="height: 100%; width: 0%; background: var(--accent-color); transition: width 0.1s linear;"></div></div>
+            <span id="ultimate-icon">🎯</span> <div class="sniper-cooldown" style="flex-grow: 1; height: 8px; margin-left: 8px; background: rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden;"><div id="sniper-bar" style="height: 100%; width: 0%; background: var(--accent-color); transition: width 0.1s linear;"></div></div>
           </div>
           
           <div class="stat-chip sniper-chip" id="kaktus-ui" style="display: none; flex-grow: 1; max-width: 120px; justify-content: flex-start;">
@@ -81,14 +82,14 @@
           <div class="menu-actions">
             <button class="btn-restart" id="btn-start">SOLO</button>
             <button class="btn-restart" id="btn-multiplayer" style="background: linear-gradient(to right, #6366f1, #a855f7);">MULTIPLAYER</button>
-            <button class="btn-restart" id="btn-ships-menu" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4);">LODĚ</button>
+            <button class="btn-restart" id="btn-ships-menu" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4);">VÝBAVA</button>
             <button class="btn-restart" id="btn-meta-menu" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.05);">VYLEPŠENÍ</button>
             <button class="btn-restart" id="btn-leaderboard" style="background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.4);">ŽEBŘÍČEK</button>
             <button class="btn-restart" id="btn-settings" style="background: rgba(100, 116, 139, 0.2); border-color: rgba(100, 116, 139, 0.4); min-width: unset; padding: 1.2rem;">⚙️</button>
           </div>
           <div class="controls-hint">
             <span>WASD: POHYB</span>
-            <span>KLIK: SNIPER</span>
+            <span>KLIK: SCHOPNOST</span>
             <span>ESC: PAUZA</span>
           </div>
         </div>
@@ -118,10 +119,10 @@
       </div>
 
       <div id="ships-modal" class="modal">
-        <div class="modal-content">
-          <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">VÝBĚR LODĚ</h2>
+        <div class="modal-content" style="max-width: 800px;">
+          <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">TVÁ VÝBAVA</h2>
           <div class="stat-chip" style="margin-bottom:20px; display:inline-flex;">DOGECOIN: <span id="ships-currency">0</span></div>
-          <div id="ships-options" class="upgrade-grid"></div>
+          <div id="ships-options" style="width: 100%; display: flex; flex-direction: column;"></div>
           <button class="btn-restart" id="btn-close-ships" style="margin-top:2.5rem">ZAVŘÍT</button>
         </div>
       </div>
@@ -150,7 +151,7 @@
             
             <button onclick="showHostModal()" class="btn-restart" style="width: 100%; background: #a855f7; margin-top: 10px;">ZALOŽIT NOVOU MÍSTNOST</button>
           </div>
-          <button class="btn-restart" id="btn-close-mp" style="margin-top:2.5rem; background: rgba(255, 255, 255, 0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZPĚT DO MENU</button>
+          <button class="btn-restart btn-reload" style="margin-top:2.5rem; background: rgba(255, 255, 255, 0.05); font-size: 0.9rem; border: none; opacity: 0.5; box-shadow:none;">ZPĚT DO MENU</button>
         </div>
       </div>
 
