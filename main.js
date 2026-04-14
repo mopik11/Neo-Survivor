@@ -51,7 +51,7 @@ const CONFIG = {
 
         { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎', rarity: 'legendary' },
         { id: 'luck', name: 'Větší Výběr', desc: '+1 možnost při levelu', icon: '🍀', rarity: 'legendary' },
-        { id: 'aura', name: 'Mrazivá Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' },
+        { id: 'aura', name: 'Mraziv Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' },
         { id: 'bait', name: 'Návnada', desc: 'Vypouští chutné cíle pro ufony', icon: '🪤', rarity: 'legendary' }
     ],
     RARITIES: {
@@ -1141,6 +1141,34 @@ class Player {
     }
 }
 
+function spawnEnemy() {
+    const alive = getAllAlivePlayers();
+    if (alive.length === 0) return;
+    const a = Math.random() * Math.PI * 2;
+    const pivot = alive[Math.floor(Math.random() * alive.length)];
+    const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
+    const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
+    const mod = Math.floor(GAME.time / 60) + 1;
+
+    let enemy;
+    if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
+        enemy = new Boss(x, y, mod);
+        showBossWarning(); 
+        GAME.lastBossTime = GAME.time;
+    } else {
+        let type = 1;
+        if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
+        enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
+    }
+
+    if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
+}
+
+function showBossWarning() {
+    const el = document.getElementById('boss-warning'); if (el) el.style.display = 'block';
+    setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
+}
+
 function updateUI() {
     const p = GAME.entities.player;
     if (!p) return;
@@ -1459,6 +1487,38 @@ function showMetaMenu() {
         container.appendChild(card);
     });
 }
+
+window.softResetToMenu = () => {
+    GAME.active = false;
+    GAME.paused = false;
+    
+    if (NET.socket) {
+        NET.socket.disconnect();
+        NET.socket = null;
+    }
+    
+    if (NET.serverPollingInterval) {
+        clearInterval(NET.serverPollingInterval);
+        NET.serverPollingInterval = null;
+    }
+
+    NET.isMultiplayer = false;
+    NET.roomId = null;
+    NET.others = {};
+    
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('menu-modal').classList.add('active');
+    
+    resetGame();
+    AudioEngine.startMenuMusic();
+};
+
+document.addEventListener('click', (e) => {
+    if (e.target.closest('.btn-reload')) {
+        e.preventDefault();
+        window.softResetToMenu();
+    }
+});
 
 function initSocket() {
     if (NET.socket && NET.socket.connected) return;
@@ -1813,32 +1873,6 @@ function handleAuth(isLogin) {
     }
 }
 
-// ZCELA NOVÁ A BEZPEČNÁ LOGIKA PRO NÁVRAT DO MENU
-window.softResetToMenu = () => {
-    GAME.active = false;
-    GAME.paused = false;
-    
-    if (NET.socket) {
-        NET.socket.disconnect();
-        NET.socket = null; 
-    }
-    
-    if (NET.serverPollingInterval) {
-        clearInterval(NET.serverPollingInterval);
-        NET.serverPollingInterval = null;
-    }
-
-    NET.isMultiplayer = false;
-    NET.roomId = null;
-    NET.others = {};
-    
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('menu-modal').classList.add('active');
-    
-    resetGame();
-    AudioEngine.startMenuMusic();
-};
-
 function init() {
     GAME.canvas = document.getElementById('game-canvas');
     GAME.ctx = GAME.canvas.getContext('2d');
@@ -2045,7 +2079,7 @@ function useUltimate(cx, cy) {
     const ability = META.selectedAbility || 1;
     const p = GAME.entities.player;
     
-    if (ability === 1) { 
+    if (ability === 1) { // SNIPER
         const cam = GAME.camera;
         const worldTargetX = cx + (cam.x / GAME.zoom);
         const worldTargetY = cy + (cam.y / GAME.zoom);
@@ -2054,7 +2088,7 @@ function useUltimate(cx, cy) {
         shakeScreen(15);
         if (NET.isMultiplayer) syncShot(proj);
     } 
-    else if (ability === 2) { 
+    else if (ability === 2) { // ZMRAZENÍ ČASU
         GAME.frozenUntil = Date.now() + 5000;
         const overlay = document.getElementById('freeze-overlay');
         if(overlay) {
@@ -2065,7 +2099,7 @@ function useUltimate(cx, cy) {
             NET.socket.emit('useAbility', { type: 2 });
         }
     }
-    else if (ability === 3) { 
+    else if (ability === 3) { // POSEDNUTÍ 10 NEJBLIŽŠÍCH
         if (GAME.entities.enemies) {
             const normalEnemies = GAME.entities.enemies.filter(e => !e.possessed && !e.isBoss);
             const closest = normalEnemies.sort((a,b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y)).slice(0, 10);
