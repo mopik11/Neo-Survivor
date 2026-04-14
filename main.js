@@ -575,7 +575,6 @@ function getAllTargets() {
             if (b && b.hp > 0) list.push({ x: b.x, y: b.y, radius: b.radius, isBait: true, obj: b });
         });
     }
-    // V SOLU I NORMÁLNÍ UFOUNI ÚTOČÍ NA POSEDNUTÉ
     if (!NET.isMultiplayer && GAME.entities.enemies) {
         GAME.entities.enemies.filter(e => e.possessed).forEach(e => {
             if (e.hp > 0) list.push({ x: e.x, y: e.y, radius: e.radius, isBait: false, possessed: true, obj: e });
@@ -1348,40 +1347,6 @@ function toggleFullscreen(element, force = false) {
     }
 }
 
-// ZCELA NOVÁ A BEZPEČNÁ LOGIKA PRO NÁVRAT DO MENU
-window.softResetToMenu = () => {
-    GAME.active = false;
-    GAME.paused = false;
-    
-    if (NET.socket) {
-        NET.socket.disconnect();
-        NET.socket = null; // Toto zajistí, že se nevytvoří duplicitní spojení!
-    }
-    
-    if (NET.serverPollingInterval) {
-        clearInterval(NET.serverPollingInterval);
-        NET.serverPollingInterval = null;
-    }
-
-    NET.isMultiplayer = false;
-    NET.roomId = null;
-    NET.others = {};
-    
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('menu-modal').classList.add('active');
-    
-    resetGame();
-    AudioEngine.startMenuMusic();
-};
-
-// GLOBALNÍ POSLUCHAČ PRO VŠECHNA TLAČÍTKA "MENU" a "UKONČIT DO MENU" (třída .btn-reload)
-document.addEventListener('click', (e) => {
-    if (e.target.closest('.btn-reload')) {
-        e.preventDefault();
-        window.softResetToMenu();
-    }
-});
-
 function showShipsMenu() {
     const container = document.getElementById('ships-options');
     if(!container) return; 
@@ -1969,14 +1934,14 @@ function init() {
     
     const btnShips = document.getElementById('btn-ships-menu');
     if (btnShips) btnShips.onclick = () => {
-        window.showShipsMenu();
+        showShipsMenu();
         document.getElementById('ships-modal').classList.add('active');
     };
     const btnCloseShips = document.getElementById('btn-close-ships');
     if (btnCloseShips) btnCloseShips.onclick = () => document.getElementById('ships-modal').classList.remove('active');
 
     const btnMeta = document.getElementById('btn-meta-menu');
-    if (btnMeta) btnMeta.onclick = () => { window.showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+    if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
     const btnCloseMeta = document.getElementById('btn-close-meta');
     if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
 
@@ -2453,7 +2418,7 @@ function render() {
                             if (target) ctx.lineTo(target.x - camX, target.y - camY);
                         });
                         ctx.strokeStyle = '#ffffff';
-                        ctx.lineWidth = 2 + (op.projSize - 6) * 0.3;
+                        ctx.lineWidth = 2 + (this.projSize - 6) * 0.3;
                         ctx.shadowBlur = 0;
                         ctx.stroke();
                         ctx.restore();
