@@ -2048,6 +2048,25 @@ function init() {
         startGame(); 
     };
 
+    const btnPauseMenu = document.getElementById('btn-pause-menu');
+    if (btnPauseMenu) btnPauseMenu.onclick = () => {
+        if (confirm("Opravdu chceš ukončit hru a vrátit se do menu?")) {
+            window.softResetToMenu();
+        }
+    };
+
+    const btnGameOverMenu = document.getElementById('btn-gameover-menu');
+    if (btnGameOverMenu) btnGameOverMenu.onclick = () => window.softResetToMenu();
+
+    const btnMainQuit = document.getElementById('btn-main-quit');
+    if (btnMainQuit) btnMainQuit.onclick = () => {
+        if (confirm("Opravdu se chceš odhlásit?")) {
+            localStorage.removeItem('neoSurvivor_user');
+            localStorage.removeItem('neoSurvivor_pass');
+            location.reload();
+        }
+    };
+
     GAME.canvas.addEventListener('touchstart', (e) => {
         if (!GAME.active || GAME.paused || !GAME.entities.player || GAME.entities.player.dead) return;
         const t = e.touches[0];
