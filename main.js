@@ -1153,7 +1153,6 @@ function updateUI() {
     const sBar = document.getElementById('sniper-bar');
     if (sBar) sBar.style.width = `${sRatio * 100}%`;
 
-    // Aktualizace ikonky ultiny podle výběru
     const ultIcon = document.getElementById('ultimate-icon');
     if (ultIcon) {
         if (META.selectedAbility === 1) ultIcon.innerText = "🎯";
@@ -1814,6 +1813,32 @@ function handleAuth(isLogin) {
     }
 }
 
+// ZCELA NOVÁ A BEZPEČNÁ LOGIKA PRO NÁVRAT DO MENU
+window.softResetToMenu = () => {
+    GAME.active = false;
+    GAME.paused = false;
+    
+    if (NET.socket) {
+        NET.socket.disconnect();
+        NET.socket = null; 
+    }
+    
+    if (NET.serverPollingInterval) {
+        clearInterval(NET.serverPollingInterval);
+        NET.serverPollingInterval = null;
+    }
+
+    NET.isMultiplayer = false;
+    NET.roomId = null;
+    NET.others = {};
+    
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('menu-modal').classList.add('active');
+    
+    resetGame();
+    AudioEngine.startMenuMusic();
+};
+
 function init() {
     GAME.canvas = document.getElementById('game-canvas');
     GAME.ctx = GAME.canvas.getContext('2d');
@@ -2020,7 +2045,7 @@ function useUltimate(cx, cy) {
     const ability = META.selectedAbility || 1;
     const p = GAME.entities.player;
     
-    if (ability === 1) { // SNIPER
+    if (ability === 1) { 
         const cam = GAME.camera;
         const worldTargetX = cx + (cam.x / GAME.zoom);
         const worldTargetY = cy + (cam.y / GAME.zoom);
@@ -2029,7 +2054,7 @@ function useUltimate(cx, cy) {
         shakeScreen(15);
         if (NET.isMultiplayer) syncShot(proj);
     } 
-    else if (ability === 2) { // ZMRAZENÍ ČASU
+    else if (ability === 2) { 
         GAME.frozenUntil = Date.now() + 5000;
         const overlay = document.getElementById('freeze-overlay');
         if(overlay) {
@@ -2040,7 +2065,7 @@ function useUltimate(cx, cy) {
             NET.socket.emit('useAbility', { type: 2 });
         }
     }
-    else if (ability === 3) { // POSEDNUTÍ 10 NEJBLIŽŠÍCH
+    else if (ability === 3) { 
         if (GAME.entities.enemies) {
             const normalEnemies = GAME.entities.enemies.filter(e => !e.possessed && !e.isBoss);
             const closest = normalEnemies.sort((a,b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y)).slice(0, 10);
