@@ -2049,11 +2049,7 @@ function init() {
     };
 
     const btnPauseMenu = document.getElementById('btn-pause-menu');
-    if (btnPauseMenu) btnPauseMenu.onclick = () => {
-        if (confirm("Opravdu chceš ukončit hru a vrátit se do menu?")) {
-            window.softResetToMenu();
-        }
-    };
+    if (btnPauseMenu) btnPauseMenu.onclick = () => window.softResetToMenu();
 
     const btnGameOverMenu = document.getElementById('btn-gameover-menu');
     if (btnGameOverMenu) btnGameOverMenu.onclick = () => window.softResetToMenu();
