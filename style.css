@@ -149,7 +149,7 @@ canvas {
   transition: opacity 0.1s ease-out; 
 }
 #freeze-overlay {
-  background-color: rgba(56, 189, 248, 0.1); /* Světle modrá */
+  background-color: rgba(56, 189, 248, 0.1); 
   transition: opacity 0.3s ease-out; 
 }
 #freeze-overlay.active {
@@ -326,11 +326,11 @@ canvas {
     text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
 }
 
-/* Upgrade Cards */
 .upgrade-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 12px;
+  margin-top: 1.5rem;
   width: 100%;
 }
 
@@ -406,7 +406,6 @@ canvas {
 .lb-row.gold { border-color: #fbbf24; color: #fbbf24; background: rgba(245, 158, 11, 0.1);}
 .lb-row.silver { border-color: #cbd5e1; color: #f8fafc; background: rgba(203, 213, 225, 0.1);}
 .lb-row.bronze { border-color: #b45309; color: #d97706; background: rgba(180, 83, 9, 0.1);}
-
 
 .loader {
     border: 4px solid rgba(255, 255, 255, 0.1);
@@ -567,10 +566,6 @@ canvas {
     gap: 8px;
     margin-top: 1.5rem;
     font-size: 0.75rem;
-  }
-
-  .fs-button {
-      display: none !important;
   }
 }
 
