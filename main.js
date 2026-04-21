@@ -1271,7 +1271,7 @@ function applyUpgrade(id) {
             case 'magnet': p.magnetRange *= 1.5; break;
             case 'shield': p.shield *= 0.8; break;
             case 'regen': p.regen += 1; break;
-            case 'xpgen': if (!p.lastXpGen) p.xpGenInterval = 60000; else p.xpGenInterval = Math.max(500, p.xpGenInterval / 2); p.lastXpGen = Date.now(); break;
+            case 'xpgen': if (!p.lastXpGen) p.xpGenInterval = 600; else p.xpGenInterval = Math.max(500, p.xpGenInterval / 2); p.lastXpGen = Date.now(); break;
             case 'ultramagnet': p.ultraMagnet = true; p.ultraMagnetPower += 1; break;
             case 'pierce': p.pierceCount += 1; break;
             case 'wall_range': p.wallRangeBonus += 0.25; break; 
