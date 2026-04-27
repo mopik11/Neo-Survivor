@@ -81,7 +81,8 @@ const CONFIG = {
         { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎', rarity: 'legendary' },
         { id: 'luck', name: 'Větší Výběr', desc: '+1 možnost při levelu', icon: '🍀', rarity: 'legendary' },
         { id: 'aura', name: 'Mraziv Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' },
-        { id: 'bait', name: 'Návnada', desc: 'Vypouští chutné cíle pro ufony', icon: '🪤', rarity: 'legendary' }
+        { id: 'bait', name: 'Návnada', desc: 'Vypouští chutné cíle pro ufony', icon: '🪤', rarity: 'legendary' },
+        { id: 'possession_plus', name: 'Velitel Duchů', desc: 'Ability: Posedne o +2 více nepřátel', icon: '👻', rarity: 'rare' }
     ],
     RARITIES: {
         common: { chance: 40, color: '#94a3b8', name: 'COMMON' },
@@ -815,6 +816,47 @@ class Enemy {
                 this.lastShot = Date.now();
             }
         }
+
+        if (this.type === 4 && target.id && GAME.entities.gems && GAME.entities.gems.find(g => g.id === target.id)) {
+            if (dist(this.x, this.y, target.x, target.y) < 30) {
+                GAME.entities.gems = GAME.entities.gems.filter(g => g.id !== target.id);
+                this.stolenGems = (this.stolenGems || 0) + 1;
+            }
+        }
+
+        const now = Date.now();
+        if (this.type === 3 && !this.exploding) {
+            if (dist(this.x, this.y, target.x, target.y) < 80 && !target.isBait && target.hp !== undefined) {
+                this.exploding = true;
+                this.explodeTime = now + 1500;
+            }
+        }
+
+        if (this.type === 3 && this.exploding && now > this.explodeTime) {
+            this.hp = 0;
+            players.forEach(p => { if (dist(p.x, p.y, this.x, this.y) < 150) p.hp -= 40; });
+            if (GAME.entities.enemies) {
+                GAME.entities.enemies.forEach(e => { if (e.id !== this.id && dist(e.x, e.y, this.x, this.y) < 150) e.hp -= 150; });
+            }
+            if (GAME.entities.fire) {
+                for(let j=0; j<15; j++) {
+                    const a = Math.random() * Math.PI * 2;
+                    const d = Math.random() * 150;
+                    GAME.entities.fire.push(new Fire(this.x + Math.cos(a)*d, this.y + Math.sin(a)*d, 0, false));
+                }
+            }
+            shakeScreen(15); AudioEngine.play('hit');
+        }
+
+        if (this.type === 5) {
+            if (GAME.entities.enemies) {
+                GAME.entities.enemies.forEach(e => {
+                    if (e.id !== this.id && !e.possessed && dist(e.x, e.y, this.x, this.y) < 250) {
+                        e.hp = Math.min(e.maxHp, e.hp + 0.5);
+                    }
+                });
+            }
+        }
     }
     draw(ctx, cam) {
         const ratio = this.hp / this.maxHp;
@@ -873,8 +915,17 @@ class Enemy {
         } else if (this.type === 5) {
             // Support (kříž nebo ovál s aurou)
             const color = this.possessed ? '#22c55e' : '#0ea5e9';
+            
+            // Healing Aura effect
+            ctx.save();
+            ctx.translate(this.x - cam.x, this.y - cam.y);
+            const pulse = (Math.sin(Date.now() / 300) + 1) * 0.5;
+            ctx.globalAlpha = 0.1 + pulse * 0.1;
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(0, 0, 250, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = 1.0;
+            
             ctx.shadowBlur = 20; ctx.shadowColor = color; ctx.fillStyle = color;
-            ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
             ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#fff';
             ctx.fillRect(-8, -3, 16, 6); ctx.fillRect(-3, -8, 6, 16);
@@ -897,6 +948,18 @@ class Player {
 
         this.critChance = 0;
         this.critMultiplier = 3;
+        this.maxPossessions = 10;
+        this.wallWidthBonus = 0;
+        this.wallRangeBonus = 0;
+        this.laserRangeBonus = 0;
+        this.lastFired = 0;
+        this.lastSniperTime = 0;
+        this.lastRegen = 0;
+        this.lastXpGen = 0;
+        this.lastFireTrail = 0;
+        this.lastKaktusToggle = 0;
+        this.lastBait = 0;
+        this.laserTargets = [];
 
         this.luckFactor = 1.0 + (isLocal ? (META.upgrades.luck * 0.05) : 0);
         this.orbitals = 0; this.knockbackForce = 6; this.xpMultiplier = 1.0;
@@ -978,61 +1041,63 @@ class Player {
         }
 
         if (this.shipType === 2) {
-            this.laserTargets = [];
-            const enemies = GAME.entities.enemies;
-            if (enemies && enemies.length > 0) {
-                const range = 400 + this.laserRangeBonus;
-                const inRange = enemies.filter(e => e && e.hp > 0 && dist(this.x, this.y, e.x, e.y) < range);
-                inRange.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y));
+            const now = Date.now();
+            if (now - this.lastFired > (this.fireRate / 2)) {
+                this.laserTargets = [];
+                const enemies = GAME.entities.enemies;
+                if (enemies && enemies.length > 0) {
+                    const range = 400 + this.laserRangeBonus;
+                    const inRange = enemies.filter(e => e && e.hp > 0 && dist(this.x, this.y, e.x, e.y) < range);
+                    inRange.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y));
 
-                const primaryTargets = inRange.slice(0, this.projectileCount);
-                const hitSet = new Set(primaryTargets.map(t => t.id));
+                    const primaryTargets = inRange.slice(0, this.projectileCount);
+                    const hitSet = new Set(primaryTargets.map(t => t.id));
 
-                primaryTargets.forEach(target => {
-                    const chain = [target];
-                    let current = target;
-                    let jumpsLeft = this.pierceCount - 1;
+                    primaryTargets.forEach(target => {
+                        const chain = [target];
+                        let current = target;
+                        let jumpsLeft = this.pierceCount - 1;
 
-                    while (jumpsLeft > 0) {
-                        const nextTargets = enemies.filter(e => e && e.hp > 0 && !hitSet.has(e.id) && dist(current.x, current.y, e.x, e.y) < 300);
-                        if (nextTargets.length === 0) break;
-                        nextTargets.sort((a, b) => dist(current.x, current.y, a.x, a.y) - dist(current.x, current.y, b.x, b.y));
-                        const next = nextTargets[0];
-                        chain.push(next);
-                        hitSet.add(next.id);
-                        current = next;
-                        jumpsLeft--;
-                    }
-                    this.laserTargets.push(chain);
-                });
-
-                const now = Date.now();
-                if (now - this.lastFired > (this.fireRate / 2) && this.laserTargets.length > 0) {
-                    let isCrit = Math.random() < this.critChance;
-                    const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
-
-                    this.laserTargets.forEach(chain => {
-                        chain.forEach(target => {
-                            if (!target) return;
-                            target.hp -= finalDamage;
-
-                            if (isCrit) {
-                                if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
-                                GAME.entities.floatingTexts.push(new FloatingText(target.x, target.y - 25, "CRITICAL!", "#ef4444"));
-                            }
-
-                            if (NET.isMultiplayer) {
-                                NET.socket.emit('enemyHit', { id: target.id, damage: finalDamage });
-                            }
-                            if (target.hp <= 0) {
-                                AudioEngine.play('hit');
-                                if (!NET.isMultiplayer && GAME.entities.gems) GAME.entities.gems.push(new Gem(target.x, target.y));
-                                GAME.kills++;
-                                updateUI();
-                            }
-                        });
+                        while (jumpsLeft > 0) {
+                            const nextTargets = enemies.filter(e => e && e.hp > 0 && !hitSet.has(e.id) && dist(current.x, current.y, e.x, e.y) < 300);
+                            if (nextTargets.length === 0) break;
+                            nextTargets.sort((a, b) => dist(current.x, current.y, a.x, a.y) - dist(current.x, current.y, b.x, b.y));
+                            const next = nextTargets[0];
+                            chain.push(next);
+                            hitSet.add(next.id);
+                            current = next;
+                            jumpsLeft--;
+                        }
+                        this.laserTargets.push(chain);
                     });
-                    this.lastFired = now;
+
+                    if (this.laserTargets.length > 0) {
+                        let isCrit = Math.random() < this.critChance;
+                        const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
+
+                        this.laserTargets.forEach(chain => {
+                            chain.forEach(target => {
+                                if (!target) return;
+                                target.hp -= finalDamage;
+
+                                if (isCrit) {
+                                    if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                                    GAME.entities.floatingTexts.push(new FloatingText(target.x, target.y - 25, "CRITICAL!", "#ef4444"));
+                                }
+
+                                if (NET.isMultiplayer) {
+                                    NET.socket.emit('enemyHit', { id: target.id, damage: finalDamage });
+                                }
+                                if (target.hp <= 0) {
+                                    AudioEngine.play('hit');
+                                    if (!NET.isMultiplayer && GAME.entities.gems) GAME.entities.gems.push(new Gem(target.x, target.y));
+                                    GAME.kills++;
+                                }
+                            });
+                        });
+                        updateUI();
+                        this.lastFired = now;
+                    }
                 }
             }
         }
@@ -1145,8 +1210,8 @@ class Player {
 
         if (this.shipType === 4) { // Brokovnice
             const baseAngle = Math.atan2(target.y - this.y, target.x - this.x);
-            const pellets = 3 + this.projectileCount;
-            const spread = Math.PI / 4; 
+            const pellets = 4 + this.projectileCount;
+            const spread = Math.PI / 6; 
             
             for (let i = 0; i < pellets; i++) {
                 const isCrit = Math.random() < this.critChance;
@@ -1155,8 +1220,8 @@ class Player {
                 const angleOffset = -spread/2 + (spread / (pellets-1 || 1)) * i;
                 const shootAngle = baseAngle + angleOffset;
                 
-                const tx = this.x + Math.cos(shootAngle) * 100;
-                const ty = this.y + Math.sin(shootAngle) * 100;
+                const tx = this.x + Math.cos(shootAngle) * 500;
+                const ty = this.y + Math.sin(shootAngle) * 500;
 
                 const proj = new Projectile(this.x, this.y, tx, ty, finalDamage, {
                     size: this.projSize * 0.8,
@@ -1164,8 +1229,8 @@ class Player {
                     bounce: this.bounces,
                     isCrit: isCrit,
                     type: 'default',
-                    life: 40 + (Math.random()*10), // Krátký dostřel
-                    speed: CONFIG.PROJECTILE_SPEED * (1.2 + Math.random()*0.4)
+                    life: 60 + (Math.random()*20), // Lepší dostřel
+                    speed: CONFIG.PROJECTILE_SPEED * (1.1 + Math.random()*0.3)
                 });
                 if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
                 if (NET.isMultiplayer) syncShot(proj);
@@ -1359,12 +1424,17 @@ function showLevelUp() {
         if (u.id === 'kaktus' && GAME.entities.player.hasKaktus) return false;
 
         if (pShip === 1) {
-            if (['wall_range', 'wall_width', 'laser_range'].includes(u.id)) return false;
+            if (['wall_range', 'wall_width', 'laser_range', 'possession_plus'].includes(u.id)) return false;
         } else if (pShip === 2) {
-            if (['wall_range', 'wall_width', 'bounce'].includes(u.id)) return false;
+            if (['wall_range', 'wall_width', 'bounce', 'possession_plus'].includes(u.id)) return false;
         } else if (pShip === 3) {
-            if (['count', 'pierce', 'bounce', 'laser_range'].includes(u.id)) return false;
+            if (['count', 'pierce', 'bounce', 'laser_range', 'possession_plus'].includes(u.id)) return false;
+        } else if (pShip === 4) {
+            if (['wall_range', 'wall_width', 'laser_range', 'possession_plus'].includes(u.id)) return false;
         }
+
+        if (u.id === 'possession_plus' && META.selectedAbility !== 3) return false;
+        
         return true;
     };
 
@@ -1441,6 +1511,7 @@ function applyUpgrade(id) {
             case 'kaktus': p.hasKaktus = true; p.kaktus = true; p.lastKaktusToggle = Date.now(); break;
             case 'bait': p.bait = true; p.baitHpMult += 5; p.lastBait = Date.now(); break;
             case 'growth': p.maxHp += Math.floor(p.maxHp * 0.1); p.hp = p.maxHp; break;
+            case 'possession_plus': p.maxPossessions += 2; break;
         }
     } catch (e) { console.error("Upgrade error:", e); }
 
@@ -2298,10 +2369,11 @@ function useUltimate(cx, cy) {
             NET.socket.emit('useAbility', { type: 2 });
         }
     }
-    else if (ability === 3) { // POSEDNUTÍ 10 NEJBLIŽŠÍCH
+    else if (ability === 3) { // POSEDNUTÍ NEJBLIŽŠÍCH
         if (GAME.entities.enemies) {
             const normalEnemies = GAME.entities.enemies.filter(e => !e.possessed && !e.isBoss);
-            const closest = normalEnemies.sort((a, b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y)).slice(0, 10);
+            const count = p.maxPossessions || 10;
+            const closest = normalEnemies.sort((a, b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y)).slice(0, count);
 
             const idsToPossess = [];
             closest.forEach(e => {
@@ -2320,7 +2392,7 @@ function useUltimate(cx, cy) {
         const healed = [];
         players.forEach(pl => {
             if (dist(p.x, p.y, pl.x, pl.y) < 250) {
-                pl.hp = Math.min(pl.maxHp, pl.hp + p.maxHp * 0.2); // heal 20%
+                pl.hp = Math.min(pl.maxHp, pl.hp + p.maxHp * 0.5); // heal 50%
                 healed.push(pl.id || myPlayerId);
                 if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
                 GAME.entities.floatingTexts.push(new FloatingText(pl.x, pl.y - 25, "+HEAL", "#10b981"));
@@ -2337,7 +2409,7 @@ function useUltimate(cx, cy) {
 
         if (NET.isMultiplayer && NET.socket && healed.length > 0) {
             NET.socket.emit('useAbility', { type: 'medic' });
-            NET.socket.emit('healPlayers', { targets: healed, amount: p.maxHp * 0.2 });
+            NET.socket.emit('healPlayers', { targets: healed, amount: p.maxHp * 0.5 });
         }
     }
 }
@@ -2431,7 +2503,7 @@ function update(dt) {
                     type = 3; hp *= 0.5; speedMod = 1.8;
                 } else if (GAME.entities.player.level >= 5 && rnd < 0.25) {
                     type = 4; hp *= 1.5; speedMod = 2.2;
-                } else if (GAME.entities.player.level >= 8 && rnd < 0.3) {
+                } else if (GAME.entities.player.level >= 8 && rnd < 0.27) {
                     type = 5; hp *= 3; speedMod = 0.5;
                 }
 
