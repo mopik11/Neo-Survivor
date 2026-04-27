@@ -243,6 +243,17 @@
       </div>
     </div>
 
+    <div id="custom-confirm-modal" class="modal">
+      <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <h2 style="font-size: 2rem; color: #fca5a5; margin-bottom: 1rem;">POTVRZENÍ</h2>
+        <p id="custom-confirm-text" style="font-size: 1.1rem; color: #cbd5e1; margin-bottom: 2rem;"></p>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-restart" id="btn-confirm-yes" style="flex: 1; background: #ef4444; color: white;">ANO</button>
+          <button class="btn-restart" id="btn-confirm-no" onclick="document.getElementById('custom-confirm-modal').classList.remove('active')" style="flex: 1; background: #475569; color: white;">NE</button>
+        </div>
+      </div>
+    </div>
+
     </div>
     
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>

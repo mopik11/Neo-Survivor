@@ -20,6 +20,24 @@ window.showCustomAlert = function (msg) {
     }
 };
 
+window.showCustomConfirm = function (msg, onConfirm) {
+    const modal = document.getElementById('custom-confirm-modal');
+    const text = document.getElementById('custom-confirm-text');
+    const btnYes = document.getElementById('btn-confirm-yes');
+    if (modal && text && btnYes) {
+        text.innerText = msg;
+        btnYes.onclick = () => {
+            modal.classList.remove('active');
+            if (onConfirm) onConfirm();
+        };
+        modal.classList.add('active');
+    } else {
+        if (confirm(msg)) {
+            if (onConfirm) onConfirm();
+        }
+    }
+};
+
 const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
@@ -1934,13 +1952,13 @@ function init() {
     if (btnRegister) btnRegister.onclick = () => handleAuth(false);
 
     document.getElementById('btn-reset-progress').onclick = () => {
-        if (confirm("Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?")) {
+        window.showCustomConfirm("Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?", () => {
             localStorage.removeItem('neoSurvivor_meta');
             localStorage.removeItem('neoSurvivor_pid');
             localStorage.removeItem('neoSurvivor_user');
             localStorage.removeItem('neoSurvivor_pass');
             location.reload();
-        }
+        });
     };
 
     GAME.entities = {
@@ -2067,11 +2085,11 @@ function init() {
 
     const btnMainQuit = document.getElementById('btn-main-quit');
     if (btnMainQuit) btnMainQuit.onclick = () => {
-        if (confirm("Opravdu se chceš odhlásit?")) {
+        window.showCustomConfirm("Opravdu se chceš odhlásit?", () => {
             localStorage.removeItem('neoSurvivor_user');
             localStorage.removeItem('neoSurvivor_pass');
             location.reload();
-        }
+        });
     };
 
     GAME.canvas.addEventListener('touchstart', (e) => {
