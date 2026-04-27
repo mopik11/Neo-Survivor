@@ -29,6 +29,11 @@ const db = new sqlite3.Database('./neo_survivor.db', (err) => {
 
 const ROOMS = {};
 
+// NASTAVENÍ PRO ADMIN KONZOLI
+let SERVER_ADMIN_PIN = null;
+const ADMIN_USER = "mopik"; // <-- ZMĚŇ SI UŽIVATELSKÉ JMÉNO
+const ADMIN_PASS = "o9~^>!:U{i3Y6,o"; // <-- ZMĚŇ SI HESLO
+
 const CONFIG = {
     ENEMY_BASE_HEALTH: 20,
     ENEMY_BASE_SPEED: 4.5, 
@@ -51,6 +56,99 @@ function broadcastLeaderboard() {
 io.on('connection', (socket) => {
     console.log('Hráč připojen:', socket.id);
 
+    // --- ADMIN KONZOLE (2FA OCHRANA + RELACE) ---
+    socket.on('requestAdminPin', (data) => {
+        if (data.user === ADMIN_USER && data.pass === ADMIN_PASS) {
+            SERVER_ADMIN_PIN = Math.floor(100000 + Math.random() * 900000).toString();
+            console.log(`\n===========================================`);
+            console.log(`🔑 ADMIN PIN KÓD BYL VYGENEROVÁN: ${SERVER_ADMIN_PIN}`);
+            console.log(`===========================================\n`);
+            socket.emit('adminAuthStep', { step: 2 });
+        } else {
+            socket.emit('adminAuthError', "Špatné jméno nebo heslo.");
+        }
+    });
+
+    socket.on('verifyAdminPin', (data) => {
+        if (data.user === ADMIN_USER && data.pass === ADMIN_PASS && data.pin === SERVER_ADMIN_PIN) {
+            socket.isAdmin = true; 
+            SERVER_ADMIN_PIN = null; 
+            socket.emit('adminAuthStep', { step: 3 });
+        } else {
+            socket.emit('adminAuthError', "Špatný nebo expirovaný PIN kód.");
+        }
+    });
+
+    socket.on('adminCommand', (data) => {
+        if (!socket.isAdmin) {
+            return socket.emit('adminResponse', { msg: "CHYBA: Neautorizovaný přístup! Přihlaste se.", color: "red" });
+        }
+
+        const args = data.cmd.trim().split(' ');
+        const cmd = args[0].toLowerCase();
+        const target = args[1];
+
+        if (cmd === 'give') {
+            const amount = parseInt(args[2]);
+            if (!target || isNaN(amount)) return socket.emit('adminResponse', { msg: "Použití: give <jméno> <počet>", color: "yellow" });
+            db.get(`SELECT meta FROM accounts WHERE username = ?`, [target], (err, row) => {
+                if (!row) return socket.emit('adminResponse', { msg: `Hráč ${target} nenalezen.`, color: "red" });
+                let meta = JSON.parse(row.meta);
+                meta.currency = (meta.currency || 0) + amount;
+                db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [JSON.stringify(meta), target], () => {
+                    socket.emit('adminResponse', { msg: `Úspěch: ${target} dostal ${amount} Doge. (Nyní má ${meta.currency})`, color: "lime" });
+                });
+            });
+        }
+        else if (cmd === 'level') {
+            const amount = parseInt(args[2]);
+            if (!target || isNaN(amount)) return socket.emit('adminResponse', { msg: "Použití: level <jméno> <číslo_levelu>", color: "yellow" });
+            db.get(`SELECT meta FROM accounts WHERE username = ?`, [target], (err, row) => {
+                if (!row) return socket.emit('adminResponse', { msg: `Hráč ${target} nenalezen.`, color: "red" });
+                let meta = JSON.parse(row.meta);
+                meta.maxLevel = amount;
+                db.run(`UPDATE accounts SET meta = ?, max_level = ? WHERE username = ?`, [JSON.stringify(meta), amount, target], () => {
+                    socket.emit('adminResponse', { msg: `Úspěch: Hráči ${target} byl nastaven Max Level ${amount}.`, color: "lime" });
+                    broadcastLeaderboard();
+                });
+            });
+        }
+        else if (cmd === 'stats') {
+            if (target) {
+                db.get(`SELECT * FROM accounts WHERE username = ?`, [target], (err, row) => {
+                    if (!row) return socket.emit('adminResponse', { msg: `Hráč ${target} nenalezen.`, color: "red" });
+                    socket.emit('adminResponse', { msg: `Hráč: ${row.username} | Max Lvl: ${row.max_level}\nMeta: ${row.meta}`, color: "cyan" });
+                });
+            } else {
+                db.all(`SELECT username, max_level FROM accounts ORDER BY max_level DESC`, [], (err, rows) => {
+                    let text = `Zaregistrováno hráčů: ${rows.length}\n`;
+                    rows.forEach(r => text += `- ${r.username} (Lvl ${r.max_level})\n`);
+                    socket.emit('adminResponse', { msg: text, color: "cyan" });
+                });
+            }
+        } 
+        else if (cmd === 'delete') {
+            if (!target) return socket.emit('adminResponse', { msg: "Použití: delete <jméno>", color: "yellow" });
+            db.run(`DELETE FROM accounts WHERE username = ?`, [target], function(err) {
+                if (this.changes > 0) socket.emit('adminResponse', { msg: `Účet ${target} byl smazán.`, color: "lime" });
+                else socket.emit('adminResponse', { msg: `Hráč ${target} nenalezen.`, color: "red" });
+                broadcastLeaderboard();
+            });
+        } 
+        else if (cmd === 'rooms') {
+            let count = Object.keys(ROOMS).length;
+            let text = `Aktivní místnosti: ${count}\n`;
+            for (let id in ROOMS) {
+                text += `- ID: ${id} | Hráčů: ${Object.keys(ROOMS[id].players).length} | Lvl: ${ROOMS[id].level}\n`;
+            }
+            socket.emit('adminResponse', { msg: text, color: "cyan" });
+        } 
+        else {
+            socket.emit('adminResponse', { msg: "Neznámý příkaz. Dostupné: give, level, stats, delete, rooms", color: "yellow" });
+        }
+    });
+
+    // --- BĚŽNÁ LOGIKA HRY ---
     socket.on('register', (data) => {
         const { user, pass } = data;
         if (!user || user.length < 3 || !pass || pass.length < 1) {
