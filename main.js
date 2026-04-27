@@ -2407,14 +2407,28 @@ function update(dt) {
                 const mod = Math.floor(GAME.time / 60) + 1;
 
                 let enemy;
+                let hp = CONFIG.ENEMY_BASE_HEALTH * mod;
+                let type = 1;
+                let speedMod = 1;
+
+                const rnd = Math.random();
+                if (GAME.entities.player.level >= 3 && rnd < 0.1) {
+                    type = 2; hp *= 0.5;
+                } else if (GAME.entities.player.level >= 4 && rnd < 0.2) {
+                    type = 3; hp *= 0.5; speedMod = 1.8;
+                } else if (GAME.entities.player.level >= 5 && rnd < 0.25) {
+                    type = 4; hp *= 1.5; speedMod = 2.2;
+                } else if (GAME.entities.player.level >= 8 && rnd < 0.3) {
+                    type = 5; hp *= 3; speedMod = 0.5;
+                }
+
                 if (GAME.entities.player.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
                     enemy = new Boss(x, y, mod);
                     showBossWarning();
                     GAME.lastBossTime = GAME.time;
                 } else {
-                    let type = 1;
-                    if (GAME.entities.player.level >= 3 && Math.random() < 0.1) type = 2;
-                    enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
+                    enemy = new Enemy(x, y, mod * speedMod, Math.random().toString(36).substr(2, 9), type);
+                    enemy.maxHp = hp; enemy.hp = hp;
                 }
                 if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
             }
@@ -2603,7 +2617,23 @@ function update(dt) {
                         if (proj.pierce > 1) proj.pierce--; else if (proj.pierce !== Infinity && proj.bounce <= 0) GAME.entities.projectiles.splice(pIndex, 1);
                         if (enemy.hp <= 0) {
                             AudioEngine.play('hit');
-                            if (!NET.isMultiplayer && GAME.entities.gems) GAME.entities.gems.push(new Gem(enemy.x, enemy.y));
+                            if (!NET.isMultiplayer && GAME.entities.gems) {
+                                if (enemy.type === 4) { // Zloděj drop
+                                    const drops = (enemy.stolenGems || 0) + 5;
+                                    for(let i=0; i<drops; i++) {
+                                        GAME.entities.gems.push(new Gem(enemy.x + (Math.random()-0.5)*100, enemy.y + (Math.random()-0.5)*100));
+                                    }
+                                } else {
+                                    let isNuke = false, isMagnet = false;
+                                    if (enemy.isBoss) {
+                                        if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
+                                        for(let i=0; i<10; i++) GAME.entities.gems.push(new Gem(enemy.x + (Math.random()-0.5)*150, enemy.y + (Math.random()-0.5)*150));
+                                    }
+                                    const gem = new Gem(enemy.x, enemy.y);
+                                    gem.isNuke = isNuke; gem.isMagnet = isMagnet;
+                                    GAME.entities.gems.push(gem);
+                                }
+                            }
                             GAME.kills++;
                             if (p.lifestealChance > 0 && Math.random() < p.lifestealChance) {
                                 p.hp = Math.min(p.maxHp, p.hp + 1);
@@ -2627,7 +2657,30 @@ function update(dt) {
                     GAME.entities.pickedGems.add(g.id);
                     NET.socket.emit('gemPickup', g.id);
                 } else {
-                    p.addXp(Math.round(10 * (p.luckFactor || 1)));
+                    if (g.isNuke) {
+                        GAME.entities.enemies.forEach(e => {
+                            if (!e.isBoss) {
+                                e.hp = 0; e.dead = true;
+                                GAME.entities.gems.push(new Gem(e.x, e.y));
+                            }
+                        });
+                        if (GAME.entities.fire) {
+                            for(let j=0; j<30; j++) {
+                                const a = Math.random() * Math.PI * 2;
+                                const d = Math.random() * 800;
+                                GAME.entities.fire.push(new Fire(p.x + Math.cos(a)*d, p.y + Math.sin(a)*d, 0, false));
+                            }
+                        }
+                        shakeScreen(20); AudioEngine.play('hit');
+                        p.addXp(10);
+                    } else if (g.isMagnet) {
+                        GAME.entities.gems.forEach(gg => {
+                            p.addXp(Math.round(10 * (p.luckFactor || 1)));
+                        });
+                        GAME.entities.gems = [];
+                    } else {
+                        p.addXp(Math.round(10 * (p.luckFactor || 1)));
+                    }
                 }
                 GAME.entities.gems.splice(i, 1);
             }
