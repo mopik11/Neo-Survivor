@@ -433,6 +433,115 @@ class FloatingText {
     }
 }
 
+class MenuAnimation {
+    constructor() {
+        this.canvas = document.getElementById('menu-anim-canvas');
+        if (!this.canvas) return;
+        this.ctx = this.canvas.getContext('2d');
+        this.stars = [];
+        this.ufos = [];
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.initEntities();
+        this.animate();
+    }
+    resize() {
+        if (!this.canvas) return;
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+    initEntities() {
+        for (let i = 0; i < 100; i++) {
+            this.stars.push({
+                x: Math.random() * this.canvas.width,
+                y: Math.random() * this.canvas.height,
+                size: Math.random() * 2,
+                speed: 0.1 + Math.random() * 0.3
+            });
+        }
+        for (let i = 0; i < 4; i++) {
+            this.spawnUFO();
+        }
+    }
+    spawnUFO() {
+        const side = Math.random() > 0.5 ? -100 : this.canvas.width + 100;
+        this.ufos.push({
+            x: side,
+            y: Math.random() * this.canvas.height,
+            vx: (side < 0 ? 1 : -1) * (0.5 + Math.random() * 1.5),
+            vy: (Math.random() - 0.5) * 0.5,
+            size: 20 + Math.random() * 30,
+            color: `hsl(${Math.random() * 360}, 80%, 60%)`,
+            rotation: 0,
+            rotSpeed: (Math.random() - 0.5) * 0.02
+        });
+    }
+    animate() {
+        if (!this.canvas) return;
+        const menu = document.getElementById('menu-modal');
+        if (menu && !menu.classList.contains('active')) {
+            requestAnimationFrame(() => this.animate());
+            return;
+        }
+
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Stars
+        this.ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        this.stars.forEach(s => {
+            s.x -= s.speed;
+            if (s.x < 0) s.x = this.canvas.width;
+            this.ctx.beginPath();
+            this.ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+
+        // UFOs
+        this.ufos.forEach((u, i) => {
+            u.x += u.vx;
+            u.y += u.vy;
+            u.rotation += u.rotSpeed;
+
+            if (u.x < -200 || u.x > this.canvas.width + 200) {
+                this.ufos.splice(i, 1);
+                this.spawnUFO();
+            }
+
+            this.ctx.save();
+            this.ctx.translate(u.x, u.y);
+            this.ctx.rotate(Math.sin(Date.now() / 1000) * 0.1 + u.rotation);
+            
+            // Draw UFO body
+            this.ctx.shadowBlur = 25;
+            this.ctx.shadowColor = u.color;
+            this.ctx.fillStyle = u.color;
+            this.ctx.beginPath();
+            this.ctx.ellipse(0, 0, u.size, u.size * 0.35, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // Dome
+            this.ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            this.ctx.beginPath();
+            this.ctx.arc(0, -u.size * 0.1, u.size * 0.45, Math.PI, 0);
+            this.ctx.fill();
+            
+            // Lights
+            this.ctx.fillStyle = '#fff';
+            for(let j=0; j<3; j++) {
+                const lx = -u.size * 0.5 + (j * u.size * 0.5);
+                this.ctx.beginPath();
+                this.ctx.arc(lx, u.size * 0.1, 2, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+
+            this.ctx.restore();
+            this.ctx.shadowBlur = 0;
+        });
+
+        requestAnimationFrame(() => this.animate());
+    }
+}
+
 class Fire {
     constructor(x, y, damage, isLocal = true) {
         this.x = x; this.y = y; this.damage = damage;
@@ -2348,6 +2457,8 @@ function init() {
         GAME.joystick.currentY = GAME.joystick.startY + Math.sin(angle) * d;
     }, { passive: true });
     GAME.canvas.addEventListener('touchend', () => { GAME.joystick.active = false; GAME.joystick.currentX = GAME.joystick.startX; GAME.joystick.currentY = GAME.joystick.startY; });
+    
+    GAME.menuAnimation = new MenuAnimation();
 }
 
 function useUltimate(cx, cy) {
