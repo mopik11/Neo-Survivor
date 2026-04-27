@@ -548,10 +548,53 @@ class Gem {
         }
     }
     draw(ctx, cam) {
-        ctx.shadowBlur = 15; ctx.shadowColor = '#10b981';
-        ctx.fillStyle = '#34d399';
-        ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
+        if (this.isNuke) {
+            ctx.shadowBlur = 20; ctx.shadowColor = '#ef4444'; ctx.fillStyle = '#ef4444';
+        } else if (this.isMagnet) {
+            ctx.shadowBlur = 20; ctx.shadowColor = '#3b82f6'; ctx.fillStyle = '#3b82f6';
+        } else {
+            ctx.shadowBlur = 15; ctx.shadowColor = '#10b981'; ctx.fillStyle = '#34d399';
+        }
+        ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius + (this.isNuke||this.isMagnet ? 2 : 0), 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
+    }
+}
+
+class Tombstone {
+    constructor(x, y, id, playerId, progress) {
+        this.x = x; this.y = y; this.id = id; this.playerId = playerId; this.progress = progress || 0;
+    }
+    draw(ctx, cam) {
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(this.x - cam.x - 15, this.y - cam.y - 20, 30, 40);
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y - 20, 15, Math.PI, 0); ctx.fill();
+        
+        // Progress bar
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(this.x - cam.x - 20, this.y - cam.y + 25, 40, 6);
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(this.x - cam.x - 20, this.y - cam.y + 25, 40 * (this.progress / 100), 6);
+    }
+}
+
+class Obstacle {
+    constructor(x, y, radius) {
+        this.x = x; this.y = y; this.radius = radius;
+    }
+    draw(ctx, cam) {
+        ctx.fillStyle = '#334155';
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        for(let i=0; i<8; i++) {
+            const a = (i/8)*Math.PI*2;
+            const r = this.radius * (0.8 + Math.sin(this.x * this.y + i) * 0.2);
+            if (i===0) ctx.moveTo(this.x - cam.x + Math.cos(a)*r, this.y - cam.y + Math.sin(a)*r);
+            else ctx.lineTo(this.x - cam.x + Math.cos(a)*r, this.y - cam.y + Math.sin(a)*r);
+        }
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
     }
 }
 
@@ -801,6 +844,42 @@ class Enemy {
                 ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(-15, -15, 30, 30);
             }
             ctx.restore(); ctx.shadowBlur = 0;
+        } else if (this.type === 3) {
+            // Kamikadze (kosočtverec)
+            const flash = Math.sin(Date.now() / 100) > 0 ? '#ef4444' : '#f97316';
+            const color = this.possessed ? '#22c55e' : flash;
+            ctx.shadowBlur = 25; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
+            ctx.rotate(Date.now() / 200);
+            ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(15, 0); ctx.lineTo(0, 20); ctx.lineTo(-15, 0); ctx.closePath(); ctx.fill();
+            if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
+            ctx.restore(); ctx.shadowBlur = 0;
+        } else if (this.type === 4) {
+            // Goblin (hvězdička nebo něco rychlého)
+            const color = this.possessed ? '#22c55e' : '#eab308';
+            ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
+            ctx.rotate(-Date.now() / 500);
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const a = (i / 5) * Math.PI * 2;
+                ctx.lineTo(Math.cos(a) * 15, Math.sin(a) * 15);
+                const a2 = ((i + 0.5) / 5) * Math.PI * 2;
+                ctx.lineTo(Math.cos(a2) * 7, Math.sin(a2) * 7);
+            }
+            ctx.closePath(); ctx.fill();
+            if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
+            ctx.restore(); ctx.shadowBlur = 0;
+        } else if (this.type === 5) {
+            // Support (kříž nebo ovál s aurou)
+            const color = this.possessed ? '#22c55e' : '#0ea5e9';
+            ctx.shadowBlur = 20; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
+            ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-8, -3, 16, 6); ctx.fillRect(-3, -8, 6, 16);
+            if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
+            ctx.restore(); ctx.shadowBlur = 0;
         }
     }
 }
@@ -1049,6 +1128,35 @@ class Player {
             });
             if (GAME.entities.projectiles) GAME.entities.projectiles.push(wall);
             if (NET.isMultiplayer) syncShot(wall);
+        }
+
+        if (this.shipType === 4) { // Brokovnice
+            const baseAngle = Math.atan2(target.y - this.y, target.x - this.x);
+            const pellets = 3 + this.projectileCount;
+            const spread = Math.PI / 4; 
+            
+            for (let i = 0; i < pellets; i++) {
+                const isCrit = Math.random() < this.critChance;
+                const finalDamage = (isCrit ? this.damage * this.critMultiplier : this.damage) * 0.7;
+                
+                const angleOffset = -spread/2 + (spread / (pellets-1 || 1)) * i;
+                const shootAngle = baseAngle + angleOffset;
+                
+                const tx = this.x + Math.cos(shootAngle) * 100;
+                const ty = this.y + Math.sin(shootAngle) * 100;
+
+                const proj = new Projectile(this.x, this.y, tx, ty, finalDamage, {
+                    size: this.projSize * 0.8,
+                    pierce: this.pierceCount,
+                    bounce: this.bounces,
+                    isCrit: isCrit,
+                    type: 'default',
+                    life: 40 + (Math.random()*10), // Krátký dostřel
+                    speed: CONFIG.PROJECTILE_SPEED * (1.2 + Math.random()*0.4)
+                });
+                if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
+                if (NET.isMultiplayer) syncShot(proj);
+            }
         }
 
         AudioEngine.play('shoot');
@@ -1419,7 +1527,8 @@ function showShipsMenu() {
     const ships = [
         { id: 1, name: 'Základní Loď', desc: 'Spolehlivý standardní model', cost: 0, icon: '🚀' },
         { id: 2, name: 'Laserová Loď', desc: 'Automatický paprsek, nestřílí', cost: 500, icon: '🩸' },
-        { id: 3, name: 'Drtivá Zeď', desc: 'Průrazná vlna bez základní palby.', cost: 1000, icon: '🌊' }
+        { id: 3, name: 'Drtivá Zeď', desc: 'Průrazná vlna bez základní palby.', cost: 1000, icon: '🌊' },
+        { id: 4, name: 'Brokovnice', desc: 'Střílí 3-5 střel najednou.', cost: 1500, icon: '💥' }
     ];
 
     ships.forEach(item => {
@@ -1456,7 +1565,8 @@ function showShipsMenu() {
     const abilities = [
         { id: 1, name: 'Odstřelovač', desc: 'Základní průrazná střela', cost: 0, icon: '🎯' },
         { id: 2, name: 'Zastavení času', desc: 'Znehybní všechny nepřátele na 5s', cost: 800, icon: '⏳' },
-        { id: 3, name: 'Posednutí', desc: '10 nejbližších ufounů přejde na tvou stranu', cost: 1200, icon: '👻' }
+        { id: 3, name: 'Posednutí', desc: '10 nejbližších ufounů přejde na tvou stranu', cost: 1200, icon: '👻' },
+        { id: 4, name: 'Léčivá aura', desc: 'Léčíš spoluhráče ve své blízkosti', cost: 1500, icon: '⚕️' }
     ];
 
     abilities.forEach(item => {
@@ -1672,6 +1782,8 @@ function initSocket() {
                     let g = currentGems.get(hg.id);
                     if (!g) {
                         g = new Gem(hg.x, hg.y, hg.id);
+                        g.isNuke = hg.isNuke;
+                        g.isMagnet = hg.isMagnet;
                     } else if (!g.attracted && !g.ultraAttracted) {
                         g.x = hg.x;
                         g.y = hg.y;
@@ -1685,6 +1797,14 @@ function initSocket() {
                     bait.id = b.id; bait.maxHp = b.maxHp; return bait;
                 });
             }
+
+            if (data.tombstones) {
+                GAME.entities.tombstones = data.tombstones.map(t => new Tombstone(t.x, t.y, t.id, t.playerId, t.reviveProgress));
+            } else { GAME.entities.tombstones = []; }
+
+            if (data.obstacles) {
+                GAME.entities.obstacles = data.obstacles.map(o => new Obstacle(o.x, o.y, o.radius));
+            } else { GAME.entities.obstacles = []; }
 
             const newOthers = {};
             for (let pId in data.players) {
@@ -1752,6 +1872,28 @@ function initSocket() {
             const waitModal = document.getElementById('waiting-modal');
             if (waitModal) waitModal.classList.remove('active');
             gameOver();
+        });
+
+        NET.socket.on('playerRevived', (data) => {
+            if (data.playerId === myPlayerId && GAME.entities.player) {
+                GAME.entities.player.dead = false;
+                GAME.entities.player.hp = GAME.entities.player.maxHp / 2;
+                if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                GAME.entities.floatingTexts.push(new FloatingText(GAME.entities.player.x, GAME.entities.player.y - 25, "REVIVED!", "#3b82f6"));
+            }
+        });
+
+        NET.socket.on('explosion', (data) => {
+            // Nuke or Kamikadze explosion
+            if (GAME.entities.fire) {
+                for(let i=0; i<30; i++) {
+                    const a = Math.random() * Math.PI * 2;
+                    const d = Math.random() * data.radius;
+                    GAME.entities.fire.push(new Fire(data.x + Math.cos(a)*d, data.y + Math.sin(a)*d, 0, false));
+                }
+            }
+            shakeScreen(20);
+            AudioEngine.play('hit');
         });
 
     } catch (e) {
@@ -2159,6 +2301,32 @@ function useUltimate(cx, cy) {
             }
         }
     }
+    else if (ability === 4) { // LÉČIVÁ AURA (MEDIC)
+        // Vydává pulzy do okolí (např. 250px)
+        const players = getAllAlivePlayers();
+        const healed = [];
+        players.forEach(pl => {
+            if (dist(p.x, p.y, pl.x, pl.y) < 250) {
+                pl.hp = Math.min(pl.maxHp, pl.hp + p.maxHp * 0.2); // heal 20%
+                healed.push(pl.id || myPlayerId);
+                if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                GAME.entities.floatingTexts.push(new FloatingText(pl.x, pl.y - 25, "+HEAL", "#10b981"));
+            }
+        });
+        
+        // Visuals
+        const overlay = document.getElementById('freeze-overlay');
+        if (overlay) {
+            overlay.style.boxShadow = "inset 0 0 100px rgba(16, 185, 129, 0.5)";
+            overlay.classList.add('active');
+            setTimeout(() => { overlay.classList.remove('active'); overlay.style.boxShadow = ""; }, 500);
+        }
+
+        if (NET.isMultiplayer && NET.socket && healed.length > 0) {
+            NET.socket.emit('useAbility', { type: 'medic' });
+            NET.socket.emit('healPlayers', { targets: healed, amount: p.maxHp * 0.2 });
+        }
+    }
 }
 
 function startGame() {
@@ -2256,6 +2424,16 @@ function update(dt) {
 
     const p = GAME.entities.player;
     p.update(dt);
+
+    if (NET.isMultiplayer && GAME.entities.tombstones && !p.dead) {
+        GAME.entities.tombstones.forEach(t => {
+            if (dist(p.x, p.y, t.x, t.y) < 100) {
+                if (NET.socket) NET.socket.emit('reviveProgress', { tombstoneId: t.id, amount: 0.5 });
+                if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                if (Math.random() < 0.1) GAME.entities.floatingTexts.push(new FloatingText(t.x, t.y - 25, "OŽIVOVÁNÍ...", "#3b82f6"));
+            }
+        });
+    }
 
     GAME.camera.x = (p.x * GAME.zoom) - GAME.canvas.width / 2; GAME.camera.y = (p.y * GAME.zoom) - GAME.canvas.height / 2;
     if (CONFIG.SCREEN_SHAKE > 0) { GAME.camera.x += (Math.random() - 0.5) * CONFIG.SCREEN_SHAKE; GAME.camera.y += (Math.random() - 0.5) * CONFIG.SCREEN_SHAKE; CONFIG.SCREEN_SHAKE *= 0.9; }
@@ -2487,7 +2665,9 @@ function render() {
 
     if (GAME.active && GAME.entities) {
         if (GAME.entities.fire) GAME.entities.fire.forEach(f => { if (f) f.draw(ctx, { x: camX, y: camY }); });
+        if (GAME.entities.obstacles) GAME.entities.obstacles.forEach(o => { if (o) o.draw(ctx, { x: camX, y: camY }); });
         if (GAME.entities.baits) GAME.entities.baits.forEach(b => { if (b) b.draw(ctx, { x: camX, y: camY }); });
+        if (GAME.entities.tombstones) GAME.entities.tombstones.forEach(t => { if (t) t.draw(ctx, { x: camX, y: camY }); });
         if (GAME.entities.gems) GAME.entities.gems.forEach(g => { if (g) g.draw(ctx, { x: camX, y: camY }); });
         if (GAME.entities.projectiles) GAME.entities.projectiles.forEach(p => { if (p) p.draw(ctx, { x: camX, y: camY }); });
         if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => { if (e) e.draw(ctx, { x: camX, y: camY }); });
