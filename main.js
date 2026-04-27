@@ -9,6 +9,17 @@ window.onerror = function (msg, url, line, col, error) {
 
 console.warn("SCRIPT: Neo Survivor načten.");
 
+window.showCustomAlert = function(msg) {
+    const modal = document.getElementById('custom-alert-modal');
+    const text = document.getElementById('custom-alert-text');
+    if (modal && text) {
+        text.innerText = msg;
+        modal.classList.add('active');
+    } else {
+        console.warn("Custom alert:", msg);
+    }
+};
+
 const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
@@ -1417,7 +1428,7 @@ function showShipsMenu() {
                 saveMeta();
                 showShipsMenu();
             } else {
-                alert("Nemáš dost Dogecoinu!");
+                window.showCustomAlert("Nemáš dost Dogecoinu!");
             }
         };
         shipsGrid.appendChild(card);
@@ -1454,7 +1465,7 @@ function showShipsMenu() {
                 saveMeta();
                 showShipsMenu();
             } else {
-                alert("Nemáš dost Dogecoinu!");
+                window.showCustomAlert("Nemáš dost Dogecoinu!");
             }
         };
         abilitiesGrid.appendChild(card);
@@ -1479,7 +1490,7 @@ function showMetaMenu() {
         const owned = item.isHat && META.upgrades.hat === item.type;
         card.innerHTML = `<h3>${item.name}</h3><p>${item.desc}</p><span class="cost">${owned ? 'VLASTNĚNO' : cost + ' DOGE'}</span>`;
         card.onclick = () => {
-            if (META.currency < cost) { alert("Nemáš dost Dogecoinu!"); return; }
+            if (META.currency < cost) { window.showCustomAlert("Nemáš dost Dogecoinu!"); return; }
             if (item.isHat) { META.upgrades.hat = item.type; }
             else { META.upgrades[item.id]++; }
             META.currency -= cost; saveMeta(); showMetaMenu();
@@ -1806,7 +1817,7 @@ window.showHostModal = () => {
 window.joinCloudServer = (roomName) => {
     tryFullscreen();
     if(!roomName || roomName.trim() === '') {
-        alert("Zadej platný kód!");
+        window.showCustomAlert("Zadej platný kód!");
         return;
     }
     initSocket();
@@ -1822,8 +1833,8 @@ function handleAuth(isLogin) {
     const nameVal = document.getElementById('input-login-name').value.trim();
     const passVal = document.getElementById('input-login-pass').value.trim();
     
-    if (nameVal.length < 3) { alert("Jméno musí mít alespoň 3 znaky!"); return; }
-    if (passVal.length < 1) { alert("Zadej heslo!"); return; }
+    if (nameVal.length < 3) { window.showCustomAlert("Jméno musí mít alespoň 3 znaky!"); return; }
+    if (passVal.length < 1) { window.showCustomAlert("Zadej heslo!"); return; }
 
     if (NET.socket && NET.socket.connected) {
         document.getElementById('login-loader').style.display = 'block';
