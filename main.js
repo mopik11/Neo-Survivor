@@ -1060,8 +1060,21 @@ class Player {
 
         if (dx !== 0 || dy !== 0) {
             const angle = Math.atan2(dy, dx);
-            this.x += Math.cos(angle) * this.speed * GAME.speedFactor;
-            this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
+            let nextX = this.x + Math.cos(angle) * this.speed * GAME.speedFactor;
+            let nextY = this.y + Math.sin(angle) * this.speed * GAME.speedFactor;
+
+            if (GAME.entities.obstacles) {
+                GAME.entities.obstacles.forEach(obs => {
+                    if (dist(nextX, nextY, obs.x, obs.y) < this.radius + obs.radius) {
+                        const pushAngle = Math.atan2(nextY - obs.y, nextX - obs.x);
+                        nextX = obs.x + Math.cos(pushAngle) * (this.radius + obs.radius);
+                        nextY = obs.y + Math.sin(pushAngle) * (this.radius + obs.radius);
+                    }
+                });
+            }
+
+            this.x = nextX;
+            this.y = nextY;
 
             const now = Date.now();
             if (this.fireTrail && now - this.lastFireTrail > 150) {
@@ -2491,8 +2504,10 @@ function update(dt) {
                             e.hp = 0; e.dead = true;
                             if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: 99999 });
                         } else {
-                            t.hp -= (e.isBoss ? 2 : 0.5) * (t.shield || 1);
-                            if (t.hp <= 0) t.dead = true;
+                            if (t.hp !== undefined) {
+                                t.hp -= (e.isBoss ? 2 : 0.5) * (t.shield || 1);
+                                if (t.hp <= 0) t.dead = true;
+                            }
 
                             if (t.isLocal) {
                                 shakeScreen(8);
@@ -2536,6 +2551,19 @@ function update(dt) {
             const proj = GAME.entities.projectiles[pIndex];
             if (!proj) continue;
             proj.update();
+
+            if (GAME.entities.obstacles) {
+                let hitObstacle = false;
+                GAME.entities.obstacles.forEach(obs => {
+                    if (dist(proj.x, proj.y, obs.x, obs.y) < proj.radius + obs.radius) {
+                        hitObstacle = true;
+                    }
+                });
+                if (hitObstacle && proj.type !== 'wall') {
+                    GAME.entities.projectiles.splice(pIndex, 1);
+                    continue;
+                }
+            }
 
             if (proj.life <= 0) {
                 GAME.entities.projectiles.splice(pIndex, 1);
