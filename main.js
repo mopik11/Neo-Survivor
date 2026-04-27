@@ -1316,7 +1316,7 @@ class Player {
                     ctx.beginPath();
                     ctx.moveTo(this.x - cam.x, this.y - cam.y);
                     chain.forEach(target => {
-                        if (target) ctx.lineTo(target.x - camX, target.y - cam.y);
+                        if (target) ctx.lineTo(target.x - cam.x, target.y - cam.y);
                     });
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 2 + (this.projSize - 6) * 0.3;
@@ -2199,8 +2199,13 @@ function init() {
         floatingTexts: []
     };
 
-    window.addEventListener('keydown', (e) => { GAME.input[e.key.toLowerCase()] = true; if (e.key === 'Escape') togglePause(); });
-    window.addEventListener('keyup', (e) => { GAME.input[e.key.toLowerCase()] = false; });
+    window.addEventListener('keydown', (e) => { 
+        if (e.key) GAME.input[e.key.toLowerCase()] = true; 
+        if (e.key === 'Escape') togglePause(); 
+    });
+    window.addEventListener('keyup', (e) => { 
+        if (e.key) GAME.input[e.key.toLowerCase()] = false; 
+    });
 
     GAME.canvas.addEventListener('mousedown', (e) => {
         if (!GAME.active || GAME.paused || !GAME.entities.player || GAME.entities.player.dead) return;
