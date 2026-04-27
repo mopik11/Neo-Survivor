@@ -2432,6 +2432,33 @@ function init() {
         });
     };
 
+    const btnTutorial = document.getElementById('btn-tutorial');
+    if (btnTutorial) btnTutorial.onclick = () => document.getElementById('tutorial-modal').classList.add('active');
+    const btnCloseTutorial = document.getElementById('btn-close-tutorial');
+    if (btnCloseTutorial) btnCloseTutorial.onclick = () => document.getElementById('tutorial-modal').classList.remove('active');
+
+    const btnFeedback = document.getElementById('btn-feedback');
+    if (btnFeedback) btnFeedback.onclick = () => document.getElementById('feedback-modal').classList.add('active');
+    const btnCloseFeedback = document.getElementById('btn-close-feedback');
+    if (btnCloseFeedback) btnCloseFeedback.onclick = () => document.getElementById('feedback-modal').classList.remove('active');
+
+    const btnSendFeedback = document.getElementById('btn-send-feedback');
+    if (btnSendFeedback) btnSendFeedback.onclick = () => {
+        const text = document.getElementById('feedback-text').value;
+        if (!text || text.trim().length < 5) {
+            window.showCustomAlert("Zpráva musí mít aspoň 5 znaků.");
+            return;
+        }
+        if (NET.socket && NET.socket.connected) {
+            NET.socket.emit('sendFeedback', { text: text, user: META.playerName });
+            window.showCustomAlert("Díky! Zpětná vazba byla odeslána vývojáři.");
+            document.getElementById('feedback-text').value = '';
+            document.getElementById('feedback-modal').classList.remove('active');
+        } else {
+            window.showCustomAlert("Chyba: Nejseš připojen k serveru.");
+        }
+    };
+
     GAME.canvas.addEventListener('touchstart', (e) => {
         if (!GAME.active || GAME.paused || !GAME.entities.player || GAME.entities.player.dead) return;
         const t = e.touches[0];
