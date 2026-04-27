@@ -1417,7 +1417,7 @@ function showShipsMenu() {
                 saveMeta();
                 showShipsMenu();
             } else {
-                showCustomAlert("Nemáš dost Dogecoinu!");
+                alert("Nemáš dost Dogecoinu!");
             }
         };
         shipsGrid.appendChild(card);
@@ -1454,7 +1454,7 @@ function showShipsMenu() {
                 saveMeta();
                 showShipsMenu();
             } else {
-                showCustomAlert("Nemáš dost Dogecoinu!");
+                alert("Nemáš dost Dogecoinu!");
             }
         };
         abilitiesGrid.appendChild(card);
@@ -1479,7 +1479,7 @@ function showMetaMenu() {
         const owned = item.isHat && META.upgrades.hat === item.type;
         card.innerHTML = `<h3>${item.name}</h3><p>${item.desc}</p><span class="cost">${owned ? 'VLASTNĚNO' : cost + ' DOGE'}</span>`;
         card.onclick = () => {
-            if (META.currency < cost) { showCustomAlert("Nemáš dost Dogecoinu!"); return; }
+            if (META.currency < cost) { alert("Nemáš dost Dogecoinu!"); return; }
             if (item.isHat) { META.upgrades.hat = item.type; }
             else { META.upgrades[item.id]++; }
             META.currency -= cost; saveMeta(); showMetaMenu();
@@ -1806,7 +1806,7 @@ window.showHostModal = () => {
 window.joinCloudServer = (roomName) => {
     tryFullscreen();
     if(!roomName || roomName.trim() === '') {
-        showCustomAlert("Zadej platný kód!");
+        alert("Zadej platný kód!");
         return;
     }
     initSocket();
@@ -1822,8 +1822,8 @@ function handleAuth(isLogin) {
     const nameVal = document.getElementById('input-login-name').value.trim();
     const passVal = document.getElementById('input-login-pass').value.trim();
     
-    if (nameVal.length < 3) { showCustomAlert("Jméno musí mít alespoň 3 znaky!"); return; }
-    if (passVal.length < 1) { showCustomAlert("Zadej heslo!"); return; }
+    if (nameVal.length < 3) { alert("Jméno musí mít alespoň 3 znaky!"); return; }
+    if (passVal.length < 1) { alert("Zadej heslo!"); return; }
 
     if (NET.socket && NET.socket.connected) {
         document.getElementById('login-loader').style.display = 'block';
@@ -2630,19 +2630,3 @@ window.addEventListener('keydown', initAudio);
 window.addEventListener('touchstart', initAudio);
 
 init();
-
-window.showCustomAlert = function(msg) {
-    const alertEl = document.createElement('div');
-    alertEl.className = 'custom-alert';
-    alertEl.innerText = msg;
-    document.body.appendChild(alertEl);
-    
-    // Trigger animation
-    setTimeout(() => alertEl.classList.add('show'), 10);
-    
-    // Remove after 3 seconds
-    setTimeout(() => {
-        alertEl.classList.remove('show');
-        setTimeout(() => alertEl.remove(), 300);
-    }, 3000);
-};
