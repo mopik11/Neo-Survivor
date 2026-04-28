@@ -207,42 +207,46 @@
       </div>
 
       <div id="tutorial-modal" class="modal">
-        <div class="modal-content tutorial-modal-content">
-          <h2 class="tutorial-title">GALAKTICKÁ PŘÍRUČKA</h2>
+        <div class="modal-content" style="max-width: 750px; padding: 2rem;">
+          <h2 style="font-size: 2.5rem; color: #38bdf8; margin-bottom: 1.5rem; letter-spacing: 2px;">GALAKTICKÁ PŘÍRUČKA</h2>
           
-          <div class="tutorial-grid">
+          <div style="text-align: left; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; overflow-y: auto; max-height: 60vh; padding-right: 10px;">
             <div class="tutorial-card">
               <h3>🕹️ OVLÁDÁNÍ</h3>
-              <p><strong>WASD / Joystick:</strong> Pohyb lodi.</p>
-              <p><strong>Klik / Klepnutí:</strong> Speciální schopnost (pokud je nabitá 🎯).</p>
-              <p><strong>ESC / Ikona:</strong> Pauza a statistiky.</p>
+              <p><strong>WASD / Joystick:</strong> Pohyb lodi v prostoru.</p>
+              <p><strong>Levý Klik / Klepnutí:</strong> Aktivuje speciální schopnost (pokud je připravena).</p>
+              <p><strong>ESC:</strong> Pauza a statistiky.</p>
             </div>
 
             <div class="tutorial-card">
-              <h3>💎 VYLEPŠENÍ</h3>
-              <p>Sbírej <strong>XP Gemy</strong> z padlých nepřátel pro postup na další level.</p>
-              <p>Každý level ti nabídne náhodná vylepšení pro útok i obranu.</p>
+              <h3>💎 RŮST A LEVELY</h3>
+              <p>Zabíjej nepřátele a sbírej modré <strong>XP Gemy</strong>.</p>
+              <p>Každý level ti dá na výběr ze 3 (nebo více) vylepšení, která ti pomohou přežít déle.</p>
             </div>
 
             <div class="tutorial-card">
-              <h3>🧛 LIFESTEAL</h3>
-              <p>Vzácná schopnost léčit se při každém zabití nepřítele. Čím více nepřátel zničíš, tím více HP získáš zpět!</p>
+              <h3>👾 NEPŘÁTELÉ</h3>
+              <p><strong>Základní (Červení):</strong> Jdou přímo po tobě.</p>
+              <p><strong>Střelci (Zelení):</strong> Drží si odstup a pálí projektily.</p>
+              <p><strong>Kamikadze (Oranžoví):</strong> Jsou velmi rychlí a při nárazu vybuchnou.</p>
+              <p><strong>Support (Modří):</strong> Neléčí tebe, ale opravují poškozené ufony v okolí!</p>
             </div>
 
             <div class="tutorial-card">
-              <h3>🎁 DROPY</h3>
-              <p><strong>Bomba (☢️):</strong> Zničí vše na obrazovce.</p>
-              <p><strong>Magnet (🧲):</strong> Přitáhne všechny gemy.</p>
-              <p><strong>Lékárnička (➕):</strong> Opraví poškození.</p>
+              <h3>🎁 SPECIÁLNÍ DROPY</h3>
+              <p><strong>Nukleární bomba (☢️):</strong> Okamžitě zničí všechny viditelné nepřátele.</p>
+              <p><strong>Magnet (🧲):</strong> Přitáhne všechny XP gemy z celé mapy k tobě.</p>
+              <p><strong>Lékárnička (➕):</strong> Doplní část tvého poškozeného pancíře.</p>
             </div>
 
-            <div class="tutorial-card full-width">
-              <h3>👾 NEPŘÁTELÉ A BOSS</h3>
-              <p>Dávej pozor na <strong>střelce</strong> a <strong>kamikadze</strong> ufony. Každou minutu dorazí <strong>BOSS</strong> – za jeho poražení získáš hromadu Dogecoinů!</p>
+            <div class="tutorial-card" style="grid-column: span 2;">
+              <h3>👹 BOSS & PROGRESE</h3>
+              <p>Každou minutu se objeví <strong>BOSS</strong>. Má obrovské HP a nebezpečné útoky.</p>
+              <p>Za každou hru získáváš <strong>Dogecoiny</strong> (10 zabití = 1 Doge), za které si v menu kupuješ trvalá vylepšení a nové lodě.</p>
             </div>
           </div>
           
-          <button class="btn-restart" id="btn-close-tutorial">ROZUMÍM!</button>
+          <button class="btn-restart" id="btn-close-tutorial" style="margin-top:2rem; width: 100%; background: #38bdf8; border: none;">ROZUMÍM, CHCI BOJOVAT!</button>
         </div>
       </div>
 
