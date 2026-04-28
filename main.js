@@ -558,10 +558,7 @@ class Fire {
                     if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: dmg });
 
                     if (e.hp <= 0) {
-                        AudioEngine.play('hit');
-                        if (!NET.isMultiplayer && GAME.entities.gems) GAME.entities.gems.push(new Gem(e.x, e.y));
-                        GAME.kills++;
-                        updateUI();
+                        handleEnemyDeath(e);
                     }
                 }
             });
@@ -730,10 +727,7 @@ class Orbiter {
                         NET.socket.emit('enemyHit', { id: e.id, damage: dmg });
                     }
                     if (e.hp <= 0) {
-                        AudioEngine.play('hit');
-                        if (!NET.isMultiplayer && GAME.entities.gems) GAME.entities.gems.push(new Gem(e.x, e.y));
-                        GAME.kills++;
-                        updateUI();
+                        handleEnemyDeath(e);
                     }
                 }
             });
@@ -876,8 +870,7 @@ class Enemy {
                     target.hp -= 50;
                     this.hp -= 20;
                     if (target.hp <= 0) {
-                        GAME.entities.enemies = GAME.entities.enemies.filter(e => e.id !== target.id);
-                        GAME.entities.gems.push(new Gem(target.x, target.y));
+                        handleEnemyDeath(target);
                     }
                 }
             }
@@ -1040,8 +1033,62 @@ class Enemy {
             ctx.fillRect(-8, -3, 16, 6); ctx.fillRect(-3, -8, 6, 16);
             if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
             ctx.restore(); ctx.shadowBlur = 0;
+}
+
+/* --- HELPER FUNCTIONS --- */
+function healPlayer(amount) {
+    const p = GAME.entities.player;
+    if (!p || p.dead) return;
+    const oldHp = p.hp;
+    p.hp = Math.min(p.maxHp, p.hp + amount);
+    if (p.hp > oldHp) {
+        const healGained = Math.round((p.hp - oldHp) * 10) / 10;
+        if (healGained > 0) {
+            if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+            GAME.entities.floatingTexts.push(new FloatingText(p.x, p.y - 30, `+${healGained} HP`, "#10b981"));
         }
     }
+}
+
+function handleEnemyDeath(enemy) {
+    if (enemy.dead && !enemy.hp > 0) return; // Already dead
+    enemy.dead = true;
+    enemy.hp = 0;
+    
+    GAME.kills++;
+    const p = GAME.entities.player;
+
+    // Lifesteal logic
+    if (p && p.lifestealChance > 0 && Math.random() < p.lifestealChance) {
+        // Heal 3% of max HP, but at least 3 HP for better feel
+        const healAmount = Math.max(3, Math.floor(p.maxHp * 0.03));
+        healPlayer(healAmount);
+        
+        // Audio feedback for lifesteal
+        AudioEngine.play('gem'); 
+    }
+
+    // Gem drops (Solo only)
+    if (!NET.isMultiplayer && GAME.entities.gems) {
+        if (enemy.type === 4) { // Thief
+            const drops = (enemy.stolenGems || 0) + 5;
+            for(let i=0; i<drops; i++) {
+                GAME.entities.gems.push(new Gem(enemy.x + (Math.random()-0.5)*100, enemy.y + (Math.random()-0.5)*100));
+            }
+        } else {
+            let isNuke = false, isMagnet = false;
+            if (enemy.isBoss) {
+                if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
+                for(let i=0; i<10; i++) GAME.entities.gems.push(new Gem(enemy.x + (Math.random()-0.5)*150, enemy.y + (Math.random()-0.5)*150));
+            }
+            const gem = new Gem(enemy.x, enemy.y);
+            gem.isNuke = isNuke; gem.isMagnet = isMagnet;
+            GAME.entities.gems.push(gem);
+        }
+    }
+
+    AudioEngine.play('hit');
+    updateUI();
 }
 
 class Player {
@@ -1198,9 +1245,7 @@ class Player {
                                     NET.socket.emit('enemyHit', { id: target.id, damage: finalDamage });
                                 }
                                 if (target.hp <= 0) {
-                                    AudioEngine.play('hit');
-                                    if (!NET.isMultiplayer && GAME.entities.gems) GAME.entities.gems.push(new Gem(target.x, target.y));
-                                    GAME.kills++;
+                                    handleEnemyDeath(target);
                                 }
                             });
                         });
@@ -2716,7 +2761,7 @@ function update(dt) {
                         }
                     } else {
                         if (t.kaktus) {
-                            e.hp = 0; e.dead = true;
+                            handleEnemyDeath(e);
                             if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: 99999 });
                         } else {
                             if (t.hp !== undefined) {
@@ -2859,29 +2904,7 @@ function update(dt) {
                         }
                         if (proj.pierce > 1) proj.pierce--; else if (proj.pierce !== Infinity && proj.bounce <= 0) GAME.entities.projectiles.splice(pIndex, 1);
                         if (enemy.hp <= 0) {
-                            AudioEngine.play('hit');
-                            if (!NET.isMultiplayer && GAME.entities.gems) {
-                                if (enemy.type === 4) { // Zloděj drop
-                                    const drops = (enemy.stolenGems || 0) + 5;
-                                    for(let i=0; i<drops; i++) {
-                                        GAME.entities.gems.push(new Gem(enemy.x + (Math.random()-0.5)*100, enemy.y + (Math.random()-0.5)*100));
-                                    }
-                                } else {
-                                    let isNuke = false, isMagnet = false;
-                                    if (enemy.isBoss) {
-                                        if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
-                                        for(let i=0; i<10; i++) GAME.entities.gems.push(new Gem(enemy.x + (Math.random()-0.5)*150, enemy.y + (Math.random()-0.5)*150));
-                                    }
-                                    const gem = new Gem(enemy.x, enemy.y);
-                                    gem.isNuke = isNuke; gem.isMagnet = isMagnet;
-                                    GAME.entities.gems.push(gem);
-                                }
-                            }
-                            GAME.kills++;
-                            if (p.lifestealChance > 0 && Math.random() < p.lifestealChance) {
-                                p.hp = Math.min(p.maxHp, p.hp + 1);
-                            }
-                            updateUI();
+                            handleEnemyDeath(enemy);
                         }
                     }
                 });
