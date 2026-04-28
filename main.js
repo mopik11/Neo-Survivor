@@ -3128,6 +3128,7 @@ function render() {
 
 const initAudio = () => {
     AudioEngine.init();
+    tryFullscreen();
     if (document.getElementById('menu-modal') && document.getElementById('menu-modal').classList.contains('active')) {
         AudioEngine.startMenuMusic();
     }

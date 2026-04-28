@@ -615,10 +615,10 @@ canvas {
 
   .btn-restart {
     width: 100% !important;
-    padding: 0.5rem 0.15rem !important;
+    padding: 0.45rem 0.15rem !important;
     font-size: 0.65rem !important;
     white-space: normal !important;
-    line-height: 1.2 !important;
+    line-height: 1.1 !important;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -626,12 +626,14 @@ canvas {
     justify-content: center;
   }
   .btn-main { font-size: 0.75rem !important; padding: 0.6rem 0.3rem !important; }
-  .btn-sub, .btn-mini { font-size: 0.52rem !important; padding: 0.4rem 0.05rem !important; }
-  .btn-mini span { font-size: 1rem !important; margin-bottom: 2px !important; }
+  .btn-sub { font-size: 0.52rem !important; padding: 0.4rem 0.05rem !important; }
+  .btn-mini { font-size: 0.48rem !important; padding: 0.3rem 0.02rem !important; }
+  .btn-mini span { font-size: 0.9rem !important; margin-bottom: 2px !important; }
   .menu-group-title { font-size: 0.52rem !important; }
   .tutorial-card h3 { font-size: 0.75rem !important; }
   .tutorial-card p { font-size: 0.6rem !important; }
-  .menu-actions-grid.secondary { gap: 5px !important; }
+  .menu-actions-grid.secondary { gap: 4px !important; }
+  .menu-actions-row { flex-direction: column !important; gap: 8px !important; }
 
   .join-group {
     flex-direction: column;
