@@ -1975,7 +1975,12 @@ document.addEventListener('click', (e) => {
 
 function initSocket() {
     if (NET.socket && NET.socket.connected) return;
-    const SERVER_URL = "https://neoserver.alwaysdata.net/";
+    
+    // Automatická detekce serveru (lokální vs produkční)
+    const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? "http://localhost:3000"
+        : "https://neoserver.alwaysdata.net/";
+
     try {
         NET.socket = io(SERVER_URL);
 
@@ -2199,7 +2204,10 @@ function initSocket() {
 
         NET.socket.on('serverStats', (data) => {
             const el = document.getElementById('active-players-count');
-            if (el) el.innerText = data.activePlayers;
+            if (el) {
+                // Zobrazíme oba údaje pro lepší přehled
+                el.innerHTML = `${data.activePlayers} <span style="font-size:0.65rem; opacity:0.6; margin-left:5px;">(${data.playingNow} v bitvě)</span>`;
+            }
         });
 
         NET.socket.on('explosion', (data) => {
