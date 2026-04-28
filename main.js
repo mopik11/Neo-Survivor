@@ -74,7 +74,7 @@ const CONFIG = {
         { id: 'regen', name: 'Regenerace', desc: 'Obnova 1 HP/s', icon: '💊', rarity: 'epic' },
         { id: 'ultramagnet', name: 'Ultra Magnet', desc: 'Pomalý sběr z celé mapy', icon: '🌌', rarity: 'epic' },
         { id: 'orbit', name: 'Orbitální Štít', desc: 'Vypustí rotující projektil', icon: '🪐', rarity: 'epic' },
-        { id: 'lifesteal', name: 'Lifesteal', desc: '5% šance na heal při killu', icon: '🧛', rarity: 'epic' },
+        { id: 'lifesteal', name: 'Lifesteal', desc: '10% šance vyléčit si 8% HP při killu', icon: '🧛', rarity: 'epic' },
         { id: 'fire', name: 'Ohnivá Stopa', desc: 'Zanecháváš za sebou oheň', icon: '🔥', rarity: 'epic' },
         { id: 'kaktus', name: 'Kaktus', desc: 'Zabíjí dotykem (10s on, 30s off)', icon: '🌵', rarity: 'epic' },
 
@@ -416,17 +416,17 @@ const AudioEngine = {
 class FloatingText {
     constructor(x, y, text, color) {
         this.x = x; this.y = y; this.text = text; this.color = color;
-        this.life = 1.0;
-        this.vy = -1;
+        this.life = 1.2;
+        this.vy = -1.8;
     }
     update() {
         this.y += this.vy;
-        this.life -= 0.02;
+        this.life -= 0.012;
     }
     draw(ctx, cam) {
-        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.globalAlpha = Math.max(0, Math.min(1, this.life));
         ctx.fillStyle = this.color;
-        ctx.font = 'bold 16px Outfit, sans-serif';
+        ctx.font = 'bold 22px Outfit, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(this.text, this.x - cam.x, this.y - cam.y);
         ctx.globalAlpha = 1.0;
@@ -510,7 +510,7 @@ class MenuAnimation {
             this.ctx.save();
             this.ctx.translate(u.x, u.y);
             this.ctx.rotate(Math.sin(Date.now() / 1000) * 0.1 + u.rotation);
-            
+
             // Draw UFO body
             this.ctx.shadowBlur = 25;
             this.ctx.shadowColor = u.color;
@@ -518,16 +518,16 @@ class MenuAnimation {
             this.ctx.beginPath();
             this.ctx.ellipse(0, 0, u.size, u.size * 0.35, 0, 0, Math.PI * 2);
             this.ctx.fill();
-            
+
             // Dome
             this.ctx.fillStyle = 'rgba(255,255,255,0.4)';
             this.ctx.beginPath();
             this.ctx.arc(0, -u.size * 0.1, u.size * 0.45, Math.PI, 0);
             this.ctx.fill();
-            
+
             // Lights
             this.ctx.fillStyle = '#fff';
-            for(let j=0; j<3; j++) {
+            for (let j = 0; j < 3; j++) {
                 const lx = -u.size * 0.5 + (j * u.size * 0.5);
                 this.ctx.beginPath();
                 this.ctx.arc(lx, u.size * 0.1, 2, 0, Math.PI * 2);
@@ -665,7 +665,7 @@ class Gem {
         } else {
             ctx.shadowBlur = 15; ctx.shadowColor = '#10b981'; ctx.fillStyle = '#34d399';
         }
-        ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius + (this.isNuke||this.isMagnet ? 2 : 0), 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius + (this.isNuke || this.isMagnet ? 2 : 0), 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
     }
 }
@@ -679,7 +679,7 @@ class Tombstone {
         ctx.fillRect(this.x - cam.x - 15, this.y - cam.y - 20, 30, 40);
         ctx.fillStyle = '#94a3b8';
         ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y - 20, 15, Math.PI, 0); ctx.fill();
-        
+
         // Progress bar
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(this.x - cam.x - 20, this.y - cam.y + 25, 40, 6);
@@ -697,11 +697,11 @@ class Obstacle {
         ctx.strokeStyle = '#1e293b';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        for(let i=0; i<8; i++) {
-            const a = (i/8)*Math.PI*2;
+        for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2;
             const r = this.radius * (0.8 + Math.sin(this.x * this.y + i) * 0.2);
-            if (i===0) ctx.moveTo(this.x - cam.x + Math.cos(a)*r, this.y - cam.y + Math.sin(a)*r);
-            else ctx.lineTo(this.x - cam.x + Math.cos(a)*r, this.y - cam.y + Math.sin(a)*r);
+            if (i === 0) ctx.moveTo(this.x - cam.x + Math.cos(a) * r, this.y - cam.y + Math.sin(a) * r);
+            else ctx.lineTo(this.x - cam.x + Math.cos(a) * r, this.y - cam.y + Math.sin(a) * r);
         }
         ctx.closePath();
         ctx.fill(); ctx.stroke();
@@ -948,10 +948,10 @@ class Enemy {
                 GAME.entities.enemies.forEach(e => { if (e.id !== this.id && dist(e.x, e.y, this.x, this.y) < 150) e.hp -= 150; });
             }
             if (GAME.entities.fire) {
-                for(let j=0; j<15; j++) {
+                for (let j = 0; j < 15; j++) {
                     const a = Math.random() * Math.PI * 2;
                     const d = Math.random() * 150;
-                    GAME.entities.fire.push(new Fire(this.x + Math.cos(a)*d, this.y + Math.sin(a)*d, 0, false));
+                    GAME.entities.fire.push(new Fire(this.x + Math.cos(a) * d, this.y + Math.sin(a) * d, 0, false));
                 }
             }
             shakeScreen(15); AudioEngine.play('hit');
@@ -1024,7 +1024,7 @@ class Enemy {
         } else if (this.type === 5) {
             // Support (kříž nebo ovál s aurou)
             const color = this.possessed ? '#22c55e' : '#0ea5e9';
-            
+
             // Healing Aura effect
             ctx.save();
             ctx.translate(this.x - cam.x, this.y - cam.y);
@@ -1033,7 +1033,7 @@ class Enemy {
             ctx.fillStyle = color;
             ctx.beginPath(); ctx.arc(0, 0, 250, 0, Math.PI * 2); ctx.fill();
             ctx.globalAlpha = 1.0;
-            
+
             ctx.shadowBlur = 20; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#fff';
@@ -1320,15 +1320,15 @@ class Player {
         if (this.shipType === 4) { // Brokovnice
             const baseAngle = Math.atan2(target.y - this.y, target.x - this.x);
             const pellets = 4 + this.projectileCount;
-            const spread = Math.PI / 6; 
-            
+            const spread = Math.PI / 6;
+
             for (let i = 0; i < pellets; i++) {
                 const isCrit = Math.random() < this.critChance;
                 const finalDamage = (isCrit ? this.damage * this.critMultiplier : this.damage) * 0.7;
-                
-                const angleOffset = -spread/2 + (spread / (pellets-1 || 1)) * i;
+
+                const angleOffset = -spread / 2 + (spread / (pellets - 1 || 1)) * i;
                 const shootAngle = baseAngle + angleOffset;
-                
+
                 const tx = this.x + Math.cos(shootAngle) * 500;
                 const ty = this.y + Math.sin(shootAngle) * 500;
 
@@ -1338,8 +1338,8 @@ class Player {
                     bounce: this.bounces,
                     isCrit: isCrit,
                     type: 'default',
-                    life: 60 + (Math.random()*20), // Lepší dostřel
-                    speed: CONFIG.PROJECTILE_SPEED * (1.1 + Math.random()*0.3)
+                    life: 60 + (Math.random() * 20), // Lepší dostřel
+                    speed: CONFIG.PROJECTILE_SPEED * (1.1 + Math.random() * 0.3)
                 });
                 if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
                 if (NET.isMultiplayer) syncShot(proj);
@@ -1543,7 +1543,7 @@ function showLevelUp() {
         }
 
         if (u.id === 'possession_plus' && META.selectedAbility !== 3) return false;
-        
+
         return true;
     };
 
@@ -1613,7 +1613,7 @@ function applyUpgrade(id) {
             case 'orbit': p.orbitals += 1; break;
             case 'knockback': p.knockbackForce *= 1.5; break;
             case 'xpboost': p.xpMultiplier += 0.2; break;
-            case 'lifesteal': p.lifestealChance += 0.05; break;
+            case 'lifesteal': p.lifestealChance += 0.10; break;
             case 'aura': p.aura = true; p.auraRange += 20; p.auraPower *= 0.8; break;
             case 'bounce': p.bounces += 1; break;
             case 'fire': p.fireTrail = true; p.fireDamageMult += 0.5; break;
@@ -2079,10 +2079,10 @@ function initSocket() {
         NET.socket.on('explosion', (data) => {
             // Nuke or Kamikadze explosion
             if (GAME.entities.fire) {
-                for(let i=0; i<30; i++) {
+                for (let i = 0; i < 30; i++) {
                     const a = Math.random() * Math.PI * 2;
                     const d = Math.random() * data.radius;
-                    GAME.entities.fire.push(new Fire(data.x + Math.cos(a)*d, data.y + Math.sin(a)*d, 0, false));
+                    GAME.entities.fire.push(new Fire(data.x + Math.cos(a) * d, data.y + Math.sin(a) * d, 0, false));
                 }
             }
             shakeScreen(20);
@@ -2308,12 +2308,12 @@ function init() {
         floatingTexts: []
     };
 
-    window.addEventListener('keydown', (e) => { 
-        if (e.key) GAME.input[e.key.toLowerCase()] = true; 
-        if (e.key === 'Escape') togglePause(); 
+    window.addEventListener('keydown', (e) => {
+        if (e.key) GAME.input[e.key.toLowerCase()] = true;
+        if (e.key === 'Escape') togglePause();
     });
-    window.addEventListener('keyup', (e) => { 
-        if (e.key) GAME.input[e.key.toLowerCase()] = false; 
+    window.addEventListener('keyup', (e) => {
+        if (e.key) GAME.input[e.key.toLowerCase()] = false;
     });
 
     GAME.canvas.addEventListener('mousedown', (e) => {
@@ -2484,7 +2484,7 @@ function init() {
         GAME.joystick.currentY = GAME.joystick.startY + Math.sin(angle) * d;
     }, { passive: true });
     GAME.canvas.addEventListener('touchend', () => { GAME.joystick.active = false; GAME.joystick.currentX = GAME.joystick.startX; GAME.joystick.currentY = GAME.joystick.startY; });
-    
+
     GAME.menuAnimation = new MenuAnimation();
 }
 
@@ -2541,7 +2541,7 @@ function useUltimate(cx, cy) {
                 GAME.entities.floatingTexts.push(new FloatingText(pl.x, pl.y - 25, "+HEAL", "#10b981"));
             }
         });
-        
+
         // Visuals
         const overlay = document.getElementById('freeze-overlay');
         if (overlay) {
@@ -2863,14 +2863,14 @@ function update(dt) {
                             if (!NET.isMultiplayer && GAME.entities.gems) {
                                 if (enemy.type === 4) { // Zloděj drop
                                     const drops = (enemy.stolenGems || 0) + 5;
-                                    for(let i=0; i<drops; i++) {
-                                        GAME.entities.gems.push(new Gem(enemy.x + (Math.random()-0.5)*100, enemy.y + (Math.random()-0.5)*100));
+                                    for (let i = 0; i < drops; i++) {
+                                        GAME.entities.gems.push(new Gem(enemy.x + (Math.random() - 0.5) * 100, enemy.y + (Math.random() - 0.5) * 100));
                                     }
                                 } else {
                                     let isNuke = false, isMagnet = false;
                                     if (enemy.isBoss) {
                                         if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
-                                        for(let i=0; i<10; i++) GAME.entities.gems.push(new Gem(enemy.x + (Math.random()-0.5)*150, enemy.y + (Math.random()-0.5)*150));
+                                        for (let i = 0; i < 10; i++) GAME.entities.gems.push(new Gem(enemy.x + (Math.random() - 0.5) * 150, enemy.y + (Math.random() - 0.5) * 150));
                                     }
                                     const gem = new Gem(enemy.x, enemy.y);
                                     gem.isNuke = isNuke; gem.isMagnet = isMagnet;
@@ -2879,7 +2879,10 @@ function update(dt) {
                             }
                             GAME.kills++;
                             if (p.lifestealChance > 0 && Math.random() < p.lifestealChance) {
-                                p.hp = Math.min(p.maxHp, p.hp + 1);
+                                const healAmount = Math.max(8, p.maxHp * 0.08);
+                                p.hp = Math.min(p.maxHp, p.hp + healAmount);
+                                if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                                GAME.entities.floatingTexts.push(new FloatingText(p.x, p.y - 30, "+LÉČENÍ", "#10b981"));
                             }
                             updateUI();
                         }
@@ -2908,10 +2911,10 @@ function update(dt) {
                             }
                         });
                         if (GAME.entities.fire) {
-                            for(let j=0; j<30; j++) {
+                            for (let j = 0; j < 30; j++) {
                                 const a = Math.random() * Math.PI * 2;
                                 const d = Math.random() * 800;
-                                GAME.entities.fire.push(new Fire(p.x + Math.cos(a)*d, p.y + Math.sin(a)*d, 0, false));
+                                GAME.entities.fire.push(new Fire(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, 0, false));
                             }
                         }
                         shakeScreen(20); AudioEngine.play('hit');
