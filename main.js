@@ -2197,6 +2197,11 @@ function initSocket() {
             }
         });
 
+        NET.socket.on('serverStats', (data) => {
+            const el = document.getElementById('active-players-count');
+            if (el) el.innerText = data.activePlayers;
+        });
+
         NET.socket.on('explosion', (data) => {
             // Nuke or Kamikadze explosion
             if (GAME.entities.fire) {
@@ -3253,12 +3258,7 @@ const initAudio = () => {
     }
 };
 
-if (NET.socket) {
-    NET.socket.on('serverStats', (data) => {
-        const el = document.getElementById('active-players-count');
-        if (el) el.innerText = data.activePlayers;
-    });
-}
+
 
 ['click', 'keydown', 'touchstart'].forEach(type => window.addEventListener(type, initAudio));
 
