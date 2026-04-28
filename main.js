@@ -576,6 +576,41 @@ class Fire {
     }
 }
 
+class FriendlyMinion {
+    constructor(x, y, damage, owner) {
+        this.x = x; this.y = y; this.damage = damage; this.owner = owner;
+        this.radius = 12; this.hp = 30; this.maxHp = 30; this.life = 10; // Sekundy
+        this.id = Math.random().toString(36).substr(2, 9);
+        this.speed = 3.5;
+    }
+    update() {
+        this.life -= 1/60;
+        if (this.life <= 0) this.hp = 0;
+        
+        const enemies = GAME.entities.enemies;
+        if (enemies.length > 0) {
+            const target = enemies.sort((a,b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0];
+            const angle = Math.atan2(target.y - this.y, target.x - this.x);
+            this.x += Math.cos(angle) * this.speed * GAME.speedFactor;
+            this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
+            
+            if (dist(this.x, this.y, target.x, target.y) < this.radius + target.radius) {
+                target.hp -= this.damage;
+                this.hp -= 2; // Bere poškození při útoku
+                if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: target.id, damage: this.damage });
+            }
+        }
+    }
+    draw(ctx, cam) {
+        ctx.shadowBlur = 15; ctx.shadowColor = '#6366f1'; ctx.fillStyle = '#818cf8';
+        ctx.beginPath();
+        ctx.moveTo(this.x - cam.x, this.y - cam.y - 12);
+        ctx.lineTo(this.x - cam.x + 10, this.y - cam.y + 8);
+        ctx.lineTo(this.x - cam.x - 10, this.y - cam.y + 8);
+        ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+    }
+}
+
 class Projectile {
     constructor(x, y, targetX, targetY, damage, stats = {}) {
         this.x = x; this.y = y;
@@ -752,6 +787,18 @@ function getAllAlivePlayers() {
 
 function getAllTargets() {
     const list = getAllAlivePlayers();
+    if (GAME.entities.baits) {
+        GAME.entities.baits.forEach(b => b.update());
+    }
+
+    if (GAME.entities.minions) {
+        for (let i = GAME.entities.minions.length - 1; i >= 0; i--) {
+            const m = GAME.entities.minions[i];
+            m.update();
+            if (m.hp <= 0) GAME.entities.minions.splice(i, 1);
+        }
+    }
+
     if (GAME.entities && GAME.entities.baits) {
         GAME.entities.baits.forEach(b => {
             if (b && b.hp > 0) list.push({ x: b.x, y: b.y, radius: b.radius, isBait: true, obj: b });
@@ -783,11 +830,13 @@ class Bait {
 }
 
 class Boss {
-    constructor(x, y, level = 1, id = Math.random().toString(36).substr(2, 9)) {
+    constructor(x, y, level = 1, id = Math.random().toString(36).substr(2, 9), type = null) {
         this.x = x; this.y = y; this.radius = 50; this.id = id;
+        this.type = type || Math.floor(Math.random() * 5) + 1; // 1-5 varianty
         this.maxHp = CONFIG.ENEMY_BASE_HEALTH * 30 * level; this.hp = this.maxHp;
-        this.speed = CONFIG.ENEMY_BASE_SPEED * 0.8; this.isBoss = true;
+        this.speed = CONFIG.ENEMY_BASE_SPEED * 0.7; this.isBoss = true;
         this.knockback = { x: 0, y: 0 };
+        this.lastAction = Date.now();
     }
     update() {
         if (NET.isMultiplayer) {
@@ -800,39 +849,56 @@ class Boss {
 
         const targets = getAllTargets();
         if (targets.length === 0) return;
-        const baits = targets.filter(t => t.isBait);
-        const target = baits.length > 0
-            ? baits.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0]
-            : targets.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0];
+        const target = targets.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0];
         const angle = Math.atan2(target.y - this.y, target.x - this.x);
+        
         let speedScale = 1.0;
         const players = getAllAlivePlayers();
-        players.forEach(p => {
-            if (p.aura && dist(this.x, this.y, p.x, p.y) < (p.auraRange || 150)) {
-                speedScale *= (p.auraPower || 0.5);
-            }
-        });
-        const currentSpeed = this.speed * speedScale * GAME.speedFactor;
-        this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
-        this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
+        players.forEach(p => { if (p.aura && dist(this.x, this.y, p.x, p.y) < (p.auraRange || 150)) speedScale *= 0.5; });
+
+        this.x += Math.cos(angle) * this.speed * speedScale * GAME.speedFactor + this.knockback.x;
+        this.y += Math.sin(angle) * this.speed * speedScale * GAME.speedFactor + this.knockback.y;
         this.knockback.x *= 0.9; this.knockback.y *= 0.9;
+
+        // Boss útoky podle typu
+        if (Date.now() - this.lastAction > 3000) {
+            if (this.type === 2) { // Hunter Boss - dávka střel
+                for(let i=0; i<8; i++) {
+                    const a = angle - 0.5 + i * 0.125;
+                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x+Math.cos(a)*100, this.y+Math.sin(a)*100, 15, { isEnemy:true, color:'#f43f5e', speed:8 }));
+                }
+            } else if (this.type === 3) { // Kamikadze Boss - minion spawn
+                for(let i=0; i<3; i++) {
+                    GAME.entities.enemies.push(new Enemy(this.x, this.y, 1, Math.random().toString(36).substr(2,9), 3));
+                }
+            }
+            this.lastAction = Date.now();
+        }
     }
     draw(ctx, cam) {
         const ratio = this.hp / this.maxHp;
-        ctx.shadowBlur = 40; ctx.shadowColor = '#ef4444'; ctx.fillStyle = '#ef4444';
+        const colors = {1:'#ef4444', 2:'#f43f5e', 3:'#f97316', 4:'#eab308', 5:'#0ea5e9'};
+        const color = colors[this.type] || '#ef4444';
+        
+        ctx.shadowBlur = 50; ctx.shadowColor = color; ctx.fillStyle = color;
+        ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
+        ctx.rotate(Date.now() / 1000);
         ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const a = (i / 6) * Math.PI * 2 + (Date.now() / 1000);
-            const px = this.x - cam.x + Math.cos(a) * this.radius;
-            const py = this.y - cam.y + Math.sin(a) * this.radius;
-            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        const sides = 5 + this.type;
+        for (let i = 0; i < sides; i++) {
+            const a = (i / sides) * Math.PI * 2;
+            const r = this.radius * (0.8 + Math.sin(Date.now()/500 + i)*0.2);
+            if (i === 0) ctx.moveTo(Math.cos(a)*r, Math.sin(a)*r); else ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
         }
         ctx.closePath(); ctx.fill();
-        const barW = 100; const barH = 10;
+        
+        // HP Bar
+        ctx.restore();
+        const barW = 120; const barH = 12;
         ctx.fillStyle = 'rgba(0,0,0,0.8)';
-        ctx.fillRect(this.x - cam.x - barW / 2, this.y - cam.y - this.radius - 30, barW, barH);
-        ctx.fillStyle = '#ef4444';
-        ctx.fillRect(this.x - cam.x - barW / 2, this.y - cam.y - this.radius - 30, barW * ratio, barH);
+        ctx.fillRect(this.x - cam.x - barW / 2, this.y - cam.y - this.radius - 40, barW, barH);
+        ctx.fillStyle = color;
+        ctx.fillRect(this.x - cam.x - barW / 2, this.y - cam.y - this.radius - 40, barW * ratio, barH);
         ctx.shadowBlur = 0;
     }
 }
@@ -898,6 +964,37 @@ class Enemy {
                 speedScale *= (p.auraPower || 0.5);
             }
         });
+        if (this.type === 6) { // SKOKAN (Leaper)
+            if (!this.jumpState) this.jumpState = 'WALKING';
+            
+            if (this.jumpState === 'WALKING') {
+                if (dist(this.x, this.y, target.x, target.y) < 250) {
+                    this.jumpState = 'PREPARING';
+                    this.prepTime = Date.now() + 1000;
+                    this.jumpTarget = { x: target.x, y: target.y };
+                }
+            } else if (this.jumpState === 'PREPARING') {
+                if (Date.now() > this.prepTime) {
+                    this.jumpState = 'JUMPING';
+                    this.jumpStart = { x: this.x, y: this.y };
+                    this.jumpProgress = 0;
+                }
+                return; // Stojí a míří
+            } else if (this.jumpState === 'JUMPING') {
+                this.jumpProgress += 0.04 * GAME.speedFactor;
+                this.x = this.jumpStart.x + (this.jumpTarget.x - this.jumpStart.x) * this.jumpProgress;
+                this.y = this.jumpStart.y + (this.jumpTarget.y - this.jumpStart.y) * this.jumpProgress;
+                
+                if (this.jumpProgress >= 1) {
+                    this.jumpState = 'WALKING';
+                    // Po dopadu může udělat malé poškození v okolí
+                    const players = getAllAlivePlayers();
+                    players.forEach(p => { if (dist(this.x, this.y, p.x, p.y) < 50) p.hp -= 15; });
+                }
+                return;
+            }
+        }
+
         const currentSpeed = this.speed * speedScale * GAME.speedFactor;
         this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
         this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
@@ -1036,10 +1133,15 @@ class Enemy {
 
             ctx.shadowBlur = 20; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(-8, -3, 16, 6); ctx.fillRect(-3, -8, 6, 16);
-            if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
-            ctx.restore(); ctx.shadowBlur = 0;
+        }
+
+        // HP Bar for all enemies when damaged
+        if (this.hp < this.maxHp) {
+            const barW = 30; const barH = 4;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(this.x - cam.x - barW / 2, this.y - cam.y - 35, barW, barH);
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(this.x - cam.x - barW / 2, this.y - cam.y - 35, barW * (this.hp / this.maxHp), barH);
         }
     }
 }
@@ -1283,7 +1385,15 @@ class Player {
                 const isCrit = Math.random() < this.critChance;
                 const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
 
-                const proj = new Projectile(this.x, this.y, target.x, target.y, finalDamage, {
+                // Malý rozptyl pro více projektilů
+                const spread = this.projectileCount > 1 ? (Math.random() - 0.5) * 0.15 : 0;
+                const baseAngle = Math.atan2(target.y - this.y, target.x - this.x);
+                const shootAngle = baseAngle + spread;
+
+                const tx = this.x + Math.cos(shootAngle) * 500;
+                const ty = this.y + Math.sin(shootAngle) * 500;
+
+                const proj = new Projectile(this.x, this.y, tx, ty, finalDamage, {
                     size: this.projSize,
                     pierce: this.pierceCount,
                     bounce: this.bounces,
@@ -1294,6 +1404,15 @@ class Player {
                 });
                 if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
                 if (NET.isMultiplayer) syncShot(proj);
+            }
+        }
+
+        if (this.shipType === 5) { // NEKROMANCER
+            if (!GAME.entities.minions) GAME.entities.minions = [];
+            if (GAME.entities.minions.length < 10 + this.projectileCount * 2) {
+                const minion = new FriendlyMinion(this.x, this.y, this.damage * 0.5, this);
+                GAME.entities.minions.push(minion);
+                // V multiplayeru by to chtělo sync, ale zatím solo focus
             }
         }
 
@@ -1722,7 +1841,8 @@ function showShipsMenu() {
         { id: 1, name: 'Základní Loď', desc: 'Spolehlivý standardní model', cost: 0, icon: '🚀' },
         { id: 2, name: 'Laserová Loď', desc: 'Automatický paprsek, nestřílí', cost: 500, icon: '🩸' },
         { id: 3, name: 'Drtivá Zeď', desc: 'Průrazná vlna bez základní palby.', cost: 1000, icon: '🌊' },
-        { id: 4, name: 'Brokovnice', desc: 'Střílí 3-5 střel najednou.', cost: 1500, icon: '💥' }
+        { id: 4, name: 'Brokovnice', desc: 'Střílí 3-5 střel najednou.', cost: 1500, icon: '💥' },
+        { id: 5, name: 'Nekromancer', desc: 'Místo útoku vyvolává vlastní armádu minionů.', cost: 2000, icon: '💀' }
     ];
 
     ships.forEach(item => {
@@ -2639,9 +2759,12 @@ function update(dt) {
                     type = 4; hp *= 1.5; speedMod = 2.2;
                 } else if (GAME.entities.player.level >= 8 && rnd < 0.27) {
                     type = 5; hp *= 3; speedMod = 0.5;
+                } else if (GAME.entities.player.level >= 10 && rnd < 0.35) {
+                    type = 6; hp *= 1.2; speedMod = 1.0;
                 }
 
-                if (GAME.entities.player.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
+                const hasBoss = GAME.entities.enemies.some(e => e.isBoss);
+                if (GAME.entities.player.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL) && !hasBoss) {
                     enemy = new Boss(x, y, mod);
                     showBossWarning();
                     GAME.lastBossTime = GAME.time;
@@ -3002,6 +3125,7 @@ function render() {
             }
         }
 
+        if (GAME.entities.minions) GAME.entities.minions.forEach(m => { if (m) m.draw(ctx, { x: camX, y: camY }); });
         if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
 
         if (GAME.entities.floatingTexts) {
@@ -3128,6 +3252,13 @@ const initAudio = () => {
         ['click', 'keydown', 'touchstart'].forEach(type => window.removeEventListener(type, initAudio));
     }
 };
+
+if (NET.socket) {
+    NET.socket.on('serverStats', (data) => {
+        const el = document.getElementById('active-players-count');
+        if (el) el.innerText = data.activePlayers;
+    });
+}
 
 ['click', 'keydown', 'touchstart'].forEach(type => window.addEventListener(type, initAudio));
 
