@@ -1676,18 +1676,19 @@ function togglePause() {
     }
 }
 
-let fullscreenAttempted = false;
 function tryFullscreen() {
-    if (fullscreenAttempted) return;
-    const isFS = document.fullscreenElement || document.webkitFullscreenElement;
-    if (!isFS) {
-        if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(e => { });
-        } else if (document.documentElement.webkitRequestFullscreen) {
-            document.documentElement.webkitRequestFullscreen();
-        }
+    const isFS = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+    if (isFS) return;
+
+    try {
+        const el = document.documentElement;
+        const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        if (rfs) rfs.call(el).catch(e => {
+            // Pouze tiché selhání, pokud prohlížeč vyžaduje silnější gesto
+        });
+    } catch (err) {
+        console.warn("Fullscreen attempt failed:", err);
     }
-    fullscreenAttempted = true;
 }
 
 function toggleFullscreen(element, force = false) {
@@ -2327,17 +2328,7 @@ function init() {
         }
     });
 
-    const startAudio = () => {
-        AudioEngine.init();
-        const menu = document.getElementById('menu-modal');
-        if (menu && menu.classList.contains('active')) {
-            AudioEngine.startMenuMusic();
-        }
-        if (AudioEngine.ctx && AudioEngine.ctx.state === 'running') {
-            ['mousedown', 'keydown', 'touchstart', 'mousemove'].forEach(type => window.removeEventListener(type, startAudio));
-        }
-    };
-    ['mousedown', 'keydown', 'touchstart', 'mousemove'].forEach(type => window.addEventListener(type, startAudio));
+
     setInterval(() => { if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume(); }, 500);
 
     const btnStart = document.getElementById('btn-start');
@@ -3132,10 +3123,12 @@ const initAudio = () => {
     if (document.getElementById('menu-modal') && document.getElementById('menu-modal').classList.contains('active')) {
         AudioEngine.startMenuMusic();
     }
+    // Odstraníme listenery po úspěšné inicializaci (pokud chceme, ale Fullscreen můžeme zkoušet dál)
+    if (AudioEngine.ctx && AudioEngine.ctx.state === 'running' && (document.fullscreenElement || document.webkitFullscreenElement)) {
+        ['click', 'keydown', 'touchstart'].forEach(type => window.removeEventListener(type, initAudio));
+    }
 };
 
-window.addEventListener('click', initAudio);
-window.addEventListener('keydown', initAudio);
-window.addEventListener('touchstart', initAudio);
+['click', 'keydown', 'touchstart'].forEach(type => window.addEventListener(type, initAudio));
 
 init();
