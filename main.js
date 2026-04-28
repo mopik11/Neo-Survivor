@@ -1986,6 +1986,11 @@ function initSocket() {
 
         NET.socket.on('connect', () => {
             console.warn("CLOUD: Připojeno k hernímu serveru!");
+            
+            const myPlayerId = localStorage.getItem('neoSurvivor_pid') || Math.random().toString(36).substr(2, 9);
+            if (!localStorage.getItem('neoSurvivor_pid')) localStorage.setItem('neoSurvivor_pid', myPlayerId);
+            
+            NET.socket.emit('initPlayer', { playerId: myPlayerId });
 
             const savedUser = localStorage.getItem('neoSurvivor_user');
             if (savedUser) {
