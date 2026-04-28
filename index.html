@@ -207,46 +207,65 @@
       </div>
 
       <div id="tutorial-modal" class="modal">
-        <div class="modal-content" style="max-width: 750px; padding: 2rem;">
-          <h2 style="font-size: 2.5rem; color: #38bdf8; margin-bottom: 1.5rem; letter-spacing: 2px;">GALAKTICKÁ PŘÍRUČKA</h2>
+        <div class="modal-content" style="max-width: 900px; padding: 2.5rem;">
+          <h2 style="font-size: 2.8rem; color: #38bdf8; margin-bottom: 0.5rem; letter-spacing: 3px; text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);">VESMÍRNÝ MANUÁL</h2>
+          <p style="color: #94a3b8; margin-bottom: 2rem; font-size: 0.9rem;">Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.</p>
           
-          <div style="text-align: left; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; overflow-y: auto; max-height: 60vh; padding-right: 10px;">
+          <div style="text-align: left; width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; overflow-y: auto; max-height: 65vh; padding-right: 15px; padding-bottom: 20px;">
             <div class="tutorial-card">
-              <h3>🕹️ OVLÁDÁNÍ</h3>
-              <p><strong>WASD / Joystick:</strong> Pohyb lodi v prostoru.</p>
-              <p><strong>Levý Klik / Klepnutí:</strong> Aktivuje speciální schopnost (pokud je připravena).</p>
-              <p><strong>ESC:</strong> Pauza a statistiky.</p>
+              <h3>🕹️ ZÁKLADNÍ OVLÁDÁNÍ</h3>
+              <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
+                <li><strong style="color:white">Pohyb:</strong> Klávesy <span style="color:#6366f1">WASD</span> nebo <span style="color:#6366f1">Joystick</span> na mobilu.</li>
+                <li><strong style="color:white">Schopnost:</strong> <span style="color:#6366f1">Levý klik</span> nebo <span style="color:#6366f1">Klepnutí</span> (pravá strana mobilu).</li>
+                <li><strong style="color:white">Pauza:</strong> Klávesa <span style="color:#6366f1">ESC</span> pro statistiky a pauzu.</li>
+              </ul>
             </div>
 
             <div class="tutorial-card">
-              <h3>💎 RŮST A LEVELY</h3>
-              <p>Zabíjej nepřátele a sbírej modré <strong>XP Gemy</strong>.</p>
-              <p>Každý level ti dá na výběr ze 3 (nebo více) vylepšení, která ti pomohou přežít déle.</p>
+              <h3>🧬 VÝVOJ A LEVELY</h3>
+              <p>Zabíjej nepřátele a sbírej <strong style="color:#10b981">XP Gemy</strong>. Každý nový level ti nabídne 3 náhodná vylepšení.</p>
+              <p style="font-size: 0.8rem; font-style: italic;">Tip: Zaměř se nejdřív na poškození (Damage) a pak na dosah (Magnet)!</p>
             </div>
 
             <div class="tutorial-card">
-              <h3>👾 NEPŘÁTELÉ</h3>
-              <p><strong>Základní (Červení):</strong> Jdou přímo po tobě.</p>
-              <p><strong>Střelci (Zelení):</strong> Drží si odstup a pálí projektily.</p>
-              <p><strong>Kamikadze (Oranžoví):</strong> Jsou velmi rychlí a při nárazu vybuchnou.</p>
-              <p><strong>Support (Modří):</strong> Neléčí tebe, ale opravují poškozené ufony v okolí!</p>
+              <h3>🚀 FLOTILA LODÍ</h3>
+              <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
+                <li><strong style="color:#6366f1">Průzkumník:</strong> Vyvážená loď se speciální schopností Sniper.</li>
+                <li><strong style="color:#f43f5e">Těžký Křižník:</strong> Pomalý, ale má ničivý laser a víc HP.</li>
+                <li><strong style="color:#a855f7">Duch:</strong> Křehká loď, která dokáže posednout nepřátele.</li>
+              </ul>
             </div>
 
             <div class="tutorial-card">
-              <h3>🎁 SPECIÁLNÍ DROPY</h3>
-              <p><strong>Nukleární bomba (☢️):</strong> Okamžitě zničí všechny viditelné nepřátele.</p>
-              <p><strong>Magnet (🧲):</strong> Přitáhne všechny XP gemy z celé mapy k tobě.</p>
-              <p><strong>Lékárnička (➕):</strong> Doplní část tvého poškozeného pancíře.</p>
+              <h3>👾 ATLAS MIMOZEMŠŤANŮ</h3>
+              <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
+                <li><span style="color:#ef4444">●</span> <strong style="color:white">Dron:</strong> Základní nepřítel, útočí ve vlnách.</li>
+                <li><span style="color:#22c55e">●</span> <strong style="color:white">Lovec:</strong> Střílí nebezpečné projektily.</li>
+                <li><span style="color:#f59e0b">●</span> <strong style="color:white">Sebevrah:</strong> Rychle se přiblíží a vybuchne.</li>
+                <li><span style="color:#3b82f6">●</span> <strong style="color:white">Opravář:</strong> Léčí ostatní ufony v okolí.</li>
+              </ul>
             </div>
 
-            <div class="tutorial-card" style="grid-column: span 2;">
-              <h3>👹 BOSS & PROGRESE</h3>
-              <p>Každou minutu se objeví <strong>BOSS</strong>. Má obrovské HP a nebezpečné útoky.</p>
-              <p>Za každou hru získáváš <strong>Dogecoiny</strong> (10 zabití = 1 Doge), za které si v menu kupuješ trvalá vylepšení a nové lodě.</p>
+            <div class="tutorial-card">
+              <h3>🎁 TAKTICKÁ VÝBAVA</h3>
+              <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
+                <li><strong style="color:white">☢️ Nuke:</strong> Vymaže vše na obrazovce.</li>
+                <li><strong style="color:white">🧲 Magnet:</strong> Přitáhne všechny gemy z dálky.</li>
+                <li><strong style="color:white">➕ Lékárna:</strong> Opraví poškozený trup lodi.</li>
+              </ul>
+            </div>
+
+            <div class="tutorial-card">
+              <h3>💡 POKROČILÉ TIPY</h3>
+              <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
+                <li><strong style="color:white">Lifesteal + Rychlost:</strong> Skvělá kombinace pro nesmrtelnost.</li>
+                <li><strong style="color:white">Boss:</strong> Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!</li>
+                <li><strong style="color:white">Dogecoiny:</strong> Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!</li>
+              </ul>
             </div>
           </div>
           
-          <button class="btn-restart" id="btn-close-tutorial" style="margin-top:2rem; width: 100%; background: #38bdf8; border: none;">ROZUMÍM, CHCI BOJOVAT!</button>
+          <button class="btn-restart" id="btn-close-tutorial" style="margin-top:2rem; width: 100%; background: linear-gradient(to right, #38bdf8, #6366f1); border: none; font-size: 1.1rem;">ROZUMÍM, CHCI DO BOJE!</button>
         </div>
       </div>
 
