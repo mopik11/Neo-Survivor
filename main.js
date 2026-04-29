@@ -934,6 +934,15 @@ class Enemy {
         this.hp = this.maxHp;
         this.knockback = { x: 0, y: 0 };
         this.possessed = false;
+        
+        // Safety init
+        if (this.type === 6) {
+            this.jumpState = 'WALKING';
+            this.jumpProgress = 0;
+            this.jumpStart = { x: x, y: y };
+            this.jumpTarget = { x: x, y: y };
+            this.prepTime = 0;
+        }
     }
     update() {
         if (NET.isMultiplayer) {
@@ -1115,9 +1124,6 @@ class Enemy {
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
             ctx.rotate(Date.now() / 200);
             ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(15, 0); ctx.lineTo(0, 20); ctx.lineTo(-15, 0); ctx.closePath(); ctx.fill();
-            if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
-            ctx.restore(); ctx.shadowBlur = 0;
-            ctx.closePath(); ctx.fill();
             if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
             ctx.restore(); ctx.shadowBlur = 0;
         } else if (this.type === 6) {
@@ -2894,7 +2900,9 @@ function update(dt) {
     }
 
     const p = GAME.entities.player;
+    if (isNaN(p.x) || isNaN(p.y)) { p.x = 0; p.y = 0; }
     p.update(dt);
+    if (isNaN(p.x) || isNaN(p.y)) { p.x = 0; p.y = 0; }
 
     if (NET.isMultiplayer && GAME.entities.tombstones && !p.dead) {
         GAME.entities.tombstones.forEach(t => {
@@ -2935,6 +2943,7 @@ function update(dt) {
         GAME.entities.enemies.forEach((e) => {
             if (!e) return;
             e.update();
+            if (isNaN(e.x) || isNaN(e.y)) { e.x = 0; e.y = 0; }
             targets.forEach(t => {
                 if (dist(t.x, t.y, e.x, e.y) < t.radius + e.radius && !t.possessed && !e.possessed) {
                     if (t.isBait) {
