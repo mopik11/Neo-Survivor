@@ -698,11 +698,11 @@ class Gem {
         else if (player.ultraMagnet) this.ultraAttracted = true;
 
         if (this.attracted) {
-            const d = Math.sqrt(d2);
+            const d = Math.sqrt(d2) || 1;
             this.x += (dx / d) * 14 * GAME.speedFactor;
             this.y += (dy / d) * 14 * GAME.speedFactor;
         } else if (this.ultraAttracted) {
-            const d = Math.sqrt(d2);
+            const d = Math.sqrt(d2) || 1;
             const umSpeed = 0.8 * (player.ultraMagnetPower || 1);
             this.x += (dx / d) * umSpeed * GAME.speedFactor;
             this.y += (dy / d) * umSpeed * GAME.speedFactor;
@@ -3348,7 +3348,7 @@ function render() {
             if (op && !op.dead) drawDot(op.x, op.y, '#3b82f6', 3);
         }
         drawDot(pCx, pCy, '#10b981', 3);
-
+    } finally {
         ctx.restore();
     }
 
