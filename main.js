@@ -3154,87 +3154,89 @@ function render() {
     const ctx = GAME.ctx, cam = GAME.camera;
     if (!ctx) return;
 
-    ctx.save(); ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height); ctx.scale(GAME.zoom, GAME.zoom);
-    const camX = cam.x / GAME.zoom, camY = cam.y / GAME.zoom;
+    try {
+        ctx.save(); ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height); ctx.scale(GAME.zoom, GAME.zoom);
+        const camX = cam.x / GAME.zoom, camY = cam.y / GAME.zoom;
 
-    if (GAME.stars) {
-        GAME.stars.forEach(s => {
-            if (!s) return;
-            const sx = (s.x - camX * 0.1) % (GAME.canvas.width / GAME.zoom), sy = (s.y - camY * 0.1) % (GAME.canvas.height / GAME.zoom);
-            ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`; ctx.beginPath(); ctx.arc(sx < 0 ? sx + (GAME.canvas.width / GAME.zoom) : sx, sy < 0 ? sy + (GAME.canvas.height / GAME.zoom) : sy, s.size, 0, Math.PI * 2); ctx.fill();
-        });
-    }
-
-    ctx.strokeStyle = 'rgba(99, 102, 241, 0.15)'; ctx.lineWidth = 1; ctx.beginPath();
-    const hexRadius = 60, hexHeight = hexRadius * Math.sqrt(3);
-    const startCol = Math.floor(camX / (hexRadius * 1.5)) - 1, endCol = startCol + Math.ceil((GAME.canvas.width / GAME.zoom) / (hexRadius * 1.5)) + 2;
-    const startRow = Math.floor(camY / hexHeight) - 1, endRow = startRow + Math.ceil((GAME.canvas.height / GAME.zoom) / hexHeight) + 2;
-    for (let col = startCol; col <= endCol; col++) {
-        for (let row = startRow; row <= endRow; row++) {
-            const cx = col * hexRadius * 1.5 - camX, cy = (row * hexHeight + (Math.abs(col) % 2 === 0 ? 0 : hexHeight / 2)) - camY;
-            for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; const px = cx + Math.cos(a) * hexRadius, py = cy + Math.sin(a) * hexRadius; if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+        if (GAME.stars) {
+            GAME.stars.forEach(s => {
+                if (!s) return;
+                const sx = (s.x - camX * 0.1) % (GAME.canvas.width / GAME.zoom), sy = (s.y - camY * 0.1) % (GAME.canvas.height / GAME.zoom);
+                ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`; ctx.beginPath(); ctx.arc(sx < 0 ? sx + (GAME.canvas.width / GAME.zoom) : sx, sy < 0 ? sy + (GAME.canvas.height / GAME.zoom) : sy, s.size, 0, Math.PI * 2); ctx.fill();
+            });
         }
-    }
-    ctx.stroke();
 
-    if (GAME.active && GAME.entities) {
-        if (GAME.entities.fire) GAME.entities.fire.forEach(f => { if (f) f.draw(ctx, { x: camX, y: camY }); });
-        if (GAME.entities.obstacles) GAME.entities.obstacles.forEach(o => { if (o) o.draw(ctx, { x: camX, y: camY }); });
-        if (GAME.entities.baits) GAME.entities.baits.forEach(b => { if (b) b.draw(ctx, { x: camX, y: camY }); });
-        if (GAME.entities.tombstones) GAME.entities.tombstones.forEach(t => { if (t) t.draw(ctx, { x: camX, y: camY }); });
-        if (GAME.entities.gems) GAME.entities.gems.forEach(g => { if (g) g.draw(ctx, { x: camX, y: camY }); });
-        if (GAME.entities.projectiles) GAME.entities.projectiles.forEach(p => { if (p) p.draw(ctx, { x: camX, y: camY }); });
-        if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => { if (e) e.draw(ctx, { x: camX, y: camY }); });
-
-        for (const id in NET.others) {
-            if (NET.others[id]) {
-                const op = NET.others[id];
-
-                if (op.shipType === 2 && op.laserTargetsIds && op.laserTargetsIds.length > 0 && GAME.entities.enemies) {
-                    const chainsToDraw = op.laserTargetsIds.map(chainIds => {
-                        return chainIds.map(eid => GAME.entities.enemies.find(e => e && e.id === eid)).filter(e => e);
-                    }).filter(chain => chain.length > 0);
-
-                    chainsToDraw.forEach(chain => {
-                        if (!chain || chain.length === 0) return;
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.moveTo(op.x - camX, op.y - camY);
-                        chain.forEach(target => {
-                            if (target) ctx.lineTo(target.x - camX, target.y - camY);
-                        });
-                        ctx.strokeStyle = '#ef4444';
-                        ctx.lineWidth = 6 + (op.projSize - 6);
-                        ctx.shadowBlur = 20;
-                        ctx.shadowColor = '#ef4444';
-                        ctx.stroke();
-
-                        ctx.beginPath();
-                        ctx.moveTo(op.x - camX, op.y - camY);
-                        chain.forEach(target => {
-                            if (target) ctx.lineTo(target.x - camX, target.y - camY);
-                        });
-                        ctx.strokeStyle = '#ffffff';
-                        ctx.lineWidth = 2 + (this.projSize - 6) * 0.3;
-                        ctx.shadowBlur = 0;
-                        ctx.stroke();
-                        ctx.restore();
-                    });
-                }
-
-                op.draw(ctx, { x: camX, y: camY });
+        ctx.strokeStyle = 'rgba(99, 102, 241, 0.15)'; ctx.lineWidth = 1; ctx.beginPath();
+        const hexRadius = 60, hexHeight = hexRadius * Math.sqrt(3);
+        const startCol = Math.floor(camX / (hexRadius * 1.5)) - 1, endCol = startCol + Math.ceil((GAME.canvas.width / GAME.zoom) / (hexRadius * 1.5)) + 2;
+        const startRow = Math.floor(camY / hexHeight) - 1, endRow = startRow + Math.ceil((GAME.canvas.height / GAME.zoom) / hexHeight) + 2;
+        for (let col = startCol; col <= endCol; col++) {
+            for (let row = startRow; row <= endRow; row++) {
+                const cx = col * hexRadius * 1.5 - camX, cy = (row * hexHeight + (Math.abs(col) % 2 === 0 ? 0 : hexHeight / 2)) - camY;
+                for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; const px = cx + Math.cos(a) * hexRadius, py = cy + Math.sin(a) * hexRadius; if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
             }
         }
+        ctx.stroke();
 
-        if (GAME.entities.minions) GAME.entities.minions.forEach(m => { if (m) m.draw(ctx, { x: camX, y: camY }); });
-        if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
+        if (GAME.active && GAME.entities) {
+            if (GAME.entities.fire) GAME.entities.fire.forEach(f => { if (f) f.draw(ctx, { x: camX, y: camY }); });
+            if (GAME.entities.obstacles) GAME.entities.obstacles.forEach(o => { if (o) o.draw(ctx, { x: camX, y: camY }); });
+            if (GAME.entities.baits) GAME.entities.baits.forEach(b => { if (b) b.draw(ctx, { x: camX, y: camY }); });
+            if (GAME.entities.tombstones) GAME.entities.tombstones.forEach(t => { if (t) t.draw(ctx, { x: camX, y: camY }); });
+            if (GAME.entities.gems) GAME.entities.gems.forEach(g => { if (g) g.draw(ctx, { x: camX, y: camY }); });
+            if (GAME.entities.projectiles) GAME.entities.projectiles.forEach(p => { if (p) p.draw(ctx, { x: camX, y: camY }); });
+            if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => { if (e) e.draw(ctx, { x: camX, y: camY }); });
 
-        if (GAME.entities.floatingTexts) {
-            GAME.entities.floatingTexts.forEach(ft => { if (ft) ft.draw(ctx, { x: camX, y: camY }); });
+            for (const id in NET.others) {
+                if (NET.others[id]) {
+                    const op = NET.others[id];
+
+                    if (op.shipType === 2 && op.laserTargetsIds && op.laserTargetsIds.length > 0 && GAME.entities.enemies) {
+                        const chainsToDraw = op.laserTargetsIds.map(chainIds => {
+                            return chainIds.map(eid => GAME.entities.enemies.find(e => e && e.id === eid)).filter(e => e);
+                        }).filter(chain => chain.length > 0);
+
+                        chainsToDraw.forEach(chain => {
+                            if (!chain || chain.length === 0) return;
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.moveTo(op.x - camX, op.y - camY);
+                            chain.forEach(target => {
+                                if (target) ctx.lineTo(target.x - camX, target.y - camY);
+                            });
+                            ctx.strokeStyle = '#ef4444';
+                            ctx.lineWidth = 6 + (op.projSize - 6);
+                            ctx.shadowBlur = 20;
+                            ctx.shadowColor = '#ef4444';
+                            ctx.stroke();
+
+                            ctx.beginPath();
+                            ctx.moveTo(op.x - camX, op.y - camY);
+                            chain.forEach(target => {
+                                if (target) ctx.lineTo(target.x - camX, target.y - camY);
+                            });
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 2 + (op.projSize - 6) * 0.3;
+                            ctx.shadowBlur = 0;
+                            ctx.stroke();
+                            ctx.restore();
+                        });
+                    }
+
+                    op.draw(ctx, { x: camX, y: camY });
+                }
+            }
+
+            if (GAME.entities.minions) GAME.entities.minions.forEach(m => { if (m) m.draw(ctx, { x: camX, y: camY }); });
+            if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
+
+            if (GAME.entities.floatingTexts) {
+                GAME.entities.floatingTexts.forEach(ft => { if (ft) ft.draw(ctx, { x: camX, y: camY }); });
+            }
         }
+    } finally {
+        ctx.restore();
     }
-
-    ctx.restore();
 
     if (GAME.active && GAME.entities && GAME.entities.player && !GAME.entities.player.dead) {
         const cx = GAME.canvas.width / 2;
