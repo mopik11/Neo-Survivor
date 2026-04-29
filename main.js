@@ -2682,6 +2682,7 @@ function init() {
     GAME.menuAnimation = new MenuAnimation();
 }
 
+function useUltimate(cx, cy) {
     try {
         const ability = META.selectedAbility || 1;
         const p = GAME.entities.player;
