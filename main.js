@@ -42,7 +42,7 @@ const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
     ENEMY_BASE_HEALTH: 20,
-    ENEMY_BASE_SPEED: 3.5,
+    ENEMY_BASE_SPEED: 2.5,
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
     SPAWN_RADIUS: 700,
@@ -692,20 +692,19 @@ class Gem {
     }
     update(player) {
         if (player.dead) return;
-        const dx = player.x - this.x, dy = player.y - this.y;
-        const d2 = dx*dx + dy*dy;
-        if (d2 < player.magnetRange * player.magnetRange) this.attracted = true;
+        const d = dist(this.x, this.y, player.x, player.y);
+        if (d < player.magnetRange) this.attracted = true;
         else if (player.ultraMagnet) this.ultraAttracted = true;
 
         if (this.attracted) {
-            const d = Math.sqrt(d2) || 1;
-            this.x += (dx / d) * 14 * GAME.speedFactor;
-            this.y += (dy / d) * 14 * GAME.speedFactor;
+            const angle = Math.atan2(player.y - this.y, player.x - this.x);
+            this.x += Math.cos(angle) * 14 * GAME.speedFactor;
+            this.y += Math.sin(angle) * 14 * GAME.speedFactor;
         } else if (this.ultraAttracted) {
-            const d = Math.sqrt(d2) || 1;
+            const angle = Math.atan2(player.y - this.y, player.x - this.x);
             const umSpeed = 0.8 * (player.ultraMagnetPower || 1);
-            this.x += (dx / d) * umSpeed * GAME.speedFactor;
-            this.y += (dy / d) * umSpeed * GAME.speedFactor;
+            this.x += Math.cos(angle) * umSpeed * GAME.speedFactor;
+            this.y += Math.sin(angle) * umSpeed * GAME.speedFactor;
         }
     }
     draw(ctx, cam) {
@@ -1081,11 +1080,9 @@ class Enemy {
 
         if (this.type === 5) {
             if (GAME.entities.enemies) {
-                const r2 = 250 * 250;
                 GAME.entities.enemies.forEach(e => {
-                    if (e.id !== this.id && !e.possessed) {
-                        const d2 = (e.x - this.x)**2 + (e.y - this.y)**2;
-                        if (d2 < r2) e.hp = Math.min(e.maxHp, e.hp + 0.5);
+                    if (e.id !== this.id && !e.possessed && dist(e.x, e.y, this.x, this.y) < 250) {
+                        e.hp = Math.min(e.maxHp, e.hp + 0.5);
                     }
                 });
             }
@@ -1318,21 +1315,14 @@ class Player {
                         let jumpsLeft = this.pierceCount - 1;
 
                         while (jumpsLeft > 0) {
-                            let next = null;
-                            let minD2 = 300 * 300;
-                            for (let i = 0; i < enemies.length; i++) {
-                                const e = enemies[i];
-                                if (!e || e.hp <= 0 || hitSet.has(e.id)) continue;
-                                const d2 = (current.x - e.x)**2 + (current.y - e.y)**2;
-                                if (d2 < minD2) { minD2 = d2; next = e; }
-                            }
-                            
-                            if (next) {
-                                chain.push(next);
-                                hitSet.add(next.id);
-                                current = next;
-                                jumpsLeft--;
-                            } else break;
+                            const nextTargets = enemies.filter(e => e && e.hp > 0 && !hitSet.has(e.id) && dist(current.x, current.y, e.x, e.y) < 300);
+                            if (nextTargets.length === 0) break;
+                            nextTargets.sort((a, b) => dist(current.x, current.y, a.x, a.y) - dist(current.x, current.y, b.x, b.y));
+                            const next = nextTargets[0];
+                            chain.push(next);
+                            hitSet.add(next.id);
+                            current = next;
+                            jumpsLeft--;
                         }
                         this.laserTargets.push(chain);
                     });
@@ -2683,77 +2673,72 @@ function init() {
 }
 
 function useUltimate(cx, cy) {
-    try {
-        const ability = META.selectedAbility || 1;
-        const p = GAME.entities.player;
+    const ability = META.selectedAbility || 1;
+    const p = GAME.entities.player;
 
-        if (ability === 1) { // SNIPER
-            const cam = GAME.camera;
-            const worldTargetX = cx + (cam.x / GAME.zoom);
-            const worldTargetY = cy + (cam.y / GAME.zoom);
-            const proj = new Projectile(p.x, p.y, worldTargetX, worldTargetY, p.damage * 10, { size: 12, pierce: Infinity });
-            if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
-            shakeScreen(15);
-            if (NET.isMultiplayer) syncShot(proj);
+    if (ability === 1) { // SNIPER
+        const cam = GAME.camera;
+        const worldTargetX = cx + (cam.x / GAME.zoom);
+        const worldTargetY = cy + (cam.y / GAME.zoom);
+        const proj = new Projectile(p.x, p.y, worldTargetX, worldTargetY, p.damage * 10, { size: 12, pierce: Infinity });
+        if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
+        shakeScreen(15);
+        if (NET.isMultiplayer) syncShot(proj);
+    }
+    else if (ability === 2) { // ZMRAZENÍ ČASU
+        GAME.frozenUntil = Date.now() + 5000;
+        const overlay = document.getElementById('freeze-overlay');
+        if (overlay) {
+            overlay.classList.add('active');
+            setTimeout(() => overlay.classList.remove('active'), 5000);
         }
-        else if (ability === 2) { // ZMRAZENÍ ČASU
-            GAME.frozenUntil = Date.now() + 5000;
-            const overlay = document.getElementById('freeze-overlay');
-            if (overlay) {
-                overlay.classList.add('active');
-                setTimeout(() => overlay.classList.remove('active'), 5000);
-            }
-            if (NET.isMultiplayer && NET.socket) {
-                NET.socket.emit('useAbility', { type: 2 });
-            }
+        if (NET.isMultiplayer && NET.socket) {
+            NET.socket.emit('useAbility', { type: 2 });
         }
-        else if (ability === 3) { // POSEDNUTÍ NEJBLIŽŠÍCH
-            if (GAME.entities.enemies) {
-                const normalEnemies = GAME.entities.enemies.filter(e => !e.possessed && !e.isBoss);
-                const count = p.maxPossessions || 10;
-                // Optimalizované hledání 'count' nejbližších
-                const closest = normalEnemies.sort((a, b) => {
-                    const da = (p.x - a.x)**2 + (p.y - a.y)**2;
-                    const db = (p.x - b.x)**2 + (p.y - b.y)**2;
-                    return da - db;
-                }).slice(0, count);
+    }
+    else if (ability === 3) { // POSEDNUTÍ NEJBLIŽŠÍCH
+        if (GAME.entities.enemies) {
+            const normalEnemies = GAME.entities.enemies.filter(e => !e.possessed && !e.isBoss);
+            const count = p.maxPossessions || 10;
+            const closest = normalEnemies.sort((a, b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y)).slice(0, count);
 
-                const idsToPossess = [];
-                closest.forEach(e => {
-                    e.possessed = true;
-                    idsToPossess.push(e.id);
-                });
-
-                if (NET.isMultiplayer && NET.socket && idsToPossess.length > 0) {
-                    NET.socket.emit('useAbility', { type: 3, enemyIds: idsToPossess });
-                }
-            }
-        }
-        else if (ability === 4) { // LÉČIVÁ AURA (MEDIC)
-            const players = getAllAlivePlayers();
-            const healed = [];
-            players.forEach(pl => {
-                if (dist(p.x, p.y, pl.x, pl.y) < 250) {
-                    pl.hp = Math.min(pl.maxHp, pl.hp + p.maxHp * 0.5); 
-                    healed.push(pl.id || myPlayerId);
-                    if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
-                    GAME.entities.floatingTexts.push(new FloatingText(pl.x, pl.y - 25, "+HEAL", "#10b981"));
-                }
+            const idsToPossess = [];
+            closest.forEach(e => {
+                e.possessed = true;
+                idsToPossess.push(e.id);
             });
 
-            const overlay = document.getElementById('freeze-overlay');
-            if (overlay) {
-                overlay.style.boxShadow = "inset 0 0 100px rgba(16, 185, 129, 0.5)";
-                overlay.classList.add('active');
-                setTimeout(() => { overlay.classList.remove('active'); overlay.style.boxShadow = ""; }, 500);
-            }
-
-            if (NET.isMultiplayer && NET.socket && healed.length > 0) {
-                NET.socket.emit('useAbility', { type: 'medic' });
-                NET.socket.emit('healPlayers', { targets: healed, amount: p.maxHp * 0.5 });
+            if (NET.isMultiplayer && NET.socket && idsToPossess.length > 0) {
+                NET.socket.emit('useAbility', { type: 3, enemyIds: idsToPossess });
             }
         }
-    } catch (err) { console.error("Error in useUltimate:", err); }
+    }
+    else if (ability === 4) { // LÉČIVÁ AURA (MEDIC)
+        // Vydává pulzy do okolí (např. 250px)
+        const players = getAllAlivePlayers();
+        const healed = [];
+        players.forEach(pl => {
+            if (dist(p.x, p.y, pl.x, pl.y) < 250) {
+                pl.hp = Math.min(pl.maxHp, pl.hp + p.maxHp * 0.5); // heal 50%
+                healed.push(pl.id || myPlayerId);
+                if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                GAME.entities.floatingTexts.push(new FloatingText(pl.x, pl.y - 25, "+HEAL", "#10b981"));
+            }
+        });
+
+        // Visuals
+        const overlay = document.getElementById('freeze-overlay');
+        if (overlay) {
+            overlay.style.boxShadow = "inset 0 0 100px rgba(16, 185, 129, 0.5)";
+            overlay.classList.add('active');
+            setTimeout(() => { overlay.classList.remove('active'); overlay.style.boxShadow = ""; }, 500);
+        }
+
+        if (NET.isMultiplayer && NET.socket && healed.length > 0) {
+            NET.socket.emit('useAbility', { type: 'medic' });
+            NET.socket.emit('healPlayers', { targets: healed, amount: p.maxHp * 0.5 });
+        }
+    }
 }
 
 function startGame() {
@@ -3170,38 +3155,25 @@ function render() {
     if (!ctx) return;
 
     try {
-        ctx.save();
-        ctx.fillStyle = '#020617';
-        ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
-        ctx.scale(GAME.zoom, GAME.zoom);
-        
+        ctx.save(); ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height); ctx.scale(GAME.zoom, GAME.zoom);
         const camX = cam.x / GAME.zoom, camY = cam.y / GAME.zoom;
 
         if (GAME.stars) {
             GAME.stars.forEach(s => {
                 if (!s) return;
                 const sx = (s.x - camX * 0.1) % (GAME.canvas.width / GAME.zoom), sy = (s.y - camY * 0.1) % (GAME.canvas.height / GAME.zoom);
-                ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`;
-                ctx.beginPath();
-                ctx.arc(sx < 0 ? sx + (GAME.canvas.width / GAME.zoom) : sx, sy < 0 ? sy + (GAME.canvas.height / GAME.zoom) : sy, s.size, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`; ctx.beginPath(); ctx.arc(sx < 0 ? sx + (GAME.canvas.width / GAME.zoom) : sx, sy < 0 ? sy + (GAME.canvas.height / GAME.zoom) : sy, s.size, 0, Math.PI * 2); ctx.fill();
             });
         }
 
-        ctx.strokeStyle = 'rgba(99, 102, 241, 0.15)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(99, 102, 241, 0.15)'; ctx.lineWidth = 1; ctx.beginPath();
         const hexRadius = 60, hexHeight = hexRadius * Math.sqrt(3);
         const startCol = Math.floor(camX / (hexRadius * 1.5)) - 1, endCol = startCol + Math.ceil((GAME.canvas.width / GAME.zoom) / (hexRadius * 1.5)) + 2;
         const startRow = Math.floor(camY / hexHeight) - 1, endRow = startRow + Math.ceil((GAME.canvas.height / GAME.zoom) / hexHeight) + 2;
         for (let col = startCol; col <= endCol; col++) {
             for (let row = startRow; row <= endRow; row++) {
-                const cx_hex = col * hexRadius * 1.5 - camX, cy_hex = (row * hexHeight + (Math.abs(col) % 2 === 0 ? 0 : hexHeight / 2)) - camY;
-                for (let i = 0; i < 6; i++) {
-                    const a = (i / 6) * Math.PI * 2;
-                    const px = cx_hex + Math.cos(a) * hexRadius, py = cy_hex + Math.sin(a) * hexRadius;
-                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-                }
+                const cx = col * hexRadius * 1.5 - camX, cy = (row * hexHeight + (Math.abs(col) % 2 === 0 ? 0 : hexHeight / 2)) - camY;
+                for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; const px = cx + Math.cos(a) * hexRadius, py = cy + Math.sin(a) * hexRadius; if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
             }
         }
         ctx.stroke();
@@ -3218,6 +3190,7 @@ function render() {
             for (const id in NET.others) {
                 if (NET.others[id]) {
                     const op = NET.others[id];
+
                     if (op.shipType === 2 && op.laserTargetsIds && op.laserTargetsIds.length > 0 && GAME.entities.enemies) {
                         const chainsToDraw = op.laserTargetsIds.map(chainIds => {
                             return chainIds.map(eid => GAME.entities.enemies.find(e => e && e.id === eid)).filter(e => e);
@@ -3228,77 +3201,147 @@ function render() {
                             ctx.save();
                             ctx.beginPath();
                             ctx.moveTo(op.x - camX, op.y - camY);
-                            chain.forEach(target => { if (target) ctx.lineTo(target.x - camX, target.y - camY); });
-                            ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 6 + (op.projSize - 6); ctx.shadowBlur = 20; ctx.shadowColor = '#ef4444'; ctx.stroke();
-                            ctx.beginPath(); ctx.moveTo(op.x - camX, op.y - camY);
-                            chain.forEach(target => { if (target) ctx.lineTo(target.x - camX, target.y - camY); });
-                            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2 + (op.projSize - 6) * 0.3; ctx.shadowBlur = 0; ctx.stroke();
+                            chain.forEach(target => {
+                                if (target) ctx.lineTo(target.x - camX, target.y - camY);
+                            });
+                            ctx.strokeStyle = '#ef4444';
+                            ctx.lineWidth = 6 + (op.projSize - 6);
+                            ctx.shadowBlur = 20;
+                            ctx.shadowColor = '#ef4444';
+                            ctx.stroke();
+
+                            ctx.beginPath();
+                            ctx.moveTo(op.x - camX, op.y - camY);
+                            chain.forEach(target => {
+                                if (target) ctx.lineTo(target.x - camX, target.y - camY);
+                            });
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 2 + (op.projSize - 6) * 0.3;
+                            ctx.shadowBlur = 0;
+                            ctx.stroke();
                             ctx.restore();
                         });
                     }
+
                     op.draw(ctx, { x: camX, y: camY });
                 }
             }
 
             if (GAME.entities.minions) GAME.entities.minions.forEach(m => { if (m) m.draw(ctx, { x: camX, y: camY }); });
             if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
-            if (GAME.entities.floatingTexts) GAME.entities.floatingTexts.forEach(ft => { if (ft) ft.draw(ctx, { x: camX, y: camY }); });
-        }
 
-        if (GAME.active && GAME.entities && GAME.entities.player && !GAME.entities.player.dead) {
-            const cx_center = GAME.canvas.width / 2, cy_center = GAME.canvas.height / 2;
-            const marginX = 50, marginY = 100, boundX = cx_center - marginX, boundY = cy_center - marginY;
-
-            for (const id in NET.others) {
-                const op = NET.others[id];
-                if (op && !op.dead) {
-                    const screenX = (op.x * GAME.zoom) - GAME.camera.x, screenY = (op.y * GAME.zoom) - GAME.camera.y;
-                    if (screenX < marginX || screenX > GAME.canvas.width - marginX || screenY < marginY || screenY > GAME.canvas.height - marginY) {
-                        const dx = screenX - cx_center, dy = screenY - cy_center, angle = Math.atan2(dy, dx), tanTheta = Math.tan(angle);
-                        let edgeX, edgeY;
-                        if (Math.abs(tanTheta) < boundY / boundX) {
-                            edgeX = cx_center + (dx > 0 ? boundX : -boundX);
-                            edgeY = cy_center + (dx > 0 ? boundX : -boundX) * tanTheta;
-                        } else {
-                            edgeY = cy_center + (dy > 0 ? boundY : -boundY);
-                            edgeX = cx_center + (dy > 0 ? boundY : -boundY) / tanTheta;
-                        }
-                        ctx.save(); ctx.translate(edgeX, edgeY); ctx.rotate(angle); ctx.shadowBlur = 10; ctx.shadowColor = '#3b82f6'; ctx.fillStyle = '#3b82f6';
-                        ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-8, 8); ctx.lineTo(-4, 0); ctx.lineTo(-8, -8); ctx.closePath(); ctx.fill();
-                        if (op.remoteName) {
-                            ctx.rotate(-angle); ctx.fillStyle = 'rgba(255, 255, 255, 0.6)'; ctx.font = 'bold 10px Outfit, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(op.remoteName, 0, -20);
-                        }
-                        ctx.restore();
-                    }
-                }
+            if (GAME.entities.floatingTexts) {
+                GAME.entities.floatingTexts.forEach(ft => { if (ft) ft.draw(ctx, { x: camX, y: camY }); });
             }
-
-            const mapSize = 150, padding = 20, startX = GAME.canvas.width - mapSize - padding, startY = 80;
-            ctx.save(); ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'; ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)'; ctx.lineWidth = 2; ctx.fillRect(startX, startY, mapSize, mapSize); ctx.strokeRect(startX, startY, mapSize, mapSize);
-            const viewDist = 4000, scale = mapSize / viewDist, pCx = GAME.entities.player.x, pCy = GAME.entities.player.y;
-            const drawDot = (x, y, color, size) => {
-                const relX = (x - pCx) * scale + mapSize / 2, relY = (y - pCy) * scale + mapSize / 2;
-                if (relX >= 0 && relX <= mapSize && relY >= 0 && relY <= mapSize) {
-                    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(startX + relX, startY + relY, size, 0, Math.PI * 2); ctx.fill();
-                }
-            };
-            if (GAME.entities.gems) GAME.entities.gems.forEach(g => { if (g) drawDot(g.x, g.y, '#34d399', 1); });
-            if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => { if (e) drawDot(e.x, e.y, e.isBoss ? '#ef4444' : (e.type === 2 ? '#a855f7' : '#f59e0b'), e.isBoss ? 4 : 2); });
-            if (GAME.entities.minions) GAME.entities.minions.forEach(m => { if (m) drawDot(m.x, m.y, '#818cf8', 2); });
-            for (const id in NET.others) { const op = NET.others[id]; if (op && !op.dead) drawDot(op.x, op.y, '#3b82f6', 3); }
-            drawDot(pCx, pCy, '#10b981', 3);
-            ctx.restore();
         }
     } finally {
         ctx.restore();
     }
 
-    if (window.innerWidth < 850 && GAME.joystick) {
+    if (GAME.active && GAME.entities && GAME.entities.player && !GAME.entities.player.dead) {
+        const cx = GAME.canvas.width / 2;
+        const cy = GAME.canvas.height / 2;
+
+        const marginX = 50;
+        const marginY = 100;
+        const boundX = cx - marginX;
+        const boundY = cy - marginY;
+
+        for (const id in NET.others) {
+            const op = NET.others[id];
+            if (op && !op.dead) {
+                const screenX = (op.x * GAME.zoom) - GAME.camera.x;
+                const screenY = (op.y * GAME.zoom) - GAME.camera.y;
+
+                if (screenX < marginX || screenX > GAME.canvas.width - marginX || screenY < marginY || screenY > GAME.canvas.height - marginY) {
+                    const dx = screenX - cx;
+                    const dy = screenY - cy;
+                    const angle = Math.atan2(dy, dx);
+                    const tanTheta = Math.tan(angle);
+
+                    let edgeX, edgeY;
+                    if (Math.abs(tanTheta) < boundY / boundX) {
+                        edgeX = cx + (dx > 0 ? boundX : -boundX);
+                        edgeY = cy + (dx > 0 ? boundX : -boundX) * tanTheta;
+                    } else {
+                        edgeY = cy + (dy > 0 ? boundY : -boundY);
+                        edgeX = cx + (dy > 0 ? boundY : -boundY) / tanTheta;
+                    }
+
+                    ctx.save();
+                    ctx.translate(edgeX, edgeY);
+
+                    ctx.save();
+                    ctx.rotate(angle);
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#3b82f6';
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.beginPath();
+                    ctx.moveTo(12, 0);
+                    ctx.lineTo(-8, 8);
+                    ctx.lineTo(-4, 0);
+                    ctx.lineTo(-8, -8);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+
+                    if (op.remoteName) {
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                        ctx.font = 'bold 10px Outfit, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(op.remoteName, -Math.cos(angle) * 25, -Math.sin(angle) * 25);
+                    }
+
+                    ctx.restore();
+                }
+            }
+        }
+
+        const mapSize = 150;
+        const padding = 20;
+        const startX = GAME.canvas.width - mapSize - padding;
+        const startY = 80;
+
         ctx.save();
-        const sx = GAME.joystick.startX, sy = GAME.joystick.startY, jcx = GAME.joystick.currentX, jcy = GAME.joystick.currentY;
-        ctx.beginPath(); ctx.arc(sx, sy, 75, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.beginPath(); ctx.arc(jcx, jcy, 32, 0, Math.PI * 2); ctx.fillStyle = 'rgba(99, 102, 241, 0.5)'; ctx.shadowBlur = 20; ctx.shadowColor = '#6366f1'; ctx.fill();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.fillRect(startX, startY, mapSize, mapSize);
+        ctx.strokeRect(startX, startY, mapSize, mapSize);
+
+        const viewDist = 4000;
+        const scale = mapSize / viewDist;
+        const pCx = GAME.entities.player.x;
+        const pCy = GAME.entities.player.y;
+
+        const drawDot = (x, y, color, size) => {
+            const relX = (x - pCx) * scale + mapSize / 2;
+            const relY = (y - pCy) * scale + mapSize / 2;
+            if (relX >= 0 && relX <= mapSize && relY >= 0 && relY <= mapSize) {
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(startX + relX, startY + relY, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        };
+
+        if (GAME.entities.gems) GAME.entities.gems.forEach(g => { if (g) drawDot(g.x, g.y, '#34d399', 1); });
+        if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => { if (e) drawDot(e.x, e.y, e.isBoss ? '#ef4444' : (e.type === 2 ? '#a855f7' : '#f59e0b'), e.isBoss ? 4 : 2); });
+        if (GAME.entities.minions) GAME.entities.minions.forEach(m => { if (m) drawDot(m.x, m.y, '#818cf8', 2); });
+        for (const id in NET.others) {
+            const op = NET.others[id];
+            if (op && !op.dead) drawDot(op.x, op.y, '#3b82f6', 3);
+        }
+        drawDot(pCx, pCy, '#10b981', 3);
+
         ctx.restore();
+    }
+
+    if (window.innerWidth < 850 && GAME.joystick) {
+        ctx.save(); const sx = GAME.joystick.startX, sy = GAME.joystick.startY, jcx = GAME.joystick.currentX, jcy = GAME.joystick.currentY;
+        ctx.beginPath(); ctx.arc(sx, sy, 75, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(jcx, jcy, 32, 0, Math.PI * 2); ctx.fillStyle = 'rgba(99, 102, 241, 0.5)'; ctx.shadowBlur = 20; ctx.shadowColor = '#6366f1'; ctx.fill(); ctx.restore();
     }
 }
 
