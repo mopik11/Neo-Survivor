@@ -42,7 +42,7 @@ const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
     ENEMY_BASE_HEALTH: 20,
-    ENEMY_BASE_SPEED: 2.5,
+    ENEMY_BASE_SPEED: 3.5,
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
     SPAWN_RADIUS: 700,
@@ -692,19 +692,20 @@ class Gem {
     }
     update(player) {
         if (player.dead) return;
-        const d = dist(this.x, this.y, player.x, player.y);
-        if (d < player.magnetRange) this.attracted = true;
+        const dx = player.x - this.x, dy = player.y - this.y;
+        const d2 = dx*dx + dy*dy;
+        if (d2 < player.magnetRange * player.magnetRange) this.attracted = true;
         else if (player.ultraMagnet) this.ultraAttracted = true;
 
         if (this.attracted) {
-            const angle = Math.atan2(player.y - this.y, player.x - this.x);
-            this.x += Math.cos(angle) * 14 * GAME.speedFactor;
-            this.y += Math.sin(angle) * 14 * GAME.speedFactor;
+            const d = Math.sqrt(d2);
+            this.x += (dx / d) * 14 * GAME.speedFactor;
+            this.y += (dy / d) * 14 * GAME.speedFactor;
         } else if (this.ultraAttracted) {
-            const angle = Math.atan2(player.y - this.y, player.x - this.x);
+            const d = Math.sqrt(d2);
             const umSpeed = 0.8 * (player.ultraMagnetPower || 1);
-            this.x += Math.cos(angle) * umSpeed * GAME.speedFactor;
-            this.y += Math.sin(angle) * umSpeed * GAME.speedFactor;
+            this.x += (dx / d) * umSpeed * GAME.speedFactor;
+            this.y += (dy / d) * umSpeed * GAME.speedFactor;
         }
     }
     draw(ctx, cam) {
@@ -1080,9 +1081,11 @@ class Enemy {
 
         if (this.type === 5) {
             if (GAME.entities.enemies) {
+                const r2 = 250 * 250;
                 GAME.entities.enemies.forEach(e => {
-                    if (e.id !== this.id && !e.possessed && dist(e.x, e.y, this.x, this.y) < 250) {
-                        e.hp = Math.min(e.maxHp, e.hp + 0.5);
+                    if (e.id !== this.id && !e.possessed) {
+                        const d2 = (e.x - this.x)**2 + (e.y - this.y)**2;
+                        if (d2 < r2) e.hp = Math.min(e.maxHp, e.hp + 0.5);
                     }
                 });
             }
@@ -1315,14 +1318,21 @@ class Player {
                         let jumpsLeft = this.pierceCount - 1;
 
                         while (jumpsLeft > 0) {
-                            const nextTargets = enemies.filter(e => e && e.hp > 0 && !hitSet.has(e.id) && dist(current.x, current.y, e.x, e.y) < 300);
-                            if (nextTargets.length === 0) break;
-                            nextTargets.sort((a, b) => dist(current.x, current.y, a.x, a.y) - dist(current.x, current.y, b.x, b.y));
-                            const next = nextTargets[0];
-                            chain.push(next);
-                            hitSet.add(next.id);
-                            current = next;
-                            jumpsLeft--;
+                            let next = null;
+                            let minD2 = 300 * 300;
+                            for (let i = 0; i < enemies.length; i++) {
+                                const e = enemies[i];
+                                if (!e || e.hp <= 0 || hitSet.has(e.id)) continue;
+                                const d2 = (current.x - e.x)**2 + (current.y - e.y)**2;
+                                if (d2 < minD2) { minD2 = d2; next = e; }
+                            }
+                            
+                            if (next) {
+                                chain.push(next);
+                                hitSet.add(next.id);
+                                current = next;
+                                jumpsLeft--;
+                            } else break;
                         }
                         this.laserTargets.push(chain);
                     });
@@ -2672,73 +2682,77 @@ function init() {
     GAME.menuAnimation = new MenuAnimation();
 }
 
-function useUltimate(cx, cy) {
-    const ability = META.selectedAbility || 1;
-    const p = GAME.entities.player;
+    try {
+        const ability = META.selectedAbility || 1;
+        const p = GAME.entities.player;
 
-    if (ability === 1) { // SNIPER
-        const cam = GAME.camera;
-        const worldTargetX = cx + (cam.x / GAME.zoom);
-        const worldTargetY = cy + (cam.y / GAME.zoom);
-        const proj = new Projectile(p.x, p.y, worldTargetX, worldTargetY, p.damage * 10, { size: 12, pierce: Infinity });
-        if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
-        shakeScreen(15);
-        if (NET.isMultiplayer) syncShot(proj);
-    }
-    else if (ability === 2) { // ZMRAZENÍ ČASU
-        GAME.frozenUntil = Date.now() + 5000;
-        const overlay = document.getElementById('freeze-overlay');
-        if (overlay) {
-            overlay.classList.add('active');
-            setTimeout(() => overlay.classList.remove('active'), 5000);
+        if (ability === 1) { // SNIPER
+            const cam = GAME.camera;
+            const worldTargetX = cx + (cam.x / GAME.zoom);
+            const worldTargetY = cy + (cam.y / GAME.zoom);
+            const proj = new Projectile(p.x, p.y, worldTargetX, worldTargetY, p.damage * 10, { size: 12, pierce: Infinity });
+            if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
+            shakeScreen(15);
+            if (NET.isMultiplayer) syncShot(proj);
         }
-        if (NET.isMultiplayer && NET.socket) {
-            NET.socket.emit('useAbility', { type: 2 });
+        else if (ability === 2) { // ZMRAZENÍ ČASU
+            GAME.frozenUntil = Date.now() + 5000;
+            const overlay = document.getElementById('freeze-overlay');
+            if (overlay) {
+                overlay.classList.add('active');
+                setTimeout(() => overlay.classList.remove('active'), 5000);
+            }
+            if (NET.isMultiplayer && NET.socket) {
+                NET.socket.emit('useAbility', { type: 2 });
+            }
         }
-    }
-    else if (ability === 3) { // POSEDNUTÍ NEJBLIŽŠÍCH
-        if (GAME.entities.enemies) {
-            const normalEnemies = GAME.entities.enemies.filter(e => !e.possessed && !e.isBoss);
-            const count = p.maxPossessions || 10;
-            const closest = normalEnemies.sort((a, b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y)).slice(0, count);
+        else if (ability === 3) { // POSEDNUTÍ NEJBLIŽŠÍCH
+            if (GAME.entities.enemies) {
+                const normalEnemies = GAME.entities.enemies.filter(e => !e.possessed && !e.isBoss);
+                const count = p.maxPossessions || 10;
+                // Optimalizované hledání 'count' nejbližších
+                const closest = normalEnemies.sort((a, b) => {
+                    const da = (p.x - a.x)**2 + (p.y - a.y)**2;
+                    const db = (p.x - b.x)**2 + (p.y - b.y)**2;
+                    return da - db;
+                }).slice(0, count);
 
-            const idsToPossess = [];
-            closest.forEach(e => {
-                e.possessed = true;
-                idsToPossess.push(e.id);
+                const idsToPossess = [];
+                closest.forEach(e => {
+                    e.possessed = true;
+                    idsToPossess.push(e.id);
+                });
+
+                if (NET.isMultiplayer && NET.socket && idsToPossess.length > 0) {
+                    NET.socket.emit('useAbility', { type: 3, enemyIds: idsToPossess });
+                }
+            }
+        }
+        else if (ability === 4) { // LÉČIVÁ AURA (MEDIC)
+            const players = getAllAlivePlayers();
+            const healed = [];
+            players.forEach(pl => {
+                if (dist(p.x, p.y, pl.x, pl.y) < 250) {
+                    pl.hp = Math.min(pl.maxHp, pl.hp + p.maxHp * 0.5); 
+                    healed.push(pl.id || myPlayerId);
+                    if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                    GAME.entities.floatingTexts.push(new FloatingText(pl.x, pl.y - 25, "+HEAL", "#10b981"));
+                }
             });
 
-            if (NET.isMultiplayer && NET.socket && idsToPossess.length > 0) {
-                NET.socket.emit('useAbility', { type: 3, enemyIds: idsToPossess });
+            const overlay = document.getElementById('freeze-overlay');
+            if (overlay) {
+                overlay.style.boxShadow = "inset 0 0 100px rgba(16, 185, 129, 0.5)";
+                overlay.classList.add('active');
+                setTimeout(() => { overlay.classList.remove('active'); overlay.style.boxShadow = ""; }, 500);
+            }
+
+            if (NET.isMultiplayer && NET.socket && healed.length > 0) {
+                NET.socket.emit('useAbility', { type: 'medic' });
+                NET.socket.emit('healPlayers', { targets: healed, amount: p.maxHp * 0.5 });
             }
         }
-    }
-    else if (ability === 4) { // LÉČIVÁ AURA (MEDIC)
-        // Vydává pulzy do okolí (např. 250px)
-        const players = getAllAlivePlayers();
-        const healed = [];
-        players.forEach(pl => {
-            if (dist(p.x, p.y, pl.x, pl.y) < 250) {
-                pl.hp = Math.min(pl.maxHp, pl.hp + p.maxHp * 0.5); // heal 50%
-                healed.push(pl.id || myPlayerId);
-                if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
-                GAME.entities.floatingTexts.push(new FloatingText(pl.x, pl.y - 25, "+HEAL", "#10b981"));
-            }
-        });
-
-        // Visuals
-        const overlay = document.getElementById('freeze-overlay');
-        if (overlay) {
-            overlay.style.boxShadow = "inset 0 0 100px rgba(16, 185, 129, 0.5)";
-            overlay.classList.add('active');
-            setTimeout(() => { overlay.classList.remove('active'); overlay.style.boxShadow = ""; }, 500);
-        }
-
-        if (NET.isMultiplayer && NET.socket && healed.length > 0) {
-            NET.socket.emit('useAbility', { type: 'medic' });
-            NET.socket.emit('healPlayers', { targets: healed, amount: p.maxHp * 0.5 });
-        }
-    }
+    } catch (err) { console.error("Error in useUltimate:", err); }
 }
 
 function startGame() {
