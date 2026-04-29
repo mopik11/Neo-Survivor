@@ -581,7 +581,7 @@ class FriendlyMinion {
         this.x = x; this.y = y; this.damage = damage; this.owner = owner;
         this.radius = 12; this.hp = 30; this.maxHp = 30; this.life = 10; // Sekundy
         this.id = Math.random().toString(36).substr(2, 9);
-        this.speed = 3.5;
+        this.speed = 1.75;
     }
     update() {
         this.life -= 1/60;
@@ -596,6 +596,7 @@ class FriendlyMinion {
             
             if (dist(this.x, this.y, target.x, target.y) < this.radius + target.radius) {
                 target.hp -= this.damage;
+                if (target.hp <= 0) handleEnemyDeath(target);
                 this.hp -= 2; // Bere poškození při útoku
                 if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: target.id, damage: this.damage });
             }
@@ -631,6 +632,7 @@ class Projectile {
         this.ownerId = stats.ownerId || 'local';
         this.isEnemy = stats.isEnemy || false;
         this.color = stats.color || null;
+        this.speed = speed;
     }
     update() {
         this.x += this.vx * GAME.speedFactor;
@@ -2727,6 +2729,40 @@ let lastTime = 0;
 let accumulator = 0;
 const timeStep = 1000 / 60;
 
+function handleEnemyDeath(enemy) {
+    if (!enemy || enemy.dead || enemy.hp > 0) return;
+    enemy.dead = true;
+    AudioEngine.play('hit');
+    
+    if (!NET.isMultiplayer && GAME.entities.gems) {
+        if (enemy.type === 4) { // Zloděj drop
+            const drops = (enemy.stolenGems || 0) + 5;
+            for (let i = 0; i < drops; i++) {
+                GAME.entities.gems.push(new Gem(enemy.x + (Math.random() - 0.5) * 100, enemy.y + (Math.random() - 0.5) * 100));
+            }
+        } else {
+            let isNuke = false, isMagnet = false;
+            if (enemy.isBoss) {
+                if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
+                for (let i = 0; i < 10; i++) GAME.entities.gems.push(new Gem(enemy.x + (Math.random() - 0.5) * 150, enemy.y + (Math.random() - 0.5) * 150));
+            }
+            const gem = new Gem(enemy.x, enemy.y);
+            gem.isNuke = isNuke; gem.isMagnet = isMagnet;
+            GAME.entities.gems.push(gem);
+        }
+    }
+    GAME.kills++;
+    
+    const p = GAME.entities.player;
+    if (p && p.lifestealChance > 0 && Math.random() < p.lifestealChance) {
+        const healAmount = Math.max(8, p.maxHp * 0.08);
+        p.hp = Math.min(p.maxHp, p.hp + healAmount);
+        if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+        GAME.entities.floatingTexts.push(new FloatingText(p.x, p.y - 30, "+LÉČENÍ", "#10b981"));
+    }
+    updateUI();
+}
+
 function loop(time) {
     if (!lastTime) lastTime = time;
     let dt = time - lastTime;
@@ -2793,6 +2829,20 @@ function update(dt) {
                 if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
             }
             GAME.lastSpawnTime = now;
+
+            // Náhodné generování meteorů (překážek) v singleplayeru
+            if (!GAME.entities.obstacles) GAME.entities.obstacles = [];
+            if (Math.random() < 0.1 && GAME.entities.obstacles.length < 30) {
+                const alive = getAllAlivePlayers();
+                if (alive.length > 0) {
+                    const pivot = alive[Math.floor(Math.random() * alive.length)];
+                    GAME.entities.obstacles.push(new Obstacle(
+                        pivot.x + (Math.random() - 0.5) * 2000,
+                        pivot.y + (Math.random() - 0.5) * 2000,
+                        40 + Math.random() * 60
+                    ));
+                }
+            }
         }
     }
 
@@ -2986,37 +3036,15 @@ function update(dt) {
                             if (validTargets.length > 0) {
                                 const next = validTargets.sort((a, b) => dist(proj.x, proj.y, a.x, a.y) - dist(proj.x, proj.y, b.x, b.y))[0];
                                 const angle = Math.atan2(next.y - proj.y, next.x - proj.x);
-                                proj.vx = Math.cos(angle) * CONFIG.PROJECTILE_SPEED; proj.vy = Math.sin(angle) * CONFIG.PROJECTILE_SPEED; proj.bounce--;
+                                proj.vx = Math.cos(angle) * (proj.speed || CONFIG.PROJECTILE_SPEED); 
+                                proj.vy = Math.sin(angle) * (proj.speed || CONFIG.PROJECTILE_SPEED); 
+                                proj.bounce--;
+                                proj.life += 50; // Přidat životnost při odrazu, aby to fungovalo i u brokovnice
                             }
                         }
                         if (proj.pierce > 1) proj.pierce--; else if (proj.pierce !== Infinity && proj.bounce <= 0) GAME.entities.projectiles.splice(pIndex, 1);
                         if (enemy.hp <= 0) {
-                            AudioEngine.play('hit');
-                            if (!NET.isMultiplayer && GAME.entities.gems) {
-                                if (enemy.type === 4) { // Zloděj drop
-                                    const drops = (enemy.stolenGems || 0) + 5;
-                                    for (let i = 0; i < drops; i++) {
-                                        GAME.entities.gems.push(new Gem(enemy.x + (Math.random() - 0.5) * 100, enemy.y + (Math.random() - 0.5) * 100));
-                                    }
-                                } else {
-                                    let isNuke = false, isMagnet = false;
-                                    if (enemy.isBoss) {
-                                        if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
-                                        for (let i = 0; i < 10; i++) GAME.entities.gems.push(new Gem(enemy.x + (Math.random() - 0.5) * 150, enemy.y + (Math.random() - 0.5) * 150));
-                                    }
-                                    const gem = new Gem(enemy.x, enemy.y);
-                                    gem.isNuke = isNuke; gem.isMagnet = isMagnet;
-                                    GAME.entities.gems.push(gem);
-                                }
-                            }
-                            GAME.kills++;
-                            if (p.lifestealChance > 0 && Math.random() < p.lifestealChance) {
-                                const healAmount = Math.max(8, p.maxHp * 0.08);
-                                p.hp = Math.min(p.maxHp, p.hp + healAmount);
-                                if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
-                                GAME.entities.floatingTexts.push(new FloatingText(p.x, p.y - 30, "+LÉČENÍ", "#10b981"));
-                            }
-                            updateUI();
+                            handleEnemyDeath(enemy);
                         }
                     }
                 });
@@ -3243,6 +3271,7 @@ function render() {
 
         if (GAME.entities.gems) GAME.entities.gems.forEach(g => { if (g) drawDot(g.x, g.y, '#34d399', 1); });
         if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => { if (e) drawDot(e.x, e.y, e.isBoss ? '#ef4444' : (e.type === 2 ? '#a855f7' : '#f59e0b'), e.isBoss ? 4 : 2); });
+        if (GAME.entities.minions) GAME.entities.minions.forEach(m => { if (m) drawDot(m.x, m.y, '#818cf8', 2); });
         for (const id in NET.others) {
             const op = NET.others[id];
             if (op && !op.dead) drawDot(op.x, op.y, '#3b82f6', 3);
