@@ -588,17 +588,30 @@ class FriendlyMinion {
         if (this.life <= 0) this.hp = 0;
         
         const enemies = GAME.entities.enemies;
-        if (enemies.length > 0) {
-            const target = enemies.sort((a,b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0];
-            const angle = Math.atan2(target.y - this.y, target.x - this.x);
-            this.x += Math.cos(angle) * this.speed * GAME.speedFactor;
-            this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
-            
-            if (dist(this.x, this.y, target.x, target.y) < this.radius + target.radius) {
-                target.hp -= this.damage;
-                if (target.hp <= 0) handleEnemyDeath(target);
-                this.hp -= 2; // Bere poškození při útoku
-                if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: target.id, damage: this.damage });
+        if (enemies && enemies.length > 0) {
+            let target = null;
+            let minDist = Infinity;
+            for (let i = 0; i < enemies.length; i++) {
+                const e = enemies[i];
+                if (!e || e.hp <= 0) continue;
+                const d = dist(this.x, this.y, e.x, e.y);
+                if (d < minDist) {
+                    minDist = d;
+                    target = e;
+                }
+            }
+
+            if (target) {
+                const angle = Math.atan2(target.y - this.y, target.x - this.x);
+                this.x += Math.cos(angle) * this.speed * GAME.speedFactor;
+                this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
+                
+                if (minDist < this.radius + target.radius) {
+                    target.hp -= this.damage * GAME.speedFactor;
+                    if (target.hp <= 0) handleEnemyDeath(target);
+                    this.hp -= 2 * GAME.speedFactor;
+                    if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: target.id, damage: this.damage });
+                }
             }
         }
     }
@@ -1104,6 +1117,30 @@ class Enemy {
             ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(15, 0); ctx.lineTo(0, 20); ctx.lineTo(-15, 0); ctx.closePath(); ctx.fill();
             if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
             ctx.restore(); ctx.shadowBlur = 0;
+            ctx.closePath(); ctx.fill();
+            if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
+            ctx.restore(); ctx.shadowBlur = 0;
+        } else if (this.type === 6) {
+            // Leaper (trojúhelník s "nohama" nebo barvou)
+            const color = this.possessed ? '#22c55e' : '#f43f5e';
+            ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
+            
+            if (this.jumpState === 'PREPARING') {
+                const s = 1 + Math.sin(Date.now() / 50) * 0.2;
+                ctx.scale(s, s);
+                ctx.fillStyle = '#fff';
+            }
+            
+            ctx.beginPath();
+            ctx.moveTo(0, -20); ctx.lineTo(15, 10); ctx.lineTo(-15, 10); ctx.closePath(); ctx.fill();
+            if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
+            ctx.restore(); ctx.shadowBlur = 0;
+            
+            if (this.jumpState === 'PREPARING' && this.jumpTarget) {
+                ctx.setLineDash([5, 5]); ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(this.x - cam.x, this.y - cam.y); ctx.lineTo(this.jumpTarget.x - cam.x, this.jumpTarget.y - cam.y); ctx.stroke(); ctx.setLineDash([]);
+            }
         } else if (this.type === 4) {
             // Goblin (hvězdička nebo něco rychlého)
             const color = this.possessed ? '#22c55e' : '#eab308';
@@ -1378,9 +1415,19 @@ class Player {
         if (this.dead) return;
         const enemies = GAME.entities.enemies;
         if (!enemies || enemies.length === 0) return;
-        const sortedEnemies = [...enemies].filter(e => e && e.hp > 0).sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y));
-        if (sortedEnemies.length === 0) return;
-        const target = sortedEnemies[0];
+        
+        let target = null;
+        let minDist = Infinity;
+        for (let i = 0; i < enemies.length; i++) {
+            const e = enemies[i];
+            if (!e || e.hp <= 0) continue;
+            const d = dist(this.x, this.y, e.x, e.y);
+            if (d < minDist) {
+                minDist = d;
+                target = e;
+            }
+        }
+        if (!target) return;
 
         if (this.shipType === 1) {
             for (let i = 0; i < this.projectileCount; i++) {
@@ -3080,9 +3127,8 @@ function update(dt) {
                         shakeScreen(20); AudioEngine.play('hit');
                         p.addXp(10);
                     } else if (g.isMagnet) {
-                        GAME.entities.gems.forEach(gg => {
-                            p.addXp(Math.round(10 * (p.luckFactor || 1)));
-                        });
+                        const totalXp = GAME.entities.gems.length * Math.round(10 * (p.luckFactor || 1));
+                        p.addXp(totalXp);
                         GAME.entities.gems = [];
                     } else {
                         p.addXp(Math.round(10 * (p.luckFactor || 1)));
