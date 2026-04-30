@@ -3157,6 +3157,10 @@ function render() {
     const ctx = GAME.ctx, cam = GAME.camera;
     if (!ctx) return;
 
+    if (ctx.resetTransform) ctx.resetTransform();
+    ctx.globalAlpha = 1.0;
+    ctx.shadowBlur = 0;
+
     try {
         ctx.save(); ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height); ctx.scale(GAME.zoom, GAME.zoom);
         const camX = cam.x / GAME.zoom, camY = cam.y / GAME.zoom;
