@@ -3453,7 +3453,7 @@ function init() {
     if (langEs) langEs.onclick = () => window.setLanguage('es');
     
     window.setLanguage(localStorage.getItem('neoSurvivor_lang') || 'cs');
-    checkUrlParams();
+
 
     loadMeta();
     document.getElementById('display-max-level').innerText = META.maxLevel || 0;
@@ -3507,9 +3507,12 @@ function init() {
             localStorage.removeItem('neoSurvivor_pid');
             localStorage.removeItem('neoSurvivor_user');
             localStorage.removeItem('neoSurvivor_pass');
-            location.reload();
+            // Wait 500ms to ensure socket message is sent
+            setTimeout(() => location.reload(), 500);
         });
     };
+
+    checkUrlParams();
 
     GAME.entities = {
         player: new Player(true),
