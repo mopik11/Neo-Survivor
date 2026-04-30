@@ -111,7 +111,8 @@ const META = {
     playerName: null,
     maxLevel: 1,
     currency: 0,
-    upgrades: { hp: 0, speed: 0, luck: 0, hat: null },
+    lastDailyGift: 0,
+    upgrades: { hp: 0, speed: 0, luck: 0, regen: 0, armor: 0, hat: null },
     ships: { 1: true, 2: false, 3: false },
     selectedShip: 1,
     abilities: { 1: true, 2: false, 3: false },
@@ -139,6 +140,9 @@ const loadMeta = () => {
         if (!META.selectedShip) META.selectedShip = 1;
         if (!META.abilities) META.abilities = { 1: true, 2: false, 3: false };
         if (!META.selectedAbility) META.selectedAbility = 1;
+        if (!META.upgrades.regen) META.upgrades.regen = 0;
+        if (!META.upgrades.armor) META.upgrades.armor = 0;
+        if (!META.lastDailyGift) META.lastDailyGift = 0;
         if (!META.playerName) META.playerName = null;
         if (!META.maxLevel) META.maxLevel = 1;
     }
@@ -1254,6 +1258,14 @@ class Player {
     update(dt) {
         if (this.dead) return;
 
+        // Meta Upgrades: Regeneration
+        const regenVal = (META.upgrades.regen || 0) * 0.1;
+        if (regenVal > 0 && this.hp < this.maxHp) {
+            this.hp = Math.min(this.maxHp, this.hp + regenVal / 60);
+        }
+
+        // Apply armor to damage taken elsewhere in the code
+        // We'll search for where hp is subtracted and apply reduction there.
         if (this.orbitals !== this.orbitersList.length) {
             this.orbitersList = [];
             for (let i = 0; i < this.orbitals; i++) this.orbitersList.push(new Orbiter(this, i, this.orbitals));
@@ -1982,6 +1994,8 @@ function showMetaMenu() {
         { id: 'hp', name: '❤️ Extra HP', desc: 'Počáteční HP +10', cost: 10, val: META.upgrades.hp },
         { id: 'speed', name: '👟 Rychlost', desc: 'Pohyb +2%', cost: 15, val: META.upgrades.speed },
         { id: 'luck', name: '🍀 Štěstí', desc: 'XP násobič +0.05', cost: 25, val: META.upgrades.luck },
+        { id: 'regen', name: '💊 Regenerace', desc: 'HP/s +0.1', cost: 40, val: META.upgrades.regen || 0 },
+        { id: 'armor', name: '🛡️ Štít', desc: 'Redukce poškození +2%', cost: 50, val: META.upgrades.armor || 0 },
         { id: 'hat_crown', name: '👑 Koruna', desc: 'Zlatá královská koruna', cost: 100, isHat: true, type: 'crown' },
         { id: 'hat_wizard', name: '🧙 Mág', desc: 'Klobouk čaroděje', cost: 100, isHat: true, type: 'wizard' },
         { id: 'hat_ninja', name: '🥷 Ninja', desc: 'Maska stínu', cost: 100, isHat: true, type: 'ninja' }
@@ -2519,6 +2533,11 @@ function init() {
             "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ALIEN ATLAS",
             "🎁 TAKTICKÁ VÝBAVA": "🎁 TACTICAL GEAR",
             "💡 POKROČILÉ TIPY": "💡 ADVANCED TIPS",
+            "💊 Regenerace": "💊 Regeneration",
+            "🛡️ Štít": "🛡️ Shield",
+            "DÁREK": "GIFT",
+            "Další dárek za ": "Next gift in ",
+            "Dostal jsi 50 Doge! 🚀": "You got 50 Doge! 🚀",
             "VYTVOŘIT NOVÝ SERVER": "CREATE NEW SERVER",
             "Název serveru...": "Server name...",
             "ZPĚT": "BACK",
@@ -3491,27 +3510,63 @@ function init() {
         requestAnimationFrame(loop);
     }
 
-    const btnLogin = document.getElementById('btn-login');
-    if (btnLogin) btnLogin.onclick = () => handleAuth(true);
-
     const btnRegister = document.getElementById('btn-register');
     if (btnRegister) btnRegister.onclick = () => handleAuth(false);
+
+    // Daily Gift Logic
+    const btnDaily = document.createElement('button');
+    btnDaily.className = 'btn-restart btn-mini';
+    btnDaily.id = 'btn-daily-gift';
+    btnDaily.style.background = 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)';
+    btnDaily.style.color = 'white';
+    btnDaily.innerHTML = '<span>🎁</span> <div data-i18n="DÁREK">DÁREK</div>';
+    
+    const otherMenu = document.querySelector('.menu-actions-grid.secondary');
+    if (otherMenu) otherMenu.insertBefore(btnDaily, otherMenu.firstChild);
+
+    btnDaily.onclick = () => {
+        const now = Date.now();
+        const cooldown = 24 * 60 * 60 * 1000; // 24 hours
+        if (now - META.lastDailyGift < cooldown) {
+            const remaining = cooldown - (now - META.lastDailyGift);
+            const hours = Math.floor(remaining / (3600 * 1000));
+            const mins = Math.floor((remaining % (3600 * 1000)) / (60 * 1000));
+            window.showCustomAlert(window.T("Další dárek za ") + hours + "h " + mins + "m!");
+            return;
+        }
+        META.currency += 50;
+        META.lastDailyGift = now;
+        saveMeta();
+        document.getElementById('display-doge').innerText = META.currency;
+        window.showCustomAlert(window.T("Dostal jsi 50 Doge! 🚀"));
+        btnDaily.style.opacity = '0.5';
+    };
 
     document.getElementById('btn-reset-progress').onclick = () => {
         document.getElementById('settings-modal').classList.remove('active');
         window.showCustomConfirm(window.T("Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?"), () => {
             if (NET.socket) {
+                // Wait for confirmation from server
+                NET.socket.once('accountDeleted', (res) => {
+                    localStorage.removeItem('neoSurvivor_meta');
+                    localStorage.removeItem('neoSurvivor_pid');
+                    localStorage.removeItem('neoSurvivor_user');
+                    localStorage.removeItem('neoSurvivor_pass');
+                    location.reload();
+                });
                 NET.socket.emit('deleteAccount', { 
                     user: localStorage.getItem('neoSurvivor_user'), 
                     pass: localStorage.getItem('neoSurvivor_pass') 
                 });
+                // Fallback in case server doesn't respond
+                setTimeout(() => { if (localStorage.getItem('neoSurvivor_user')) location.reload(); }, 2000);
+            } else {
+                localStorage.removeItem('neoSurvivor_meta');
+                localStorage.removeItem('neoSurvivor_pid');
+                localStorage.removeItem('neoSurvivor_user');
+                localStorage.removeItem('neoSurvivor_pass');
+                location.reload();
             }
-            localStorage.removeItem('neoSurvivor_meta');
-            localStorage.removeItem('neoSurvivor_pid');
-            localStorage.removeItem('neoSurvivor_user');
-            localStorage.removeItem('neoSurvivor_pass');
-            // Wait 500ms to ensure socket message is sent
-            setTimeout(() => location.reload(), 500);
         });
     };
 
@@ -3986,7 +4041,12 @@ function update(dt) {
                             if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: 99999 });
                         } else {
                             if (t.hp !== undefined) {
-                                t.hp -= (e.isBoss ? 2 : 0.5) * (t.shield || 1);
+                                let dmg = (e.isBoss ? 2 : 0.5) * (t.shield || 1);
+                                if (t.isLocal) {
+                                    const armorRed = (META.upgrades.armor || 0) * 0.02;
+                                    dmg *= (1 - armorRed);
+                                }
+                                t.hp -= dmg;
                                 if (t.hp <= 0) t.dead = true;
                             }
 
@@ -4054,7 +4114,12 @@ function update(dt) {
             if (proj.isEnemy) {
                 alivePlayers.forEach(pl => {
                     if (dist(proj.x, proj.y, pl.x, pl.y) < proj.radius + pl.radius) {
-                        pl.hp -= proj.damage * (pl.shield || 1);
+                        let dmg = proj.damage * (pl.shield || 1);
+                        if (pl.isLocal) {
+                            const armorRed = (META.upgrades.armor || 0) * 0.02;
+                            dmg *= (1 - armorRed);
+                        }
+                        pl.hp -= dmg;
                         if (pl.hp <= 0) pl.dead = true;
                         GAME.entities.projectiles.splice(pIndex, 1);
                         updateUI();
