@@ -2350,7 +2350,10 @@ window.showHostModal = () => {
     // QR Code generation
     const qrImg = document.getElementById('qr-code-img');
     if (qrImg) {
-        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${roomName}`;
+        // Construct the full URL with the room parameter
+        const currentUrl = window.location.origin + window.location.pathname;
+        const joinUrl = `${currentUrl}?room=${roomName}`;
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl)}`;
         qrImg.style.display = 'block';
     }
 
@@ -3312,18 +3315,33 @@ function init() {
                 if (trimmed && trimmed.length > 0) {
                     if (!window.ORIGINAL_TEXTS.has(node)) window.ORIGINAL_TEXTS.set(node, trimmed);
                     const orig = window.ORIGINAL_TEXTS.get(node);
-                    if (dict[orig]) node.nodeValue = node.nodeValue.replace(trimmed, dict[orig]);
+                    
+                    if (lang === 'cs') {
+                        // Special case for returning to Czech - restore original
+                        node.nodeValue = node.nodeValue.replace(trimmed, orig);
+                    } else if (dict[orig]) {
+                        node.nodeValue = node.nodeValue.replace(trimmed, dict[orig]);
+                    }
                 }
             } else if (node.nodeType === 1 && node.nodeName !== 'SCRIPT' && node.nodeName !== 'STYLE') {
                 if (node.hasAttribute('data-i18n')) {
                     const key = node.getAttribute('data-i18n');
-                    if (dict[key]) {
-                        // If it has children, we only want to replace the text parts
+                    if (lang === 'cs') {
+                         for (let i = 0; i < node.childNodes.length; i++) {
+                            const child = node.childNodes[i];
+                            if (child.nodeType === 3) {
+                                const t = child.nodeValue.trim();
+                                child.nodeValue = child.nodeValue.replace(t, key);
+                            }
+                        }
+                    } else if (dict[key]) {
                         for (let i = 0; i < node.childNodes.length; i++) {
                             const child = node.childNodes[i];
                             if (child.nodeType === 3) {
                                 const t = child.nodeValue.trim();
-                                if (t === key) child.nodeValue = child.nodeValue.replace(t, dict[key]);
+                                if (t === key || (dict[key] && t === dict[key])) {
+                                     child.nodeValue = child.nodeValue.replace(t, dict[key]);
+                                }
                             }
                         }
                     }
@@ -3332,13 +3350,31 @@ function init() {
                 if (node.placeholder) {
                     if (!window.ORIGINAL_TEXTS.has(node)) window.ORIGINAL_TEXTS.set(node, node.placeholder);
                     const orig = window.ORIGINAL_TEXTS.get(node);
-                    if (dict[orig]) node.placeholder = dict[orig];
+                    if (lang === 'cs') node.placeholder = orig;
+                    else if (dict[orig]) node.placeholder = dict[orig];
                 }
             }
         }
         walk(document.body);
-        window.T = function(str) { return dict[str] || str; };
+        window.T = function(str) { 
+            if (lang === 'cs') return str;
+            return dict[str] || str; 
+        };
     };
+
+    // Join room from URL parameter
+    function checkUrlParams() {
+        const params = new URLSearchParams(window.location.search);
+        const roomId = params.get('room');
+        if (roomId && roomId.length === 6) {
+            // Give it a tiny delay to ensure socket and UI are ready
+            setTimeout(() => {
+                if (typeof window.joinCloudServer === 'function') {
+                    window.joinCloudServer(roomId.toUpperCase());
+                }
+            }, 1000);
+        }
+    }
 
     const langCs = document.getElementById('btn-lang-cs');
     if (langCs) langCs.onclick = () => window.setLanguage('cs');
@@ -3348,7 +3384,9 @@ function init() {
     if (langDe) langDe.onclick = () => window.setLanguage('de');
     const langEs = document.getElementById('btn-lang-es');
     if (langEs) langEs.onclick = () => window.setLanguage('es');
+    
     window.setLanguage(localStorage.getItem('neoSurvivor_lang') || 'cs');
+    checkUrlParams();
 
     loadMeta();
     document.getElementById('display-max-level').innerText = META.maxLevel || 0;
