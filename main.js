@@ -2206,6 +2206,7 @@ function initSocket() {
                 newOthers[pId].shipType = data.players[pId].shipType || 1;
                 newOthers[pId].laserTargetsIds = data.players[pId].laserTargetsIds || [];
                 newOthers[pId].remoteName = data.players[pId].name || "Hráč";
+                newOthers[pId].kills = data.players[pId].kills || 0;
             }
             NET.others = newOthers;
             GAME.time = data.time;
@@ -2319,7 +2320,8 @@ function syncPlayer() {
         kaktus: GAME.entities.player.hasKaktus,
         shipType: GAME.entities.player.shipType,
         laserTargetsIds: safeLaserTargets,
-        name: savedUser
+        name: savedUser,
+        kills: GAME.kills || 0
     });
 }
 
@@ -3336,6 +3338,60 @@ function render() {
         drawDot(pCx, pCy, '#10b981', 3);
 
         ctx.restore();
+
+        if (NET.isMultiplayer) {
+            let playersList = [{ name: (localStorage.getItem('neoSurvivor_user') || "Já"), kills: GAME.kills || 0, isMe: true }];
+            for (const id in NET.others) {
+                const op = NET.others[id];
+                if (op) {
+                    playersList.push({ name: op.remoteName || "Hráč", kills: op.kills || 0, isMe: false, dead: op.dead });
+                }
+            }
+            playersList.sort((a, b) => b.kills - a.kills);
+
+            ctx.save();
+            const sbWidth = mapSize;
+            const sbHeight = 35 + playersList.length * 25;
+            const sbY = startY + mapSize + 15;
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
+            ctx.lineWidth = 2;
+            if (ctx.roundRect) {
+                ctx.beginPath();
+                ctx.roundRect(startX, sbY, sbWidth, sbHeight, 8);
+                ctx.fill(); ctx.stroke();
+            } else {
+                ctx.fillRect(startX, sbY, sbWidth, sbHeight);
+                ctx.strokeRect(startX, sbY, sbWidth, sbHeight);
+            }
+
+            ctx.fillStyle = '#a5b4fc';
+            ctx.font = 'bold 12px Outfit, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText(`Hráči: ${playersList.length}`, startX + 15, sbY + 12);
+            
+            ctx.textAlign = 'right';
+            ctx.fillText(`Zabití`, startX + sbWidth - 15, sbY + 12);
+
+            ctx.beginPath();
+            ctx.moveTo(startX + 10, sbY + 30);
+            ctx.lineTo(startX + sbWidth - 10, sbY + 30);
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.stroke();
+
+            playersList.forEach((pl, idx) => {
+                ctx.fillStyle = pl.dead ? '#64748b' : (pl.isMe ? '#10b981' : '#f8fafc');
+                ctx.textAlign = 'left';
+                let dispName = pl.name;
+                if (dispName.length > 10) dispName = dispName.substring(0, 8) + '..';
+                ctx.fillText(dispName, startX + 15, sbY + 40 + idx * 25);
+                ctx.textAlign = 'right';
+                ctx.fillText(pl.kills.toString(), startX + sbWidth - 15, sbY + 40 + idx * 25);
+            });
+            ctx.restore();
+        }
     }
 
     if (window.innerWidth < 850 && GAME.joystick) {
