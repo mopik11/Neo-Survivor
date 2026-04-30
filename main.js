@@ -2346,6 +2346,14 @@ function syncShot(proj) {
 window.showHostModal = () => {
     const roomName = Math.random().toString(36).substr(2, 6).toUpperCase();
     document.getElementById('host-code-display').innerText = roomName;
+    
+    // QR Code generation
+    const qrImg = document.getElementById('qr-code-img');
+    if (qrImg) {
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${roomName}`;
+        qrImg.style.display = 'block';
+    }
+
     document.getElementById('multiplayer-modal').classList.remove('active');
     document.getElementById('host-modal').classList.add('active');
 
@@ -2537,6 +2545,20 @@ function init() {
             "OŽIVOVÁNÍ...": "REVIVING...",
             "DOGECOIN:": "DOGECOIN:",
             "v bitvě": "in battle",
+            "Dron:": "Drone:",
+            "Kostka:": "Cube:",
+            "Kamikadze:": "Kamikaze:",
+            "Goblin:": "Goblin:",
+            "Support:": "Support:",
+            "Skokan:": "Leaper:",
+            "Boss:": "Boss:",
+            "Lifesteal + Rychlost:": "Lifesteal + Speed:",
+            "Dogecoiny:": "Dogecoins:",
+            "🚀 Průzkumník:": "🚀 Explorer:",
+            "⚡ Laserový křižník:": "⚡ Laser Cruiser:",
+            "🛡️ Obránce:": "🛡️ Defender:",
+            "💥 Brokovnice:": "💥 Shotgun:",
+            "💀 Nekromancer:": "💀 Necromancer:",
             "Nemáš dost Dogecoinu!": "Not enough Dogecoin!",
             "Zatím žádné záznamy. Buď první!": "No records yet. Be the first!",
             "Žádné aktivní servery": "No active servers",
@@ -2577,7 +2599,6 @@ function init() {
             "Mág": "Mage",
             "Klobouk čaroděje": "Wizard hat",
             "Ninja": "Ninja",
-            "Maska stínu": "Shadow mask",
             "Maska stínu": "Shadow mask",
             "✅ ZKOPÍROVÁNO!": "✅ COPIED!",
             "📋 KOPÍROVAT KÓD": "📋 COPY CODE",
@@ -2803,6 +2824,20 @@ function init() {
             "OŽIVOVÁNÍ...": "WIEDERBELEBUNG...",
             "DOGECOIN:": "DOGECOIN:",
             "v bitvě": "im Kampf",
+            "Dron:": "Drohne:",
+            "Kostka:": "Würfel:",
+            "Kamikadze:": "Kamikaze:",
+            "Goblin:": "Kobold:",
+            "Support:": "Unterstützung:",
+            "Skokan:": "Springer:",
+            "Boss:": "Boss:",
+            "Lifesteal + Rychlost:": "Lebensraub + Geschw.:",
+            "Dogecoiny:": "Dogecoins:",
+            "🚀 Průzkumník:": "🚀 Entdecker:",
+            "⚡ Laserový křižník:": "⚡ Laserkreuzer:",
+            "🛡️ Obránce:": "🛡️ Verteidiger:",
+            "💥 Brokovnice:": "💥 Schrotflinte:",
+            "💀 Nekromancer:": "💀 Nekromant:",
             "Nemáš dost Dogecoinu!": "Nicht genug Dogecoin!",
             "Zatím žádné záznamy. Buď první!": "Noch keine Einträge. Sei der Erste!",
             "Žádné aktivní servery": "Keine aktiven Server",
@@ -2843,7 +2878,6 @@ function init() {
             "Mág": "Magier",
             "Klobouk čaroděje": "Zaubererhut",
             "Ninja": "Ninja",
-            "Maska stínu": "Schattenmaske",
             "Maska stínu": "Schattenmaske",
             "✅ ZKOPÍROVÁNO!": "✅ KOPIERT!",
             "📋 KOPÍROVAT KÓD": "📋 CODE KOPIEREN",
@@ -3069,6 +3103,20 @@ function init() {
             "OŽIVOVÁNÍ...": "REVIVIENDO...",
             "DOGECOIN:": "DOGECOIN:",
             "v bitvě": "en batalla",
+            "Dron:": "Dron:",
+            "Kostka:": "Cubo:",
+            "Kamikadze:": "Kamikaze:",
+            "Goblin:": "Duende:",
+            "Support:": "Apoyo:",
+            "Skokan:": "Saltador:",
+            "Boss:": "Jefe:",
+            "Lifesteal + Rychlost:": "Robo de Vida + Veloc.:",
+            "Dogecoiny:": "Dogecoins:",
+            "🚀 Průzkumník:": "🚀 Explorador:",
+            "⚡ Laserový křižník:": "⚡ Crucero Láser:",
+            "🛡️ Obránce:": "🛡️ Defensor:",
+            "💥 Brokovnice:": "💥 Escopeta:",
+            "💀 Nekromancer:": "💀 Nigromante:",
             "Nemáš dost Dogecoinu!": "¡No tienes suficientes Dogecoins!",
             "Zatím žádné záznamy. Buď první!": "Todavía no hay registros. ¡Sé el primero!",
             "Žádné aktivní servery": "No hay servidores activos",
@@ -3261,24 +3309,30 @@ function init() {
         function walk(node) {
             if (node.nodeType === 3) {
                 const trimmed = node.nodeValue.trim();
-                if (trimmed && trimmed.length > 1) {
-                    if (!window.ORIGINAL_TEXTS.has(node)) {
-                        window.ORIGINAL_TEXTS.set(node, trimmed);
-                    }
+                if (trimmed && trimmed.length > 0) {
+                    if (!window.ORIGINAL_TEXTS.has(node)) window.ORIGINAL_TEXTS.set(node, trimmed);
                     const orig = window.ORIGINAL_TEXTS.get(node);
-                    if (dict[orig]) {
-                        node.nodeValue = node.nodeValue.replace(trimmed, dict[orig]);
-                    } else if (I18N['cs'] && !dict[orig] && orig) {
-                        node.nodeValue = node.nodeValue.replace(trimmed, orig);
-                    }
+                    if (dict[orig]) node.nodeValue = node.nodeValue.replace(trimmed, dict[orig]);
                 }
             } else if (node.nodeType === 1 && node.nodeName !== 'SCRIPT' && node.nodeName !== 'STYLE') {
+                if (node.hasAttribute('data-i18n')) {
+                    const key = node.getAttribute('data-i18n');
+                    if (dict[key]) {
+                        // If it has children, we only want to replace the text parts
+                        for (let i = 0; i < node.childNodes.length; i++) {
+                            const child = node.childNodes[i];
+                            if (child.nodeType === 3) {
+                                const t = child.nodeValue.trim();
+                                if (t === key) child.nodeValue = child.nodeValue.replace(t, dict[key]);
+                            }
+                        }
+                    }
+                }
                 for (let i = 0; i < node.childNodes.length; i++) walk(node.childNodes[i]);
                 if (node.placeholder) {
                     if (!window.ORIGINAL_TEXTS.has(node)) window.ORIGINAL_TEXTS.set(node, node.placeholder);
                     const orig = window.ORIGINAL_TEXTS.get(node);
                     if (dict[orig]) node.placeholder = dict[orig];
-                    else node.placeholder = orig;
                 }
             }
         }

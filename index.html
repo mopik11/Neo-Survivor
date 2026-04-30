@@ -197,6 +197,9 @@
 
           <div style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; border: 1px solid rgba(16, 185, 129, 0.3); margin-bottom: 20px; width: 100%;">
               <div id="host-code-display">XXXXXX</div>
+              <div id="qr-code-container" style="display: flex; justify-content: center; margin-bottom: 15px;">
+                  <img id="qr-code-img" src="" alt="QR Code" style="border-radius: 10px; border: 2px solid rgba(255,255,255,0.2); width: 120px; height: 120px; display: none;">
+              </div>
               <button id="btn-copy-code" class="btn-restart" style="width: 100%; padding: 12px; font-size: 0.9rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">📋 KOPÍROVAT KÓD</button>
           </div>
 
@@ -247,24 +250,24 @@
             <div class="tutorial-card">
               <h3 data-i18n="🚀 FLOTILA LODÍ">🚀 FLOTILA LODÍ</h3>
               <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                <li><strong style="color:white">🚀 Průzkumník:</strong> Základní vyvážená loď.</li>
-                <li><strong style="color:#60a5fa">⚡ Laserový křižník:</strong> Střílí zničující lasery na více cílů.</li>
-                <li><strong style="color:#f43f5e">🛡️ Obránce:</strong> Základní útok tvoří rotující bariéru.</li>
-                <li><strong style="color:#fbbf24">💥 Brokovnice:</strong> Střílí salvu nábojů zblízka.</li>
-                <li><strong style="color:#a855f7">💀 Nekromancer:</strong> Vyvolává armádu pomocníků z mrtvých.</li>
+                <li><strong style="color:white" data-i18n="🚀 Průzkumník:">🚀 Průzkumník:</strong> Základní vyvážená loď.</li>
+                <li><strong style="color:#60a5fa" data-i18n="⚡ Laserový křižník:">⚡ Laserový křižník:</strong> Střílí zničující lasery na více cílů.</li>
+                <li><strong style="color:#f43f5e" data-i18n="🛡️ Obránce:">🛡️ Obránce:</strong> Základní útok tvoří rotující bariéru.</li>
+                <li><strong style="color:#fbbf24" data-i18n="💥 Brokovnice:">💥 Brokovnice:</strong> Střílí salvu nábojů zblízka.</li>
+                <li><strong style="color:#a855f7" data-i18n="💀 Nekromancer:">💀 Nekromancer:</strong> Vyvolává armádu pomocníků z mrtvých.</li>
               </ul>
             </div>
 
             <div class="tutorial-card">
               <h3 data-i18n="👾 ATLAS MIMOZEMŠŤANŮ">👾 ATLAS MIMOZEMŠŤANŮ</h3>
               <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                <li><span style="color:#ef4444">▲</span> <strong style="color:white">Dron:</strong> Základní červený nepřítel, útočí ve vlnách.</li>
-                <li><span style="color:#a855f7">■</span> <strong style="color:white">Kostka:</strong> Zvláštní fialový/modrý tvar, pohybuje se jinak.</li>
-                <li><span style="color:#f97316">◆</span> <strong style="color:white">Kamikadze:</strong> Rychle se přiblíží a vybuchne, když zasáhne cíl.</li>
-                <li><span style="color:#eab308">★</span> <strong style="color:white">Goblin:</strong> Zlatá hvězdička, je neuvěřitelně rychlý!</li>
-                <li><span style="color:#0ea5e9">✚</span> <strong style="color:white">Support:</strong> Léčí a posiluje ostatní ufony v okolí.</li>
-                <li><span style="color:#f43f5e">▼</span> <strong style="color:white">Skokan:</strong> Vyznačí si cíl a bleskově tam doskočí.</li>
-                <li><span style="color:#ef4444">⬟</span> <strong style="color:white">Boss:</strong> Obří mnohostěn s velkým HP. Každou minutu.</li>
+                <li><span style="color:#ef4444">▲</span> <strong style="color:white" data-i18n="Dron:">Dron:</strong> Základní červený nepřítel, útočí ve vlnách.</li>
+                <li><span style="color:#a855f7">■</span> <strong style="color:white" data-i18n="Kostka:">Kostka:</strong> Zvláštní fialový/modrý tvar, pohybuje se jinak.</li>
+                <li><span style="color:#f97316">◆</span> <strong style="color:white" data-i18n="Kamikadze:">Kamikadze:</strong> Rychle se přiblíží a vybuchne, když zasáhne cíl.</li>
+                <li><span style="color:#eab308">★</span> <strong style="color:white" data-i18n="Goblin:">Goblin:</strong> Zlatá hvězdička, je neuvěřitelně rychlý!</li>
+                <li><span style="color:#0ea5e9">✚</span> <strong style="color:white" data-i18n="Support:">Support:</strong> Léčí a posiluje ostatní ufony v okolí.</li>
+                <li><span style="color:#f43f5e">▼</span> <strong style="color:white" data-i18n="Skokan:">Skokan:</strong> Vyznačí si cíl a bleskově tam doskočí.</li>
+                <li><span style="color:#ef4444">⬟</span> <strong style="color:white" data-i18n="Boss:">Boss:</strong> Obří mnohostěn s velkým HP. Každou minutu.</li>
               </ul>
             </div>
 
@@ -280,9 +283,9 @@
             <div class="tutorial-card">
               <h3>💡 POKROČILÉ TIPY</h3>
               <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                <li><strong style="color:white">Lifesteal + Rychlost:</strong> Skvělá kombinace pro nesmrtelnost.</li>
-                <li><strong style="color:white">Boss:</strong> Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!</li>
-                <li><strong style="color:white">Dogecoiny:</strong> Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!</li>
+                <li><strong style="color:white" data-i18n="Lifesteal + Rychlost:">Lifesteal + Rychlost:</strong> Skvělá kombinace pro nesmrtelnost.</li>
+                <li><strong style="color:white" data-i18n="Boss:">Boss:</strong> Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!</li>
+                <li><strong style="color:white" data-i18n="Dogecoiny:">Dogecoiny:</strong> Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!</li>
               </ul>
             </div>
           </div>
