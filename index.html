@@ -228,12 +228,12 @@
 
       <div id="tutorial-modal" class="modal">
         <div class="modal-content" style="max-width: 900px; padding: 2.5rem;">
-          <h2 style="font-size: 2.8rem; color: #38bdf8; margin-bottom: 0.5rem; letter-spacing: 3px; text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);">VESMÍRNÝ MANUÁL</h2>
-          <p style="color: #94a3b8; margin-bottom: 2rem; font-size: 0.9rem;">Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.</p>
+          <h2 style="font-size: 2.8rem; color: #38bdf8; margin-bottom: 0.5rem; letter-spacing: 3px; text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);" data-i18n="VESMÍRNÝ MANUÁL">VESMÍRNÝ MANUÁL</h2>
+          <p style="color: #94a3b8; margin-bottom: 2rem; font-size: 0.9rem;" data-i18n="Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.">Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.</p>
           
           <div style="text-align: left; width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; overflow-y: auto; max-height: 65vh; padding-right: 15px; padding-bottom: 20px;">
             <div class="tutorial-card">
-              <h3>🕹️ ZÁKLADNÍ OVLÁDÁNÍ</h3>
+              <h3 data-i18n="🕹️ ZÁKLADNÍ OVLÁDÁNÍ">🕹️ ZÁKLADNÍ OVLÁDÁNÍ</h3>
               <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
                 <li><strong style="color:white">Pohyb:</strong> Klávesy <span style="color:#6366f1">WASD</span> nebo <span style="color:#6366f1">Joystick</span> na mobilu.</li>
                 <li><strong style="color:white">Schopnost:</strong> <span style="color:#6366f1">Levý klik</span> nebo <span style="color:#6366f1">Klepnutí</span> (pravá strana mobilu).</li>
@@ -242,7 +242,7 @@
             </div>
 
             <div class="tutorial-card">
-              <h3>🧬 VÝVOJ A LEVELY</h3>
+              <h3 data-i18n="🧬 VÝVOJ A LEVELY">🧬 VÝVOJ A LEVELY</h3>
               <p>Zabíjej nepřátele a sbírej <strong style="color:#10b981">XP Gemy</strong>. Každý nový level ti nabídne 3 náhodná vylepšení.</p>
               <p style="font-size: 0.8rem; font-style: italic;">Tip: Zaměř se nejdřív na poškození (Damage) a pak na dosah (Magnet)!</p>
             </div>
@@ -272,7 +272,7 @@
             </div>
 
             <div class="tutorial-card">
-              <h3>🎁 TAKTICKÁ VÝBAVA</h3>
+              <h3 data-i18n="🎁 TAKTICKÁ VÝBAVA">🎁 TAKTICKÁ VÝBAVA</h3>
               <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
                 <li><strong style="color:white">☢️ Nuke:</strong> Vymaže vše na obrazovce.</li>
                 <li><strong style="color:white">🧲 Magnet:</strong> Přitáhne všechny gemy z dálky.</li>
@@ -281,7 +281,7 @@
             </div>
 
             <div class="tutorial-card">
-              <h3>💡 POKROČILÉ TIPY</h3>
+              <h3 data-i18n="💡 POKROČILÉ TIPY">💡 POKROČILÉ TIPY</h3>
               <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
                 <li><strong style="color:white" data-i18n="Lifesteal + Rychlost:">Lifesteal + Rychlost:</strong> Skvělá kombinace pro nesmrtelnost.</li>
                 <li><strong style="color:white" data-i18n="Boss:">Boss:</strong> Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!</li>
@@ -308,9 +308,18 @@
 
       <div id="waiting-modal" class="modal">
         <div class="modal-content" style="max-width: 400px;">
-          <h2 style="font-size: 2.2rem; color: var(--accent-color); margin-bottom: 1rem;">ČEKÁNÍ...</h2>
-          <p style="color: #94a3b8; font-size: 1rem; margin-bottom: 20px;">Čekáme, až si ostatní hráči vyberou vylepšení.</p>
+          <h2 style="font-size: 2.2rem; color: var(--accent-color); margin-bottom: 1rem;" data-i18n="ČEKÁNÍ...">ČEKÁNÍ...</h2>
+          <p style="color: #94a3b8; font-size: 1rem; margin-bottom: 20px;" data-i18n="Čekáme, až si ostatní hráči vyberou vylepšení.">Čekáme, až si ostatní hráči vyberou vylepšení.</p>
           <div class="loader"></div>
+        </div>
+      </div>
+
+      <div id="qr-join-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+          <h2 style="font-size: 2.2rem; color: #10b981; margin-bottom: 1rem;" data-i18n="MÍSTNOST">MÍSTNOST</h2>
+          <p id="qr-join-text" style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 25px;">Připojit se k místnosti ABCDEF?</p>
+          <button id="btn-qr-join-confirm" class="btn-restart" style="width:100%; background:#10b981; margin-bottom:10px;" data-i18n="PŘIPOJIT">PŘIPOJIT</button>
+          <button onclick="document.getElementById('qr-join-modal').classList.remove('active')" class="btn-restart" style="width:100%; background:rgba(255,255,255,0.05); border:none;" data-i18n="ZRUŠIT">ZRUŠIT</button>
         </div>
       </div>
 

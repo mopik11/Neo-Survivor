@@ -1979,12 +1979,12 @@ function showMetaMenu() {
     document.getElementById('meta-currency').innerText = META.currency;
     container.innerHTML = '';
     const items = [
-        { id: 'hp', name: 'Extra HP', desc: 'Počáteční HP +10', cost: 10, val: META.upgrades.hp },
-        { id: 'speed', name: 'Rychlost', desc: 'Pohyb +2%', cost: 15, val: META.upgrades.speed },
-        { id: 'luck', name: 'Štěstí', desc: 'XP násobič +0.05', cost: 25, val: META.upgrades.luck },
-        { id: 'hat_crown', name: 'Koruna', desc: 'Zlatá královská koruna', cost: 100, isHat: true, type: 'crown' },
-        { id: 'hat_wizard', name: 'Mág', desc: 'Klobouk čaroděje', cost: 100, isHat: true, type: 'wizard' },
-        { id: 'hat_ninja', name: 'Ninja', desc: 'Maska stínu', cost: 100, isHat: true, type: 'ninja' }
+        { id: 'hp', name: '❤️ Extra HP', desc: 'Počáteční HP +10', cost: 10, val: META.upgrades.hp },
+        { id: 'speed', name: '👟 Rychlost', desc: 'Pohyb +2%', cost: 15, val: META.upgrades.speed },
+        { id: 'luck', name: '🍀 Štěstí', desc: 'XP násobič +0.05', cost: 25, val: META.upgrades.luck },
+        { id: 'hat_crown', name: '👑 Koruna', desc: 'Zlatá královská koruna', cost: 100, isHat: true, type: 'crown' },
+        { id: 'hat_wizard', name: '🧙 Mág', desc: 'Klobouk čaroděje', cost: 100, isHat: true, type: 'wizard' },
+        { id: 'hat_ninja', name: '🥷 Ninja', desc: 'Maska stínu', cost: 100, isHat: true, type: 'ninja' }
     ];
     items.forEach(item => {
         const card = document.createElement('div'); card.className = 'upgrade-card';
@@ -2498,6 +2498,24 @@ function init() {
             "DOSTUPNÉ SERVERY": "AVAILABLE SERVERS",
             "OBNOVIT": "REFRESH",
             "ZALOŽIT HRU": "HOST GAME",
+            "MÍSTNOST": "ROOM",
+            "ČEKÁNÍ...": "WAITING...",
+            "Čekáme, až si ostatní hráči vyberou vylepšení.": "Waiting for other players to pick upgrades.",
+            "Připojit se k místnosti ": "Join room ",
+            "❤️ Extra HP": "❤️ Extra HP",
+            "👟 Rychlost": "👟 Speed",
+            "🍀 Štěstí": "🍀 Luck",
+            "👑 Koruna": "👑 Crown",
+            "🧙 Mág": "🧙 Mage",
+            "🥷 Ninja": "🥷 Ninja",
+            "VESMÍRNÝ MANUÁL": "SPACE MANUAL",
+            "Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.": "Everything you need to know to survive in deep space.",
+            "🕹️ ZÁKLADNÍ OVLÁDÁNÍ": "🕹️ BASIC CONTROLS",
+            "🧬 VÝVOJ A LEVELY": "🧬 EVOLUTION & LEVELS",
+            "🚀 FLOTILA LODÍ": "🚀 SHIP FLEET",
+            "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ALIEN ATLAS",
+            "🎁 TAKTICKÁ VÝBAVA": "🎁 TACTICAL GEAR",
+            "💡 POKROČILÉ TIPY": "💡 ADVANCED TIPS",
             "VYTVOŘIT NOVÝ SERVER": "CREATE NEW SERVER",
             "Název serveru...": "Server name...",
             "ZPĚT": "BACK",
@@ -2777,6 +2795,24 @@ function init() {
             "DOSTUPNÉ SERVERY": "VERFÜGBARE SERVER",
             "OBNOVIT": "AKTUALISIEREN",
             "ZALOŽIT HRU": "SPIEL ERSTELLEN",
+            "MÍSTNOST": "RAUM",
+            "ČEKÁNÍ...": "WARTEN...",
+            "Čekáme, až si ostatní hráči vyberou vylepšení.": "Warten auf andere Spieler.",
+            "Připojit se k místnosti ": "Raum beitreten ",
+            "❤️ Extra HP": "❤️ Extra HP",
+            "👟 Rychlost": "👟 Geschw.",
+            "🍀 Štěstí": "🍀 Glück",
+            "👑 Koruna": "👑 Krone",
+            "🧙 Mág": "🧙 Magier",
+            "🥷 Ninja": "🥷 Ninja",
+            "VESMÍRNÝ MANUÁL": "WELTRAUM-HANDBUCH",
+            "Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.": "Alles, was Sie wissen müssen, um im tiefen Weltraum zu überleben.",
+            "🕹️ ZÁKLADNÍ OVLÁDÁNÍ": "🕹️ GRUNDSTEUERUNG",
+            "🧬 VÝVOJ A LEVELY": "🧬 ENTWICKLUNG & LEVEL",
+            "🚀 FLOTILA LODÍ": "🚀 SCHIFFSFLOTTE",
+            "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ALIEN-ATLAS",
+            "🎁 TAKTICKÁ VÝBAVA": "🎁 TAKTISCHE AUSRÜSTUNG",
+            "💡 POKROČILÉ TIPY": "💡 FORTGESCHRITTENE TIPPS",
             "VYTVOŘIT NOVÝ SERVER": "NEUEN SERVER ERSTELLEN",
             "Název serveru...": "Servername...",
             "ZPĚT": "ZURÜCK",
@@ -3056,6 +3092,24 @@ function init() {
             "DOSTUPNÉ SERVERY": "SERVIDORES DISPONIBLES",
             "OBNOVIT": "ACTUALIZAR",
             "ZALOŽIT HRU": "CREAR PARTIDA",
+            "MÍSTNOST": "SALA",
+            "ČEKÁNÍ...": "ESPERANDO...",
+            "Čekáme, až si ostatní hráči vyberou vylepšení.": "Esperando a que otros elijan mejoras.",
+            "Připojit se k místnosti ": "Unirse a la sala ",
+            "❤️ Extra HP": "❤️ HP Extra",
+            "👟 Rychlost": "👟 Velocidad",
+            "🍀 Štěstí": "🍀 Suerte",
+            "👑 Koruna": "👑 Corona",
+            "🧙 Mág": "🧙 Mago",
+            "🥷 Ninja": "🥷 Ninja",
+            "VESMÍRNÝ MANUÁL": "MANUAL ESPACIAL",
+            "Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.": "Todo lo que necesitas saber para sobrevivir en el espacio profundo.",
+            "🕹️ ZÁKLADNÍ OVLÁDÁNÍ": "🕹️ CONTROLES BÁSICOS",
+            "🧬 VÝVOJ A LEVELY": "🧬 EVOLUCIÓN Y NIVELES",
+            "🚀 FLOTILA LODÍ": "🚀 FLOTA DE NAVES",
+            "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ATLAS ALIENÍGENA",
+            "🎁 TAKTICKÁ VÝBAVA": "🎁 EQUIPO TÁCTICO",
+            "💡 POKROČILÉ TIPY": "💡 CONSEJOS AVANZADOS",
             "VYTVOŘIT NOVÝ SERVER": "CREAR NUEVO SERVIDOR",
             "Název serveru...": "Nombre del servidor...",
             "ZPĚT": "ATRÁS",
@@ -3310,43 +3364,43 @@ function init() {
         const dict = I18N[lang] || {};
         
         function walk(node) {
+            // Text nodes
             if (node.nodeType === 3) {
-                const trimmed = node.nodeValue.trim();
-                if (trimmed && trimmed.length > 0) {
-                    if (!window.ORIGINAL_TEXTS.has(node)) window.ORIGINAL_TEXTS.set(node, trimmed);
+                const text = node.nodeValue.trim();
+                if (text.length > 0) {
+                    if (!window.ORIGINAL_TEXTS.has(node)) window.ORIGINAL_TEXTS.set(node, node.nodeValue);
                     const orig = window.ORIGINAL_TEXTS.get(node);
+                    const origTrimmed = orig.trim();
                     
                     if (lang === 'cs') {
-                        // Special case for returning to Czech - restore original
-                        node.nodeValue = node.nodeValue.replace(trimmed, orig);
-                    } else if (dict[orig]) {
-                        node.nodeValue = node.nodeValue.replace(trimmed, dict[orig]);
+                        node.nodeValue = orig;
+                    } else if (dict[origTrimmed]) {
+                        node.nodeValue = orig.replace(origTrimmed, dict[origTrimmed]);
                     }
                 }
-            } else if (node.nodeType === 1 && node.nodeName !== 'SCRIPT' && node.nodeName !== 'STYLE') {
+            } 
+            // Element nodes
+            else if (node.nodeType === 1 && node.nodeName !== 'SCRIPT' && node.nodeName !== 'STYLE') {
+                // Handle data-i18n attribute
                 if (node.hasAttribute('data-i18n')) {
                     const key = node.getAttribute('data-i18n');
                     if (lang === 'cs') {
-                         for (let i = 0; i < node.childNodes.length; i++) {
-                            const child = node.childNodes[i];
-                            if (child.nodeType === 3) {
-                                const t = child.nodeValue.trim();
-                                child.nodeValue = child.nodeValue.replace(t, key);
-                            }
+                        // Restore key as text if in Czech
+                        if (node.childNodes.length === 1 && node.firstChild.nodeType === 3) {
+                            node.firstChild.nodeValue = key;
                         }
                     } else if (dict[key]) {
-                        for (let i = 0; i < node.childNodes.length; i++) {
-                            const child = node.childNodes[i];
-                            if (child.nodeType === 3) {
-                                const t = child.nodeValue.trim();
-                                if (t === key || (dict[key] && t === dict[key])) {
-                                     child.nodeValue = child.nodeValue.replace(t, dict[key]);
-                                }
-                            }
+                        // Replace text content if dictionary has entry
+                        if (node.childNodes.length === 1 && node.firstChild.nodeType === 3) {
+                            node.firstChild.nodeValue = dict[key];
                         }
                     }
                 }
+                
+                // Recursively walk children
                 for (let i = 0; i < node.childNodes.length; i++) walk(node.childNodes[i]);
+                
+                // Handle placeholders
                 if (node.placeholder) {
                     if (!window.ORIGINAL_TEXTS.has(node)) window.ORIGINAL_TEXTS.set(node, node.placeholder);
                     const orig = window.ORIGINAL_TEXTS.get(node);
@@ -3355,6 +3409,7 @@ function init() {
                 }
             }
         }
+        
         walk(document.body);
         window.T = function(str) { 
             if (lang === 'cs') return str;
@@ -3367,12 +3422,24 @@ function init() {
         const params = new URLSearchParams(window.location.search);
         const roomId = params.get('room');
         if (roomId && roomId.length === 6) {
-            // Give it a tiny delay to ensure socket and UI are ready
-            setTimeout(() => {
-                if (typeof window.joinCloudServer === 'function') {
-                    window.joinCloudServer(roomId.toUpperCase());
-                }
-            }, 1000);
+            const modal = document.getElementById('qr-join-modal');
+            const text = document.getElementById('qr-join-text');
+            const confirmBtn = document.getElementById('btn-qr-join-confirm');
+            
+            if (modal && text && confirmBtn) {
+                text.innerText = window.T("Připojit se k místnosti ") + roomId.toUpperCase() + "?";
+                modal.classList.add('active');
+                
+                confirmBtn.onclick = () => {
+                    modal.classList.remove('active');
+                    if (typeof window.joinCloudServer === 'function') {
+                        window.joinCloudServer(roomId.toUpperCase());
+                    }
+                    // Remove param from URL without refresh
+                    const newUrl = window.location.origin + window.location.pathname;
+                    window.history.replaceState({}, document.title, newUrl);
+                };
+            }
         }
     }
 
@@ -3430,6 +3497,12 @@ function init() {
     document.getElementById('btn-reset-progress').onclick = () => {
         document.getElementById('settings-modal').classList.remove('active');
         window.showCustomConfirm(window.T("Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?"), () => {
+            if (NET.socket) {
+                NET.socket.emit('deleteAccount', { 
+                    user: localStorage.getItem('neoSurvivor_user'), 
+                    pass: localStorage.getItem('neoSurvivor_pass') 
+                });
+            }
             localStorage.removeItem('neoSurvivor_meta');
             localStorage.removeItem('neoSurvivor_pid');
             localStorage.removeItem('neoSurvivor_user');
