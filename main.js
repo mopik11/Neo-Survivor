@@ -1890,9 +1890,9 @@ function showShipsMenu() {
 
     document.getElementById('ships-currency').innerText = META.currency;
     container.innerHTML = `
-        <h3 style="width:100%; text-align:left; color:#a5b4fc; margin-bottom:10px;">LODĚ</h3>
+        <h3 style="width:100%; text-align:left; color:#a5b4fc; margin-bottom:10px;">${window.T('LODĚ')}</h3>
         <div id="ships-grid" class="upgrade-grid"></div>
-        <h3 style="width:100%; text-align:left; color:#a5b4fc; margin-top:20px; margin-bottom:10px;">SCHOPNOSTI (Místo Sniperu)</h3>
+        <h3 style="width:100%; text-align:left; color:#a5b4fc; margin-top:20px; margin-bottom:10px;">${window.T('SCHOPNOSTI (Místo Sniperu)')}</h3>
         <div id="abilities-grid" class="upgrade-grid"></div>
     `;
 
@@ -1913,8 +1913,8 @@ function showShipsMenu() {
         card.className = 'upgrade-card' + (selected ? ' selected' : '');
         card.innerHTML = `
             <div class="upgrade-icon">${item.icon}</div>
-            <h3>${item.name}</h3>
-            <p>${item.desc}</p>
+            <h3>${window.T(item.name)}</h3>
+            <p>${window.T(item.desc)}</p>
             <span class="cost" style="margin-top:10px; display:inline-block">${selected ? window.T('VYBRÁNO') : (owned ? window.T('VLASTNĚNO (Klikni)') : item.cost + ' DOGE')}</span>
         `;
         card.onclick = () => {
@@ -1951,8 +1951,8 @@ function showShipsMenu() {
         card.className = 'upgrade-card' + (selected ? ' selected' : '');
         card.innerHTML = `
             <div class="upgrade-icon">${item.icon}</div>
-            <h3>${item.name}</h3>
-            <p>${item.desc}</p>
+            <h3>${window.T(item.name)}</h3>
+            <p>${window.T(item.desc)}</p>
             <span class="cost" style="margin-top:10px; display:inline-block">${selected ? window.T('VYBRÁNO') : (owned ? window.T('VLASTNĚNO (Klikni)') : item.cost + ' DOGE')}</span>
         `;
         card.onclick = () => {
@@ -1990,7 +1990,7 @@ function showMetaMenu() {
         const card = document.createElement('div'); card.className = 'upgrade-card';
         const cost = item.isHat ? item.cost : Math.floor(item.cost * (1 + item.val * 0.5));
         const owned = item.isHat && META.upgrades.hat === item.type;
-        card.innerHTML = `<h3>${item.name}</h3><p>${item.desc}</p><span class="cost">${owned ? window.T('VLASTNĚNO') : cost + ' DOGE'}</span>`;
+        card.innerHTML = `<h3>${window.T(item.name)}</h3><p>${window.T(item.desc)}</p><span class="cost">${owned ? window.T('VLASTNĚNO') : cost + ' DOGE'}</span>`;
         card.onclick = () => {
             if (META.currency < cost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
             if (item.isHat) { META.upgrades.hat = item.type; }
@@ -2352,10 +2352,10 @@ window.showHostModal = () => {
     document.getElementById('btn-copy-code').onclick = () => {
         navigator.clipboard.writeText(roomName).then(() => {
             const btn = document.getElementById('btn-copy-code');
-            btn.innerText = "✅ ZKOPÍROVÁNO!";
+            btn.innerText = window.T("✅ ZKOPÍROVÁNO!");
             btn.style.background = "#10b981";
             setTimeout(() => {
-                btn.innerText = "📋 KOPÍROVAT KÓD";
+                btn.innerText = window.T("📋 KOPÍROVAT KÓD");
                 btn.style.background = "rgba(255,255,255,0.1)";
             }, 2000);
         });
@@ -2544,7 +2544,41 @@ function init() {
             "Zadej heslo!": "Enter password!",
             "Zpráva musí mít aspoň 5 znaků.": "Message must have at least 5 characters.",
             "Díky! Zpětná vazba byla odeslána vývojáři.": "Thanks! Feedback sent to the developer.",
-            "Chyba: Nejseš připojen k serveru.": "Error: Not connected to server."
+            "Chyba: Nejseš připojen k serveru.": "Error: Not connected to server.",
+            "LODĚ": "SHIPS",
+            "SCHOPNOSTI (Místo Sniperu)": "ABILITIES (Replaces Sniper)",
+            "Základní Loď": "Basic Ship",
+            "Spolehlivý standardní model": "Reliable standard model",
+            "Laserová Loď": "Laser Ship",
+            "Automatický paprsek, nestřílí": "Auto-beam, no projectiles",
+            "Drtivá Zeď": "Crushing Wall",
+            "Průrazná vlna bez základní palby.": "Piercing wave, no basic fire.",
+            "Brokovnice": "Shotgun",
+            "Střílí 3-5 střel najednou.": "Fires 3-5 shots at once.",
+            "Nekromancer": "Necromancer",
+            "Místo útoku vyvolává vlastní armádu minionů.": "Summons own minion army instead of attacking.",
+            "Odstřelovač": "Sniper",
+            "Základní průrazná střela": "Basic piercing shot",
+            "Zastavení času": "Time Stop",
+            "Znehybní všechny nepřátele na 5s": "Freezes all enemies for 5s",
+            "Posednutí": "Possession",
+            "10 nejbližších ufounů přejde na tvou stranu": "10 nearest aliens join your side",
+            "Léčivá aura": "Healing Aura",
+            "Léčíš spoluhráče ve své blízkosti": "Heals nearby teammates",
+            "Extra HP": "Extra HP",
+            "Počáteční HP +10": "Starting HP +10",
+            "Rychlost": "Speed",
+            "Pohyb +2%": "Movement +2%",
+            "Štěstí": "Luck",
+            "XP násobič +0.05": "XP multiplier +0.05",
+            "Koruna": "Crown",
+            "Zlatá královská koruna": "Golden royal crown",
+            "Mág": "Mage",
+            "Klobouk čaroděje": "Wizard hat",
+            "Ninja": "Ninja",
+            "Maska stínu": "Shadow mask",
+            "✅ ZKOPÍROVÁNO!": "✅ COPIED!",
+            "📋 KOPÍROVAT KÓD": "📋 COPY CODE"
         },
         de: {
             "VÍTEJ!": "WILLKOMMEN!",
@@ -2638,7 +2672,41 @@ function init() {
             "Zadej heslo!": "Passwort eingeben!",
             "Zpráva musí mít aspoň 5 znaků.": "Nachricht muss mindestens 5 Zeichen lang sein.",
             "Díky! Zpětná vazba byla odeslána vývojáři.": "Danke! Feedback an den Entwickler gesendet.",
-            "Chyba: Nejseš připojen k serveru.": "Fehler: Keine Verbindung zum Server."
+            "Chyba: Nejseš připojen k serveru.": "Fehler: Keine Verbindung zum Server.",
+            "LODĚ": "SCHIFFE",
+            "SCHOPNOSTI (Místo Sniperu)": "FÄHIGKEITEN (Ersetzt Sniper)",
+            "Základní Loď": "Basisschiff",
+            "Spolehlivý standardní model": "Zuverlässiges Standardmodell",
+            "Laserová Loď": "Laserschiff",
+            "Automatický paprsek, nestřílí": "Auto-Strahl, keine Projektile",
+            "Drtivá Zeď": "Zerschmetternde Wand",
+            "Průrazná vlna bez základní palby.": "Durchdringende Welle, kein Standardfeuer.",
+            "Brokovnice": "Schrotflinte",
+            "Střílí 3-5 střel najednou.": "Feuert 3-5 Schüsse gleichzeitig.",
+            "Nekromancer": "Nekromant",
+            "Místo útoku vyvolává vlastní armádu minionů.": "Beschwört eine Armee von Dienern statt anzugreifen.",
+            "Odstřelovač": "Scharfschütze",
+            "Základní průrazná střela": "Durchschlagender Basisschuss",
+            "Zastavení času": "Zeitstopp",
+            "Znehybní všechny nepřátele na 5s": "Friert alle Feinde für 5s ein",
+            "Posednutí": "Besessenheit",
+            "10 nejbližších ufounů přejde na tvou stranu": "10 nächste Aliens wechseln die Seite",
+            "Léčivá aura": "Heilaura",
+            "Léčíš spoluhráče ve své blízkosti": "Heilt Teammitglieder in der Nähe",
+            "Extra HP": "Extra HP",
+            "Počáteční HP +10": "Start-HP +10",
+            "Rychlost": "Geschwindigkeit",
+            "Pohyb +2%": "Bewegung +2%",
+            "Štěstí": "Glück",
+            "XP násobič +0.05": "XP-Multiplikator +0.05",
+            "Koruna": "Krone",
+            "Zlatá královská koruna": "Goldene königliche Krone",
+            "Mág": "Magier",
+            "Klobouk čaroděje": "Zaubererhut",
+            "Ninja": "Ninja",
+            "Maska stínu": "Schattenmaske",
+            "✅ ZKOPÍROVÁNO!": "✅ KOPIERT!",
+            "📋 KOPÍROVAT KÓD": "📋 CODE KOPIEREN"
         },
         es: {
             "VÍTEJ!": "¡BIENVENIDO!",
@@ -2732,7 +2800,41 @@ function init() {
             "Zadej heslo!": "¡Introduce la contraseña!",
             "Zpráva musí mít aspoň 5 znaků.": "El mensaje debe tener al menos 5 caracteres.",
             "Díky! Zpětná vazba byla odeslána vývojáři.": "¡Gracias! Comentarios enviados al desarrollador.",
-            "Chyba: Nejseš připojen k serveru.": "Error: No conectado al servidor."
+            "Chyba: Nejseš připojen k serveru.": "Error: No conectado al servidor.",
+            "LODĚ": "NAVES",
+            "SCHOPNOSTI (Místo Sniperu)": "HABILIDADES (Reemplaza Francotirador)",
+            "Základní Loď": "Nave Básica",
+            "Spolehlivý standardní model": "Modelo estándar confiable",
+            "Laserová Loď": "Nave Láser",
+            "Automatický paprsek, nestřílí": "Rayo automático, sin proyectiles",
+            "Drtivá Zeď": "Muro Aplastante",
+            "Průrazná vlna bez základní palby.": "Ola perforante, sin fuego básico.",
+            "Brokovnice": "Escopeta",
+            "Střílí 3-5 střel najednou.": "Dispara 3-5 tiros a la vez.",
+            "Nekromancer": "Nigromante",
+            "Místo útoku vyvolává vlastní armádu minionů.": "Invoca ejército de secuaces en lugar de atacar.",
+            "Odstřelovač": "Francotirador",
+            "Základní průrazná střela": "Tiro perforante básico",
+            "Zastavení času": "Parada de Tiempo",
+            "Znehybní všechny nepřátele na 5s": "Congela a todos los enemigos por 5s",
+            "Posednutí": "Posesión",
+            "10 nejbližších ufounů přejde na tvou stranu": "10 alienígenas más cercanos se unen",
+            "Léčivá aura": "Aura Sanadora",
+            "Léčíš spoluhráče ve své blízkosti": "Cura a compañeros cercanos",
+            "Extra HP": "HP Extra",
+            "Počáteční HP +10": "HP Inicial +10",
+            "Rychlost": "Velocidad",
+            "Pohyb +2%": "Movimiento +2%",
+            "Štěstí": "Suerte",
+            "XP násobič +0.05": "Multiplicador XP +0.05",
+            "Koruna": "Corona",
+            "Zlatá královská koruna": "Corona real dorada",
+            "Mág": "Mago",
+            "Klobouk čaroděje": "Sombrero de mago",
+            "Ninja": "Ninja",
+            "Maska stínu": "Máscara de sombra",
+            "✅ ZKOPÍROVÁNO!": "✅ ¡COPIADO!",
+            "📋 KOPÍROVAT KÓD": "📋 COPIAR CÓDIGO"
         }
     };
 
