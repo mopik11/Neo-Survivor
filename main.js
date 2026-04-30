@@ -1915,7 +1915,7 @@ function showShipsMenu() {
             <div class="upgrade-icon">${item.icon}</div>
             <h3>${item.name}</h3>
             <p>${item.desc}</p>
-            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? 'VYBRÁNO' : (owned ? 'VLASTNĚNO (Klikni)' : item.cost + ' DOGE')}</span>
+            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? window.T('VYBRÁNO') : (owned ? window.T('VLASTNĚNO (Klikni)') : item.cost + ' DOGE')}</span>
         `;
         card.onclick = () => {
             if (owned) {
@@ -1953,7 +1953,7 @@ function showShipsMenu() {
             <div class="upgrade-icon">${item.icon}</div>
             <h3>${item.name}</h3>
             <p>${item.desc}</p>
-            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? 'VYBRÁNO' : (owned ? 'VLASTNĚNO (Klikni)' : item.cost + ' DOGE')}</span>
+            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? window.T('VYBRÁNO') : (owned ? window.T('VLASTNĚNO (Klikni)') : item.cost + ' DOGE')}</span>
         `;
         card.onclick = () => {
             if (owned) {
@@ -1990,7 +1990,7 @@ function showMetaMenu() {
         const card = document.createElement('div'); card.className = 'upgrade-card';
         const cost = item.isHat ? item.cost : Math.floor(item.cost * (1 + item.val * 0.5));
         const owned = item.isHat && META.upgrades.hat === item.type;
-        card.innerHTML = `<h3>${item.name}</h3><p>${item.desc}</p><span class="cost">${owned ? 'VLASTNĚNO' : cost + ' DOGE'}</span>`;
+        card.innerHTML = `<h3>${item.name}</h3><p>${item.desc}</p><span class="cost">${owned ? window.T('VLASTNĚNO') : cost + ' DOGE'}</span>`;
         card.onclick = () => {
             if (META.currency < cost) { window.showCustomAlert("Nemáš dost Dogecoinu!"); return; }
             if (item.isHat) { META.upgrades.hat = item.type; }
@@ -2451,28 +2451,216 @@ function init() {
     GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
 
     const I18N = {
-        cs: {
-            "NASTAVENÍ": "NASTAVENÍ", "JAZYK / LANGUAGE:": "JAZYK / LANGUAGE:", "NEBEZPEČNÁ ZÓNA:": "NEBEZPEČNÁ ZÓNA:", 
-            "ODHLÁSIT SE A SMAZAT POSTUP": "ODHLÁSIT SE A SMAZAT POSTUP", "ZAVŘÍT": "ZAVŘÍT", 
-            "🚀 FLOTILA LODÍ": "🚀 FLOTILA LODÍ", "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ATLAS MIMOZEMŠŤANŮ"
-        },
+        cs: {},
         en: {
-            "NASTAVENÍ": "SETTINGS", "JAZYK / LANGUAGE:": "LANGUAGE:", "NEBEZPEČNÁ ZÓNA:": "DANGER ZONE:", 
-            "ODHLÁSIT SE A SMAZAT POSTUP": "LOGOUT & DELETE PROGRESS", "ZAVŘÍT": "CLOSE", 
-            "🚀 FLOTILA LODÍ": "🚀 SHIP FLEET", "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ALIEN ATLAS"
+            "VÍTEJ!": "WELCOME!",
+            "PŘIHLÁŠENÍ NEBO REGISTRACE": "LOGIN OR REGISTER",
+            "Jméno (min 3 znaky)...": "Username (min 3 chars)...",
+            "Heslo...": "Password...",
+            "PŘIHLÁSIT": "LOGIN",
+            "REGISTROVAT": "REGISTER",
+            "KOSMICKÝ BOJ O PŘEŽITÍ": "COSMIC STRUGGLE FOR SURVIVAL",
+            "Hráč:": "Player:",
+            "Nej. Level:": "Max Level:",
+            "Aktivních hráčů online:": "Active players online:",
+            "HRA": "GAME",
+            "SOLO": "SOLO",
+            "MULTIPLAYER": "MULTIPLAYER",
+            "POSTUP": "PROGRESS",
+            "VÝBAVA": "FLEET",
+            "VYLEPŠENÍ": "UPGRADES",
+            "ŽEBŘÍČEK": "LEADERBOARD",
+            "OSTATNÍ": "OTHER",
+            "NÁVOD": "TUTORIAL",
+            "FEEDBACK": "FEEDBACK",
+            "NASTAVENÍ": "SETTINGS",
+            "ODHLÁSIT": "LOGOUT",
+            "SÍŇ SLÁVY": "HALL OF FAME",
+            "Načítání ze serveru...": "Loading from server...",
+            "ZAVŘÍT": "CLOSE",
+            "JAZYK / LANGUAGE:": "LANGUAGE:",
+            "NEBEZPEČNÁ ZÓNA:": "DANGER ZONE:",
+            "ODHLÁSIT SE A SMAZAT POSTUP": "LOGOUT & DELETE PROGRESS",
+            "TVÁ VÝBAVA": "YOUR FLEET",
+            "SÍŤOVÁ HRA": "MULTIPLAYER",
+            "DOSTUPNÉ SERVERY": "AVAILABLE SERVERS",
+            "OBNOVIT": "REFRESH",
+            "ZALOŽIT HRU": "HOST GAME",
+            "VYTVOŘIT NOVÝ SERVER": "CREATE NEW SERVER",
+            "Název serveru...": "Server name...",
+            "ZPĚT": "BACK",
+            "LEVEL UP!": "LEVEL UP!",
+            "VESMÍRNÝ MANUÁL": "SPACE MANUAL",
+            "Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.": "Everything you need to survive in deep space.",
+            "🕹️ ZÁKLADNÍ OVLÁDÁNÍ": "🕹️ BASIC CONTROLS",
+            "Pohyb:": "Movement:",
+            "Schopnost:": "Ability:",
+            "Pauza:": "Pause:",
+            "🧬 VÝVOJ A LEVELY": "🧬 EVOLUTION AND LEVELS",
+            "Zabíjej nepřátele a sbírej": "Kill enemies and collect",
+            "Každý nový level ti nabídne 3 náhodná vylepšení.": "Each level offers 3 random upgrades.",
+            "Tip: Zaměř se nejdřív na poškození (Damage) a pak na dosah (Magnet)!": "Tip: Focus on damage first, then magnet range!",
+            "🎁 TAKTICKÁ VÝBAVA": "🎁 TACTICAL GEAR",
+            "Vymaže vše na obrazovce.": "Wipes everything on screen.",
+            "Přitáhne všechny gemy z dálky.": "Pulls all gems from afar.",
+            "Opraví poškozený trup lodi.": "Repairs damaged ship hull.",
+            "💡 POKROČILÉ TIPY": "💡 ADVANCED TIPS",
+            "Skvělá kombinace pro nesmrtelnost.": "Great combo for immortality.",
+            "Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!": "Spawns every minute. Always dodge sideways!",
+            "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 kills = 1 Doge. Buy permanent upgrades!",
+            "ROZUMÍM, CHCI DO BOJE!": "UNDERSTOOD, LET'S FIGHT!",
+            "Napiš mi, co bys chtěl vylepšit nebo nahlásit chybu.": "Tell me what to improve or report a bug.",
+            "ODESLAT": "SUBMIT",
+            "🚀 FLOTILA LODÍ": "🚀 SHIP FLEET",
+            "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ALIEN ATLAS",
+            "Základní vyvážená loď.": "Basic balanced ship.",
+            "Střílí zničující lasery na více cílů.": "Shoots devastating lasers at multiple targets.",
+            "Základní útok tvoří rotující bariéru.": "Basic attack forms a rotating barrier.",
+            "Střílí salvu nábojů zblízka.": "Fires a shotgun blast at close range.",
+            "Vyvolává armádu pomocníků z mrtvých.": "Summons an army of helpers from the dead.",
+            "Základní červený nepřítel, útočí ve vlnách.": "Basic red enemy, attacks in waves.",
+            "Zvláštní fialový/modrý tvar, pohybuje se jinak.": "Special purple/blue shape, moves differently.",
+            "Rychle se přiblíží a vybuchne, když zasáhne cíl.": "Quickly approaches and explodes on impact.",
+            "Zlatá hvězdička, je neuvěřitelně rychlý!": "Golden star, incredibly fast!",
+            "Léčí a posiluje ostatní ufony v okolí.": "Heals and buffs other aliens nearby.",
+            "Vyznačí si cíl a bleskově tam doskočí.": "Marks a target and leaps there lightning fast.",
+            "Obří mnohostěn s velkým HP. Každou minutu.": "Giant polygon with huge HP. Every minute.",
+            "Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?": "Do you really want to delete all progress, logout, and clear local data?",
+            "Opravdu se chceš odhlásit?": "Do you really want to log out?",
+            "NE": "NO",
+            "ANO": "YES",
+            "VLASTNĚNO (Klikni)": "OWNED (Click)",
+            "VYBRÁNO": "SELECTED",
+            "VLASTNĚNO": "OWNED",
+            "LÉČENÍ": "HEAL",
+            "OŽIVOVÁNÍ...": "REVIVING...",
+            "DOGECOIN:": "DOGECOIN:"
+        },
+        de: {
+            "VÍTEJ!": "WILLKOMMEN!",
+            "PŘIHLÁŠENÍ NEBO REGISTRACE": "ANMELDEN ODER REGISTRIEREN",
+            "Jméno (min 3 znaky)...": "Benutzername (min 3 Zeichen)...",
+            "Heslo...": "Passwort...",
+            "PŘIHLÁSIT": "ANMELDEN",
+            "REGISTROVAT": "REGISTRIEREN",
+            "KOSMICKÝ BOJ O PŘEŽITÍ": "KOSMISCHER KAMPF UMS ÜBERLEBEN",
+            "Hráč:": "Spieler:",
+            "Nej. Level:": "Max. Level:",
+            "Aktivních hráčů online:": "Aktive Spieler online:",
+            "HRA": "SPIEL",
+            "SOLO": "SOLO",
+            "MULTIPLAYER": "MEHRSPIELER",
+            "POSTUP": "FORTSCHRITT",
+            "VÝBAVA": "AUSRÜSTUNG",
+            "VYLEPŠENÍ": "VERBESSERUNGEN",
+            "ŽEBŘÍČEK": "RANGLISTE",
+            "OSTATNÍ": "SONSTIGES",
+            "NÁVOD": "ANLEITUNG",
+            "FEEDBACK": "FEEDBACK",
+            "NASTAVENÍ": "EINSTELLUNGEN",
+            "ODHLÁSIT": "ABMELDEN",
+            "SÍŇ SLÁVY": "RUHMESHALLE",
+            "Načítání ze serveru...": "Wird vom Server geladen...",
+            "ZAVŘÍT": "SCHLIESSEN",
+            "JAZYK / LANGUAGE:": "SPRACHE:",
+            "NEBEZPEČNÁ ZÓNA:": "GEFAHRENZONE:",
+            "ODHLÁSIT SE A SMAZAT POSTUP": "ABMELDEN & DATEN LÖSCHEN",
+            "TVÁ VÝBAVA": "DEINE FLOTTE",
+            "SÍŤOVÁ HRA": "MEHRSPIELER",
+            "DOSTUPNÉ SERVERY": "VERFÜGBARE SERVER",
+            "OBNOVIT": "AKTUALISIEREN",
+            "ZALOŽIT HRU": "SPIEL ERSTELLEN",
+            "VYTVOŘIT NOVÝ SERVER": "NEUEN SERVER ERSTELLEN",
+            "Název serveru...": "Servername...",
+            "ZPĚT": "ZURÜCK",
+            "LEVEL UP!": "STUFENAUFSTIEG!",
+            "VESMÍRNÝ MANUÁL": "WELTRAUM-HANDBUCH",
+            "Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.": "Alles, was du zum Überleben im Weltraum wissen musst.",
+            "🕹️ ZÁKLADNÍ OVLÁDÁNÍ": "🕹️ GRUNDSTEUERUNG",
+            "Pohyb:": "Bewegung:",
+            "Schopnost:": "Fähigkeit:",
+            "Pauza:": "Pause:",
+            "🧬 VÝVOJ A LEVELY": "🧬 EVOLUTION UND LEVEL",
+            "Zabíjej nepřátele a sbírej": "Töte Feinde und sammle",
+            "Každý nový level ti nabídne 3 náhodná vylepšení.": "Jedes Level bietet 3 zufällige Upgrades.",
+            "Tip: Zaměř se nejdřív na poškození (Damage) a pak na dosah (Magnet)!": "Tipp: Fokus auf Schaden, dann Magnet-Reichweite!",
+            "🎁 TAKTICKÁ VÝBAVA": "🎁 TAKTISCHE AUSRÜSTUNG",
+            "Vymaže vše na obrazovce.": "Löscht alles auf dem Bildschirm.",
+            "Přitáhne všechny gemy z dálky.": "Zieht alle Edelsteine aus der Ferne an.",
+            "Opraví poškozený trup lodi.": "Repariert die beschädigte Schiffshülle.",
+            "💡 POKROČILÉ TIPY": "💡 FORTGESCHRITTENE TIPPS",
+            "Skvělá kombinace pro nesmrtelnost.": "Tolle Kombination für Unsterblichkeit.",
+            "Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!": "Erscheint jede Minute. Immer seitlich ausweichen!",
+            "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 Kills = 1 Doge. Kaufe permanente Upgrades!",
+            "ROZUMÍM, CHCI DO BOJE!": "VERSTANDEN, AUF IN DEN KAMPF!",
+            "Napiš mi, co bys chtěl vylepšit nebo nahlásit chybu.": "Schreibe mir, was du verbessern möchtest oder melde einen Fehler.",
+            "ODESLAT": "ABSENDEN",
+            "🚀 FLOTILA LODÍ": "🚀 SCHIFFSFLOTTE",
+            "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ALIEN-ATLAS",
+            "Základní vyvážená loď.": "Ausgewogenes Basisschiff.",
+            "Střílí zničující lasery na více cílů.": "Schießt verheerende Laser auf mehrere Ziele.",
+            "Základní útok tvoří rotující bariéru.": "Basisangriff bildet eine rotierende Barriere.",
+            "Střílí salvu nábojů zblízka.": "Feuert eine Schrotladung auf kurze Distanz ab.",
+            "Vyvolává armádu pomocníků z mrtvých.": "Beschwört eine Armee von Helfern aus den Toten.",
+            "Základní červený nepřítel, útočí ve vlnách.": "Roter Basisfeind, greift in Wellen an.",
+            "Zvláštní fialový/modrý tvar, pohybuje se jinak.": "Besondere lila/blaue Form, bewegt sich anders.",
+            "Rychle se přiblíží a vybuchne, když zasáhne cíl.": "Nähert sich schnell und explodiert beim Aufprall.",
+            "Zlatá hvězdička, je neuvěřitelně rychlý!": "Goldener Stern, unglaublich schnell!",
+            "Léčí a posiluje ostatní ufony v okolí.": "Heilt und stärkt andere Aliens in der Nähe.",
+            "Vyznačí si cíl a bleskově tam doskočí.": "Markiert ein Ziel und springt blitzschnell dorthin.",
+            "Obří mnohostěn s velkým HP. Každou minutu.": "Riesiges Polygon mit viel HP. Jede Minute.",
+            "Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?": "Möchtest du wirklich alle Fortschritte löschen, dich abmelden und lokale Daten löschen?",
+            "Opravdu se chceš odhlásit?": "Möchtest du dich wirklich abmelden?",
+            "NE": "NEIN",
+            "ANO": "JA",
+            "VLASTNĚNO (Klikni)": "IM BESITZ (Klicken)",
+            "VYBRÁNO": "AUSGEWÄHLT",
+            "VLASTNĚNO": "IM BESITZ",
+            "LÉČENÍ": "HEILUNG",
+            "OŽIVOVÁNÍ...": "WIEDERBELEBUNG...",
+            "DOGECOIN:": "DOGECOIN:"
         }
     };
+
+    window.ORIGINAL_TEXTS = window.ORIGINAL_TEXTS || new WeakMap();
     window.setLanguage = function(lang) {
         localStorage.setItem('neoSurvivor_lang', lang);
-        document.querySelectorAll('[data-i18n]').forEach(el => {
-            const key = el.getAttribute('data-i18n');
-            if (I18N[lang] && I18N[lang][key]) el.innerText = I18N[lang][key];
-        });
+        const dict = I18N[lang] || {};
+        
+        function walk(node) {
+            if (node.nodeType === 3) {
+                const trimmed = node.nodeValue.trim();
+                if (trimmed && trimmed.length > 1) {
+                    if (!window.ORIGINAL_TEXTS.has(node)) {
+                        window.ORIGINAL_TEXTS.set(node, trimmed);
+                    }
+                    const orig = window.ORIGINAL_TEXTS.get(node);
+                    if (dict[orig]) {
+                        node.nodeValue = node.nodeValue.replace(trimmed, dict[orig]);
+                    } else if (I18N['cs'] && !dict[orig] && orig) {
+                        node.nodeValue = node.nodeValue.replace(trimmed, orig);
+                    }
+                }
+            } else if (node.nodeType === 1 && node.nodeName !== 'SCRIPT' && node.nodeName !== 'STYLE') {
+                for (let i = 0; i < node.childNodes.length; i++) walk(node.childNodes[i]);
+                if (node.placeholder) {
+                    if (!window.ORIGINAL_TEXTS.has(node)) window.ORIGINAL_TEXTS.set(node, node.placeholder);
+                    const orig = window.ORIGINAL_TEXTS.get(node);
+                    if (dict[orig]) node.placeholder = dict[orig];
+                    else node.placeholder = orig;
+                }
+            }
+        }
+        walk(document.body);
+        window.T = function(str) { return dict[str] || str; };
     };
+
     const langCs = document.getElementById('btn-lang-cs');
     if (langCs) langCs.onclick = () => window.setLanguage('cs');
     const langEn = document.getElementById('btn-lang-en');
     if (langEn) langEn.onclick = () => window.setLanguage('en');
+    const langDe = document.getElementById('btn-lang-de');
+    if (langDe) langDe.onclick = () => window.setLanguage('de');
     window.setLanguage(localStorage.getItem('neoSurvivor_lang') || 'cs');
 
     loadMeta();
