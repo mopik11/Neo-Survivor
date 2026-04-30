@@ -1441,8 +1441,12 @@ class Player {
                 const isCrit = Math.random() < this.critChance;
                 const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
 
-                // Malý rozptyl pro více projektilů
-                const spread = this.projectileCount > 1 ? (Math.random() - 0.5) * 0.15 : 0;
+                // Rovnoměrný rozptyl pro více projektilů
+                let spread = 0;
+                if (this.projectileCount > 1) {
+                    const totalSpread = 0.4; // 0.4 radiánu rozptyl
+                    spread = -totalSpread / 2 + (totalSpread / (this.projectileCount - 1)) * i;
+                }
                 const baseAngle = Math.atan2(target.y - this.y, target.x - this.x);
                 const shootAngle = baseAngle + spread;
 
@@ -2446,6 +2450,31 @@ function init() {
     GAME.ctx.fillStyle = '#020617';
     GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
 
+    const I18N = {
+        cs: {
+            "NASTAVENÍ": "NASTAVENÍ", "JAZYK / LANGUAGE:": "JAZYK / LANGUAGE:", "NEBEZPEČNÁ ZÓNA:": "NEBEZPEČNÁ ZÓNA:", 
+            "ODHLÁSIT SE A SMAZAT POSTUP": "ODHLÁSIT SE A SMAZAT POSTUP", "ZAVŘÍT": "ZAVŘÍT", 
+            "🚀 FLOTILA LODÍ": "🚀 FLOTILA LODÍ", "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ATLAS MIMOZEMŠŤANŮ"
+        },
+        en: {
+            "NASTAVENÍ": "SETTINGS", "JAZYK / LANGUAGE:": "LANGUAGE:", "NEBEZPEČNÁ ZÓNA:": "DANGER ZONE:", 
+            "ODHLÁSIT SE A SMAZAT POSTUP": "LOGOUT & DELETE PROGRESS", "ZAVŘÍT": "CLOSE", 
+            "🚀 FLOTILA LODÍ": "🚀 SHIP FLEET", "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ALIEN ATLAS"
+        }
+    };
+    window.setLanguage = function(lang) {
+        localStorage.setItem('neoSurvivor_lang', lang);
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (I18N[lang] && I18N[lang][key]) el.innerText = I18N[lang][key];
+        });
+    };
+    const langCs = document.getElementById('btn-lang-cs');
+    if (langCs) langCs.onclick = () => window.setLanguage('cs');
+    const langEn = document.getElementById('btn-lang-en');
+    if (langEn) langEn.onclick = () => window.setLanguage('en');
+    window.setLanguage(localStorage.getItem('neoSurvivor_lang') || 'cs');
+
     loadMeta();
     document.getElementById('display-max-level').innerText = META.maxLevel || 0;
 
@@ -2484,6 +2513,7 @@ function init() {
     if (btnRegister) btnRegister.onclick = () => handleAuth(false);
 
     document.getElementById('btn-reset-progress').onclick = () => {
+        document.getElementById('settings-modal').classList.remove('active');
         window.showCustomConfirm("Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?", () => {
             localStorage.removeItem('neoSurvivor_meta');
             localStorage.removeItem('neoSurvivor_pid');

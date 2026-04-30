@@ -128,14 +128,22 @@
 
       <div id="settings-modal" class="modal">
         <div class="modal-content" style="max-width: 450px;">
-          <h2 style="font-size: 2.5rem; margin-bottom: 1.5rem;">NASTAVENÍ</h2>
+          <h2 style="font-size: 2.5rem; margin-bottom: 1.5rem;" data-i18n="NASTAVENÍ">NASTAVENÍ</h2>
 
-          <div style="width: 100%; padding-top: 10px;">
-              <p style="color: #ef4444; font-size: 0.8rem; margin-bottom: 10px;">NEBEZPEČNÁ ZÓNA:</p>
-              <button id="btn-reset-progress" class="btn-restart" style="width: 100%; background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #fca5a5; white-space: normal; font-size: 1rem; padding: 0.8rem 1rem;">ODHLÁSIT SE A SMAZAT POSTUP</button>
+          <div style="width: 100%; margin-bottom: 20px;">
+              <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 10px;" data-i18n="JAZYK / LANGUAGE:">JAZYK / LANGUAGE:</p>
+              <div style="display: flex; gap: 10px;">
+                  <button id="btn-lang-cs" class="btn-restart" style="flex: 1; padding: 0.5rem; background: rgba(255,255,255,0.1); border: none;">🇨🇿 ČEŠTINA</button>
+                  <button id="btn-lang-en" class="btn-restart" style="flex: 1; padding: 0.5rem; background: rgba(255,255,255,0.05); border: none;">🇬🇧 ENGLISH</button>
+              </div>
           </div>
 
-          <button class="btn-restart" id="btn-close-settings" style="margin-top:2rem; width: 100%; background: rgba(255,255,255,0.05); border: none;">ZAVŘÍT</button>
+          <div style="width: 100%; padding-top: 10px;">
+              <p style="color: #ef4444; font-size: 0.8rem; margin-bottom: 10px;" data-i18n="NEBEZPEČNÁ ZÓNA:">NEBEZPEČNÁ ZÓNA:</p>
+              <button id="btn-reset-progress" class="btn-restart" style="width: 100%; background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #fca5a5; white-space: normal; font-size: 1rem; padding: 0.8rem 1rem;" data-i18n="ODHLÁSIT SE A SMAZAT POSTUP">ODHLÁSIT SE A SMAZAT POSTUP</button>
+          </div>
+
+          <button class="btn-restart" id="btn-close-settings" style="margin-top:2rem; width: 100%; background: rgba(255,255,255,0.05); border: none;" data-i18n="ZAVŘÍT">ZAVŘÍT</button>
         </div>
       </div>
 
@@ -231,22 +239,26 @@
             </div>
 
             <div class="tutorial-card">
-              <h3>🚀 FLOTILA LODÍ</h3>
+              <h3 data-i18n="🚀 FLOTILA LODÍ">🚀 FLOTILA LODÍ</h3>
               <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                <li><strong style="color:#6366f1">Průzkumník:</strong> Vyvážená loď se speciální schopností Sniper.</li>
-                <li><strong style="color:#f43f5e">Těžký Křižník:</strong> Pomalý, ale má ničivý laser a víc HP.</li>
-                <li><strong style="color:#a855f7">Duch:</strong> Křehká loď, která dokáže posednout nepřátele.</li>
+                <li><strong style="color:white">🚀 Průzkumník:</strong> Základní vyvážená loď.</li>
+                <li><strong style="color:#60a5fa">⚡ Laserový křižník:</strong> Střílí zničující lasery na více cílů.</li>
+                <li><strong style="color:#f43f5e">🛡️ Obránce:</strong> Základní útok tvoří rotující bariéru.</li>
+                <li><strong style="color:#fbbf24">💥 Brokovnice:</strong> Střílí salvu nábojů zblízka.</li>
+                <li><strong style="color:#a855f7">💀 Nekromancer:</strong> Vyvolává armádu pomocníků z mrtvých.</li>
               </ul>
             </div>
 
             <div class="tutorial-card">
-              <h3>👾 ATLAS MIMOZEMŠŤANŮ</h3>
+              <h3 data-i18n="👾 ATLAS MIMOZEMŠŤANŮ">👾 ATLAS MIMOZEMŠŤANŮ</h3>
               <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                <li><span style="color:#ef4444">●</span> <strong style="color:white">Dron:</strong> Základní nepřítel, útočí ve vlnách.</li>
-                <li><span style="color:#22c55e">●</span> <strong style="color:white">Lovec:</strong> Střílí nebezpečné projektily.</li>
-                <li><span style="color:#f59e0b">●</span> <strong style="color:white">Sebevrah:</strong> Rychle se přiblíží a vybuchne.</li>
-                <li><span style="color:#3b82f6">●</span> <strong style="color:white">Opravář:</strong> Léčí ostatní ufony v okolí.</li>
-                <li><span style="color:#eab308">★</span> <strong style="color:white">Hvězda:</strong> Elitní nepřítel s obrovským HP.</li>
+                <li><span style="color:#ef4444">▲</span> <strong style="color:white">Dron:</strong> Základní červený nepřítel, útočí ve vlnách.</li>
+                <li><span style="color:#a855f7">■</span> <strong style="color:white">Kostka:</strong> Zvláštní fialový/modrý tvar, pohybuje se jinak.</li>
+                <li><span style="color:#f97316">◆</span> <strong style="color:white">Kamikadze:</strong> Rychle se přiblíží a vybuchne, když zasáhne cíl.</li>
+                <li><span style="color:#eab308">★</span> <strong style="color:white">Goblin:</strong> Zlatá hvězdička, je neuvěřitelně rychlý!</li>
+                <li><span style="color:#0ea5e9">✚</span> <strong style="color:white">Support:</strong> Léčí a posiluje ostatní ufony v okolí.</li>
+                <li><span style="color:#f43f5e">▼</span> <strong style="color:white">Skokan:</strong> Vyznačí si cíl a bleskově tam doskočí.</li>
+                <li><span style="color:#ef4444">⬟</span> <strong style="color:white">Boss:</strong> Obří mnohostěn s velkým HP. Každou minutu.</li>
               </ul>
             </div>
 
