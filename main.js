@@ -584,9 +584,9 @@ class FriendlyMinion {
         this.speed = 1.75;
     }
     update() {
-        this.life -= 1/60;
+        this.life -= 1 / 60;
         if (this.life <= 0) this.hp = 0;
-        
+
         const enemies = GAME.entities.enemies;
         if (enemies && enemies.length > 0) {
             let target = null;
@@ -605,7 +605,7 @@ class FriendlyMinion {
                 const angle = Math.atan2(target.y - this.y, target.x - this.x);
                 this.x += Math.cos(angle) * this.speed * GAME.speedFactor;
                 this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
-                
+
                 if (minDist < this.radius + target.radius) {
                     target.hp -= this.damage * GAME.speedFactor;
                     if (target.hp <= 0) handleEnemyDeath(target);
@@ -866,7 +866,7 @@ class Boss {
         if (targets.length === 0) return;
         const target = targets.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0];
         const angle = Math.atan2(target.y - this.y, target.x - this.x);
-        
+
         let speedScale = 1.0;
         const players = getAllAlivePlayers();
         players.forEach(p => { if (p.aura && dist(this.x, this.y, p.x, p.y) < (p.auraRange || 150)) speedScale *= 0.5; });
@@ -878,13 +878,13 @@ class Boss {
         // Boss útoky podle typu
         if (Date.now() - this.lastAction > 3000) {
             if (this.type === 2) { // Hunter Boss - dávka střel
-                for(let i=0; i<8; i++) {
+                for (let i = 0; i < 8; i++) {
                     const a = angle - 0.5 + i * 0.125;
-                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x+Math.cos(a)*100, this.y+Math.sin(a)*100, 15, { isEnemy:true, color:'#f43f5e', speed:8 }));
+                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a) * 100, this.y + Math.sin(a) * 100, 15, { isEnemy: true, color: '#f43f5e', speed: 8 }));
                 }
             } else if (this.type === 3) { // Kamikadze Boss - minion spawn
-                for(let i=0; i<3; i++) {
-                    GAME.entities.enemies.push(new Enemy(this.x, this.y, 1, Math.random().toString(36).substr(2,9), 3));
+                for (let i = 0; i < 3; i++) {
+                    GAME.entities.enemies.push(new Enemy(this.x, this.y, 1, Math.random().toString(36).substr(2, 9), 3));
                 }
             }
             this.lastAction = Date.now();
@@ -892,9 +892,9 @@ class Boss {
     }
     draw(ctx, cam) {
         const ratio = this.hp / this.maxHp;
-        const colors = {1:'#ef4444', 2:'#f43f5e', 3:'#f97316', 4:'#eab308', 5:'#0ea5e9'};
+        const colors = { 1: '#ef4444', 2: '#f43f5e', 3: '#f97316', 4: '#eab308', 5: '#0ea5e9' };
         const color = colors[this.type] || '#ef4444';
-        
+
         ctx.shadowBlur = 50; ctx.shadowColor = color; ctx.fillStyle = color;
         ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
         ctx.rotate(Date.now() / 1000);
@@ -902,11 +902,11 @@ class Boss {
         const sides = 5 + this.type;
         for (let i = 0; i < sides; i++) {
             const a = (i / sides) * Math.PI * 2;
-            const r = this.radius * (0.8 + Math.sin(Date.now()/500 + i)*0.2);
-            if (i === 0) ctx.moveTo(Math.cos(a)*r, Math.sin(a)*r); else ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+            const r = this.radius * (0.8 + Math.sin(Date.now() / 500 + i) * 0.2);
+            if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r); else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
         }
         ctx.closePath(); ctx.fill();
-        
+
         // HP Bar
         ctx.restore();
         const barW = 120; const barH = 12;
@@ -934,7 +934,7 @@ class Enemy {
         this.hp = this.maxHp;
         this.knockback = { x: 0, y: 0 };
         this.possessed = false;
-        
+
         // Safety init
         if (this.type === 6) {
             this.jumpState = 'WALKING';
@@ -990,7 +990,7 @@ class Enemy {
         });
         if (this.type === 6) { // SKOKAN (Leaper)
             if (!this.jumpState) this.jumpState = 'WALKING';
-            
+
             if (this.jumpState === 'WALKING') {
                 if (dist(this.x, this.y, target.x, target.y) < 250) {
                     this.jumpState = 'PREPARING';
@@ -1008,7 +1008,7 @@ class Enemy {
                 this.jumpProgress += 0.04 * GAME.speedFactor;
                 this.x = this.jumpStart.x + (this.jumpTarget.x - this.jumpStart.x) * this.jumpProgress;
                 this.y = this.jumpStart.y + (this.jumpTarget.y - this.jumpStart.y) * this.jumpProgress;
-                
+
                 if (this.jumpProgress >= 1) {
                     this.jumpState = 'WALKING';
                     // Po dopadu může udělat malé poškození v okolí
@@ -1131,18 +1131,18 @@ class Enemy {
             const color = this.possessed ? '#22c55e' : '#f43f5e';
             ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
-            
+
             if (this.jumpState === 'PREPARING') {
                 const s = 1 + Math.sin(Date.now() / 50) * 0.2;
                 ctx.scale(s, s);
                 ctx.fillStyle = '#fff';
             }
-            
+
             ctx.beginPath();
             ctx.moveTo(0, -20); ctx.lineTo(15, 10); ctx.lineTo(-15, 10); ctx.closePath(); ctx.fill();
             if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
             ctx.restore(); ctx.shadowBlur = 0;
-            
+
             if (this.jumpState === 'PREPARING' && this.jumpTarget) {
                 ctx.setLineDash([5, 5]); ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
                 ctx.beginPath(); ctx.moveTo(this.x - cam.x, this.y - cam.y); ctx.lineTo(this.jumpTarget.x - cam.x, this.jumpTarget.y - cam.y); ctx.stroke(); ctx.setLineDash([]);
@@ -1421,7 +1421,7 @@ class Player {
         if (this.dead) return;
         const enemies = GAME.entities.enemies;
         if (!enemies || enemies.length === 0) return;
-        
+
         let target = null;
         let minDist = Infinity;
         for (let i = 0; i < enemies.length; i++) {
@@ -2030,7 +2030,7 @@ document.addEventListener('click', (e) => {
 
 function initSocket() {
     if (NET.socket && NET.socket.connected) return;
-    
+
     // Automatická detekce serveru (lokální vs produkční)
     const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? "http://localhost:3000"
@@ -2041,10 +2041,10 @@ function initSocket() {
 
         NET.socket.on('connect', () => {
             console.warn("CLOUD: Připojeno k hernímu serveru!");
-            
+
             const myPlayerId = localStorage.getItem('neoSurvivor_pid') || Math.random().toString(36).substr(2, 9);
             if (!localStorage.getItem('neoSurvivor_pid')) localStorage.setItem('neoSurvivor_pid', myPlayerId);
-            
+
             NET.socket.emit('initPlayer', { playerId: myPlayerId });
 
             const savedUser = localStorage.getItem('neoSurvivor_user');
@@ -2786,7 +2786,7 @@ function handleEnemyDeath(enemy) {
     if (!enemy || enemy.dead || enemy.hp > 0) return;
     enemy.dead = true;
     AudioEngine.play('hit');
-    
+
     if (!NET.isMultiplayer && GAME.entities.gems) {
         if (enemy.type === 4) { // Zloděj drop
             const drops = (enemy.stolenGems || 0) + 5;
@@ -2805,7 +2805,7 @@ function handleEnemyDeath(enemy) {
         }
     }
     GAME.kills++;
-    
+
     const p = GAME.entities.player;
     if (p && p.lifestealChance > 0 && Math.random() < p.lifestealChance) {
         const healAmount = Math.max(8, p.maxHp * 0.08);
@@ -3092,8 +3092,8 @@ function update(dt) {
                             if (validTargets.length > 0) {
                                 const next = validTargets.sort((a, b) => dist(proj.x, proj.y, a.x, a.y) - dist(proj.x, proj.y, b.x, b.y))[0];
                                 const angle = Math.atan2(next.y - proj.y, next.x - proj.x);
-                                proj.vx = Math.cos(angle) * (proj.speed || CONFIG.PROJECTILE_SPEED); 
-                                proj.vy = Math.sin(angle) * (proj.speed || CONFIG.PROJECTILE_SPEED); 
+                                proj.vx = Math.cos(angle) * (proj.speed || CONFIG.PROJECTILE_SPEED);
+                                proj.vy = Math.sin(angle) * (proj.speed || CONFIG.PROJECTILE_SPEED);
                                 proj.bounce--;
                                 proj.life += 50; // Přidat životnost při odrazu, aby to fungovalo i u brokovnice
                             }
