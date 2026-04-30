@@ -2589,7 +2589,7 @@ function init() {
             "ROZUMÍM": "UNDERSTOOD",
             "VAROVÁNÍ": "WARNING",
             "Hledám servery...": "Searching servers...",
-            "- NEBO KÓD -": "- OR CODE -",
+            "— NEBO KÓD —": "— OR CODE —",
             "MÍSTNOST ZALOŽENA": "ROOM HOSTED",
             "KÓD TVÉ MÍSTNOSTI:": "YOUR ROOM CODE:",
             "POKRAČOVAT": "CONTINUE",
@@ -2855,7 +2855,7 @@ function init() {
             "ROZUMÍM": "VERSTANDEN",
             "VAROVÁNÍ": "WARNUNG",
             "Hledám servery...": "Suche Server...",
-            "- NEBO KÓD -": "- ODER CODE -",
+            "— NEBO KÓD —": "— ODER CODE —",
             "MÍSTNOST ZALOŽENA": "RAUM ERSTELLT",
             "KÓD TVÉ MÍSTNOSTI:": "DEIN RAUMCODE:",
             "POKRAČOVAT": "WEITER",
@@ -3121,7 +3121,7 @@ function init() {
             "ROZUMÍM": "ENTENDIDO",
             "VAROVÁNÍ": "ADVERTENCIA",
             "Hledám servery...": "Buscando servidores...",
-            "- NEBO KÓD -": "- O CÓDIGO -",
+            "— NEBO KÓD —": "— O CÓDIGO —",
             "MÍSTNOST ZALOŽENA": "SALA CREADA",
             "KÓD TVÉ MÍSTNOSTI:": "CÓDIGO DE TU SALA:",
             "POKRAČOVAT": "CONTINUAR",
@@ -4228,10 +4228,10 @@ function render() {
             ctx.font = 'bold 12px Outfit, sans-serif';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
-            ctx.fillText(`Hráči: ${playersList.length}`, startX + 15, sbY + 12);
+            ctx.fillText(window.T('Hráči:') + ' ' + playersList.length, startX + 15, sbY + 12);
             
             ctx.textAlign = 'right';
-            ctx.fillText(`Zabití`, startX + sbWidth - 15, sbY + 12);
+            ctx.fillText(window.T('Zabití'), startX + sbWidth - 15, sbY + 12);
 
             ctx.beginPath();
             ctx.moveTo(startX + 10, sbY + 30);
