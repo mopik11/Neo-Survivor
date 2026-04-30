@@ -240,6 +240,18 @@ io.on('connection', (socket) => {
         });
     });
 
+    socket.on('deleteAccount', (data) => {
+        const { user, pass } = data;
+        if (!user || !pass) return;
+        db.get(`SELECT id FROM accounts WHERE username = ? AND password = ?`, [user, pass], (err, row) => {
+            if (row) {
+                db.run(`DELETE FROM accounts WHERE id = ?`, [row.id], () => {
+                    broadcastLeaderboard();
+                });
+            }
+        });
+    });
+
     socket.on('login', (data) => {
         const { user, pass } = data;
         db.get(`SELECT meta FROM accounts WHERE username = ? AND password = ?`, [user, pass], (err, row) => {
