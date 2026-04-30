@@ -112,6 +112,7 @@ const META = {
     maxLevel: 1,
     currency: 0,
     lastDailyGift: 0,
+    dailyStreak: 0,
     upgrades: { hp: 0, speed: 0, luck: 0, regen: 0, armor: 0, hat: null },
     ships: { 1: true, 2: false, 3: false },
     selectedShip: 1,
@@ -143,6 +144,7 @@ const loadMeta = () => {
         if (!META.upgrades.regen) META.upgrades.regen = 0;
         if (!META.upgrades.armor) META.upgrades.armor = 0;
         if (!META.lastDailyGift) META.lastDailyGift = 0;
+        if (!META.dailyStreak) META.dailyStreak = 0;
         if (!META.playerName) META.playerName = null;
         if (!META.maxLevel) META.maxLevel = 1;
     }
@@ -2535,9 +2537,13 @@ function init() {
             "💡 POKROČILÉ TIPY": "💡 ADVANCED TIPS",
             "💊 Regenerace": "💊 Regeneration",
             "🛡️ Štít": "🛡️ Shield",
-            "DÁREK": "GIFT",
-            "Další dárek za ": "Next gift in ",
+            "DÁREK": "DAILY REWARD",
+            "Další dárek za ": "Next reward in ",
             "Dostal jsi 50 Doge! 🚀": "You got 50 Doge! 🚀",
+            "DEN": "DAY",
+            "TVŮJ STREAK:": "YOUR STREAK:",
+            "DÁREK VYZVEDNUT!": "REWARD CLAIMED!",
+            "Odměna:": "Reward:",
             "VYTVOŘIT NOVÝ SERVER": "CREATE NEW SERVER",
             "Název serveru...": "Server name...",
             "ZPĚT": "BACK",
@@ -3513,34 +3519,79 @@ function init() {
     const btnRegister = document.getElementById('btn-register');
     if (btnRegister) btnRegister.onclick = () => handleAuth(false);
 
-    // Daily Gift Logic
+    // Daily Gift Logic (Streak based)
     const btnDaily = document.createElement('button');
-    btnDaily.className = 'btn-restart btn-mini';
     btnDaily.id = 'btn-daily-gift';
-    btnDaily.style.background = 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)';
-    btnDaily.style.color = 'white';
-    btnDaily.innerHTML = '<span>🎁</span> <div data-i18n="DÁREK">DÁREK</div>';
+    btnDaily.style.cssText = `
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+        border: 2px solid rgba(255,255,255,0.2);
+        box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.8rem;
+        z-index: 100;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    `;
+    btnDaily.innerHTML = '🎁';
+    btnDaily.title = window.T("DENNÍ DÁREK");
     
-    const otherMenu = document.querySelector('.menu-actions-grid.secondary');
-    if (otherMenu) otherMenu.insertBefore(btnDaily, otherMenu.firstChild);
+    const menuContent = document.querySelector('#menu-modal .modal-content');
+    if (menuContent) menuContent.appendChild(btnDaily);
+
+    btnDaily.onmouseenter = () => btnDaily.style.transform = 'scale(1.1) rotate(10deg)';
+    btnDaily.onmouseleave = () => btnDaily.style.transform = 'scale(1) rotate(0deg)';
 
     btnDaily.onclick = () => {
         const now = Date.now();
-        const cooldown = 24 * 60 * 60 * 1000; // 24 hours
-        if (now - META.lastDailyGift < cooldown) {
-            const remaining = cooldown - (now - META.lastDailyGift);
-            const hours = Math.floor(remaining / (3600 * 1000));
-            const mins = Math.floor((remaining % (3600 * 1000)) / (60 * 1000));
-            window.showCustomAlert(window.T("Další dárek za ") + hours + "h " + mins + "m!");
+        const hour = 3600 * 1000;
+        const day = 24 * hour;
+        
+        const lastClaim = META.lastDailyGift || 0;
+        const timeSince = now - lastClaim;
+
+        if (timeSince < day) {
+            const remaining = day - timeSince;
+            const h = Math.floor(remaining / hour);
+            const m = Math.floor((remaining % hour) / (60 * 1000));
+            window.showCustomAlert(window.T("Další dárek za ") + h + "h " + m + "m!");
             return;
         }
-        META.currency += 50;
+
+        // Streak logic
+        if (timeSince > 2 * day) {
+            META.dailyStreak = 1; // Reset if missed a day
+        } else {
+            META.dailyStreak = (META.dailyStreak || 0) + 1;
+        }
+
+        const rewards = [50, 100, 200, 400, 800];
+        const reward = rewards[Math.min(META.dailyStreak - 1, rewards.length - 1)];
+
+        META.currency += reward;
         META.lastDailyGift = now;
         saveMeta();
+        
         document.getElementById('display-doge').innerText = META.currency;
-        window.showCustomAlert(window.T("Dostal jsi 50 Doge! 🚀"));
+        
+        window.showCustomAlert(`🎉 ${window.T("DEN")} ${META.dailyStreak}: ${window.T("Dostal jsi")} ${reward} Doge! 🚀`);
         btnDaily.style.opacity = '0.5';
+        btnDaily.style.filter = 'grayscale(1)';
     };
+
+    // Update button state on load
+    const timeSinceLast = Date.now() - (META.lastDailyGift || 0);
+    if (timeSinceLast < 24 * 3600 * 1000) {
+        btnDaily.style.opacity = '0.5';
+        btnDaily.style.filter = 'grayscale(1)';
+    }
 
     document.getElementById('btn-reset-progress').onclick = () => {
         document.getElementById('settings-modal').classList.remove('active');
