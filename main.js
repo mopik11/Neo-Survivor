@@ -3520,77 +3520,59 @@ function init() {
     if (btnRegister) btnRegister.onclick = () => handleAuth(false);
 
     // Daily Gift Logic (Streak based)
-    const btnDaily = document.createElement('button');
-    btnDaily.id = 'btn-daily-gift';
-    btnDaily.style.cssText = `
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
-        border: 2px solid rgba(255,255,255,0.2);
-        box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
-        cursor: pointer;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 1.8rem;
-        z-index: 100;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    `;
-    btnDaily.innerHTML = '🎁';
-    btnDaily.title = window.T("DENNÍ DÁREK");
-    
-    const menuContent = document.querySelector('#menu-modal .modal-content');
-    if (menuContent) menuContent.appendChild(btnDaily);
-
-    btnDaily.onmouseenter = () => btnDaily.style.transform = 'scale(1.1) rotate(10deg)';
-    btnDaily.onmouseleave = () => btnDaily.style.transform = 'scale(1) rotate(0deg)';
-
-    btnDaily.onclick = () => {
-        const now = Date.now();
-        const hour = 3600 * 1000;
-        const day = 24 * hour;
+    const btnDaily = document.getElementById('btn-daily-gift');
+    if (btnDaily) {
+        btnDaily.style.display = 'flex';
+        btnDaily.title = window.T("DENNÍ DÁREK");
         
-        const lastClaim = META.lastDailyGift || 0;
-        const timeSince = now - lastClaim;
+        btnDaily.onmouseenter = () => btnDaily.style.transform = 'scale(1.1) rotate(10deg)';
+        btnDaily.onmouseleave = () => btnDaily.style.transform = 'scale(1) rotate(0deg)';
 
-        if (timeSince < day) {
-            const remaining = day - timeSince;
-            const h = Math.floor(remaining / hour);
-            const m = Math.floor((remaining % hour) / (60 * 1000));
-            window.showCustomAlert(window.T("Další dárek za ") + h + "h " + m + "m!");
-            return;
+        btnDaily.onclick = () => {
+            const now = Date.now();
+            const hour = 3600 * 1000;
+            const day = 24 * hour;
+            
+            const lastClaim = META.lastDailyGift || 0;
+            const timeSince = now - lastClaim;
+
+            if (timeSince < day) {
+                const remaining = day - timeSince;
+                const h = Math.floor(remaining / hour);
+                const m = Math.floor((remaining % hour) / (60 * 1000));
+                window.showCustomAlert(window.T("Další dárek za ") + h + "h " + m + "m!");
+                return;
+            }
+
+            // Streak logic
+            if (timeSince > 2 * day) {
+                META.dailyStreak = 1; // Reset if missed a day (over 48h)
+            } else {
+                META.dailyStreak = (META.dailyStreak || 0) + 1;
+            }
+
+            const rewards = [50, 100, 200, 400, 800];
+            const reward = rewards[Math.min(META.dailyStreak - 1, rewards.length - 1)];
+
+            META.currency += reward;
+            META.lastDailyGift = now;
+            saveMeta();
+            
+            document.getElementById('display-doge').innerText = META.currency;
+            
+            window.showCustomAlert(`🎉 ${window.T("DEN")} ${META.dailyStreak}: ${window.T("Dostal jsi")} ${reward} Doge! 🚀`);
+            btnDaily.style.opacity = '0.5';
+            btnDaily.style.filter = 'grayscale(1)';
+            btnDaily.style.pointerEvents = 'none';
+        };
+
+        // Update button state on load
+        const timeSinceLast = Date.now() - (META.lastDailyGift || 0);
+        if (timeSinceLast < 24 * 3600 * 1000) {
+            btnDaily.style.opacity = '0.5';
+            btnDaily.style.filter = 'grayscale(1)';
+            btnDaily.style.pointerEvents = 'none';
         }
-
-        // Streak logic
-        if (timeSince > 2 * day) {
-            META.dailyStreak = 1; // Reset if missed a day
-        } else {
-            META.dailyStreak = (META.dailyStreak || 0) + 1;
-        }
-
-        const rewards = [50, 100, 200, 400, 800];
-        const reward = rewards[Math.min(META.dailyStreak - 1, rewards.length - 1)];
-
-        META.currency += reward;
-        META.lastDailyGift = now;
-        saveMeta();
-        
-        document.getElementById('display-doge').innerText = META.currency;
-        
-        window.showCustomAlert(`🎉 ${window.T("DEN")} ${META.dailyStreak}: ${window.T("Dostal jsi")} ${reward} Doge! 🚀`);
-        btnDaily.style.opacity = '0.5';
-        btnDaily.style.filter = 'grayscale(1)';
-    };
-
-    // Update button state on load
-    const timeSinceLast = Date.now() - (META.lastDailyGift || 0);
-    if (timeSinceLast < 24 * 3600 * 1000) {
-        btnDaily.style.opacity = '0.5';
-        btnDaily.style.filter = 'grayscale(1)';
     }
 
     document.getElementById('btn-reset-progress').onclick = () => {
@@ -3599,11 +3581,15 @@ function init() {
             if (NET.socket) {
                 // Wait for confirmation from server
                 NET.socket.once('accountDeleted', (res) => {
-                    localStorage.removeItem('neoSurvivor_meta');
-                    localStorage.removeItem('neoSurvivor_pid');
-                    localStorage.removeItem('neoSurvivor_user');
-                    localStorage.removeItem('neoSurvivor_pass');
-                    location.reload();
+                    if (res.success) {
+                        localStorage.removeItem('neoSurvivor_meta');
+                        localStorage.removeItem('neoSurvivor_pid');
+                        localStorage.removeItem('neoSurvivor_user');
+                        localStorage.removeItem('neoSurvivor_pass');
+                        location.reload();
+                    } else {
+                        window.showCustomAlert(window.T("Smazání se nezdařilo: ") + res.msg);
+                    }
                 });
                 NET.socket.emit('deleteAccount', { 
                     user: localStorage.getItem('neoSurvivor_user'), 
