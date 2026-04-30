@@ -1929,7 +1929,7 @@ function showShipsMenu() {
                 saveMeta();
                 showShipsMenu();
             } else {
-                window.showCustomAlert("Nemáš dost Dogecoinu!");
+                window.showCustomAlert(window.T("Nemáš dost Dogecoinu!"));
             }
         };
         shipsGrid.appendChild(card);
@@ -1967,7 +1967,7 @@ function showShipsMenu() {
                 saveMeta();
                 showShipsMenu();
             } else {
-                window.showCustomAlert("Nemáš dost Dogecoinu!");
+                window.showCustomAlert(window.T("Nemáš dost Dogecoinu!"));
             }
         };
         abilitiesGrid.appendChild(card);
@@ -1992,7 +1992,7 @@ function showMetaMenu() {
         const owned = item.isHat && META.upgrades.hat === item.type;
         card.innerHTML = `<h3>${item.name}</h3><p>${item.desc}</p><span class="cost">${owned ? window.T('VLASTNĚNO') : cost + ' DOGE'}</span>`;
         card.onclick = () => {
-            if (META.currency < cost) { window.showCustomAlert("Nemáš dost Dogecoinu!"); return; }
+            if (META.currency < cost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
             if (item.isHat) { META.upgrades.hat = item.type; }
             else { META.upgrades[item.id]++; }
             META.currency -= cost; saveMeta(); showMetaMenu();
@@ -2067,7 +2067,7 @@ function initSocket() {
             list.innerHTML = '';
 
             if (data.length === 0) {
-                list.innerHTML = '<div style="text-align: center; color: gray; padding: 20px;">Zatím žádné záznamy. Buď první!</div>';
+                list.innerHTML = '<div style="text-align: center; color: gray; padding: 20px;">' + window.T("Zatím žádné záznamy. Buď první!") + '</div>';
                 return;
             }
 
@@ -2093,7 +2093,7 @@ function initSocket() {
             if (!container) return;
             container.innerHTML = '';
             if (rooms.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">Žádné aktivní servery</div>';
+                container.innerHTML = '<div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">' + window.T("Žádné aktivní servery") + '</div>';
                 return;
             }
             rooms.forEach(room => {
@@ -2272,7 +2272,7 @@ function initSocket() {
             const el = document.getElementById('active-players-count');
             if (el) {
                 // Zobrazíme oba údaje pro lepší přehled
-                el.innerHTML = `${data.activePlayers} <span style="font-size:0.65rem; opacity:0.6; margin-left:5px;">(${data.playingNow} v bitvě)</span>`;
+                el.innerHTML = `${data.activePlayers} <span style="font-size:0.65rem; opacity:0.6; margin-left:5px;">(${data.playingNow} ` + window.T("v bitvě") + `)</span>`;
             }
         });
 
@@ -2371,7 +2371,7 @@ window.showHostModal = () => {
 window.joinCloudServer = (roomName) => {
     tryFullscreen();
     if (!roomName || roomName.trim() === '') {
-        window.showCustomAlert("Zadej platný kód!");
+        window.showCustomAlert(window.T("Zadej platný kód!"));
         return;
     }
     initSocket();
@@ -2387,8 +2387,8 @@ function handleAuth(isLogin) {
     const nameVal = document.getElementById('input-login-name').value.trim();
     const passVal = document.getElementById('input-login-pass').value.trim();
 
-    if (nameVal.length < 3) { window.showCustomAlert("Jméno musí mít alespoň 3 znaky!"); return; }
-    if (passVal.length < 1) { window.showCustomAlert("Zadej heslo!"); return; }
+    if (nameVal.length < 3) { window.showCustomAlert(window.T("Jméno musí mít alespoň 3 znaky!")); return; }
+    if (passVal.length < 1) { window.showCustomAlert(window.T("Zadej heslo!")); return; }
 
     if (NET.socket && NET.socket.connected) {
         document.getElementById('login-loader').style.display = 'block';
@@ -2534,7 +2534,17 @@ function init() {
             "VLASTNĚNO": "OWNED",
             "LÉČENÍ": "HEAL",
             "OŽIVOVÁNÍ...": "REVIVING...",
-            "DOGECOIN:": "DOGECOIN:"
+            "DOGECOIN:": "DOGECOIN:",
+            "v bitvě": "in battle",
+            "Nemáš dost Dogecoinu!": "Not enough Dogecoin!",
+            "Zatím žádné záznamy. Buď první!": "No records yet. Be the first!",
+            "Žádné aktivní servery": "No active servers",
+            "Zadej platný kód!": "Enter a valid code!",
+            "Jméno musí mít alespoň 3 znaky!": "Name must have at least 3 characters!",
+            "Zadej heslo!": "Enter password!",
+            "Zpráva musí mít aspoň 5 znaků.": "Message must have at least 5 characters.",
+            "Díky! Zpětná vazba byla odeslána vývojáři.": "Thanks! Feedback sent to the developer.",
+            "Chyba: Nejseš připojen k serveru.": "Error: Not connected to server."
         },
         de: {
             "VÍTEJ!": "WILLKOMMEN!",
@@ -2618,7 +2628,17 @@ function init() {
             "VLASTNĚNO": "IM BESITZ",
             "LÉČENÍ": "HEILUNG",
             "OŽIVOVÁNÍ...": "WIEDERBELEBUNG...",
-            "DOGECOIN:": "DOGECOIN:"
+            "DOGECOIN:": "DOGECOIN:",
+            "v bitvě": "im Kampf",
+            "Nemáš dost Dogecoinu!": "Nicht genug Dogecoin!",
+            "Zatím žádné záznamy. Buď první!": "Noch keine Einträge. Sei der Erste!",
+            "Žádné aktivní servery": "Keine aktiven Server",
+            "Zadej platný kód!": "Gib einen gültigen Code ein!",
+            "Jméno musí mít alespoň 3 znaky!": "Name muss mindestens 3 Zeichen haben!",
+            "Zadej heslo!": "Passwort eingeben!",
+            "Zpráva musí mít aspoň 5 znaků.": "Nachricht muss mindestens 5 Zeichen lang sein.",
+            "Díky! Zpětná vazba byla odeslána vývojáři.": "Danke! Feedback an den Entwickler gesendet.",
+            "Chyba: Nejseš připojen k serveru.": "Fehler: Keine Verbindung zum Server."
         },
         es: {
             "VÍTEJ!": "¡BIENVENIDO!",
@@ -2702,7 +2722,17 @@ function init() {
             "VLASTNĚNO": "ADQUIRIDO",
             "LÉČENÍ": "CURACIÓN",
             "OŽIVOVÁNÍ...": "REVIVIENDO...",
-            "DOGECOIN:": "DOGECOIN:"
+            "DOGECOIN:": "DOGECOIN:",
+            "v bitvě": "en batalla",
+            "Nemáš dost Dogecoinu!": "¡No tienes suficientes Dogecoins!",
+            "Zatím žádné záznamy. Buď první!": "Todavía no hay registros. ¡Sé el primero!",
+            "Žádné aktivní servery": "No hay servidores activos",
+            "Zadej platný kód!": "¡Introduce un código válido!",
+            "Jméno musí mít alespoň 3 znaky!": "¡El nombre debe tener al menos 3 caracteres!",
+            "Zadej heslo!": "¡Introduce la contraseña!",
+            "Zpráva musí mít aspoň 5 znaků.": "El mensaje debe tener al menos 5 caracteres.",
+            "Díky! Zpětná vazba byla odeslána vývojáři.": "¡Gracias! Comentarios enviados al desarrollador.",
+            "Chyba: Nejseš připojen k serveru.": "Error: No conectado al servidor."
         }
     };
 
@@ -2788,7 +2818,7 @@ function init() {
 
     document.getElementById('btn-reset-progress').onclick = () => {
         document.getElementById('settings-modal').classList.remove('active');
-        window.showCustomConfirm("Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?", () => {
+        window.showCustomConfirm(window.T("Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?"), () => {
             localStorage.removeItem('neoSurvivor_meta');
             localStorage.removeItem('neoSurvivor_pid');
             localStorage.removeItem('neoSurvivor_user');
@@ -2916,7 +2946,7 @@ function init() {
 
     const btnMainQuit = document.getElementById('btn-main-quit');
     if (btnMainQuit) btnMainQuit.onclick = () => {
-        window.showCustomConfirm("Opravdu se chceš odhlásit?", () => {
+        window.showCustomConfirm(window.T("Opravdu se chceš odhlásit?"), () => {
             localStorage.removeItem('neoSurvivor_user');
             localStorage.removeItem('neoSurvivor_pass');
             location.reload();
