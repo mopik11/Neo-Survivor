@@ -2047,8 +2047,12 @@ function initSocket() {
         NET.socket.on('connect', () => {
             console.warn("CLOUD: Připojeno k hernímu serveru!");
 
-            const myPlayerId = localStorage.getItem('neoSurvivor_pid') || Math.random().toString(36).substr(2, 9);
-            if (!localStorage.getItem('neoSurvivor_pid')) localStorage.setItem('neoSurvivor_pid', myPlayerId);
+            if (!localStorage.getItem('neoSurvivor_pid')) {
+                myPlayerId = Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('neoSurvivor_pid', myPlayerId);
+            } else {
+                myPlayerId = localStorage.getItem('neoSurvivor_pid');
+            }
 
             NET.socket.emit('initPlayer', { playerId: myPlayerId });
 
@@ -2351,8 +2355,7 @@ window.showHostModal = () => {
     const qrImg = document.getElementById('qr-code-img');
     if (qrImg) {
         // Construct the full URL with the room parameter
-        const currentUrl = window.location.origin + window.location.pathname;
-        const joinUrl = `${currentUrl}?room=${roomName}`;
+        const joinUrl = window.location.href.split('?')[0] + `?room=${roomName}`;
         qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl)}`;
         qrImg.style.display = 'block';
     }
@@ -3512,7 +3515,8 @@ function init() {
         });
     };
 
-    checkUrlParams();
+    // Delay checkUrlParams slightly to ensure all initial modal logic is finished
+    setTimeout(checkUrlParams, 500);
 
     GAME.entities = {
         player: new Player(true),
