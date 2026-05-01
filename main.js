@@ -1928,9 +1928,10 @@ function togglePause(isAFK = false) {
 
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
 
-    // Reset AFK časovače při odpauzování
+    // Reset AFK časovače a spawnování při odpauzování
     if (!GAME.paused) {
         META.lastMoveTime = Date.now();
+        GAME.lastSpawnTime = Date.now(); // Prevence armády nepřátel po pauze
         META.isAFK = false;
     }
 }
@@ -2213,7 +2214,9 @@ function initSocket() {
             if (!GAME.active) {
                 startGame();
                 const chat = document.getElementById('global-chat');
+                const chatBtn = document.getElementById('btn-chat-mobile');
                 if (chat) chat.style.display = 'flex';
+                if (chatBtn) chatBtn.style.display = 'flex';
 
                 if (playerState && (playerState.x !== 0 || playerState.y !== 0)) {
                     GAME.entities.player.x = playerState.x;

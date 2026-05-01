@@ -885,6 +885,7 @@ canvas {
         height: 45px !important;
         padding: 0 !important;
         border-radius: 50% !important;
+        z-index: 1000000 !important;
     }
 }
 
