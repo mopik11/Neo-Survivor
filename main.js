@@ -156,6 +156,8 @@ const GAME = {
     score: 0,
     kills: 0,
     time: 0,
+    startTime: 0,
+    coinsCollected: 0,
     lastBossTime: 0,
     lastSpawnTime: 0,
     frozenUntil: 0,
@@ -163,6 +165,7 @@ const GAME = {
     zoom: 1.0,
     upgradeOptionsCount: 3,
     loopStarted: false,
+    chatActive: false,
     entities: {
         player: null,
         enemies: [],
@@ -549,10 +552,12 @@ class MenuAnimation {
 }
 
 class Fire {
-    constructor(x, y, damage, isLocal = true) {
+    constructor(x, y, damage, isLocal = true, type = 'fire') {
         this.x = x; this.y = y; this.damage = damage;
-        this.radius = 25; this.life = 1.5;
+        this.radius = type === 'neon' ? 12 : 25; 
+        this.life = type === 'neon' ? 0.8 : 1.5;
         this.isLocal = isLocal;
+        this.type = type;
     }
     update() {
         this.life -= 1 / 60;
@@ -574,10 +579,17 @@ class Fire {
         }
     }
     draw(ctx, cam) {
-        ctx.globalAlpha = Math.max(0, this.life / 1.5);
-        ctx.shadowBlur = 10; ctx.shadowColor = '#f59e0b';
-        ctx.fillStyle = '#f59e0b';
-        ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = Math.max(0, this.life / (this.type === 'neon' ? 0.8 : 1.5));
+        if (this.type === 'neon') {
+            ctx.shadowBlur = 15; ctx.shadowColor = '#00f2ff';
+            ctx.fillStyle = '#00f2ff';
+            ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+        } else {
+            ctx.shadowBlur = 10; ctx.shadowColor = '#f59e0b';
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
+        }
         ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
     }
 }
@@ -1093,6 +1105,20 @@ class Enemy {
                 });
             }
         }
+
+        // --- NOVÉ TYPY NEPŘÁTEL ---
+        if (this.type === 7 && !this.dead) { // RYCHLÝ SEBEVRAH
+            this.speed = (CONFIG.ENEMY_BASE_SPEED + 2.5) * GAME.speedFactor;
+            if (dist(this.x, this.y, target.x, target.y) < 25) {
+                this.hp = 0; this.dead = true;
+                if (target.hp !== undefined) target.hp -= 35;
+                shakeScreen(10); AudioEngine.play('hit');
+            }
+        }
+
+        if (this.type === 8) { // ŠTÍTONOŠ (Shield Bearer)
+            this.speed = (CONFIG.ENEMY_BASE_SPEED * 0.7) * GAME.speedFactor;
+        }
     }
     draw(ctx, cam) {
         const ratio = this.hp / this.maxHp;
@@ -1184,6 +1210,25 @@ class Enemy {
 
             ctx.shadowBlur = 20; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
+            ctx.restore(); ctx.shadowBlur = 0;
+        } else if (this.type === 7) {
+            const color = this.possessed ? '#22c55e' : '#f87171';
+            ctx.shadowBlur = 10; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
+            ctx.rotate(Date.now() / 50);
+            ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-8, 8); ctx.lineTo(-8, -8); ctx.closePath(); ctx.fill();
+            ctx.restore(); ctx.shadowBlur = 0;
+        } else if (this.type === 8) {
+            const color = this.possessed ? '#22c55e' : '#38bdf8';
+            ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
+            const players = getAllAlivePlayers();
+            const target = players.length > 0 ? players.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0] : { x: 0, y: 0 };
+            const angle = Math.atan2(target.y - this.y, target.x - this.x);
+            ctx.rotate(angle);
+            ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.arc(0, 0, 22, -Math.PI / 2, Math.PI / 2); ctx.stroke();
             ctx.restore(); ctx.shadowBlur = 0;
         }
 
@@ -1304,7 +1349,8 @@ class Player {
             if (this.fireTrail) {
                 const now = Date.now();
                 if (now - (this.lastFireTrail || 0) > 150 && dist(oldX, oldY, this.x, this.y) > 0.5) {
-                    if (GAME.entities.fire) GAME.entities.fire.push(new Fire(this.x, this.y, 0, false));
+                    const trailType = this.shipType === 2 ? 'neon' : 'fire';
+                    if (GAME.entities.fire) GAME.entities.fire.push(new Fire(this.x, this.y, 0, false, trailType));
                     this.lastFireTrail = now;
                 }
             }
@@ -1674,7 +1720,11 @@ function spawnEnemy() {
         GAME.lastBossTime = GAME.time;
     } else {
         let type = 1;
-        if (pivot.level >= 3 && Math.random() < 0.1) type = 2;
+        if (pivot.level >= 3 && Math.random() < 0.15) type = 2;
+        if (pivot.level >= 5 && Math.random() < 0.1) type = 3;
+        if (pivot.level >= 8 && Math.random() < 0.08) type = 6;
+        if (pivot.level >= 10 && Math.random() < 0.12) type = 7; // Sebevrah
+        if (pivot.level >= 12 && Math.random() < 0.1) type = 8; // Štítonoš
         enemy = new Enemy(x, y, mod, Math.random().toString(36).substr(2, 9), type);
     }
 
@@ -1830,10 +1880,26 @@ function applyUpgrade(id) {
 
 function gameOver() {
     GAME.active = false;
-    META.currency += Math.floor(GAME.kills / 10); saveMeta();
+    const killsIncome = Math.floor(GAME.kills / 10);
+    META.currency += killsIncome;
+    META.currency += GAME.coinsCollected;
+    saveMeta();
+
+    const statsLevel = document.getElementById('stats-level');
+    const statsKills = document.getElementById('stats-kills');
+    const statsCoins = document.getElementById('stats-coins');
+    const statsTime = document.getElementById('stats-time');
+
+    if (statsLevel) statsLevel.innerHTML = `Dosažený Level: <span>${GAME.entities.player.level}</span>`;
+    if (statsKills) statsKills.innerHTML = `Zabití nepřátelé: <span>${GAME.kills}</span>`;
+    if (statsCoins) statsCoins.innerHTML = `Nasbírané coiny: <span>${GAME.coinsCollected} (+${killsIncome} bonus)</span>`;
+    
+    const playTime = Math.floor((Date.now() - GAME.startTime) / 1000);
+    const mins = Math.floor(playTime / 60);
+    const secs = playTime % 60;
+    if (statsTime) statsTime.innerHTML = `Doba přežití: <span>${mins}m ${secs}s</span>`;
+
     document.getElementById('gameover-modal').classList.add('active');
-    document.getElementById('final-level').innerText = GAME.entities.player.level;
-    document.getElementById('final-kills').innerText = GAME.kills;
 }
 
 function togglePause() {
@@ -2079,6 +2145,10 @@ function initSocket() {
 
             NET.socket.emit('requestLeaderboard');
             if (NET.serverPollingInterval) window.requestServerList();
+
+            NET.socket.on('chatMessage', (data) => {
+                if (window.addChatMessage) window.addChatMessage(data.user, data.text);
+            });
         });
 
         NET.socket.on('leaderboardData', (data) => {
@@ -3695,6 +3765,49 @@ function init() {
     const btnCloseMeta = document.getElementById('btn-close-meta');
     if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
 
+    const btnSendFeedback = document.getElementById('btn-send-feedback');
+    if (btnSendFeedback) btnSendFeedback.onclick = () => {
+        const text = document.getElementById('feedback-text').value.trim();
+        if (text.length > 5 && NET.socket) {
+            NET.socket.emit('sendFeedback', { username: META.playerName || "Anonym", text });
+            document.getElementById('feedback-modal').classList.remove('active');
+            window.showCustomAlert(window.T("Děkujeme za feedback!"));
+        }
+    };
+
+    // --- GLOBAL CHAT LOGIC ---
+    const chatInput = document.getElementById('chat-input');
+    const chatMessages = document.getElementById('chat-messages');
+
+    window.addChatMessage = (user, text) => {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'chat-msg';
+        msgDiv.innerHTML = `<span class="chat-user">${user}:</span><span class="chat-text">${text}</span>`;
+        chatMessages.appendChild(msgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (chatMessages.childNodes.length > 50) chatMessages.removeChild(chatMessages.firstChild);
+    };
+
+    chatInput.onkeydown = (e) => {
+        if (e.key === 'Enter' && chatInput.value.trim().length > 0) {
+            if (NET.socket && NET.socket.connected) {
+                NET.socket.emit('globalChatMessage', { user: META.playerName || "Host", text: chatInput.value.trim() });
+            }
+            chatInput.value = "";
+            chatInput.blur();
+            GAME.chatActive = false;
+        }
+        e.stopPropagation();
+    };
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 't' && !GAME.chatActive && !document.activeElement.tagName.match(/INPUT|TEXTAREA/)) {
+            e.preventDefault();
+            GAME.chatActive = true;
+            chatInput.focus();
+        }
+    });
+
     const btnLeaderboard = document.getElementById('btn-leaderboard');
     if (btnLeaderboard) btnLeaderboard.onclick = () => {
         if (!NET.socket) initSocket();
@@ -3884,6 +3997,7 @@ function useUltimate(cx, cy) {
 function startGame() {
     resetGame();
     GAME.active = true;
+    GAME.startTime = Date.now();
     AudioEngine.stopMenuMusic();
     AudioEngine.startMusic();
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -3895,6 +4009,7 @@ function startGame() {
 
 function resetGame() {
     GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0;
+    GAME.coinsCollected = 0;
     GAME.lastSpawnTime = Date.now();
     GAME.frozenUntil = 0;
 
@@ -4292,6 +4407,7 @@ function update(dt) {
                     } else {
                         p.addXp(Math.round(10 * (p.luckFactor || 1)));
                     }
+                    GAME.coinsCollected++;
                 }
                 GAME.entities.gems.splice(i, 1);
             }

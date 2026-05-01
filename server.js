@@ -102,6 +102,10 @@ io.on('connection', (socket) => {
         broadcastServerStats();
     });
 
+    socket.on('globalChatMessage', (data) => {
+        io.emit('chatMessage', { user: data.user, text: data.text });
+    });
+
     broadcastServerStats();
 
     // --- ADMIN KONZOLE (2FA OCHRANA + RELACE) ---
