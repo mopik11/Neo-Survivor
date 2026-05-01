@@ -4097,23 +4097,6 @@ function loop(time) {
 function update(dt) {
     const now = Date.now();
     
-    // AFK detekce
-    const isMoving = GAME.input.w || GAME.input.a || GAME.input.s || GAME.input.d || GAME.joystick.active;
-    if (isMoving) {
-        META.lastMoveTime = now;
-        if (META.isAFK) {
-            META.isAFK = false;
-            GAME.paused = false;
-            const label = document.getElementById('afk-label');
-            if (label) label.style.display = 'none';
-        }
-    } else if (GAME.active && !GAME.paused && (now - (META.lastMoveTime || now) > 10000)) {
-        META.isAFK = true;
-        GAME.paused = true;
-        const label = document.getElementById('afk-label');
-        if (label) label.style.display = 'block';
-    }
-
     if (GAME.paused || !GAME.entities || !GAME.entities.player) return;
 
     if (!NET.isMultiplayer) {
