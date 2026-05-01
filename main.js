@@ -2092,6 +2092,7 @@ window.softResetToMenu = () => {
     if (chat) chat.style.display = 'none';
     const chatBtn = document.getElementById('btn-chat-mobile');
     if (chatBtn) chatBtn.style.display = 'none';
+    if (chat) chat.classList.remove('mobile-active');
 
     if (NET.socket) {
         NET.socket.disconnect();
@@ -4028,6 +4029,7 @@ function startGame() {
     
     const chat = document.getElementById('global-chat');
     const chatBtn = document.getElementById('btn-chat-mobile');
+    
     if (chat) chat.style.display = NET.isMultiplayer ? 'flex' : 'none';
     if (chatBtn) chatBtn.style.display = NET.isMultiplayer ? 'flex' : 'none';
     if (chat) chat.classList.remove('mobile-active');
