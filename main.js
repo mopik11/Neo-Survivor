@@ -3793,7 +3793,7 @@ function init() {
     };
 
     document.addEventListener('keydown', (e) => {
-        if (e.key.toLowerCase() === 't' && !GAME.chatActive && !document.activeElement.tagName.match(/INPUT|TEXTAREA/)) {
+        if (e.key && e.key.toLowerCase() === 't' && !GAME.chatActive && !document.activeElement.tagName.match(/INPUT|TEXTAREA/)) {
             e.preventDefault();
             GAME.chatActive = true;
             chatInput.focus();
