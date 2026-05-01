@@ -3732,7 +3732,9 @@ function init() {
         window.showCustomConfirm(window.T("Opravdu se chceš odhlásit?"), () => {
             localStorage.removeItem('neoSurvivor_user');
             localStorage.removeItem('neoSurvivor_pass');
-            location.reload();
+            localStorage.removeItem('neoSurvivor_meta');
+            localStorage.removeItem('neoSurvivor_pid');
+            window.location.href = window.location.origin + window.location.pathname; 
         });
     };
 
