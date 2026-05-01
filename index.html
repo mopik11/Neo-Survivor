@@ -112,13 +112,6 @@
                 <button class="btn-restart btn-mini" id="btn-feedback" style="background: rgba(236, 72, 153, 0.1);"><span>💬</span> FEEDBACK</button>
                 <button class="btn-restart btn-mini" id="btn-settings" style="background: rgba(148, 163, 184, 0.1);"><span>⚙️</span> NASTAVENÍ</button>
                 <button class="btn-restart btn-mini btn-quit" id="btn-main-quit"><span>🚪</span> ODHLÁSIT</button>
-
-    <div id="global-chat">
-        <div id="chat-messages"></div>
-        <div id="chat-input-container">
-            <input type="text" id="chat-input" placeholder="Napiš zprávu... (Enter)" maxlength="100">
-        </div>
-    </div>
               </div>
             </div>
           </div>
@@ -396,6 +389,15 @@
 
     </div>
     
+    <div id="afk-label">AFK</div>
+
+    <div id="global-chat">
+      <div id="chat-messages"></div>
+      <div id="chat-controls">
+        <input type="text" id="chat-input" placeholder="Stiskni 'T' pro psaní..." maxlength="100">
+      </div>
+    </div>
+
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script type="module" src="./main.js"></script>
   </body>

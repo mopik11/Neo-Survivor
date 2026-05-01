@@ -117,7 +117,9 @@ const META = {
     ships: { 1: true, 2: false, 3: false },
     selectedShip: 1,
     abilities: { 1: true, 2: false, 3: false },
-    selectedAbility: 1
+    selectedAbility: 1,
+    lastMoveTime: Date.now(),
+    isAFK: false
 };
 
 const saveMetaLocalOnly = () => localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
@@ -1892,7 +1894,7 @@ function gameOver() {
 
     if (statsLevel) statsLevel.innerText = GAME.entities.player.level;
     if (statsKills) statsKills.innerText = GAME.kills;
-    if (statsCoins) statsCoins.innerHTML = `${GAME.coinsCollected || 0} (+${killsIncome} bonus)`;
+    if (statsCoins) statsCoins.innerText = (GAME.coinsCollected || 0) + killsIncome;
     
     const playTime = Math.floor((Date.now() - (GAME.startTime || Date.now())) / 1000);
     const mins = Math.floor(playTime / 60);
@@ -4093,8 +4095,26 @@ function loop(time) {
 }
 
 function update(dt) {
-    if (GAME.paused || !GAME.entities || !GAME.entities.player) return;
     const now = Date.now();
+    
+    // AFK detekce
+    const isMoving = GAME.input.w || GAME.input.a || GAME.input.s || GAME.input.d || GAME.joystick.active;
+    if (isMoving) {
+        META.lastMoveTime = now;
+        if (META.isAFK) {
+            META.isAFK = false;
+            GAME.paused = false;
+            const label = document.getElementById('afk-label');
+            if (label) label.style.display = 'none';
+        }
+    } else if (GAME.active && !GAME.paused && (now - (META.lastMoveTime || now) > 10000)) {
+        META.isAFK = true;
+        GAME.paused = true;
+        const label = document.getElementById('afk-label');
+        if (label) label.style.display = 'block';
+    }
+
+    if (GAME.paused || !GAME.entities || !GAME.entities.player) return;
 
     if (!NET.isMultiplayer) {
         GAME.time += 1 / 60;
