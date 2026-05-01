@@ -3531,6 +3531,9 @@ function init() {
         requestAnimationFrame(loop);
     }
 
+    const btnLogin = document.getElementById('btn-login');
+    if (btnLogin) btnLogin.onclick = () => handleAuth(true);
+
     const btnRegister = document.getElementById('btn-register');
     if (btnRegister) btnRegister.onclick = () => handleAuth(false);
 
