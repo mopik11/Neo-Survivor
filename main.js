@@ -4007,7 +4007,7 @@ function startGame() {
     META.lastMoveTime = Date.now();
     
     const chat = document.getElementById('global-chat');
-    if (chat) chat.style.display = 'flex';
+    if (chat) chat.style.display = NET.isMultiplayer ? 'flex' : 'none';
 
     AudioEngine.stopMenuMusic();
     AudioEngine.startMusic();

@@ -859,6 +859,24 @@ canvas {
     opacity: 0.6;
 }
 
+/* Mobilní layout pro chat - pod minimapu */
+@media screen and (max-width: 850px) {
+    #global-chat {
+        left: auto;
+        right: 10px;
+        top: 220px;
+        bottom: auto;
+        width: 180px;
+        height: 140px;
+        font-size: 0.7rem;
+        z-index: 999999;
+    }
+    #chat-input {
+        padding: 5px;
+        font-size: 0.7rem;
+    }
+}
+
 #chat-messages {
     flex-grow: 1;
     padding: 10px;
