@@ -10,7 +10,7 @@
   --glass-border: rgba(255, 255, 255, 0.1);
   --xp-color: #10b981;
   --hp-color: #ef4444;
-  --modal-z: 10000;
+  --modal-z: 999999;
 }
 
 * {
@@ -173,7 +173,7 @@ canvas {
 }
 
 .modal {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
