@@ -3765,15 +3765,7 @@ function init() {
     const btnCloseMeta = document.getElementById('btn-close-meta');
     if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
 
-    const btnSendFeedback = document.getElementById('btn-send-feedback');
-    if (btnSendFeedback) btnSendFeedback.onclick = () => {
-        const text = document.getElementById('feedback-text').value.trim();
-        if (text.length > 5 && NET.socket) {
-            NET.socket.emit('sendFeedback', { username: META.playerName || "Anonym", text });
-            document.getElementById('feedback-modal').classList.remove('active');
-            window.showCustomAlert(window.T("Děkujeme za feedback!"));
-        }
-    };
+
 
     // --- GLOBAL CHAT LOGIC ---
     const chatInput = document.getElementById('chat-input');
@@ -4341,7 +4333,9 @@ function update(dt) {
                     }
 
                     if (!proj.hitEnemies.has(enemy) && d < hitDist) {
-                        enemy.hp -= proj.damage;
+                        let damage = proj.damage;
+                        if (enemy.type === 8) damage *= 0.5; // Shield reduction
+                        enemy.hp -= damage;
                         proj.hitEnemies.add(enemy);
 
                         if (proj.isCrit) {
