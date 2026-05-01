@@ -1832,6 +1832,7 @@ function gameOver() {
     document.getElementById('final-kills').innerText = GAME.kills;
 
     const statsContainer = document.createElement('div');
+    statsContainer.id = 'gameover-stats-box';
     statsContainer.style.cssText = "margin: 20px 0; padding: 15px; background: rgba(0,0,0,0.4); border-radius: 10px; font-size: 1rem; color: #a5b4fc;";
     
     const minutes = Math.floor(GAME.time / 60);
@@ -1839,11 +1840,27 @@ function gameOver() {
     const timeStr = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 
     statsContainer.innerHTML = `
-        <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>⏱ ČAS:</span> <strong>${timeStr}</strong></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>⏱ ČAS PŘEŽITÍ:</span> <strong>${timeStr}</strong></div>
         <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>💀 ZABITO:</span> <strong>${GAME.kills}</strong></div>
-        <div style="display:flex; justify-content:space-between;"><span>💰 DOGE:</span> <strong>${Math.floor(GAME.kills / 10)}</strong></div>
+        <div style="display:flex; justify-content:space-between;"><span>💰 DOGE ZÍSKÁNO:</span> <strong>${dogeEarned}</strong></div>
     `;
+    
+    // Odstranit staré stats pokud existují
+    const oldStats = modal.querySelector('#gameover-stats-box');
+    if (oldStats) oldStats.remove();
+    
     modal.querySelector('.modal-content').insertBefore(statsContainer, modal.querySelector('.btn-restart'));
+
+    // OPRAVA TLAČÍTKA: Restart listener
+    const restartBtn = modal.querySelector('.btn-restart');
+    restartBtn.onclick = () => {
+        modal.classList.remove('active');
+        if (NET.isMultiplayer) {
+            window.location.reload(); // V multiplayeru je bezpečnější reload
+        } else {
+            startGame(); // V singlu jen restartujeme
+        }
+    };
 }
 
 function togglePause() {
