@@ -160,6 +160,23 @@
         <div class="modal-content" style="max-width: 800px;">
           <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">TVÁ VÝBAVA</h2>
           <div class="stat-chip" style="margin-bottom:20px; display:inline-flex;">DOGECOIN: <span id="ships-currency">0</span></div>
+          <div id="ship-stats" style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; font-size: 0.9rem;"></div>
+          
+          <div style="margin-top: 15px;">
+              <p style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 5px;">BARVA LODI</p>
+              <div id="ship-colors" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                  <div class="color-swatch active" style="background: #ffffff;" data-color="#ffffff"></div>
+                  <div class="color-swatch" style="background: #ef4444;" data-color="#ef4444"></div>
+                  <div class="color-swatch" style="background: #3b82f6;" data-color="#3b82f6"></div>
+                  <div class="color-swatch" style="background: #10b981;" data-color="#10b981"></div>
+                  <div class="color-swatch" style="background: #f59e0b;" data-color="#f59e0b"></div>
+                  <div class="color-swatch" style="background: #ec4899;" data-color="#ec4899"></div>
+                  <div class="color-swatch" style="background: #a855f7;" data-color="#a855f7"></div>
+                  <div class="color-swatch" style="background: #06b6d4;" data-color="#06b6d4"></div>
+              </div>
+          </div>
+          
+          <button id="btn-buy-ship" class="btn-restart" style="margin-top: 20px; width: 100%; display: none;">KOUPIT ZA 500 DOGE</button>
           <div id="ships-options" style="width: 100%; display: flex; flex-direction: column;"></div>
           <button class="btn-restart" id="btn-close-ships" style="margin-top:2.5rem">ZAVŘÍT</button>
         </div>

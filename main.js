@@ -1565,8 +1565,8 @@ class Player {
             }
         }
 
-        ctx.shadowBlur = 30; ctx.shadowColor = this.isLocal ? '#6366f1' : '#f43f5e';
-        ctx.fillStyle = this.isLocal ? '#f8fafc' : '#fca5a5';
+        ctx.shadowBlur = 30; ctx.shadowColor = this.shipColor || (this.isLocal ? '#6366f1' : '#f43f5e');
+        ctx.fillStyle = this.shipColor || (this.isLocal ? '#f8fafc' : '#fca5a5');
         ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
 
         const displayName = this.isLocal ? META.playerName : this.remoteName;
@@ -2118,7 +2118,7 @@ function initSocket() {
             }
             rooms.forEach(room => {
                 const btn = document.createElement('div');
-                btn.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);";
+                btn.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 10px 15px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.1);";
                 btn.innerHTML = `
                     <div>
                         <strong style="color: #a5b4fc; font-size: 1.1rem; letter-spacing: 2px;">${room.id}</strong>
@@ -2232,6 +2232,7 @@ function initSocket() {
                 newOthers[pId].laserTargetsIds = data.players[pId].laserTargetsIds || [];
                 newOthers[pId].remoteName = data.players[pId].name || "Hráč";
                 newOthers[pId].kills = data.players[pId].kills || 0;
+                newOthers[pId].shipColor = data.players[pId].shipColor || '#ffffff';
             }
             NET.others = newOthers;
             GAME.time = data.time;
@@ -2344,6 +2345,7 @@ function syncPlayer() {
         fireTrail: GAME.entities.player.fireTrail,
         kaktus: GAME.entities.player.hasKaktus,
         shipType: GAME.entities.player.shipType,
+        shipColor: META.shipColor || '#ffffff',
         laserTargetsIds: safeLaserTargets,
         name: savedUser,
         kills: GAME.kills || 0
@@ -3641,10 +3643,12 @@ function init() {
     };
 
     window.addEventListener('keydown', (e) => {
+        if (document.activeElement.tagName === 'INPUT') return;
         if (e.key) GAME.input[e.key.toLowerCase()] = true;
         if (e.key === 'Escape') togglePause();
     });
     window.addEventListener('keyup', (e) => {
+        if (document.activeElement.tagName === 'INPUT') return;
         if (e.key) GAME.input[e.key.toLowerCase()] = false;
     });
 
@@ -4569,4 +4573,64 @@ const initAudio = () => {
 
 ['click', 'keydown', 'touchstart'].forEach(type => window.addEventListener(type, initAudio));
 
+// --- CHAT & COLOR LOGIC ---
+function initExtraFeatures() {
+    // 1. Chat Listeners
+    if (NET.socket) {
+        NET.socket.on('chatMsg', (data) => {
+            const container = document.getElementById('chat-messages');
+            if (!container) return;
+            
+            const msg = document.createElement('div');
+            msg.className = 'chat-msg';
+            msg.innerHTML = `<span style="color: ${data.color || '#8b5cf6'}; font-weight: bold;">${data.user}:</span> <span style="color: white;">${data.text}</span>`;
+            container.appendChild(msg);
+            container.scrollTop = container.scrollHeight;
+            
+            setTimeout(() => {
+                msg.style.opacity = '0';
+                setTimeout(() => msg.remove(), 500);
+            }, 8000);
+        });
+    }
+
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput) {
+        chatInput.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                const text = chatInput.value.trim();
+                if (text && NET.socket) {
+                    NET.socket.emit('chatMsg', text);
+                    chatInput.value = '';
+                }
+            }
+        };
+    }
+
+    // 2. Color Swatches
+    const swatches = document.querySelectorAll('.color-swatch');
+    swatches.forEach(s => {
+        s.onclick = () => {
+            swatches.forEach(sw => sw.classList.remove('active'));
+            s.classList.add('active');
+            META.shipColor = s.dataset.color;
+            saveMetaLocalOnly();
+            if (NET.socket) NET.socket.emit('syncAccount', { user: localStorage.getItem('neoSurvivor_user'), pass: localStorage.getItem('neoSurvivor_pass'), meta: META });
+        };
+        // Initial state
+        if (META.shipColor === s.dataset.color) {
+            swatches.forEach(sw => sw.classList.remove('active'));
+            s.classList.add('active');
+        }
+    });
+
+    // 3. Show chat in MP
+    const originalJoined = NET.socket.onJoined || (() => {});
+    NET.socket.on('joined', (data) => {
+        const overlay = document.getElementById('chat-overlay');
+        if (overlay) overlay.style.display = 'block';
+    });
+}
+
 init();
+initExtraFeatures();
