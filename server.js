@@ -733,6 +733,14 @@ setInterval(() => {
                     type = 6; // Skokan
                     hp *= 1.2;
                     speedMod = 1.0;
+                } else if (room.level >= 5 && rnd < 0.5) {
+                    type = 5; // Kamikaze (Sebevrah)
+                    hp *= 0.6;
+                    speedMod = 1.5;
+                } else if (room.level >= 15 && rnd < 0.6) {
+                    type = 7; // Tank (Obr)
+                    hp *= 5.0;
+                    speedMod = 0.4;
                 }
 
                 const hasBoss = room.enemies.some(e => e.isBoss);
