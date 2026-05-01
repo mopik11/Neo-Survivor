@@ -3806,6 +3806,14 @@ function init() {
         }
     });
 
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && GAME.active && !GAME.paused) {
+            togglePause(true);
+        } else if (!document.hidden && GAME.active) {
+            META.lastMoveTime = Date.now();
+        }
+    });
+
     const btnLeaderboard = document.getElementById('btn-leaderboard');
     if (btnLeaderboard) btnLeaderboard.onclick = () => {
         if (!NET.socket) initSocket();
