@@ -1882,22 +1882,22 @@ function gameOver() {
     GAME.active = false;
     const killsIncome = Math.floor(GAME.kills / 10);
     META.currency += killsIncome;
-    META.currency += GAME.coinsCollected;
+    META.currency += (GAME.coinsCollected || 0);
     saveMeta();
 
-    const statsLevel = document.getElementById('stats-level');
-    const statsKills = document.getElementById('stats-kills');
+    const statsLevel = document.getElementById('final-level');
+    const statsKills = document.getElementById('final-kills');
     const statsCoins = document.getElementById('stats-coins');
     const statsTime = document.getElementById('stats-time');
 
-    if (statsLevel) statsLevel.innerHTML = `Dosažený Level: <span>${GAME.entities.player.level}</span>`;
-    if (statsKills) statsKills.innerHTML = `Zabití nepřátelé: <span>${GAME.kills}</span>`;
-    if (statsCoins) statsCoins.innerHTML = `Nasbírané coiny: <span>${GAME.coinsCollected} (+${killsIncome} bonus)</span>`;
+    if (statsLevel) statsLevel.innerText = GAME.entities.player.level;
+    if (statsKills) statsKills.innerText = GAME.kills;
+    if (statsCoins) statsCoins.innerHTML = `${GAME.coinsCollected || 0} (+${killsIncome} bonus)`;
     
-    const playTime = Math.floor((Date.now() - GAME.startTime) / 1000);
+    const playTime = Math.floor((Date.now() - (GAME.startTime || Date.now())) / 1000);
     const mins = Math.floor(playTime / 60);
     const secs = playTime % 60;
-    if (statsTime) statsTime.innerHTML = `Doba přežití: <span>${mins}m ${secs}s</span>`;
+    if (statsTime) statsTime.innerText = `${mins}m ${secs}s`;
 
     document.getElementById('gameover-modal').classList.add('active');
 }
@@ -2212,6 +2212,9 @@ function initSocket() {
 
             if (!GAME.active) {
                 startGame();
+                const chat = document.getElementById('global-chat');
+                if (chat) chat.style.display = 'flex';
+
                 if (playerState && (playerState.x !== 0 || playerState.y !== 0)) {
                     GAME.entities.player.x = playerState.x;
                     GAME.entities.player.y = playerState.y;

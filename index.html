@@ -274,6 +274,8 @@
                 <li><span style="color:#ef4444">▲</span> <strong style="color:white" data-i18n="Dron:">Dron:</strong> Základní červený nepřítel, útočí ve vlnách.</li>
                 <li><span style="color:#a855f7">■</span> <strong style="color:white" data-i18n="Kostka:">Kostka:</strong> Zvláštní fialový/modrý tvar, pohybuje se jinak.</li>
                 <li><span style="color:#f97316">◆</span> <strong style="color:white" data-i18n="Kamikadze:">Kamikadze:</strong> Rychle se přiblíží a vybuchne, když zasáhne cíl.</li>
+                <li><span style="color:#f87171">▲</span> <strong style="color:white" data-i18n="Sebevrah:">Sebevrah:</strong> Extrémně rychlý, vybuchuje okamžitě při dotyku!</li>
+                <li><span style="color:#38bdf8">◓</span> <strong style="color:white" data-i18n="Štítonoš:">Štítonoš:</strong> Má odolný přední štít, který pohlcuje 50% damage.</li>
                 <li><span style="color:#eab308">★</span> <strong style="color:white" data-i18n="Goblin:">Goblin:</strong> Zlatá hvězdička, je neuvěřitelně rychlý!</li>
                 <li><span style="color:#0ea5e9">✚</span> <strong style="color:white" data-i18n="Support:">Support:</strong> Léčí a posiluje ostatní ufony v okolí.</li>
                 <li><span style="color:#f43f5e">▼</span> <strong style="color:white" data-i18n="Skokan:">Skokan:</strong> Vyznačí si cíl a bleskově tam doskočí.</li>
@@ -336,9 +338,11 @@
       <div id="gameover-modal" class="modal">
         <div class="modal-content">
           <h1 class="logo">KONEC<span>HRY</span></h1>
-          <div style="display: flex; gap: 15px; margin-bottom: 2rem; justify-content:center;">
+          <div id="gameover-stats" style="margin: 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div class="stat-chip">LEVEL: <span id="final-level">1</span></div>
             <div class="stat-chip">KILLS: <span id="final-kills">0</span></div>
+            <div class="stat-chip" style="grid-column: span 2;">COINS: <span id="stats-coins">0</span></div>
+            <div class="stat-chip" style="grid-column: span 2;">ČAS: <span id="stats-time">0m 0s</span></div>
           </div>
           <div class="menu-actions" style="width: 100%;">
             <button class="btn-restart" id="btn-restart-game">ZKUSIT ZNOVU</button>
