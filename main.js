@@ -2090,6 +2090,8 @@ window.softResetToMenu = () => {
     
     const chat = document.getElementById('global-chat');
     if (chat) chat.style.display = 'none';
+    const chatBtn = document.getElementById('btn-chat-mobile');
+    if (chatBtn) chatBtn.style.display = 'none';
 
     if (NET.socket) {
         NET.socket.disconnect();
@@ -4137,7 +4139,10 @@ function update(dt) {
         togglePause(true); // Aktivuje pauzu s nápisem AFK
     }
 
-    if (GAME.paused || !GAME.entities || !GAME.entities.player) return;
+    if (GAME.paused || !GAME.entities || !GAME.entities.player) {
+        if (GAME.paused) GAME.lastSpawnTime = now; // Neustále posouváme časovač spawnu během pauzy
+        return;
+    }
 
     if (!NET.isMultiplayer) {
         GAME.time += 1 / 60;
