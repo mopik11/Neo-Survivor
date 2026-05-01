@@ -4097,7 +4097,7 @@ function update(dt) {
         }
         META.lastMoveTime = now;
         META.isAFK = false;
-    } else if (GAME.active && !GAME.paused && !NET.isMultiplayer && (now - (META.lastMoveTime || now) > 10000)) {
+    } else if (GAME.active && !GAME.paused && (now - (META.lastMoveTime || now) > 10000)) {
         META.isAFK = true;
         togglePause(true); // Aktivuje pauzu s nápisem AFK
     }
