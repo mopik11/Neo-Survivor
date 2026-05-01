@@ -245,8 +245,7 @@ io.on('connection', (socket) => {
                 ships: { 1: true, 2: false, 3: false },
                 selectedShip: 1,
                 abilities: { 1: true, 2: false, 3: false },
-                selectedAbility: 1,
-                shipColor: '#ffffff'
+                selectedAbility: 1
             };
 
             console.log(`[REGISTER] Creating new account: "${user}"`);
@@ -317,8 +316,6 @@ io.on('connection', (socket) => {
                     if (!parsedMeta.abilities) parsedMeta.abilities = { 1: true, 2: false, 3: false };
                     if (!parsedMeta.selectedAbility) parsedMeta.selectedAbility = 1;
                     console.log(`[LOGIN] Success: "${user}"`);
-                    socket.playerName = user;
-                    socket.playerColor = parsedMeta.shipColor || '#ffffff';
                     socket.emit('loginResponse', { success: true, meta: parsedMeta });
                 } else {
                     console.log(`[LOGIN] Wrong password for "${user}"`);
@@ -335,7 +332,6 @@ io.on('connection', (socket) => {
         let { user, pass, meta } = data;
         if (!user) return;
         user = user.toLowerCase().trim();
-        if (meta && meta.shipColor) socket.playerColor = meta.shipColor;
         db.get(`SELECT password, max_level FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (row && row.password === pass) {
                 const newMaxLevel = Math.max(meta.maxLevel || 1, row.max_level || 1);
@@ -512,19 +508,6 @@ io.on('connection', (socket) => {
                     ROOMS[r].players[tid].hp = Math.min(ROOMS[r].players[tid].maxHp, ROOMS[r].players[tid].hp + data.amount);
                 }
             });
-        }
-    });
-
-    socket.on('chatMsg', (text) => {
-        if (socket.roomId && text && typeof text === 'string') {
-            const cleanText = text.trim().substring(0, 80);
-            if (cleanText) {
-                io.to(socket.roomId).emit('chatMsg', { 
-                    user: socket.playerName || "Hráč", 
-                    text: cleanText,
-                    color: socket.playerColor || '#ffffff'
-                });
-            }
         }
     });
 
@@ -733,14 +716,6 @@ setInterval(() => {
                     type = 6; // Skokan
                     hp *= 1.2;
                     speedMod = 1.0;
-                } else if (room.level >= 5 && rnd < 0.5) {
-                    type = 5; // Kamikaze (Sebevrah)
-                    hp *= 0.6;
-                    speedMod = 1.5;
-                } else if (room.level >= 15 && rnd < 0.6) {
-                    type = 7; // Tank (Obr)
-                    hp *= 5.0;
-                    speedMod = 0.4;
                 }
 
                 const hasBoss = room.enemies.some(e => e.isBoss);

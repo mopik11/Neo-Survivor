@@ -117,8 +117,7 @@ const META = {
     ships: { 1: true, 2: false, 3: false },
     selectedShip: 1,
     abilities: { 1: true, 2: false, 3: false },
-    selectedAbility: 1,
-    shipColor: '#ffffff'
+    selectedAbility: 1
 };
 
 const saveMetaLocalOnly = () => localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
@@ -1124,50 +1123,38 @@ class Enemy {
             }
             ctx.restore(); ctx.shadowBlur = 0;
         } else if (this.type === 3) {
-            const s = 1 + Math.sin(Date.now() / 100) * 0.2;
-            const color = this.possessed ? '#22c55e' : '#ef4444';
-            ctx.shadowBlur = 30; ctx.shadowColor = color; ctx.fillStyle = color;
+            // Kamikadze (kosočtverec)
+            const flash = Math.sin(Date.now() / 100) > 0 ? '#ef4444' : '#f97316';
+            const color = this.possessed ? '#22c55e' : flash;
+            ctx.shadowBlur = 25; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
-            ctx.scale(s, s);
-            ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(15, 0); ctx.lineTo(0, 15); ctx.lineTo(-15, 0); ctx.closePath(); ctx.fill();
-            ctx.restore(); ctx.shadowBlur = 0;
-        } else if (this.type === 5) {
-            const color = this.possessed ? '#22c55e' : '#0ea5e9';
-            ctx.save();
-            ctx.translate(this.x - cam.x, this.y - cam.y);
-            const pulse = (Math.sin(Date.now() / 300) + 1) * 0.5;
-            ctx.globalAlpha = 0.1 + pulse * 0.1;
-            ctx.fillStyle = color;
-            ctx.beginPath(); ctx.arc(0, 0, 250, 0, Math.PI * 2); ctx.fill();
-            ctx.globalAlpha = 1.0;
-            ctx.shadowBlur = 20; ctx.shadowColor = color; ctx.fillStyle = color;
-            ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
-            ctx.restore(); ctx.shadowBlur = 0;
-        } else if (this.type === 7) {
-            const color = this.possessed ? '#22c55e' : '#64748b';
-            ctx.shadowBlur = 20; ctx.shadowColor = color; ctx.fillStyle = color;
-            ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
-            ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 5; ctx.stroke();
+            ctx.rotate(Date.now() / 200);
+            ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(15, 0); ctx.lineTo(0, 20); ctx.lineTo(-15, 0); ctx.closePath(); ctx.fill();
+            if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
             ctx.restore(); ctx.shadowBlur = 0;
         } else if (this.type === 6) {
+            // Leaper (trojúhelník s "nohama" nebo barvou)
             const color = this.possessed ? '#22c55e' : '#f43f5e';
             ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
+
             if (this.jumpState === 'PREPARING') {
                 const s = 1 + Math.sin(Date.now() / 50) * 0.2;
                 ctx.scale(s, s);
                 ctx.fillStyle = '#fff';
             }
+
             ctx.beginPath();
             ctx.moveTo(0, -20); ctx.lineTo(15, 10); ctx.lineTo(-15, 10); ctx.closePath(); ctx.fill();
             if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
             ctx.restore(); ctx.shadowBlur = 0;
+
             if (this.jumpState === 'PREPARING' && this.jumpTarget) {
                 ctx.setLineDash([5, 5]); ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
                 ctx.beginPath(); ctx.moveTo(this.x - cam.x, this.y - cam.y); ctx.lineTo(this.jumpTarget.x - cam.x, this.jumpTarget.y - cam.y); ctx.stroke(); ctx.setLineDash([]);
             }
         } else if (this.type === 4) {
+            // Goblin (hvězdička nebo něco rychlého)
             const color = this.possessed ? '#22c55e' : '#eab308';
             ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
@@ -1182,8 +1169,25 @@ class Enemy {
             ctx.closePath(); ctx.fill();
             if (this.possessed) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
             ctx.restore(); ctx.shadowBlur = 0;
+        } else if (this.type === 5) {
+            // Support (kříž nebo ovál s aurou)
+            const color = this.possessed ? '#22c55e' : '#0ea5e9';
+
+            // Healing Aura effect
+            ctx.save();
+            ctx.translate(this.x - cam.x, this.y - cam.y);
+            const pulse = (Math.sin(Date.now() / 300) + 1) * 0.5;
+            ctx.globalAlpha = 0.1 + pulse * 0.1;
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(0, 0, 250, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = 1.0;
+
+            ctx.shadowBlur = 20; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
+            ctx.restore(); ctx.shadowBlur = 0;
         }
 
+        // HP Bar for all enemies when damaged
         if (this.hp < this.maxHp) {
             const barW = 30; const barH = 4;
             ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -1262,6 +1266,8 @@ class Player {
             this.hp = Math.min(this.maxHp, this.hp + regenVal / 60);
         }
 
+        // Apply armor to damage taken elsewhere in the code
+        // We'll search for where hp is subtracted and apply reduction there.
         if (this.orbitals !== this.orbitersList.length) {
             this.orbitersList = [];
             for (let i = 0; i < this.orbitals; i++) this.orbitersList.push(new Orbiter(this, i, this.orbitals));
@@ -1449,6 +1455,7 @@ class Player {
                 const isCrit = Math.random() < this.critChance;
                 const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
 
+                // Rovnoměrný rozptyl pro více projektilů
                 let spread = 0;
                 if (this.projectileCount > 1) {
                     const totalSpread = 0.4; // 0.4 radiánu rozptyl
@@ -1479,6 +1486,7 @@ class Player {
             if (GAME.entities.minions.length < 10 + this.projectileCount * 2) {
                 const minion = new FriendlyMinion(this.x, this.y, this.damage * 0.5, this);
                 GAME.entities.minions.push(minion);
+                // V multiplayeru by to chtělo sync, ale zatím solo focus
             }
         }
 
@@ -1557,9 +1565,8 @@ class Player {
             }
         }
 
-        const colorToUse = this.isLocal ? (META.shipColor || '#f8fafc') : (this.shipColor || '#fca5a5');
-        ctx.shadowBlur = 30; ctx.shadowColor = colorToUse;
-        ctx.fillStyle = colorToUse;
+        ctx.shadowBlur = 30; ctx.shadowColor = this.isLocal ? '#6366f1' : '#f43f5e';
+        ctx.fillStyle = this.isLocal ? '#f8fafc' : '#fca5a5';
         ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
 
         const displayName = this.isLocal ? META.playerName : this.remoteName;
@@ -1823,44 +1830,10 @@ function applyUpgrade(id) {
 
 function gameOver() {
     GAME.active = false;
-    const dogeEarned = Math.floor(GAME.kills / 10);
-    META.currency += dogeEarned; saveMeta();
-    
-    const modal = document.getElementById('gameover-modal');
-    modal.classList.add('active');
+    META.currency += Math.floor(GAME.kills / 10); saveMeta();
+    document.getElementById('gameover-modal').classList.add('active');
     document.getElementById('final-level').innerText = GAME.entities.player.level;
     document.getElementById('final-kills').innerText = GAME.kills;
-
-    const statsContainer = document.createElement('div');
-    statsContainer.id = 'gameover-stats-box';
-    statsContainer.style.cssText = "margin: 20px 0; padding: 15px; background: rgba(0,0,0,0.4); border-radius: 10px; font-size: 1rem; color: #a5b4fc;";
-    
-    const minutes = Math.floor(GAME.time / 60);
-    const seconds = Math.floor(GAME.time % 60);
-    const timeStr = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-
-    statsContainer.innerHTML = `
-        <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>⏱ ČAS PŘEŽITÍ:</span> <strong>${timeStr}</strong></div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>💀 ZABITO:</span> <strong>${GAME.kills}</strong></div>
-        <div style="display:flex; justify-content:space-between;"><span>💰 DOGE ZÍSKÁNO:</span> <strong>${dogeEarned}</strong></div>
-    `;
-    
-    // Odstranit staré stats pokud existují
-    const oldStats = modal.querySelector('#gameover-stats-box');
-    if (oldStats) oldStats.remove();
-    
-    modal.querySelector('.modal-content').insertBefore(statsContainer, modal.querySelector('.btn-restart'));
-
-    // OPRAVA TLAČÍTKA: Restart listener
-    const restartBtn = modal.querySelector('.btn-restart');
-    restartBtn.onclick = () => {
-        modal.classList.remove('active');
-        if (NET.isMultiplayer) {
-            window.location.reload(); // V multiplayeru je bezpečnější reload
-        } else {
-            startGame(); // V singlu jen restartujeme
-        }
-    };
 }
 
 function togglePause() {
@@ -1897,7 +1870,7 @@ function togglePause() {
 }
 
 function tryFullscreen() {
-    const isFS = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullscreenElement || document.msFullscreenElement;
+    const isFS = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
     if (isFS) return;
 
     try {
@@ -2145,7 +2118,7 @@ function initSocket() {
             }
             rooms.forEach(room => {
                 const btn = document.createElement('div');
-                btn.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 10px 15px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.1);";
+                btn.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);";
                 btn.innerHTML = `
                     <div>
                         <strong style="color: #a5b4fc; font-size: 1.1rem; letter-spacing: 2px;">${room.id}</strong>
@@ -2259,7 +2232,6 @@ function initSocket() {
                 newOthers[pId].laserTargetsIds = data.players[pId].laserTargetsIds || [];
                 newOthers[pId].remoteName = data.players[pId].name || "Hráč";
                 newOthers[pId].kills = data.players[pId].kills || 0;
-                newOthers[pId].shipColor = data.players[pId].shipColor || '#ffffff';
             }
             NET.others = newOthers;
             GAME.time = data.time;
@@ -2372,7 +2344,6 @@ function syncPlayer() {
         fireTrail: GAME.entities.player.fireTrail,
         kaktus: GAME.entities.player.hasKaktus,
         shipType: GAME.entities.player.shipType,
-        shipColor: META.shipColor || '#ffffff',
         laserTargetsIds: safeLaserTargets,
         name: savedUser,
         kills: GAME.kills || 0
@@ -3058,7 +3029,7 @@ function init() {
             "Zkušenostní Pole": "XP-Feld",
             "Generuje 1 XP automaticky": "Generiert automatisch 1 XP",
             "Větší Výběr": "Größere Auswahl",
-            "+1 Auswahl beim Levelaufstieg": "+1 Auswahl beim Levelaufstieg",
+            "+1 možnost při levelu": "+1 Auswahl beim Levelaufstieg",
             "Mraziv Aura": "Frost-Aura",
             "Zpomaluje blízké nepřátele": "Verlangsamt nahe Feinde",
             "Návnada": "Köder",
@@ -3287,6 +3258,7 @@ function init() {
             "Klobouk čaroděje": "Sombrero de mago",
             "Ninja": "Ninja",
             "Maska stínu": "Máscara de sombra",
+            "Máscara de sombra": "Máscara de sombra",
             "✅ ZKOPÍROVÁNO!": "✅ ¡COPIADO!",
             "📋 KOPÍROVAT KÓD": "📋 COPIAR CÓDIGO",
             "ZADEJ KÓD...": "INTRODUCIR CÓDIGO...",
@@ -3669,12 +3641,10 @@ function init() {
     };
 
     window.addEventListener('keydown', (e) => {
-        if (document.activeElement.tagName === 'INPUT') return;
         if (e.key) GAME.input[e.key.toLowerCase()] = true;
         if (e.key === 'Escape') togglePause();
     });
     window.addEventListener('keyup', (e) => {
-        if (document.activeElement.tagName === 'INPUT') return;
         if (e.key) GAME.input[e.key.toLowerCase()] = false;
     });
 
@@ -4599,64 +4569,4 @@ const initAudio = () => {
 
 ['click', 'keydown', 'touchstart'].forEach(type => window.addEventListener(type, initAudio));
 
-// --- CHAT & COLOR LOGIC ---
-function initExtraFeatures() {
-    // 1. Chat Listeners
-    if (NET.socket) {
-        NET.socket.on('chatMsg', (data) => {
-            const container = document.getElementById('chat-messages');
-            if (!container) return;
-            
-            const msg = document.createElement('div');
-            msg.className = 'chat-msg';
-            msg.innerHTML = `<span style="color: ${data.color || '#8b5cf6'}; font-weight: bold;">${data.user}:</span> <span style="color: white;">${data.text}</span>`;
-            container.appendChild(msg);
-            container.scrollTop = container.scrollHeight;
-            
-            setTimeout(() => {
-                msg.style.opacity = '0';
-                setTimeout(() => msg.remove(), 500);
-            }, 8000);
-        });
-    }
-
-    const chatInput = document.getElementById('chat-input');
-    if (chatInput) {
-        chatInput.onkeydown = (e) => {
-            if (e.key === 'Enter') {
-                const text = chatInput.value.trim();
-                if (text && NET.socket) {
-                    NET.socket.emit('chatMsg', text);
-                    chatInput.value = '';
-                }
-            }
-        };
-    }
-
-    // 2. Color Swatches
-    const swatches = document.querySelectorAll('.color-swatch');
-    swatches.forEach(s => {
-        s.onclick = () => {
-            swatches.forEach(sw => sw.classList.remove('active'));
-            s.classList.add('active');
-            META.shipColor = s.dataset.color;
-            saveMetaLocalOnly();
-            if (NET.socket) NET.socket.emit('syncAccount', { user: localStorage.getItem('neoSurvivor_user'), pass: localStorage.getItem('neoSurvivor_pass'), meta: META });
-        };
-        // Initial state
-        if (META.shipColor === s.dataset.color) {
-            swatches.forEach(sw => sw.classList.remove('active'));
-            s.classList.add('active');
-        }
-    });
-
-    // 3. Show chat in MP
-    const originalJoined = NET.socket.onJoined || (() => {});
-    NET.socket.on('joined', (data) => {
-        const overlay = document.getElementById('chat-overlay');
-        if (overlay) overlay.style.display = 'block';
-    });
-}
-
 init();
-initExtraFeatures();
