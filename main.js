@@ -2420,19 +2420,34 @@ function handleAuth(isLogin) {
     if (nameVal.length < 3) { window.showCustomAlert(window.T("Jméno musí mít alespoň 3 znaky!")); return; }
     if (passVal.length < 1) { window.showCustomAlert(window.T("Zadej heslo!")); return; }
 
+    const loader = document.getElementById('login-loader');
+    const errorEl = document.getElementById('login-error');
+    const eventName = isLogin ? 'login' : 'register';
+
     if (NET.socket && NET.socket.connected) {
-        document.getElementById('login-loader').style.display = 'block';
-        const eventName = isLogin ? 'login' : 'register';
+        if (loader) loader.style.display = 'block';
+        if (errorEl) errorEl.innerText = "";
+        
+        console.log(`[AUTH] Emitting ${eventName} for: ${nameVal}`);
+
+        // Timeout 5 sekund
+        const authTimeout = setTimeout(() => {
+            if (loader) loader.style.display = 'none';
+            if (errorEl) errorEl.innerText = "Server neodpovídá (Timeout).";
+        }, 5000);
 
         NET.socket.emit(eventName, { user: nameVal, pass: passVal });
 
         NET.socket.once(eventName + 'Response', (res) => {
-            document.getElementById('login-loader').style.display = 'none';
+            clearTimeout(authTimeout);
+            if (loader) loader.style.display = 'none';
+            
             if (res.success) {
-                META.playerName = nameVal;
+                console.log(`[AUTH] ${eventName} success!`);
+                META.playerName = nameVal.toLowerCase().trim();
                 Object.assign(META, res.meta);
 
-                localStorage.setItem('neoSurvivor_user', nameVal);
+                localStorage.setItem('neoSurvivor_user', META.playerName);
                 localStorage.setItem('neoSurvivor_pass', passVal);
                 saveMetaLocalOnly();
 
@@ -2448,8 +2463,8 @@ function handleAuth(isLogin) {
                     requestAnimationFrame(loop);
                 }
             } else {
-                const err = document.getElementById('login-error');
-                if (err) err.innerText = res.msg;
+                console.warn(`[AUTH] ${eventName} failed: ${res.msg}`);
+                if (errorEl) errorEl.innerText = res.msg || "Chyba komunikace.";
             }
         });
     } else {
