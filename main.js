@@ -1927,6 +1927,12 @@ function togglePause(isAFK = false) {
     }
 
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
+
+    // Reset AFK časovače při odpauzování
+    if (!GAME.paused) {
+        META.lastMoveTime = Date.now();
+        META.isAFK = false;
+    }
 }
 
 function tryFullscreen() {
