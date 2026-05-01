@@ -3998,6 +3998,7 @@ function startGame() {
     resetGame();
     GAME.active = true;
     GAME.startTime = Date.now();
+    META.lastMoveTime = Date.now();
     
     const chat = document.getElementById('global-chat');
     if (chat) chat.style.display = 'flex';
@@ -4097,6 +4098,16 @@ function loop(time) {
 function update(dt) {
     const now = Date.now();
     
+    // AFK detekce (jen během aktivní hry)
+    if (GAME.active && !GAME.paused && !NET.isMultiplayer) {
+        const isMoving = GAME.input.w || GAME.input.a || GAME.input.s || GAME.input.d || GAME.joystick.active;
+        if (isMoving) {
+            META.lastMoveTime = now;
+        } else if (now - (META.lastMoveTime || now) > 10000) {
+            togglePause(); // Tohle ukáže modal s nápisem AFK
+        }
+    }
+
     if (GAME.paused || !GAME.entities || !GAME.entities.player) return;
 
     if (!NET.isMultiplayer) {
