@@ -1927,17 +1927,6 @@ function togglePause(isAFK = false) {
     }
 
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
-
-    if (NET.isMultiplayer) {
-        if (GAME.paused) {
-            if (NET.socket) NET.socket.disconnect();
-        } else {
-            if (NET.socket) {
-                NET.socket.connect();
-                NET.socket.emit('joinRoom', { roomId: NET.roomId, playerId: myPlayerId });
-            }
-        }
-    }
 }
 
 function tryFullscreen() {
@@ -4101,14 +4090,16 @@ function loop(time) {
 function update(dt) {
     const now = Date.now();
     
-    // AFK detekce (jen během aktivní hry)
-    if (GAME.active && !GAME.paused && !NET.isMultiplayer) {
-        const isMoving = GAME.input.w || GAME.input.a || GAME.input.s || GAME.input.d || GAME.joystick.active;
-        if (isMoving) {
-            META.lastMoveTime = now;
-        } else if (now - (META.lastMoveTime || now) > 10000) {
-            togglePause(true); // Aktivuje pauzu s nápisem AFK
+    const isMoving = GAME.input.w || GAME.input.a || GAME.input.s || GAME.input.d || GAME.joystick.active;
+    if (isMoving) {
+        if (GAME.paused && META.isAFK) {
+            togglePause(false);
         }
+        META.lastMoveTime = now;
+        META.isAFK = false;
+    } else if (GAME.active && !GAME.paused && !NET.isMultiplayer && (now - (META.lastMoveTime || now) > 10000)) {
+        META.isAFK = true;
+        togglePause(true); // Aktivuje pauzu s nápisem AFK
     }
 
     if (GAME.paused || !GAME.entities || !GAME.entities.player) return;
