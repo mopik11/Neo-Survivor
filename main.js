@@ -2086,6 +2086,9 @@ function showMetaMenu() {
 window.softResetToMenu = () => {
     GAME.active = false;
     GAME.paused = false;
+    
+    const chat = document.getElementById('global-chat');
+    if (chat) chat.style.display = 'none';
 
     if (NET.socket) {
         NET.socket.disconnect();
@@ -3990,6 +3993,10 @@ function startGame() {
     resetGame();
     GAME.active = true;
     GAME.startTime = Date.now();
+    
+    const chat = document.getElementById('global-chat');
+    if (chat) chat.style.display = 'flex';
+
     AudioEngine.stopMenuMusic();
     AudioEngine.startMusic();
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
