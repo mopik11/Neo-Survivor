@@ -3839,6 +3839,21 @@ function init() {
         document.getElementById('menu-modal').classList.add('active');
     };
 
+    const chatBtnMobile = document.getElementById('btn-chat-mobile');
+
+    if (chatBtnMobile) {
+        chatBtnMobile.onclick = (e) => {
+            e.stopPropagation();
+            const chat = document.getElementById('global-chat');
+            if (chat) {
+                chat.classList.toggle('mobile-active');
+                if (chat.classList.contains('mobile-active')) {
+                    if (chatInput) chatInput.focus();
+                }
+            }
+        };
+    }
+
     const btnResume = document.getElementById('btn-resume');
     if (btnResume) btnResume.onclick = () => togglePause(false);
 
@@ -4007,7 +4022,10 @@ function startGame() {
     META.lastMoveTime = Date.now();
     
     const chat = document.getElementById('global-chat');
+    const chatBtn = document.getElementById('btn-chat-mobile');
     if (chat) chat.style.display = NET.isMultiplayer ? 'flex' : 'none';
+    if (chatBtn) chatBtn.style.display = NET.isMultiplayer ? 'flex' : 'none';
+    if (chat) chat.classList.remove('mobile-active');
 
     AudioEngine.stopMenuMusic();
     AudioEngine.startMusic();

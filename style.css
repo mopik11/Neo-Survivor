@@ -862,18 +862,29 @@ canvas {
 /* Mobilní layout pro chat - pod minimapu */
 @media screen and (max-width: 850px) {
     #global-chat {
-        left: auto;
-        right: 10px;
-        top: 220px;
-        bottom: auto;
-        width: 180px;
-        height: 140px;
-        font-size: 0.7rem;
-        z-index: 999999;
+        left: auto !important;
+        right: 10px !important;
+        top: 80px !important; /* Vyšší, blíž k tlačítku */
+        bottom: auto !important;
+        width: 220px !important;
+        height: 180px !important;
+        font-size: 0.8rem !important;
+        z-index: 999999 !important;
+        display: none !important; /* Schováno, dokud se neklikne na btn-chat-mobile */
+        background: rgba(15, 23, 42, 0.95) !important;
+        border: 1px solid var(--accent-color) !important;
     }
-    #chat-input {
-        padding: 5px;
-        font-size: 0.7rem;
+    #global-chat.mobile-active {
+        display: flex !important;
+    }
+    #btn-chat-mobile {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 45px !important;
+        height: 45px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
     }
 }
 
