@@ -1904,10 +1904,13 @@ function gameOver() {
     document.getElementById('gameover-modal').classList.add('active');
 }
 
-function togglePause() {
+function togglePause(isAFK = false) {
     if (!GAME.active) return;
 
     GAME.paused = !GAME.paused;
+
+    const pauseTitle = document.querySelector('#pause-modal h1');
+    if (pauseTitle) pauseTitle.innerText = isAFK ? "AFK" : "PAUZA";
 
     if (GAME.paused) {
         const p = GAME.entities.player;
@@ -3720,7 +3723,7 @@ function init() {
 
     window.addEventListener('keydown', (e) => {
         if (e.key) GAME.input[e.key.toLowerCase()] = true;
-        if (e.key === 'Escape') togglePause();
+        if (e.key === 'Escape') togglePause(false);
     });
     window.addEventListener('keyup', (e) => {
         if (e.key) GAME.input[e.key.toLowerCase()] = false;
@@ -3834,10 +3837,10 @@ function init() {
     };
 
     const btnResume = document.getElementById('btn-resume');
-    if (btnResume) btnResume.onclick = togglePause;
+    if (btnResume) btnResume.onclick = () => togglePause(false);
 
     const mobilePause = document.getElementById('mobile-pause');
-    if (mobilePause) mobilePause.onclick = (e) => { e.stopPropagation(); togglePause(); };
+    if (mobilePause) mobilePause.onclick = (e) => { e.stopPropagation(); togglePause(false); };
 
     const fsToggle = document.getElementById('fs-toggle');
     if (fsToggle) fsToggle.onclick = (e) => {
@@ -4104,7 +4107,7 @@ function update(dt) {
         if (isMoving) {
             META.lastMoveTime = now;
         } else if (now - (META.lastMoveTime || now) > 10000) {
-            togglePause(); // Tohle ukáže modal s nápisem AFK
+            togglePause(true); // Aktivuje pauzu s nápisem AFK
         }
     }
 
