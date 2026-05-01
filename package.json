@@ -1,14 +1,14 @@
 {
-  "name": "-skas",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
+  "name": "neo-survivor-server",
+  "version": "1.0.0",
+  "description": "Dedikovany server pro Neo Survivor",
+  "main": "server.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "start": "node server.js"
   },
-  "devDependencies": {
-    "vite": "^8.0.4"
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "sqlite3": "^5.1.6"
   }
 }
