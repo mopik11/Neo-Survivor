@@ -385,17 +385,79 @@ const AudioEngine = {
         } catch (e) { console.error("Audio init failed", e); }
     },
     startMenuMusic() {
-        // Muted on user request
+        if (!this.ctx) this.init();
+        if (this.menuPlaying) return;
+        this.menuPlaying = true;
+
+        const bassOsc = this.ctx.createOscillator();
+        const bassGain = this.ctx.createGain();
+        bassOsc.type = 'sawtooth';
+        bassOsc.frequency.setValueAtTime(40, this.ctx.currentTime);
+        bassGain.gain.setValueAtTime(0, this.ctx.currentTime);
+        bassGain.gain.linearRampToValueAtTime(0.015, this.ctx.currentTime + 2); // Very subtle
+        bassOsc.connect(bassGain); bassGain.connect(this.masterGain || this.ctx.destination);
+        bassOsc.start();
+        this.droneNodes = [bassOsc, bassGain];
+
+        let step = 0;
+        const playArp = () => {
+            if (!this.menuPlaying) return;
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const g = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime([110, 130, 165][step % 3], now);
+            g.gain.setValueAtTime(0, now);
+            g.gain.linearRampToValueAtTime(0.01, now + 0.05);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            osc.connect(g); g.connect(this.masterGain || this.ctx.destination);
+            osc.start(now); osc.stop(now + 0.5);
+            step++;
+            this.menuInterval = setTimeout(playArp, 1000);
+        };
+        playArp();
     },
     stopMenuMusic() {
         this.menuPlaying = false;
-        if (this.menuInterval) clearTimeout(this.menuInterval);
+        if (this.menuInterval) {
+            clearTimeout(this.menuInterval);
+            clearInterval(this.menuInterval);
+        }
         if (this.droneNodes) {
             this.droneNodes.forEach(n => {
                 try { if (n.stop) n.stop(); n.disconnect(); } catch (e) { }
             });
             this.droneNodes = null;
         }
+    },
+    startSpecialMusic() {
+        if (!this.ctx) this.init();
+        if (this.menuPlaying) return;
+        this.menuPlaying = true;
+
+        const notes = [164.81, 196.00, 220.00, 261.63, 164.81, 196.00, 329.63, 293.66]; // E, G, A, C...
+        let step = 0;
+
+        const playTick = () => {
+            if (!this.menuPlaying) return;
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const g = this.ctx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(notes[step % notes.length], now);
+            
+            g.gain.setValueAtTime(0, now);
+            g.gain.linearRampToValueAtTime(0.04, now + 0.1);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+            
+            osc.connect(g); g.connect(this.masterGain || this.ctx.destination);
+            osc.start(now); osc.stop(now + 2);
+            
+            step++;
+            this.menuInterval = setTimeout(playTick, 800);
+        };
+        playTick();
     },
     piano(freq, dur) {
         if (!this.ctx) return;
@@ -477,10 +539,10 @@ const AudioEngine = {
                 osc.start(); osc.stop(now + 0.1); break;
             case 'crateSpin':
                 osc.type = 'square';
-                osc.frequency.setValueAtTime(150, now);
-                gain.gain.setValueAtTime(0.02, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-                osc.start(); osc.stop(now + 0.05); break;
+                osc.frequency.setValueAtTime(120, now);
+                gain.gain.setValueAtTime(0.015, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+                osc.start(); osc.stop(now + 0.03); break;
             case 'crateWin':
                 const chord = [523.25, 659.25, 783.99, 1046.50]; // C Major
                 chord.forEach((f, i) => {
@@ -2485,13 +2547,15 @@ function showMetaMenu() {
         SOUNDS.bgMusic.currentTime = 0;
     }
 
-    // 3. Start the special music explicitly
-    setTimeout(() => {
-        if (SOUNDS.bgMusic) {
-            SOUNDS.bgMusic.volume = 0.4;
-            SOUNDS.bgMusic.play().catch(e => console.log("BG Music blocked"));
-        }
-    }, 100);
+    // 3. Start the special music explicitly (Synthesized fallback + MP3)
+    if (window.AudioEngine) {
+        window.AudioEngine.startSpecialMusic();
+    }
+    
+    if (SOUNDS.bgMusic) {
+        SOUNDS.bgMusic.volume = 0.3;
+        SOUNDS.bgMusic.play().catch(() => {});
+    }
 
     playSound('menuOpen');
 
@@ -2856,6 +2920,16 @@ function startCrateAnimation(winner, crateType = 'basic') {
     modal.querySelector('#btn-skip-crate').onclick = () => showResults();
 
     playSound('crateSpin');
+    // Start repeating click for roulette effect
+    let clicks = 0;
+    const maxClicks = 25;
+    const clickInterval = setInterval(() => {
+        clicks++;
+        playSound('crateSpin');
+        if (clicks >= maxClicks) clearInterval(clickInterval);
+    }, 200);
+    GAME.crateTimeouts.push(clickInterval);
+
     GAME.crateTimeouts.push(setTimeout(() => {
         const carousel = document.getElementById('crate-carousel');
         if (carousel) {
