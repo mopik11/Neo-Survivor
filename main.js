@@ -2380,25 +2380,40 @@ function showMetaMenu() {
     });
 
 
-    // 3. BEDNY (CRATES)
+    // 3. VESMÍRNÉ BEDNY (CRATES)
     const cratesSection = document.createElement('div');
     cratesSection.innerHTML = `<h2 style="color: #fbbf24; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(251,191,36,0.2); padding-bottom: 5px;">📦 VESMÍRNÉ BEDNY</h2>`;
     const cratesGrid = document.createElement('div');
     cratesGrid.className = 'menu-actions-grid';
     cratesSection.appendChild(cratesGrid);
 
-    const crateCost = 150;
-    const crateCard = document.createElement('div');
-    crateCard.className = 'upgrade-card';
-    crateCard.style.background = 'linear-gradient(135deg, rgba(251,191,36,0.1) 0%, rgba(217,119,6,0.1) 100%)';
-    crateCard.innerHTML = `<h3>📦 BEDNA S EMOJI</h3><p>Obsahuje náhodné emoji do tvé sbírky!</p><span class="cost">${crateCost} DOGE</span>`;
-    crateCard.onclick = () => {
-        if (META.currency < crateCost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
-        META.currency -= crateCost;
-        saveMeta();
-        openCrate();
-    };
-    cratesGrid.appendChild(crateCard);
+    const crateTypes = [
+        { id: 'basic', name: '📦 OBYČEJNÁ', cost: 150, color: 'rgba(148, 163, 184, 0.1)', border: '#94a3b8' },
+        { id: 'premium', name: '💎 PRÉMIOVÁ', cost: 1000, color: 'rgba(99, 102, 241, 0.1)', border: '#6366f1' },
+        { id: 'legendary', name: '👑 LEGENDÁRNÍ', cost: 5000, color: 'rgba(251, 191, 36, 0.1)', border: '#fbbf24' }
+    ];
+
+    crateTypes.forEach(type => {
+        const card = document.createElement('div');
+        card.className = 'upgrade-card';
+        card.style.background = type.color;
+        card.style.borderColor = type.border;
+        card.style.cursor = 'pointer';
+        card.style.position = 'relative';
+        card.style.zIndex = '5';
+        card.innerHTML = `<h3>${type.name}</h3><p>Otevři a získej emoji!</p><span class="cost">${type.cost} DOGE</span>`;
+        
+        card.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log("Crate clicked:", type.id);
+            if (META.currency < type.cost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
+            META.currency -= type.cost;
+            saveMeta();
+            openCrate(type.id);
+        });
+        cratesGrid.appendChild(card);
+    });
 
     // 2. SBÍRKA EMOJI & ČEPIC
     const collectionSection = document.createElement('div');
@@ -2469,31 +2484,43 @@ function getRarityColor(rarity) {
     }
 }
 
-function openCrate() {
+function openCrate(type = 'basic') {
     const roll = Math.random() * 100;
     let result = null;
     let targetRarity = 'common';
 
-    // 1. Check for specific item chances first (e.g. Diamond 0.001%)
-    const ultraRares = EMOJIS.filter(e => e.chance !== undefined).sort((a, b) => a.chance - b.chance);
-    for (const ur of ultraRares) {
-        if (roll < ur.chance) {
-            result = ur;
-            targetRarity = ur.rarity;
-            break;
-        }
+    // 1. Check for ultra-rare chance (Diamond)
+    const diamond = EMOJIS.find(e => e.id === 'ultra_rare');
+    if (diamond && roll < diamond.chance) {
+        result = diamond;
+        targetRarity = 'legendary';
     }
 
-    // 2. Fallback to rarity-based roll
     if (!result) {
-        if (roll < 0.5) targetRarity = 'legendary'; // 0.5% for legendary hats/rare items
-        else if (roll < 5) targetRarity = 'epic';    
-        else if (roll < 20) targetRarity = 'rare';   
-        else if (roll < 50) targetRarity = 'uncommon';
-        else targetRarity = 'common';
+        // 2. Adjust rarity based on crate type
+        if (type === 'legendary') {
+            if (roll < 20) targetRarity = 'legendary'; // 20% for Legendary in Legendary crate
+            else targetRarity = 'epic'; // 80% for Epic
+        } else if (type === 'premium') {
+            if (roll < 2) targetRarity = 'legendary';
+            else if (roll < 30) targetRarity = 'epic';
+            else targetRarity = 'rare';
+        } else {
+            // Basic crate
+            if (roll < 0.5) targetRarity = 'legendary';
+            else if (roll < 5) targetRarity = 'epic';    
+            else if (roll < 20) targetRarity = 'rare';   
+            else if (roll < 50) targetRarity = 'uncommon';
+            else targetRarity = 'common';
+        }
 
-        const possible = EMOJIS.filter(e => e.rarity === targetRarity && e.chance === undefined);
-        result = possible[Math.floor(Math.random() * possible.length)];
+        const possible = EMOJIS.filter(e => e.rarity === targetRarity && e.id !== 'ultra_rare');
+        if (possible.length === 0) { // Fallback if no emojis in that rarity
+             result = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+             targetRarity = result.rarity;
+        } else {
+             result = possible[Math.floor(Math.random() * possible.length)];
+        }
     }
 
     if (!META.inventory) META.inventory = [];

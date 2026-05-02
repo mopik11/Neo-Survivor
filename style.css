@@ -218,9 +218,11 @@ canvas {
               0 0 40px rgba(99, 102, 241, 0.2);
   max-width: 650px;
   width: 90vw;
-  max-height: 90vh;
+  max-height: 85vh;
   overflow-y: auto;
   text-align: center;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.5) transparent;
   transform: scale(0.9) translateY(20px);
   transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
