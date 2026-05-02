@@ -32,11 +32,23 @@ SOUNDS.bgMusic.loop = true;
 SOUNDS.bgMusic.volume = 0.3;
 
 function playSound(name) {
+    // 1. Force context resume on every sound play attempt
+    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') {
+        AudioEngine.ctx.resume();
+    }
+    
+    // 2. Use AudioEngine synthesis if possible for reliability
+    if (['menuOpen', 'upgrade', 'crateSpin', 'crateWin'].includes(name)) {
+        AudioEngine.play(name);
+    }
+
+    // 3. Also try to play the MP3 as a secondary layer (if it works, it sounds better)
     try {
         const s = SOUNDS[name];
         if (s) {
             s.currentTime = 0;
-            s.play().catch(e => console.log("Audio play blocked"));
+            const p = s.play();
+            if (p) p.catch(() => {}); // Ignore errors, fallback is already playing
         }
     } catch(e) {}
 }
@@ -365,62 +377,7 @@ const AudioEngine = {
         } catch (e) { console.error("Audio init failed", e); }
     },
     startMenuMusic() {
-        if (!this.ctx || this.menuPlaying) return;
-        if (this.ctx.state === 'suspended') this.ctx.resume();
-        this.menuPlaying = true;
-
-        const bassOsc = this.ctx.createOscillator();
-        const bassGain = this.ctx.createGain();
-        const bassFilter = this.ctx.createBiquadFilter();
-
-        bassOsc.type = 'sawtooth';
-        bassOsc.frequency.setValueAtTime(55, this.ctx.currentTime);
-
-        bassFilter.type = 'lowpass';
-        bassFilter.frequency.setValueAtTime(300, this.ctx.currentTime);
-
-        bassGain.gain.setValueAtTime(0, this.ctx.currentTime);
-        bassGain.gain.linearRampToValueAtTime(0.06, this.ctx.currentTime + 2);
-
-        bassOsc.connect(bassFilter);
-        bassFilter.connect(bassGain);
-        bassGain.connect(this.ctx.destination);
-
-        bassOsc.start();
-        this.droneNodes = [bassOsc, bassGain, bassFilter];
-
-        const notes = [220, 261.63, 329.63, 440, 329.63, 261.63, 164.81, 196.00];
-        let step = 0;
-
-        const playArp = () => {
-            if (!this.menuPlaying) return;
-            const now = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            const filter = this.ctx.createBiquadFilter();
-
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(notes[step % notes.length], now);
-
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(2500, now);
-            filter.frequency.exponentialRampToValueAtTime(200, now + 0.15);
-
-            gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.04, now + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-
-            osc.connect(filter);
-            filter.connect(gain);
-            gain.connect(this.ctx.destination);
-
-            osc.start(now);
-            osc.stop(now + 0.2);
-
-            step++;
-            this.menuInterval = setTimeout(playArp, 140);
-        };
-        playArp();
+        // Muted on user request
     },
     stopMenuMusic() {
         this.menuPlaying = false;
@@ -494,6 +451,39 @@ const AudioEngine = {
                 gain.gain.setValueAtTime(0.03, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
                 osc.start(); osc.stop(now + 0.1); break;
+            case 'menuOpen':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, now);
+                osc.frequency.exponentialRampToValueAtTime(1760, now + 0.05);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(); osc.stop(now + 0.1); break;
+            case 'upgrade':
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.1); // C6
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(); osc.stop(now + 0.1); break;
+            case 'crateSpin':
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                gain.gain.setValueAtTime(0.02, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                osc.start(); osc.stop(now + 0.05); break;
+            case 'crateWin':
+                const chord = [523.25, 659.25, 783.99, 1046.50]; // C Major
+                chord.forEach((f, i) => {
+                    const o = this.ctx.createOscillator();
+                    const g = this.ctx.createGain();
+                    o.type = 'sine';
+                    o.frequency.setValueAtTime(f, now + i * 0.05);
+                    g.gain.setValueAtTime(0.05, now + i * 0.05);
+                    g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.5);
+                    o.connect(g); g.connect(this.ctx.destination);
+                    o.start(now + i * 0.05); o.stop(now + i * 0.05 + 0.5);
+                });
+                break;
         }
     },
     startMusic() {
@@ -5703,14 +5693,19 @@ function render() {
 
 const initAudio = () => {
     AudioEngine.init();
-    tryFullscreen();
-    if (document.getElementById('menu-modal') && document.getElementById('menu-modal').classList.contains('active')) {
-        AudioEngine.startMenuMusic();
+    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') {
+        AudioEngine.ctx.resume().then(() => {
+            console.log("AudioContext resumed!");
+        });
     }
-    // Odstraníme listenery po úspěšné inicializaci (pokud chceme, ale Fullscreen můžeme zkoušet dál)
-    if (AudioEngine.ctx && AudioEngine.ctx.state === 'running' && (document.fullscreenElement || document.webkitFullscreenElement)) {
-        ['click', 'keydown', 'touchstart'].forEach(type => window.removeEventListener(type, initAudio));
-    }
+    // Try to "ping" sounds to unlock them
+    Object.values(SOUNDS).forEach(s => {
+        s.volume = 0;
+        s.play().then(() => {
+            s.pause();
+            s.volume = (s === SOUNDS.bgMusic) ? 0.3 : 1.0;
+        }).catch(() => {});
+    });
 };
 
 
