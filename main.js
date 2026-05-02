@@ -386,6 +386,8 @@ const AudioEngine = {
     },
     startMenuMusic() {
         if (!this.ctx) this.init();
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
         if (this.menuPlaying) return;
         this.menuPlaying = true;
 
@@ -394,7 +396,7 @@ const AudioEngine = {
         bassOsc.type = 'sawtooth';
         bassOsc.frequency.setValueAtTime(40, this.ctx.currentTime);
         bassGain.gain.setValueAtTime(0, this.ctx.currentTime);
-        bassGain.gain.linearRampToValueAtTime(0.015, this.ctx.currentTime + 2); // Very subtle
+        bassGain.gain.linearRampToValueAtTime(0.03, this.ctx.currentTime + 2); 
         bassOsc.connect(bassGain); bassGain.connect(this.masterGain || this.ctx.destination);
         bassOsc.start();
         this.droneNodes = [bassOsc, bassGain];
@@ -432,10 +434,12 @@ const AudioEngine = {
     },
     startSpecialMusic() {
         if (!this.ctx) this.init();
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
         if (this.menuPlaying) return;
         this.menuPlaying = true;
 
-        const notes = [164.81, 196.00, 220.00, 261.63, 164.81, 196.00, 329.63, 293.66]; // E, G, A, C...
+        const notes = [164.81, 196.00, 220.00, 261.63, 164.81, 196.00, 329.63, 293.66]; 
         let step = 0;
 
         const playTick = () => {
@@ -448,7 +452,7 @@ const AudioEngine = {
             osc.frequency.setValueAtTime(notes[step % notes.length], now);
             
             g.gain.setValueAtTime(0, now);
-            g.gain.linearRampToValueAtTime(0.04, now + 0.1);
+            g.gain.linearRampToValueAtTime(0.06, now + 0.1);
             g.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
             
             osc.connect(g); g.connect(this.masterGain || this.ctx.destination);
@@ -539,10 +543,10 @@ const AudioEngine = {
                 osc.start(); osc.stop(now + 0.1); break;
             case 'crateSpin':
                 osc.type = 'square';
-                osc.frequency.setValueAtTime(120, now);
-                gain.gain.setValueAtTime(0.015, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
-                osc.start(); osc.stop(now + 0.03); break;
+                osc.frequency.setValueAtTime(100, now);
+                gain.gain.setValueAtTime(0.06, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+                osc.start(); osc.stop(now + 0.04); break;
             case 'crateWin':
                 const chord = [523.25, 659.25, 783.99, 1046.50]; // C Major
                 chord.forEach((f, i) => {
