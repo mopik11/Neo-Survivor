@@ -25,34 +25,15 @@ const SOUNDS = {
     menuOpen: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-modern-technology-select-3124.mp3'),
     upgrade: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-button-click-interface-1002.mp3'),
     crateSpin: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-quick-mechanical-click-2510.mp3'),
-    crateWin: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3'),
-    bgMusic: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3')
+    crateWin: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3')
 };
-SOUNDS.bgMusic.loop = true;
-SOUNDS.bgMusic.volume = 0.3;
 
 function playSound(name) {
-    if (!AudioEngine.ctx) {
-        AudioEngine.init();
-    }
-    
-    // Force resume on every attempt
-    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') {
-        AudioEngine.ctx.resume().then(() => {
-            console.log("AudioContext resumed for:", name);
-            AudioEngine.play(name);
-        });
-    } else {
-        AudioEngine.play(name);
-    }
-
-    // Secondary layer MP3
     try {
         const s = SOUNDS[name];
         if (s) {
             s.currentTime = 0;
-            s.volume = (name === 'bgMusic') ? 0.3 : 0.8;
-            s.play().catch(e => console.warn("MP3 blocked:", name));
+            s.play().catch(e => console.log("Audio play blocked"));
         }
     } catch(e) {}
 }
@@ -370,7 +351,6 @@ function updateKaktusUI(isActive, pct) {
 
 const AudioEngine = {
     ctx: null,
-    masterGain: null,
     musicStarted: false,
     menuInterval: null,
     menuPlaying: false,
@@ -379,89 +359,75 @@ const AudioEngine = {
         if (this.ctx) return;
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            this.masterGain = this.ctx.createGain();
-            this.masterGain.connect(this.ctx.destination);
-            console.log("AudioEngine initialized.");
         } catch (e) { console.error("Audio init failed", e); }
     },
     startMenuMusic() {
-        if (!this.ctx) this.init();
-        if (!this.ctx) return;
+        if (!this.ctx || this.menuPlaying) return;
         if (this.ctx.state === 'suspended') this.ctx.resume();
-        if (this.menuPlaying) return;
         this.menuPlaying = true;
 
         const bassOsc = this.ctx.createOscillator();
         const bassGain = this.ctx.createGain();
-        bassOsc.type = 'sawtooth';
-        bassOsc.frequency.setValueAtTime(40, this.ctx.currentTime);
-        bassGain.gain.setValueAtTime(0, this.ctx.currentTime);
-        bassGain.gain.linearRampToValueAtTime(0.03, this.ctx.currentTime + 2); 
-        bassOsc.connect(bassGain); bassGain.connect(this.masterGain || this.ctx.destination);
-        bassOsc.start();
-        this.droneNodes = [bassOsc, bassGain];
+        const bassFilter = this.ctx.createBiquadFilter();
 
+        bassOsc.type = 'sawtooth';
+        bassOsc.frequency.setValueAtTime(55, this.ctx.currentTime);
+
+        bassFilter.type = 'lowpass';
+        bassFilter.frequency.setValueAtTime(300, this.ctx.currentTime);
+
+        bassGain.gain.setValueAtTime(0, this.ctx.currentTime);
+        bassGain.gain.linearRampToValueAtTime(0.06, this.ctx.currentTime + 2);
+
+        bassOsc.connect(bassFilter);
+        bassFilter.connect(bassGain);
+        bassGain.connect(this.ctx.destination);
+
+        bassOsc.start();
+        this.droneNodes = [bassOsc, bassGain, bassFilter];
+
+        const notes = [220, 261.63, 329.63, 440, 329.63, 261.63, 164.81, 196.00];
         let step = 0;
+
         const playArp = () => {
             if (!this.menuPlaying) return;
             const now = this.ctx.currentTime;
             const osc = this.ctx.createOscillator();
-            const g = this.ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime([110, 130, 165][step % 3], now);
-            g.gain.setValueAtTime(0, now);
-            g.gain.linearRampToValueAtTime(0.01, now + 0.05);
-            g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-            osc.connect(g); g.connect(this.masterGain || this.ctx.destination);
-            osc.start(now); osc.stop(now + 0.5);
+            const gain = this.ctx.createGain();
+            const filter = this.ctx.createBiquadFilter();
+
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(notes[step % notes.length], now);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(2500, now);
+            filter.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.04, now + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.2);
+
             step++;
-            this.menuInterval = setTimeout(playArp, 1000);
+            this.menuInterval = setTimeout(playArp, 140);
         };
         playArp();
     },
     stopMenuMusic() {
         this.menuPlaying = false;
-        if (this.menuInterval) {
-            clearTimeout(this.menuInterval);
-            clearInterval(this.menuInterval);
-        }
+        if (this.menuInterval) clearTimeout(this.menuInterval);
         if (this.droneNodes) {
             this.droneNodes.forEach(n => {
                 try { if (n.stop) n.stop(); n.disconnect(); } catch (e) { }
             });
             this.droneNodes = null;
         }
-    },
-    startSpecialMusic() {
-        if (!this.ctx) this.init();
-        if (!this.ctx) return;
-        if (this.ctx.state === 'suspended') this.ctx.resume();
-        if (this.menuPlaying) return;
-        this.menuPlaying = true;
-
-        const notes = [164.81, 196.00, 220.00, 261.63, 164.81, 196.00, 329.63, 293.66]; 
-        let step = 0;
-
-        const playTick = () => {
-            if (!this.menuPlaying) return;
-            const now = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const g = this.ctx.createGain();
-            
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(notes[step % notes.length], now);
-            
-            g.gain.setValueAtTime(0, now);
-            g.gain.linearRampToValueAtTime(0.06, now + 0.1);
-            g.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
-            
-            osc.connect(g); g.connect(this.masterGain || this.ctx.destination);
-            osc.start(now); osc.stop(now + 2);
-            
-            step++;
-            this.menuInterval = setTimeout(playTick, 800);
-        };
-        playTick();
     },
     piano(freq, dur) {
         if (!this.ctx) return;
@@ -489,15 +455,13 @@ const AudioEngine = {
         osc.stop(now + dur + 1.5);
     },
     play(type) {
-        if (!this.ctx) this.init();
         if (!this.ctx) return;
-        
-        const now = this.ctx.currentTime;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        
         osc.connect(gain);
-        gain.connect(this.masterGain || this.ctx.destination);
+        gain.connect(this.ctx.destination);
+        const now = this.ctx.currentTime;
         switch (type) {
             case 'shoot':
                 osc.type = 'triangle';
@@ -527,39 +491,6 @@ const AudioEngine = {
                 gain.gain.setValueAtTime(0.03, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
                 osc.start(); osc.stop(now + 0.1); break;
-            case 'menuOpen':
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, now);
-                osc.frequency.exponentialRampToValueAtTime(1760, now + 0.05);
-                gain.gain.setValueAtTime(0.05, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(); osc.stop(now + 0.1); break;
-            case 'upgrade':
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(523.25, now); // C5
-                osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.1); // C6
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(); osc.stop(now + 0.1); break;
-            case 'crateSpin':
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(100, now);
-                gain.gain.setValueAtTime(0.06, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-                osc.start(); osc.stop(now + 0.04); break;
-            case 'crateWin':
-                const chord = [523.25, 659.25, 783.99, 1046.50]; // C Major
-                chord.forEach((f, i) => {
-                    const o = this.ctx.createOscillator();
-                    const g = this.ctx.createGain();
-                    o.type = 'sine';
-                    o.frequency.setValueAtTime(f, now + i * 0.05);
-                    g.gain.setValueAtTime(0.05, now + i * 0.05);
-                    g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.5);
-                    o.connect(g); g.connect(this.ctx.destination);
-                    o.start(now + i * 0.05); o.stop(now + i * 0.05 + 0.5);
-                });
-                break;
         }
     },
     startMusic() {
@@ -2422,10 +2353,9 @@ function tryFullscreen() {
     try {
         const el = document.documentElement;
         const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-        if (rfs) {
-            const p = rfs.call(el);
-            if (p && p.catch) p.catch(() => {});
-        }
+        if (rfs) rfs.call(el).catch(e => {
+            // Pouze tiché selhání, pokud prohlížeč vyžaduje silnější gesto
+        });
     } catch (err) {
         console.warn("Fullscreen attempt failed:", err);
     }
@@ -2536,33 +2466,11 @@ function showShipsMenu() {
 }
 
 function showMetaMenu() {
-    // 1. ABSOLUTE STOP of any other menu music
-    if (window.AudioEngine) {
-        window.AudioEngine.stopMenuMusic();
-        window.AudioEngine.menuPlaying = false;
-        if (window.AudioEngine.menuInterval) {
-            clearTimeout(window.AudioEngine.menuInterval);
-            clearInterval(window.AudioEngine.menuInterval);
-        }
-    }
-    
-    // 2. Clear MP3 music if it was playing elsewhere
-    if (SOUNDS.bgMusic) {
-        SOUNDS.bgMusic.pause();
-        SOUNDS.bgMusic.currentTime = 0;
-    }
-
-    // 3. Start the special music explicitly (Synthesized fallback + MP3)
-    if (window.AudioEngine) {
-        window.AudioEngine.startSpecialMusic();
-    }
-    
-    if (SOUNDS.bgMusic) {
-        SOUNDS.bgMusic.volume = 0.3;
+    playSound('menuOpen');
+    // Start BG Music on first menu interaction if not playing
+    if (SOUNDS.bgMusic.paused) {
         SOUNDS.bgMusic.play().catch(() => {});
     }
-
-    playSound('menuOpen');
 
     const container = document.getElementById('meta-options');
     if (!container) return;
@@ -2607,15 +2515,6 @@ function showMetaMenu() {
     const cratesGrid = document.createElement('div');
     cratesGrid.className = 'menu-actions-grid';
     cratesSection.appendChild(cratesGrid);
-
-    // Stop classic menu music and play crate music
-    if (window.AudioEngine && window.AudioEngine.stopMenuMusic) {
-        window.AudioEngine.stopMenuMusic();
-    }
-    if (SOUNDS.bgMusic.paused) {
-        SOUNDS.bgMusic.currentTime = 0;
-        SOUNDS.bgMusic.play().catch(() => {});
-    }
 
     const crateTypes = [
         { id: 'basic', name: '📦 OBYČEJNÁ', cost: 150, color: 'rgba(148, 163, 184, 0.1)', border: '#94a3b8' },
@@ -2925,16 +2824,6 @@ function startCrateAnimation(winner, crateType = 'basic') {
     modal.querySelector('#btn-skip-crate').onclick = () => showResults();
 
     playSound('crateSpin');
-    // Start repeating click for roulette effect
-    let clicks = 0;
-    const maxClicks = 25;
-    const clickInterval = setInterval(() => {
-        clicks++;
-        playSound('crateSpin');
-        if (clicks >= maxClicks) clearInterval(clickInterval);
-    }, 200);
-    GAME.crateTimeouts.push(clickInterval);
-
     GAME.crateTimeouts.push(setTimeout(() => {
         const carousel = document.getElementById('crate-carousel');
         if (carousel) {
@@ -4673,19 +4562,6 @@ function init() {
         }
     }
 
-    const btnFs = document.getElementById('btn-fullscreen-toggle');
-    if (btnFs) btnFs.onclick = () => {
-        const el = document.documentElement;
-        const isFS = document.fullscreenElement || document.webkitFullscreenElement;
-        if (!isFS) {
-            const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-            if (rfs) rfs.call(el);
-        } else {
-            const cfs = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
-            if (cfs) cfs.call(document);
-        }
-    };
-
     document.getElementById('btn-reset-progress').onclick = () => {
         document.getElementById('settings-modal').classList.remove('active');
         window.showCustomConfirm(window.T("Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?"), () => {
@@ -4794,15 +4670,6 @@ function init() {
     if (btnCloseMeta) {
         btnCloseMeta.onclick = () => {
             document.getElementById('meta-modal').classList.remove('active');
-            // Back to menu music
-            if (SOUNDS.bgMusic) {
-                SOUNDS.bgMusic.pause();
-                SOUNDS.bgMusic.currentTime = 0;
-            }
-            // Muted on user request - do NOT start menu music
-            // if (window.AudioEngine && window.AudioEngine.startMenuMusic) {
-            //     window.AudioEngine.startMenuMusic();
-            // }
         };
     }
 
@@ -5816,20 +5683,14 @@ function render() {
 
 const initAudio = () => {
     AudioEngine.init();
-    tryFullscreen(); // RE-ENABLED for mobile support
-    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') {
-        AudioEngine.ctx.resume().then(() => {
-            console.log("AudioContext resumed!");
-        });
+    tryFullscreen();
+    if (document.getElementById('menu-modal') && document.getElementById('menu-modal').classList.contains('active')) {
+        AudioEngine.startMenuMusic();
     }
-    // Try to "ping" sounds to unlock them
-    Object.values(SOUNDS).forEach(s => {
-        s.volume = 0;
-        s.play().then(() => {
-            s.pause();
-            s.volume = (s === SOUNDS.bgMusic) ? 0.3 : 1.0;
-        }).catch(() => {});
-    });
+    // Odstraníme listenery po úspěšné inicializaci (pokud chceme, ale Fullscreen můžeme zkoušet dál)
+    if (AudioEngine.ctx && AudioEngine.ctx.state === 'running' && (document.fullscreenElement || document.webkitFullscreenElement)) {
+        ['click', 'keydown', 'touchstart'].forEach(type => window.removeEventListener(type, initAudio));
+    }
 };
 
 
