@@ -989,6 +989,42 @@ canvas {
     }
 }
 
+/* --- LANDSCAPE MOBILE FIXES --- */
+@media (max-width: 900px) and (orientation: landscape) {
+    .modal-content {
+        padding: 0.8rem !important;
+        max-height: 95vh !important;
+    }
+
+    h2 { font-size: 1rem !important; margin-bottom: 0.5rem !important; }
+
+    #crate-carousel {
+        height: 100px !important;
+    }
+
+    .crate-item {
+        min-width: 90px !important;
+        height: 90px !important;
+    }
+
+    .crate-item div {
+        font-size: 2rem !important;
+    }
+
+    #crate-result-info {
+        margin-top: 0.5rem !important;
+    }
+
+    #crate-result-info h3 {
+        font-size: 1.5rem !important;
+    }
+
+    #crate-result-info .btn-restart {
+        margin-top: 0.5rem !important;
+        padding: 8px !important;
+    }
+}
+
 @media (max-width: 480px) {
     .upgrade-grid {
         grid-template-columns: repeat(2, 1fr) !important;

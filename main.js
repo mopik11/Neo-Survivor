@@ -2681,10 +2681,10 @@ function startCrateAnimation(winner, crateType = 'basic') {
 
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 800px; width: 95vw; background: #0f172a; border: 1px solid #334155; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-            <button id="btn-skip-crate" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 0.6rem; font-weight: bold; z-index: 200;">SKIP</button>
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom: 1.5rem; opacity: 0.7; flex-wrap: wrap; justify-content: center;">
+            <button id="btn-skip-crate" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 0.55rem; font-weight: 900; z-index: 1000; letter-spacing: 1px; backdrop-filter: blur(5px);">SKIP</button>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom: 1.2rem; opacity: 0.8; flex-wrap: wrap; justify-content: center; width: 100%; padding: 0 40px;">
                 <span style="font-size: 1.2rem;">${crateData.icon}</span>
-                <h2 class="crate-anim-title" style="color: ${crateData.color}; font-size: 0.9rem; margin:0; letter-spacing: 3px; text-transform: uppercase; text-align: center;">${crateData.name}</h2>
+                <h2 class="crate-anim-title" style="color: ${crateData.color}; font-size: 0.85rem; margin:0; letter-spacing: 2px; text-transform: uppercase; text-align: center;">${crateData.name}</h2>
             </div>
             
             <div style="position: relative; width: 100%; height: ${itemSize + 30}px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);">
