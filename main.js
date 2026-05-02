@@ -2718,7 +2718,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
         const carousel = document.getElementById('crate-carousel');
         if (!carousel) return;
         carousel.style.transition = 'none';
-        const offset = -(35 * itemWidth);
+        const offset = -(35 * itemWidth + itemSize / 2);
         carousel.style.transform = `translateX(${offset}px)`;
         document.getElementById('crate-result-info').style.opacity = '1';
         document.getElementById('crate-result-info').style.transform = 'translateY(0)';
@@ -2733,7 +2733,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
     setTimeout(() => {
         const carousel = document.getElementById('crate-carousel');
         if (!carousel) return;
-        const offset = -(35 * itemWidth);
+        const offset = -(35 * itemWidth + itemSize / 2);
         carousel.style.transform = `translateX(${offset}px)`;
     }, 100);
 
