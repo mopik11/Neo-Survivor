@@ -119,8 +119,18 @@ const META = {
     abilities: { 1: true, 2: false, 3: false },
     selectedAbility: 1,
     lastMoveTime: Date.now(),
-    isAFK: false
+    isAFK: false,
+    achievements: {},
+    stats: { totalBossKills: 0, totalDogecoins: 0, totalGames: 0 }
 };
+
+const ACHIEVEMENTS = [
+    { id: 'wide', name: 'Široký', desc: 'Získej 5x upgrade na šířku zdi v jedné hře', icon: '📏' },
+    { id: 'cheapskate', name: 'Skrblík', desc: 'Získej celkem 5000 Dogecoinů', icon: '💰' },
+    { id: 'boss_slayer', name: 'Lovec Bossů', desc: 'Poraz celkem 10 bossů', icon: '💀' },
+    { id: 'veteran', name: 'Vesmírný Veterán', desc: 'Dosáhni levelu 50 v jedné hře', icon: '🎖️' },
+    { id: 'collector', name: 'Sběratel', desc: 'Odemkni všechny 3 základní lodě', icon: '🚀' }
+];
 
 const saveMetaLocalOnly = () => localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
 const saveMeta = () => {
@@ -1938,7 +1948,18 @@ function showLevelUp() {
                 const cards = container.querySelectorAll('.upgrade-card');
                 if (cards.length > 0) {
                     const randomCard = cards[Math.floor(Math.random() * cards.length)];
-                    randomCard.click();
+                    
+                    // Přidat highlight efekt
+                    randomCard.classList.add('selected');
+                    randomCard.style.transform = 'scale(1.05)';
+                    randomCard.style.zIndex = '10';
+
+                    // Počkat a kliknout
+                    setTimeout(() => {
+                        if (modal.classList.contains('active')) {
+                            randomCard.click();
+                        }
+                    }, 1000);
                 }
             }
         }, 800);
@@ -1961,7 +1982,11 @@ function applyUpgrade(id) {
             case 'pierce': p.pierceCount += 1; break;
             case 'wall_range': p.wallRangeBonus += 0.25; break;
             case 'laser_range': p.laserRangeBonus += 150; break;
-            case 'wall_width': p.wallWidthBonus += 0.25; break;
+            case 'wall_width': 
+                p.wallWidthBonus += 0.25; 
+                GAME.wallWidthUpgrades = (GAME.wallWidthUpgrades || 0) + 1;
+                checkAchievements();
+                break;
             case 'size': p.projSize *= 1.3; break;
             case 'crit_chance': p.critChance += 0.15; break;
             case 'crit_dmg': p.critMultiplier += 1; break;
@@ -1981,6 +2006,88 @@ function applyUpgrade(id) {
     } catch (e) { console.error("Upgrade error:", e); }
 
     document.getElementById('levelup-modal').classList.remove('active');
+}
+
+function checkAchievements() {
+    if (!META.achievements) META.achievements = {};
+    if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0 };
+
+    let changed = false;
+
+    // Široký: 5x wall_width
+    if (!META.achievements.wide && GAME.wallWidthUpgrades >= 5) {
+        META.achievements.wide = true;
+        changed = true;
+        showAchievementUnlocked('Široký');
+    }
+
+    // Skrblík: 5000 Dogecoins total
+    if (!META.achievements.cheapskate && (META.stats.totalDogecoins + (META.currency || 0)) >= 5000) {
+        META.achievements.cheapskate = true;
+        changed = true;
+        showAchievementUnlocked('Skrblík');
+    }
+
+    // Lovec Bossů: 10 bossů
+    if (!META.achievements.boss_slayer && META.stats.totalBossKills >= 10) {
+        META.achievements.boss_slayer = true;
+        changed = true;
+        showAchievementUnlocked('Lovec Bossů');
+    }
+
+    // Veterán: Level 50
+    if (!META.achievements.veteran && GAME.entities.player && GAME.entities.player.level >= 50) {
+        META.achievements.veteran = true;
+        changed = true;
+        showAchievementUnlocked('Vesmírný Veterán');
+    }
+
+    // Sběratel: Odemknout všechny 3 lodě
+    if (!META.achievements.collector && META.ships[1] && META.ships[2] && META.ships[3]) {
+        META.achievements.collector = true;
+        changed = true;
+        showAchievementUnlocked('Sběratel');
+    }
+
+    if (changed) saveMeta();
+}
+
+function showAchievementUnlocked(name) {
+    if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+    if (GAME.entities.player) {
+        GAME.entities.floatingTexts.push(new FloatingText(GAME.entities.player.x, GAME.entities.player.y - 60, `🏆 ÚSPĚCH: ${name}`, "#fbbf24"));
+    }
+}
+
+function showAchievementsMenu() {
+    const container = document.getElementById('achievements-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    ACHIEVEMENTS.forEach(ach => {
+        const isUnlocked = META.achievements && META.achievements[ach.id];
+        const item = document.createElement('div');
+        item.style.background = 'rgba(255,255,255,0.05)';
+        item.style.padding = '15px';
+        item.style.borderRadius = '12px';
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.gap = '15px';
+        item.style.border = isUnlocked ? '1px solid rgba(251, 191, 36, 0.4)' : '1px solid rgba(255,255,255,0.1)';
+
+        item.innerHTML = `
+            <div style="font-size: 2rem; opacity: ${isUnlocked ? 1 : 0.3};">${ach.icon}</div>
+            <div style="flex: 1;">
+                <h3 style="margin: 0; color: ${isUnlocked ? '#fbbf24' : '#94a3b8'}; font-size: 1.1rem;">${ach.name}</h3>
+                <p style="margin: 5px 0 0 0; color: #64748b; font-size: 0.85rem;">${ach.desc}</p>
+            </div>
+            <div style="font-size: 1.5rem; color: #fbbf24;">${isUnlocked ? '⭐' : '🌑'}</div>
+        `;
+        container.appendChild(item);
+    });
+
+    document.getElementById('achievements-modal').classList.add('active');
+}
 
     if (NET.isMultiplayer) {
         const waitModal = document.getElementById('waiting-modal');
@@ -1996,6 +2103,12 @@ function gameOver() {
     const killsIncome = Math.floor(GAME.kills / 10);
     META.currency += killsIncome;
     META.currency += (GAME.coinsCollected || 0);
+    
+    if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0 };
+    META.stats.totalDogecoins += killsIncome + (GAME.coinsCollected || 0);
+    META.stats.totalGames++;
+    
+    checkAchievements();
     saveMeta();
 
     const statsLevel = document.getElementById('final-level');
@@ -4020,6 +4133,11 @@ function init() {
     const btnCloseFeedback = document.getElementById('btn-close-feedback');
     if (btnCloseFeedback) btnCloseFeedback.onclick = () => document.getElementById('feedback-modal').classList.remove('active');
 
+    const btnAch = document.getElementById('btn-achievements');
+    if (btnAch) btnAch.onclick = () => showAchievementsMenu();
+    const btnCloseAch = document.getElementById('btn-close-achievements');
+    if (btnCloseAch) btnCloseAch.onclick = () => document.getElementById('achievements-modal').classList.remove('active');
+
     // Auto-random select toggle
     const checkAutoRandom = document.getElementById('check-auto-random');
     if (checkAutoRandom) {
@@ -4169,6 +4287,7 @@ function startGame() {
 
 function resetGame() {
     GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0; GAME.lastBossLevelSpawned = 0;
+    GAME.wallWidthUpgrades = 0;
     GAME.coinsCollected = 0;
     GAME.lastSpawnTime = Date.now();
     GAME.frozenUntil = 0;
@@ -4213,6 +4332,10 @@ function handleEnemyDeath(enemy) {
             if (enemy.isBoss) {
                 if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
                 for (let i = 0; i < 10; i++) GAME.entities.gems.push(new Gem(enemy.x + (Math.random() - 0.5) * 150, enemy.y + (Math.random() - 0.5) * 150));
+                
+                if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0 };
+                META.stats.totalBossKills++;
+                checkAchievements();
             }
             const gem = new Gem(enemy.x, enemy.y);
             gem.isNuke = isNuke; gem.isMagnet = isMagnet;

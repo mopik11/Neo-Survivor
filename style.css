@@ -479,8 +479,14 @@ canvas {
 
 .upgrade-card.selected {
     border-color: var(--xp-color);
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
-    background: rgba(16, 185, 129, 0.1);
+    box-shadow: 0 0 30px var(--xp-color);
+    background: rgba(16, 185, 129, 0.2);
+    animation: autoSelectGlow 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes autoSelectGlow {
+    from { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+    to { box-shadow: 0 0 40px rgba(16, 185, 129, 0.8); }
 }
 
 .upgrade-icon {
