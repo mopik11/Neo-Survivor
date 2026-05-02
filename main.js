@@ -20,6 +20,27 @@ window.showCustomAlert = function (msg) {
     }
 };
 
+// --- AUDIO SYSTEM ---
+const SOUNDS = {
+    menuOpen: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-modern-technology-select-3124.mp3'),
+    upgrade: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-button-click-interface-1002.mp3'),
+    crateSpin: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-quick-mechanical-click-2510.mp3'),
+    crateWin: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3'),
+    bgMusic: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3')
+};
+SOUNDS.bgMusic.loop = true;
+SOUNDS.bgMusic.volume = 0.3;
+
+function playSound(name) {
+    try {
+        const s = SOUNDS[name];
+        if (s) {
+            s.currentTime = 0;
+            s.play().catch(e => console.log("Audio play blocked"));
+        }
+    } catch(e) {}
+}
+
 window.showCustomConfirm = function (msg, onConfirm) {
     const modal = document.getElementById('custom-confirm-modal');
     const text = document.getElementById('custom-confirm-text');
@@ -2448,6 +2469,12 @@ function showShipsMenu() {
 }
 
 function showMetaMenu() {
+    playSound('menuOpen');
+    // Start BG Music on first menu interaction if not playing
+    if (SOUNDS.bgMusic.paused) {
+        SOUNDS.bgMusic.play().catch(() => {});
+    }
+
     const container = document.getElementById('meta-options');
     if (!container) return;
     document.getElementById('meta-currency').innerText = META.currency;
@@ -2477,6 +2504,7 @@ function showMetaMenu() {
         card.innerHTML = `<h3>${window.T(item.name)}</h3><p>${window.T(item.desc)}</p><span class="cost">${cost} DOGE</span>`;
         card.onclick = () => {
             if (META.currency < cost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
+            playSound('upgrade');
             META.upgrades[item.id] = (META.upgrades[item.id] || 0) + 1;
             META.currency -= cost; saveMeta(); showMetaMenu();
         };
@@ -2528,6 +2556,7 @@ function showMetaMenu() {
                     return; 
                 }
                 
+                playSound('upgrade'); // Click sound
                 META.currency -= totalCost;
                 saveMeta();
                 openCrate(type.id, count);
@@ -2703,15 +2732,17 @@ function startCrateAnimation(winner, crateType = 'basic') {
     modal.style.backdropFilter = 'blur(15px)';
     
     const crateData = {
-        'basic': { name: 'OBYČEJNÁ BEDNA', icon: '📦', color: '#94a3b8' },
-        'premium': { name: 'PRÉMIOVÁ BEDNA', icon: '💎', color: '#6366f1' },
-        'legendary': { name: 'LEGENDÁRNÍ BEDNA', icon: '👑', color: '#fbbf24' }
+        'basic': { name: 'OBYČEJNÁ BEDNA', icon: '📦', color: '#94a3b8', glow: 'rgba(148, 163, 184, 0.3)', bg: '#0f172a' },
+        'premium': { name: 'PRÉMIOVÁ BEDNA', icon: '💎', color: '#6366f1', glow: 'rgba(99, 102, 241, 0.5)', bg: '#060b1a' },
+        'legendary': { name: 'LEGENDÁRNÍ BEDNA', icon: '👑', color: '#fbbf24', glow: 'rgba(251, 191, 36, 0.6)', bg: '#1a1404' }
     }[crateType];
 
     const isMobile = window.innerWidth <= 768;
     const itemSize = isMobile ? 110 : 130;
     const itemGap = isMobile ? 8 : 10;
     const itemWidth = itemSize + itemGap;
+
+    modal.style.background = `radial-gradient(circle at center, ${crateData.glow.replace('0.6', '0.15').replace('0.5', '0.12')} 0%, rgba(15, 23, 42, 0.98) 100%)`;
 
     const randomItems = [];
     for(let i=0; i<40; i++) {
@@ -2720,7 +2751,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
     randomItems[35] = winner; // The 36th item is the target
 
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 800px; width: 95vw; background: #0f172a; border: 1px solid #334155; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+        <div class="modal-content" style="max-width: 800px; width: 95vw; background: ${crateData.bg}; border: 2px solid ${crateData.color}44; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 0 50px ${crateData.glow};">
             <button id="btn-skip-crate" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.65rem; font-weight: 900; z-index: 1000; letter-spacing: 1px; backdrop-filter: blur(5px);">SKIP ANIMATION</button>
             <div style="display:flex; align-items:center; gap:10px; margin-bottom: 1.2rem; opacity: 0.8; flex-wrap: wrap; justify-content: center; width: 100%; padding: 0 40px;">
                 <span style="font-size: 1.2rem;">${crateData.icon}</span>
@@ -2751,6 +2782,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                     <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${(GAME.crateQueue && GAME.crateQueue.length > 0) ? 'DALŠÍ (NEXT)' : 'PŘIDAT DO SBÍRKY'}</button>
                     <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">PRODAT (+${winner.price})</button>
+                    ${(GAME.crateQueue && GAME.crateQueue.length > 0) ? `<button id="btn-crate-sell-all" class="btn-restart" style="min-width: 180px; background: rgba(239, 68, 68, 0.4); color: #fff; border: 1px solid #ef4444; font-weight: 800; padding: 12px; font-size: 0.9rem;">PRODAT VŠECHNO Z DÁVKY</button>` : ''}
                     <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${(!GAME.crateQueue || GAME.crateQueue.length === 0) ? 'block' : 'none'};">ZATOČIT ZNOVU</button>
                 </div>
             </div>
@@ -2775,6 +2807,8 @@ function startCrateAnimation(winner, crateType = 'basic') {
         }
         const skipBtn = document.getElementById('btn-skip-crate');
         if (skipBtn) skipBtn.style.display = 'none';
+        
+        playSound('crateWin');
 
         // Auto-next after 3s
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
@@ -2791,6 +2825,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
     };
 
     // Start rotation
+    playSound('crateSpin');
     GAME.crateTimeouts.push(setTimeout(() => {
         const carousel = document.getElementById('crate-carousel');
         if (carousel) {
@@ -2827,6 +2862,34 @@ function startCrateAnimation(winner, crateType = 'basic') {
         }
     };
 
+    if (modal.querySelector('#btn-crate-sell-all')) {
+        modal.querySelector('#btn-crate-sell-all').onclick = () => {
+            clearCrateTimeouts();
+            let totalGot = winner.price;
+            
+            // Sell current
+            const invIdx = META.inventory.findIndex(i => i.id === winner.id);
+            if (invIdx !== -1) {
+                if (META.inventory[invIdx].count > 1) META.inventory[invIdx].count--;
+                else META.inventory.splice(invIdx, 1);
+            }
+
+            // Sell everything in queue
+            if (GAME.crateQueue) {
+                GAME.crateQueue.forEach(item => {
+                    totalGot += item.price;
+                });
+                GAME.crateQueue = [];
+            }
+
+            META.currency += totalGot;
+            saveMeta();
+            showCurrencyNotification(totalGot, `PRODÁNA CELÁ DÁVKA`);
+            modal.remove();
+            showMetaMenu();
+        };
+    }
+
     modal.querySelector('#btn-crate-sell').onclick = () => {
         clearCrateTimeouts();
         META.currency += winner.price;
@@ -2856,6 +2919,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
             window.showCustomAlert(window.T("Nemáš dost Dogecoinu!"));
             return;
         }
+        playSound('upgrade');
         META.currency -= totalCost;
         saveMeta();
         modal.remove();
