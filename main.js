@@ -2564,17 +2564,22 @@ function openCrate(type = 'basic') {
 
     if (!result) {
         if (type === 'legendary') {
-            if (roll < 20) targetRarity = 'legendary';
-            else targetRarity = 'epic';
-        } else if (type === 'premium') {
-            if (roll < 2) targetRarity = 'legendary';
-            else if (roll < 30) targetRarity = 'epic';
+            // Legendary: 40% Rare, 45% Epic, 15% Legendary
+            if (roll < 15) targetRarity = 'legendary';
+            else if (roll < 60) targetRarity = 'epic';
             else targetRarity = 'rare';
+        } else if (type === 'premium') {
+            // Premium: 50% Uncommon, 35% Rare, 14% Epic, 1% Legendary
+            if (roll < 1) targetRarity = 'legendary';
+            else if (roll < 15) targetRarity = 'epic';
+            else if (roll < 50) targetRarity = 'rare';
+            else targetRarity = 'uncommon';
         } else {
-            if (roll < 0.5) targetRarity = 'legendary';
-            else if (roll < 5) targetRarity = 'epic';    
-            else if (roll < 20) targetRarity = 'rare';   
-            else if (roll < 50) targetRarity = 'uncommon';
+            // Basic: 70% Common, 25% Uncommon, 4.5% Rare, 0.4% Epic, 0.1% Legendary
+            if (roll < 0.1) targetRarity = 'legendary';
+            else if (roll < 0.5) targetRarity = 'epic';    
+            else if (roll < 5) targetRarity = 'rare';   
+            else if (roll < 30) targetRarity = 'uncommon';
             else targetRarity = 'common';
         }
 
@@ -2588,16 +2593,22 @@ function openCrate(type = 'basic') {
     else META.inventory.push({ id: result.id, count: 1 });
 
     saveMeta();
-    startCrateAnimation(result);
+    startCrateAnimation(result, type);
 }
 
-function startCrateAnimation(winner) {
+function startCrateAnimation(winner, crateType = 'basic') {
     const modal = document.createElement('div');
     modal.className = 'modal active';
     modal.style.zIndex = '2000000';
-    modal.style.background = 'rgba(15, 23, 42, 0.85)'; // Semi-transparent dark background
+    modal.style.background = 'rgba(15, 23, 42, 0.85)'; 
     modal.style.backdropFilter = 'blur(10px)';
     
+    const crateData = {
+        'basic': { name: 'OBYČEJNÁ BEDNA', icon: '📦', color: '#94a3b8' },
+        'premium': { name: 'PRÉMIOVÁ BEDNA', icon: '💎', color: '#6366f1' },
+        'legendary': { name: 'LEGENDÁRNÍ BEDNA', icon: '👑', color: '#fbbf24' }
+    }[crateType];
+
     const randomItems = [];
     for(let i=0; i<40; i++) {
         randomItems.push(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
@@ -2607,7 +2618,10 @@ function startCrateAnimation(winner) {
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 800px; width: 95vw; background: #0f172a; border: 1px solid #334155; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
             <button id="btn-skip-crate" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 5px 15px; border-radius: 8px; cursor: pointer; font-size: 0.7rem; font-weight: bold; z-index: 200;">PŘESKOČIT (SKIP)</button>
-            <h2 style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem; letter-spacing: 4px; text-transform: uppercase; opacity: 0.7;">OTEVÍRÁNÍ BEDNY...</h2>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom: 2rem; opacity: 0.7;">
+                <span style="font-size: 1.5rem;">${crateData.icon}</span>
+                <h2 style="color: ${crateData.color}; font-size: 0.9rem; margin:0; letter-spacing: 4px; text-transform: uppercase;">${crateData.name}</h2>
+            </div>
             
             <div style="position: relative; width: 100%; height: 160px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 40px rgba(0,0,0,0.5);">
                 <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #fbbf24; z-index: 100; box-shadow: 0 0 15px #fbbf24;">
@@ -2641,7 +2655,8 @@ function startCrateAnimation(winner) {
         if (!carousel) return;
         carousel.style.transition = 'none';
         const itemWidth = 140;
-        const offset = -(34 * itemWidth + (itemWidth / 2));
+        // Winner is at index 35 (the 36th item)
+        const offset = -(35 * itemWidth + (itemWidth / 2));
         carousel.style.transform = `translateX(${offset}px)`;
         document.getElementById('crate-result-info').style.opacity = '1';
         document.getElementById('crate-result-info').style.transform = 'translateY(0)';
@@ -2657,7 +2672,7 @@ function startCrateAnimation(winner) {
         const carousel = document.getElementById('crate-carousel');
         if (!carousel) return;
         const itemWidth = 140; 
-        const offset = -(34 * itemWidth + (itemWidth / 2));
+        const offset = -(35 * itemWidth + (itemWidth / 2));
         carousel.style.transform = `translateX(${offset}px)`;
     }, 100);
 
