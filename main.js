@@ -2452,12 +2452,6 @@ function showMetaMenu() {
     collectionGrid.style.gap = '10px';
     collectionSection.appendChild(collectionGrid);
 
-    if (META.inventory.length > 0) {
-        document.getElementById('btn-sell-all')?.addEventListener('click', () => {
-            window.showCustomConfirm(window.T("Opravdu chceš prodat všechna neaktivní emoji?"), () => sellAllEmojis());
-        });
-    }
-
     if (!META.inventory || META.inventory.length === 0) {
         collectionGrid.innerHTML = `<p style="color: #475569; grid-column: 1/-1; padding: 20px;">Zatím nemáš žádná emoji. Otevři bednu!</p>`;
     } else {
@@ -2505,6 +2499,18 @@ function showMetaMenu() {
     container.appendChild(upgradesSection);
     container.appendChild(cratesSection);
     container.appendChild(collectionSection);
+
+    // Register Sell All listener AFTER appending to DOM
+    if (META.inventory && META.inventory.length > 0) {
+        const btnSellAll = document.getElementById('btn-sell-all');
+        if (btnSellAll) {
+            btnSellAll.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.showCustomConfirm(window.T("Opravdu chceš prodat všechna neaktivní emoji?"), () => sellAllEmojis());
+            };
+        }
+    }
 }
 
 function getRarityColor(rarity) {
@@ -2573,23 +2579,31 @@ function startCrateAnimation(winner) {
     randomItems[35] = winner; // The winner is at a specific position
 
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 800px; width: 95vw; background: #0f172a; border: 1px solid #334155; padding: 2rem; overflow: hidden; position: relative;">
-            <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 4px; height: 100%; background: #fbbf24; z-index: 10; box-shadow: 0 0 20px #fbbf24;"></div>
-            <h2 style="color: #94a3b8; font-size: 1.2rem; margin-bottom: 2rem; letter-spacing: 4px;">OTEVÍRÁNÍ BEDNY...</h2>
+        <div class="modal-content" style="max-width: 800px; width: 95vw; background: #0f172a; border: 1px solid #334155; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center;">
+            <h2 style="color: #94a3b8; font-size: 1rem; margin-bottom: 2rem; letter-spacing: 4px; text-transform: uppercase; opacity: 0.7;">OTEVÍRÁNÍ BEDNY...</h2>
             
-            <div id="crate-carousel" style="display: flex; gap: 10px; width: fit-content; transition: transform 6s cubic-bezier(0.1, 0, 0.1, 1); transform: translateX(0);">
-                ${randomItems.map(item => `
-                    <div style="min-width: 120px; height: 150px; background: rgba(255,255,255,0.05); border: 2px solid ${getRarityColor(item.rarity)}44; border-bottom: 4px solid ${getRarityColor(item.rarity)}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;">
-                        <div style="font-size: 3rem;">${item.icon}</div>
-                        <div style="font-size: 0.6rem; font-weight: bold; color: ${getRarityColor(item.rarity)}">${item.rarity.toUpperCase()}</div>
-                    </div>
-                `).join('')}
+            <div style="position: relative; width: 100%; height: 160px; overflow: hidden; background: rgba(0,0,0,0.3); border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center;">
+                <!-- CS:GO Marker -->
+                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 3px; height: 100%; background: #fbbf24; z-index: 100; box-shadow: 0 0 20px #fbbf24;">
+                    <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 10px solid #fbbf24;"></div>
+                    <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 10px solid #fbbf24;"></div>
+                </div>
+                
+                <div id="crate-carousel" style="display: flex; gap: 10px; width: fit-content; transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1); transform: translateX(0); padding-left: 50%;">
+                    ${randomItems.map(item => `
+                        <div style="min-width: 130px; height: 130px; background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.1); border-bottom: 4px solid ${getRarityColor(item.rarity)}; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;">
+                            <div style="font-size: 3rem; filter: drop-shadow(0 0 10px rgba(255,255,255,0.1));">${item.icon}</div>
+                            <div style="font-size: 0.55rem; font-weight: 900; color: ${getRarityColor(item.rarity)}; letter-spacing: 1px;">${item.rarity.toUpperCase()}</div>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
 
-            <div id="crate-result-info" style="margin-top: 3rem; opacity: 0; transition: opacity 0.5s;">
-                <h3 style="color: #fff; font-size: 2rem; margin: 0;">${winner.name}</h3>
-                <p style="color: ${getRarityColor(winner.rarity)}; font-weight: bold; font-size: 1.1rem; text-transform: uppercase;">${winner.rarity}</p>
-                <button class="btn-restart" style="margin-top: 1rem; width: 200px; background: ${getRarityColor(winner.rarity)}; color: #000;">DO SBÍRKY</button>
+            <div id="crate-result-info" style="margin-top: 2rem; opacity: 0; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center;">
+                <div style="font-size: 1rem; color: #64748b; margin-bottom: 5px;">ZÍSKÁNO:</div>
+                <h3 style="color: #fff; font-size: 2.5rem; margin: 0; text-shadow: 0 0 30px rgba(255,255,255,0.1);">${winner.name}</h3>
+                <p style="color: ${getRarityColor(winner.rarity)}; font-weight: bold; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px;">${winner.rarity}</p>
+                <button class="btn-restart" style="margin-top: 1.5rem; min-width: 250px; background: ${getRarityColor(winner.rarity)}; color: #000; box-shadow: 0 10px 30px ${getRarityColor(winner.rarity)}44;">PŘIDAT DO SBÍRKY</button>
             </div>
         </div>
     `;
@@ -2599,8 +2613,11 @@ function startCrateAnimation(winner) {
     // Start animation
     setTimeout(() => {
         const carousel = document.getElementById('crate-carousel');
-        const itemWidth = 130; // 120px width + 10px gap
-        const offset = -(35 * itemWidth) + (400 - itemWidth/2); // Center the 35th item
+        const itemWidth = 140; // 130px width + 10px gap
+        // We want to center the 35th item exactly on the marker (which is at 50% width of the container)
+        // Since we have padding-left: 50%, the 1st item starts at the marker.
+        // To get the 35th item there, we move back 34 items + half an item
+        const offset = -(34 * itemWidth + (itemWidth / 2));
         carousel.style.transform = `translateX(${offset}px)`;
     }, 100);
 
