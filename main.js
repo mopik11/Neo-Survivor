@@ -2422,9 +2422,10 @@ function tryFullscreen() {
     try {
         const el = document.documentElement;
         const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-        if (rfs) rfs.call(el).catch(e => {
-            // Pouze tiché selhání, pokud prohlížeč vyžaduje silnější gesto
-        });
+        if (rfs) {
+            const p = rfs.call(el);
+            if (p && p.catch) p.catch(() => {});
+        }
     } catch (err) {
         console.warn("Fullscreen attempt failed:", err);
     }
@@ -4672,6 +4673,19 @@ function init() {
         }
     }
 
+    const btnFs = document.getElementById('btn-fullscreen-toggle');
+    if (btnFs) btnFs.onclick = () => {
+        const el = document.documentElement;
+        const isFS = document.fullscreenElement || document.webkitFullscreenElement;
+        if (!isFS) {
+            const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+            if (rfs) rfs.call(el);
+        } else {
+            const cfs = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+            if (cfs) cfs.call(document);
+        }
+    };
+
     document.getElementById('btn-reset-progress').onclick = () => {
         document.getElementById('settings-modal').classList.remove('active');
         window.showCustomConfirm(window.T("Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?"), () => {
@@ -5802,6 +5816,7 @@ function render() {
 
 const initAudio = () => {
     AudioEngine.init();
+    tryFullscreen(); // RE-ENABLED for mobile support
     if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') {
         AudioEngine.ctx.resume().then(() => {
             console.log("AudioContext resumed!");
