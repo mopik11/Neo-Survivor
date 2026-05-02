@@ -761,6 +761,8 @@ class Tombstone {
 class Obstacle {
     constructor(x, y, radius) {
         this.x = x; this.y = y; this.radius = radius;
+        this.maxHp = 1000;
+        this.hp = this.maxHp;
     }
     draw(ctx, cam) {
         ctx.fillStyle = '#334155';
@@ -775,6 +777,16 @@ class Obstacle {
         }
         ctx.closePath();
         ctx.fill(); ctx.stroke();
+
+        // HP bar pro poškozený meteorit
+        if (this.hp < this.maxHp) {
+            const barW = this.radius * 1.5;
+            const barH = 4;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(this.x - cam.x - barW / 2, this.y - cam.y - this.radius - 15, barW, barH);
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(this.x - cam.x - barW / 2, this.y - cam.y - this.radius - 15, barW * (this.hp / this.maxHp), barH);
+        }
     }
 }
 
@@ -896,16 +908,30 @@ class Boss {
         this.knockback.x *= 0.9; this.knockback.y *= 0.9;
 
         // Boss útoky podle typu
-        if (Date.now() - this.lastAction > 3000) {
-            if (this.type === 2) { // Hunter Boss - dávka střel
+        if (Date.now() - this.lastAction > 2500) {
+            if (this.type === 1) { // Mega-Dron - výstřel do všech stran
+                for (let i = 0; i < 12; i++) {
+                    const a = (i / 12) * Math.PI * 2;
+                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a) * 100, this.y + Math.sin(a) * 100, 15, { isEnemy: true, color: '#ef4444', speed: 6 }));
+                }
+            } else if (this.type === 2) { // Hunter Boss - dávka střel na hráče
                 for (let i = 0; i < 8; i++) {
-                    const a = angle - 0.5 + i * 0.125;
+                    const a = angle - 0.4 + i * 0.1;
                     GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a) * 100, this.y + Math.sin(a) * 100, 15, { isEnemy: true, color: '#f43f5e', speed: 8 }));
                 }
             } else if (this.type === 3) { // Kamikadze Boss - minion spawn
-                for (let i = 0; i < 3; i++) {
-                    GAME.entities.enemies.push(new Enemy(this.x, this.y, 1, Math.random().toString(36).substr(2, 9), 3));
+                for (let i = 0; i < 4; i++) {
+                    const a = Math.random() * Math.PI * 2;
+                    GAME.entities.enemies.push(new Enemy(this.x + Math.cos(a) * 60, this.y + Math.sin(a) * 60, 1, Math.random().toString(36).substr(2, 9), 3));
                 }
+            } else if (this.type === 4) { // Orbitální Boss - mrazivé střely
+                 for (let i = 0; i < 16; i++) {
+                    const a = (i / 16) * Math.PI * 2 + (Date.now() / 1000);
+                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a) * 100, this.y + Math.sin(a) * 100, 20, { isEnemy: true, color: '#0ea5e9', speed: 4 }));
+                }
+            } else if (this.type === 5) { // Berserker Boss - rychlý sprint
+                this.speed = CONFIG.ENEMY_BASE_SPEED * 3.5;
+                setTimeout(() => { this.speed = CONFIG.ENEMY_BASE_SPEED * 0.7; }, 1000);
             }
             this.lastAction = Date.now();
         }
@@ -1076,17 +1102,17 @@ class Enemy {
 
         const now = Date.now();
         if (this.type === 3 && !this.exploding) {
-            if (dist(this.x, this.y, target.x, target.y) < 80 && !target.isBait && target.hp !== undefined) {
+            if (dist(this.x, this.y, target.x, target.y) < 130 && !target.isBait && target.hp !== undefined) {
                 this.exploding = true;
-                this.explodeTime = now + 1500;
+                this.explodeTime = now + 1200;
             }
         }
 
         if (this.type === 3 && this.exploding && now > this.explodeTime) {
             this.hp = 0;
-            players.forEach(p => { if (dist(p.x, p.y, this.x, this.y) < 150) p.hp -= 40; });
+            players.forEach(p => { if (dist(p.x, p.y, this.x, this.y) < 220) p.hp -= 40; });
             if (GAME.entities.enemies) {
-                GAME.entities.enemies.forEach(e => { if (e.id !== this.id && dist(e.x, e.y, this.x, this.y) < 150) e.hp -= 150; });
+                GAME.entities.enemies.forEach(e => { if (e.id !== this.id && dist(e.x, e.y, this.x, this.y) < 220) e.hp -= 150; });
             }
             if (GAME.entities.fire) {
                 for (let j = 0; j < 15; j++) {
@@ -1111,9 +1137,9 @@ class Enemy {
         // --- NOVÉ TYPY NEPŘÁTEL ---
         if (this.type === 7 && !this.dead) { // RYCHLÝ SEBEVRAH
             this.speed = (CONFIG.ENEMY_BASE_SPEED + 2.5) * GAME.speedFactor;
-            if (dist(this.x, this.y, target.x, target.y) < 25) {
+            if (dist(this.x, this.y, target.x, target.y) < 45) {
                 this.hp = 0; this.dead = true;
-                if (target.hp !== undefined) target.hp -= 35;
+                players.forEach(p => { if (dist(p.x, p.y, this.x, this.y) < 70) p.hp -= 35; });
                 shakeScreen(10); AudioEngine.play('hit');
             }
         }
@@ -1485,17 +1511,20 @@ class Player {
         const enemies = GAME.entities.enemies;
         if (!enemies || enemies.length === 0) return;
 
-        let target = null;
-        let minDist = Infinity;
-        for (let i = 0; i < enemies.length; i++) {
-            const e = enemies[i];
-            if (!e || e.hp <= 0) continue;
-            const d = dist(this.x, this.y, e.x, e.y);
-            if (d < minDist) {
-                minDist = d;
-                target = e;
+        if (!target) {
+            // Pokud není nablízku nepřítel, zkus zaměřit meteorit
+            if (GAME.entities.obstacles) {
+                let minObsDist = Infinity;
+                GAME.entities.obstacles.forEach(obs => {
+                    const d = dist(this.x, this.y, obs.x, obs.y);
+                    if (d < 600 && d < minObsDist) { // Max dosah na meteority
+                        minObsDist = d;
+                        target = obs;
+                    }
+                });
             }
         }
+
         if (!target) return;
 
         if (this.shipType === 1) {
@@ -1785,6 +1814,8 @@ function showLevelUp() {
             if (['count', 'pierce', 'bounce', 'laser_range', 'possession_plus'].includes(u.id)) return false;
         } else if (pShip === 4) {
             if (['wall_range', 'wall_width', 'laser_range', 'possession_plus'].includes(u.id)) return false;
+        } else if (pShip === 5) { // Nekromancer
+            if (['wall_range', 'wall_width', 'laser_range', 'count', 'pierce', 'bounce', 'size'].includes(u.id)) return false;
         }
 
         if (u.id === 'possession_plus' && META.selectedAbility !== 3) return false;
@@ -4318,15 +4349,19 @@ function update(dt) {
             proj.update();
 
             if (GAME.entities.obstacles) {
-                let hitObstacle = false;
-                GAME.entities.obstacles.forEach(obs => {
+                for (let oIdx = GAME.entities.obstacles.length - 1; oIdx >= 0; oIdx--) {
+                    const obs = GAME.entities.obstacles[oIdx];
                     if (dist(proj.x, proj.y, obs.x, obs.y) < proj.radius + obs.radius) {
-                        hitObstacle = true;
+                        if (proj.type !== 'wall') {
+                            obs.hp -= proj.damage;
+                            if (obs.hp <= 0) {
+                                shakeScreen(3);
+                                GAME.entities.obstacles.splice(oIdx, 1);
+                            }
+                            GAME.entities.projectiles.splice(pIndex, 1);
+                            return; // Přerušit pIndex loop pro tento projektil
+                        }
                     }
-                });
-                if (hitObstacle && proj.type !== 'wall') {
-                    GAME.entities.projectiles.splice(pIndex, 1);
-                    continue;
                 }
             }
 
