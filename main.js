@@ -2508,13 +2508,12 @@ function showMetaMenu() {
 
         card.innerHTML = `
             <h3>${type.name}</h3>
-            <p style="font-size: 0.7rem; color: #94a3b8; margin: 8px 0;">Otevři a získej emoji!</p>
+            <div style="font-size: 0.7rem; color: #fbbf24; font-weight: 800; margin-bottom: 5px;">${type.cost} DOGE / ks</div>
             <div class="crate-multipliers" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; position: absolute; bottom: 10px; left: 10px; right: 10px;">
                 ${[1, 2, 5, 10].map(count => `
-                    <button class="btn-bulk" data-count="${count}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 0; border-radius: 8px; font-size: 0.65rem; font-weight: 800; cursor: pointer; transition: all 0.2s;">${count}x</button>
+                    <button class="btn-bulk" data-count="${count}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 10px 0; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; transition: all 0.2s;">${count}x</button>
                 `).join('')}
             </div>
-            <div style="font-size: 0.7rem; color: #fbbf24; font-weight: 800; margin-top: 5px;">${type.cost} DOGE / ks</div>
         `;
 
         card.querySelectorAll('.btn-bulk').forEach(btn => {
@@ -2679,20 +2678,6 @@ function openCrate(type = 'basic', count = 1) {
         GAME.crateQueue.push(generateResult(type));
     }
 
-    // Add first to inventory
-    const addToInv = (item) => {
-        if (!META.inventory) META.inventory = [];
-        const existing = META.inventory.find(i => i.id === item.id);
-        if (existing) existing.count++;
-        else META.inventory.push({ id: item.id, count: 1 });
-        
-        if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalCratesOpened: 0 };
-        META.stats.totalCratesOpened = (META.stats.totalCratesOpened || 0) + 1;
-        saveMeta();
-        checkAchievements();
-    };
-
-    addToInv(firstResult);
     startCrateAnimation(firstResult, type);
 }
 
@@ -2793,25 +2778,26 @@ function startCrateAnimation(winner, crateType = 'basic') {
         }
     }, 6200);
 
+    // Add winner to inventory immediately when animation starts to prevent loss
+    if (!META.inventory) META.inventory = [];
+    const existing = META.inventory.find(i => i.id === winner.id);
+    if (existing) existing.count++;
+    else META.inventory.push({ id: winner.id, count: 1 });
+    
+    if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalCratesOpened: 0 };
+    META.stats.totalCratesOpened = (META.stats.totalCratesOpened || 0) + 1;
+    saveMeta();
+    checkAchievements();
+
     const autoNextTimeout = GAME.crateQueue && GAME.crateQueue.length > 0 ? setTimeout(() => {
         const nextBtn = document.getElementById('btn-crate-collect');
         if (nextBtn) nextBtn.click();
-    }, 2500) : null;
-
+    }, 3000) : null;
+    
     modal.querySelector('#btn-crate-collect').onclick = () => {
         if (autoNextTimeout) clearTimeout(autoNextTimeout);
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
             const nextWinner = GAME.crateQueue.shift();
-            // Add to inventory
-            if (!META.inventory) META.inventory = [];
-            const existing = META.inventory.find(i => i.id === nextWinner.id);
-            if (existing) existing.count++;
-            else META.inventory.push({ id: nextWinner.id, count: 1 });
-            
-            if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalCratesOpened: 0 };
-            META.stats.totalCratesOpened = (META.stats.totalCratesOpened || 0) + 1;
-            saveMeta();
-            
             modal.remove();
             startCrateAnimation(nextWinner, crateType);
         } else {
