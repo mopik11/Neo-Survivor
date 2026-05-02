@@ -761,8 +761,6 @@ class Tombstone {
 class Obstacle {
     constructor(x, y, radius) {
         this.x = x; this.y = y; this.radius = radius;
-        this.maxHp = 1000;
-        this.hp = this.maxHp;
     }
     draw(ctx, cam) {
         ctx.fillStyle = '#334155';
@@ -777,16 +775,6 @@ class Obstacle {
         }
         ctx.closePath();
         ctx.fill(); ctx.stroke();
-
-        // HP bar pro poškozený meteorit
-        if (this.hp < this.maxHp) {
-            const barW = this.radius * 1.5;
-            const barH = 4;
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.fillRect(this.x - cam.x - barW / 2, this.y - cam.y - this.radius - 15, barW, barH);
-            ctx.fillStyle = '#94a3b8';
-            ctx.fillRect(this.x - cam.x - barW / 2, this.y - cam.y - this.radius - 15, barW * (this.hp / this.maxHp), barH);
-        }
     }
 }
 
@@ -876,6 +864,58 @@ class Bait {
     }
 }
 
+class Meteorite {
+    constructor(x, y, hp = 500) {
+        this.x = x; this.y = y; this.radius = 35 + Math.random() * 25;
+        this.id = Math.random().toString(36).substr(2, 9);
+        this.maxHp = hp * (1 + (this.radius - 35) / 10);
+        this.hp = this.maxHp;
+        this.isMeteorite = true;
+        this.angle = Math.random() * Math.PI * 2;
+        this.rotSpeed = (Math.random() - 0.5) * 0.02;
+    }
+    update() {
+        this.angle += this.rotSpeed;
+    }
+    draw(ctx, cam) {
+        ctx.save();
+        ctx.translate(this.x - cam.x, this.y - cam.y);
+        ctx.rotate(this.angle);
+        ctx.fillStyle = '#475569';
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        const sides = 8;
+        for (let i = 0; i < sides; i++) {
+            const a = (i / sides) * Math.PI * 2;
+            const r = this.radius * (0.9 + Math.random() * 0.1);
+            if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+            else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Detaily na meteoritu
+        ctx.fillStyle = '#334155';
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.arc(Math.cos(i) * this.radius * 0.5, Math.sin(i) * this.radius * 0.5, this.radius * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        const ratio = this.hp / this.maxHp;
+        if (ratio < 1) {
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(-20, this.radius + 5, 40, 6);
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(-20, this.radius + 5, 40 * ratio, 6);
+        }
+        ctx.restore();
+    }
+}
+
+
 class Boss {
     constructor(x, y, level = 1, id = Math.random().toString(36).substr(2, 9), type = null) {
         this.x = x; this.y = y; this.radius = 50; this.id = id;
@@ -907,35 +947,33 @@ class Boss {
         this.y += Math.sin(angle) * this.speed * speedScale * GAME.speedFactor + this.knockback.y;
         this.knockback.x *= 0.9; this.knockback.y *= 0.9;
 
-        // Boss útoky podle typu
-        if (Date.now() - this.lastAction > 2500) {
-            if (this.type === 1) { // Mega-Dron - výstřel do všech stran
+        // Boss útoky podle typu a obtížnosti
+        const attackInterval = Math.max(1000, 4000 - (GAME.time / 60) * 200);
+        if (Date.now() - this.lastAction > attackInterval) {
+            if (this.type === 1) { // Crusher Boss - rychlý nájezd
+                this.speed *= 3;
+                setTimeout(() => this.speed = CONFIG.ENEMY_BASE_SPEED * 0.7, 1000);
+            } else if (this.type === 2) { // Hunter Boss - dávka střel
                 for (let i = 0; i < 12; i++) {
-                    const a = (i / 12) * Math.PI * 2;
-                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a) * 100, this.y + Math.sin(a) * 100, 15, { isEnemy: true, color: '#ef4444', speed: 6 }));
+                    const a = angle - 0.8 + i * 0.15;
+                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a) * 100, this.y + Math.sin(a) * 100, 15 + (GAME.time / 60) * 2, { isEnemy: true, color: '#f43f5e', speed: 9 }));
                 }
-            } else if (this.type === 2) { // Hunter Boss - dávka střel na hráče
-                for (let i = 0; i < 8; i++) {
-                    const a = angle - 0.4 + i * 0.1;
-                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a) * 100, this.y + Math.sin(a) * 100, 15, { isEnemy: true, color: '#f43f5e', speed: 8 }));
+            } else if (this.type === 3) { // Spawner Boss - vlna minionů
+                for (let i = 0; i < 5; i++) {
+                    GAME.entities.enemies.push(new Enemy(this.x + Math.random() * 40 - 20, this.y + Math.random() * 40 - 20, 1 + Math.floor(GAME.time / 120), Math.random().toString(36).substr(2, 9), Math.floor(Math.random() * 3) + 1));
                 }
-            } else if (this.type === 3) { // Kamikadze Boss - minion spawn
-                for (let i = 0; i < 4; i++) {
-                    const a = Math.random() * Math.PI * 2;
-                    GAME.entities.enemies.push(new Enemy(this.x + Math.cos(a) * 60, this.y + Math.sin(a) * 60, 1, Math.random().toString(36).substr(2, 9), 3));
+            } else if (this.type === 4) { // Pulse Boss - kruhová vlna
+                for (let i = 0; i < 24; i++) {
+                    const a = (i / 24) * Math.PI * 2;
+                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a) * 100, this.y + Math.sin(a) * 100, 20, { isEnemy: true, color: '#fbbf24', speed: 6, size: 12 }));
                 }
-            } else if (this.type === 4) { // Orbitální Boss - mrazivé střely
-                 for (let i = 0; i < 16; i++) {
-                    const a = (i / 16) * Math.PI * 2 + (Date.now() / 1000);
-                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a) * 100, this.y + Math.sin(a) * 100, 20, { isEnemy: true, color: '#0ea5e9', speed: 4 }));
-                }
-            } else if (this.type === 5) { // Berserker Boss - rychlý sprint
-                this.speed = CONFIG.ENEMY_BASE_SPEED * 3.5;
-                setTimeout(() => { this.speed = CONFIG.ENEMY_BASE_SPEED * 0.7; }, 1000);
+            } else if (this.type === 5) { // Sniper Boss - přesná střela
+                GAME.entities.projectiles.push(new Projectile(this.x, this.y, target.x, target.y, 40, { isEnemy: true, color: '#0ea5e9', speed: 15, size: 15 }));
             }
             this.lastAction = Date.now();
         }
     }
+
     draw(ctx, cam) {
         const ratio = this.hp / this.maxHp;
         const colors = { 1: '#ef4444', 2: '#f43f5e', 3: '#f97316', 4: '#eab308', 5: '#0ea5e9' };
@@ -1102,17 +1140,18 @@ class Enemy {
 
         const now = Date.now();
         if (this.type === 3 && !this.exploding) {
-            if (dist(this.x, this.y, target.x, target.y) < 130 && !target.isBait && target.hp !== undefined) {
+            if (dist(this.x, this.y, target.x, target.y) < 140 && !target.isBait && target.hp !== undefined) {
                 this.exploding = true;
                 this.explodeTime = now + 1200;
             }
         }
 
+
         if (this.type === 3 && this.exploding && now > this.explodeTime) {
             this.hp = 0;
-            players.forEach(p => { if (dist(p.x, p.y, this.x, this.y) < 220) p.hp -= 40; });
+            players.forEach(p => { if (dist(p.x, p.y, this.x, this.y) < 150) p.hp -= 40; });
             if (GAME.entities.enemies) {
-                GAME.entities.enemies.forEach(e => { if (e.id !== this.id && dist(e.x, e.y, this.x, this.y) < 220) e.hp -= 150; });
+                GAME.entities.enemies.forEach(e => { if (e.id !== this.id && dist(e.x, e.y, this.x, this.y) < 150) e.hp -= 150; });
             }
             if (GAME.entities.fire) {
                 for (let j = 0; j < 15; j++) {
@@ -1137,9 +1176,9 @@ class Enemy {
         // --- NOVÉ TYPY NEPŘÁTEL ---
         if (this.type === 7 && !this.dead) { // RYCHLÝ SEBEVRAH
             this.speed = (CONFIG.ENEMY_BASE_SPEED + 2.5) * GAME.speedFactor;
-            if (dist(this.x, this.y, target.x, target.y) < 45) {
+            if (dist(this.x, this.y, target.x, target.y) < 55) {
                 this.hp = 0; this.dead = true;
-                players.forEach(p => { if (dist(p.x, p.y, this.x, this.y) < 70) p.hp -= 35; });
+                if (target.hp !== undefined) target.hp -= 35;
                 shakeScreen(10); AudioEngine.play('hit');
             }
         }
@@ -1511,20 +1550,32 @@ class Player {
         const enemies = GAME.entities.enemies;
         if (!enemies || enemies.length === 0) return;
 
-        if (!target) {
-            // Pokud není nablízku nepřítel, zkus zaměřit meteorit
-            if (GAME.entities.obstacles) {
-                let minObsDist = Infinity;
-                GAME.entities.obstacles.forEach(obs => {
-                    const d = dist(this.x, this.y, obs.x, obs.y);
-                    if (d < 600 && d < minObsDist) { // Max dosah na meteority
-                        minObsDist = d;
-                        target = obs;
-                    }
-                });
+        let target = null;
+        let minDist = Infinity;
+        
+        // Prioritizace nepřátel před meteority
+        for (let i = 0; i < enemies.length; i++) {
+            const e = enemies[i];
+            if (!e || e.hp <= 0) continue;
+            const d = dist(this.x, this.y, e.x, e.y);
+            if (d < minDist) {
+                minDist = d;
+                target = e;
             }
         }
 
+        // Pokud není nepřítel, zkus meteorit
+        if (!target && GAME.entities.meteorites) {
+            for (let i = 0; i < GAME.entities.meteorites.length; i++) {
+                const m = GAME.entities.meteorites[i];
+                if (m.hp <= 0) continue;
+                const d = dist(this.x, this.y, m.x, m.y);
+                if (d < minDist && d < 600) { // Omezený dostřel na meteority
+                    minDist = d;
+                    target = m;
+                }
+            }
+        }
         if (!target) return;
 
         if (this.shipType === 1) {
@@ -1815,8 +1866,9 @@ function showLevelUp() {
         } else if (pShip === 4) {
             if (['wall_range', 'wall_width', 'laser_range', 'possession_plus'].includes(u.id)) return false;
         } else if (pShip === 5) { // Nekromancer
-            if (['wall_range', 'wall_width', 'laser_range', 'count', 'pierce', 'bounce', 'size'].includes(u.id)) return false;
+            if (['wall_range', 'wall_width', 'laser_range', 'pierce', 'bounce', 'size'].includes(u.id)) return false;
         }
+
 
         if (u.id === 'possession_plus' && META.selectedAbility !== 3) return false;
 
@@ -4193,6 +4245,15 @@ function update(dt) {
                 let enemy;
                 let hp = CONFIG.ENEMY_BASE_HEALTH * mod;
                 let type = 1;
+
+                // Spawnování meteoritů
+                if (!GAME.entities.meteorites) GAME.entities.meteorites = [];
+                if (Math.random() < 0.1 && GAME.entities.meteorites.length < 15) {
+                    const ma = Math.random() * Math.PI * 2;
+                    const mx = pivot.x + Math.cos(ma) * (CONFIG.SPAWN_RADIUS + 200);
+                    const my = pivot.y + Math.sin(ma) * (CONFIG.SPAWN_RADIUS + 200);
+                    GAME.entities.meteorites.push(new Meteorite(mx, my, 800 * mod));
+                }
                 let speedMod = 1;
 
                 const rnd = Math.random();
@@ -4329,6 +4390,11 @@ function update(dt) {
         GAME.entities.baits.forEach(b => b.update());
     }
 
+    if (GAME.entities.meteorites) {
+        GAME.entities.meteorites = GAME.entities.meteorites.filter(m => m && m.hp > 0);
+        GAME.entities.meteorites.forEach(m => m.update());
+    }
+
     if (GAME.entities.fire) {
         for (let i = GAME.entities.fire.length - 1; i >= 0; i--) {
             const f = GAME.entities.fire[i];
@@ -4349,19 +4415,15 @@ function update(dt) {
             proj.update();
 
             if (GAME.entities.obstacles) {
-                for (let oIdx = GAME.entities.obstacles.length - 1; oIdx >= 0; oIdx--) {
-                    const obs = GAME.entities.obstacles[oIdx];
+                let hitObstacle = false;
+                GAME.entities.obstacles.forEach(obs => {
                     if (dist(proj.x, proj.y, obs.x, obs.y) < proj.radius + obs.radius) {
-                        if (proj.type !== 'wall') {
-                            obs.hp -= proj.damage;
-                            if (obs.hp <= 0) {
-                                shakeScreen(3);
-                                GAME.entities.obstacles.splice(oIdx, 1);
-                            }
-                            GAME.entities.projectiles.splice(pIndex, 1);
-                            return; // Přerušit pIndex loop pro tento projektil
-                        }
+                        hitObstacle = true;
                     }
+                });
+                if (hitObstacle && proj.type !== 'wall') {
+                    GAME.entities.projectiles.splice(pIndex, 1);
+                    continue;
                 }
             }
 
@@ -4458,6 +4520,18 @@ function update(dt) {
                         }
                     }
                 });
+
+                // Kolize projektilů s meteority
+                if (GAME.entities.meteorites) {
+                    GAME.entities.meteorites.forEach(m => {
+                        if (dist(proj.x, proj.y, m.x, m.y) < proj.radius + m.radius) {
+                            m.hp -= proj.damage;
+                            if (proj.type !== 'wall') proj.life = 0;
+                            if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                            GAME.entities.floatingTexts.push(new FloatingText(m.x, m.y, Math.floor(proj.damage).toString(), "#94a3b8"));
+                        }
+                    });
+                }
             }
         }
     }
@@ -4539,6 +4613,7 @@ function render() {
 
         if (GAME.active && GAME.entities) {
             if (GAME.entities.fire) GAME.entities.fire.forEach(f => { if (f) f.draw(ctx, { x: camX, y: camY }); });
+            if (GAME.entities.meteorites) GAME.entities.meteorites.forEach(m => { if (m) m.draw(ctx, { x: camX, y: camY }); });
             if (GAME.entities.obstacles) GAME.entities.obstacles.forEach(o => { if (o) o.draw(ctx, { x: camX, y: camY }); });
             if (GAME.entities.baits) GAME.entities.baits.forEach(b => { if (b) b.draw(ctx, { x: camX, y: camY }); });
             if (GAME.entities.tombstones) GAME.entities.tombstones.forEach(t => { if (t) t.draw(ctx, { x: camX, y: camY }); });
