@@ -2751,9 +2751,21 @@ function startCrateAnimation(winner, crateType = 'basic') {
         carousel.style.transition = 'none';
         const offset = -(35 * itemWidth + itemSize / 2);
         carousel.style.transform = `translateX(${offset}px)`;
-        document.getElementById('crate-result-info').style.opacity = '1';
-        document.getElementById('crate-result-info').style.transform = 'translateY(0)';
+        
+        const resultInfo = document.getElementById('crate-result-info');
+        if (resultInfo) {
+            resultInfo.style.opacity = '1';
+            resultInfo.style.transform = 'translateY(0)';
+        }
         document.getElementById('btn-skip-crate').style.display = 'none';
+
+        // Also trigger auto-next if skipped
+        if (GAME.crateQueue && GAME.crateQueue.length > 0 && !GAME.currentAutoNextTimeout) {
+            GAME.currentAutoNextTimeout = setTimeout(() => {
+                const nextBtn = document.getElementById('btn-crate-collect');
+                if (nextBtn) nextBtn.click();
+            }, 3000);
+        }
     };
 
     modal.querySelector('#btn-skip-crate').onclick = () => {
@@ -2776,6 +2788,17 @@ function startCrateAnimation(winner, crateType = 'basic') {
             resultInfo.style.transform = 'translateY(0)';
             document.getElementById('btn-skip-crate').style.display = 'none';
         }
+
+        // AUTO-NEXT starts ONLY AFTER animation finishes + 3 seconds
+        if (GAME.crateQueue && GAME.crateQueue.length > 0) {
+            const autoNextTimeout = setTimeout(() => {
+                const nextBtn = document.getElementById('btn-crate-collect');
+                if (nextBtn) nextBtn.click();
+            }, 3000);
+            
+            // Store timeout ID to clear if user clicks manually
+            GAME.currentAutoNextTimeout = autoNextTimeout;
+        }
     }, 6200);
 
     // Add winner to inventory immediately when animation starts to prevent loss
@@ -2789,13 +2812,9 @@ function startCrateAnimation(winner, crateType = 'basic') {
     saveMeta();
     checkAchievements();
 
-    const autoNextTimeout = GAME.crateQueue && GAME.crateQueue.length > 0 ? setTimeout(() => {
-        const nextBtn = document.getElementById('btn-crate-collect');
-        if (nextBtn) nextBtn.click();
-    }, 3000) : null;
-    
     modal.querySelector('#btn-crate-collect').onclick = () => {
-        if (autoNextTimeout) clearTimeout(autoNextTimeout);
+        if (GAME.currentAutoNextTimeout) clearTimeout(GAME.currentAutoNextTimeout);
+        if (animTimeout) clearTimeout(animTimeout);
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
             const nextWinner = GAME.crateQueue.shift();
             modal.remove();
@@ -2807,7 +2826,9 @@ function startCrateAnimation(winner, crateType = 'basic') {
     };
 
     modal.querySelector('#btn-crate-sell').onclick = () => {
-        if (autoNextTimeout) clearTimeout(autoNextTimeout);
+        if (GAME.currentAutoNextTimeout) clearTimeout(GAME.currentAutoNextTimeout);
+        if (animTimeout) clearTimeout(animTimeout);
+        
         // Sell logic
         META.currency += winner.price;
         // Remove one from inventory if just added
@@ -2820,7 +2841,9 @@ function startCrateAnimation(winner, crateType = 'basic') {
         showCurrencyNotification(winner.price, `PRODÁNO: ${winner.name}`);
         
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
-            document.getElementById('btn-crate-collect').click();
+            const nextWinner = GAME.crateQueue.shift();
+            modal.remove();
+            startCrateAnimation(nextWinner, crateType);
         } else {
             modal.remove();
             showMetaMenu();
@@ -2828,6 +2851,9 @@ function startCrateAnimation(winner, crateType = 'basic') {
     };
 
     modal.querySelector('#btn-crate-again').onclick = () => {
+        if (GAME.currentAutoNextTimeout) clearTimeout(GAME.currentAutoNextTimeout);
+        if (animTimeout) clearTimeout(animTimeout);
+        
         const crateCost = { 'basic': 150, 'premium': 1000, 'legendary': 5000 }[GAME.lastCrateType];
         const totalCost = crateCost * (GAME.lastCrateBatchSize || 1);
         if (META.currency < totalCost) {
