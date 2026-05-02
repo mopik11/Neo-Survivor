@@ -2502,20 +2502,41 @@ function showMetaMenu() {
         card.className = 'upgrade-card';
         card.style.background = type.color;
         card.style.borderColor = type.border;
-        card.style.cursor = 'pointer';
         card.style.position = 'relative';
         card.style.zIndex = '5';
-        card.innerHTML = `<h3>${type.name}</h3><p>Otevři a získej emoji!</p><span class="cost">${type.cost} DOGE</span>`;
-        
-        card.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log("Crate clicked:", type.id);
-            if (META.currency < type.cost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
-            META.currency -= type.cost;
-            saveMeta();
-            openCrate(type.id);
+        card.style.paddingBottom = '60px'; // Space for buttons
+
+        card.innerHTML = `
+            <h3>${type.name}</h3>
+            <p style="font-size: 0.7rem; color: #94a3b8; margin: 8px 0;">Otevři a získej emoji!</p>
+            <div class="crate-multipliers" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; position: absolute; bottom: 10px; left: 10px; right: 10px;">
+                ${[1, 2, 5, 10].map(count => `
+                    <button class="btn-bulk" data-count="${count}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 0; border-radius: 8px; font-size: 0.65rem; font-weight: 800; cursor: pointer; transition: all 0.2s;">${count}x</button>
+                `).join('')}
+            </div>
+            <div style="font-size: 0.7rem; color: #fbbf24; font-weight: 800; margin-top: 5px;">${type.cost} DOGE / ks</div>
+        `;
+
+        card.querySelectorAll('.btn-bulk').forEach(btn => {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const count = parseInt(btn.getAttribute('data-count'));
+                const totalCost = type.cost * count;
+                
+                if (META.currency < totalCost) { 
+                    window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); 
+                    return; 
+                }
+                
+                META.currency -= totalCost;
+                saveMeta();
+                openCrate(type.id, count);
+            };
+            btn.onmouseenter = () => btn.style.background = 'rgba(255,255,255,0.15)';
+            btn.onmouseleave = () => btn.style.background = 'rgba(255,255,255,0.05)';
         });
+        
         cratesGrid.appendChild(card);
     });
 
@@ -2605,54 +2626,74 @@ function getRarityColor(rarity) {
     }
 }
 
-function openCrate(type = 'basic') {
-    const roll = Math.random() * 100;
-    let result = null;
-    let targetRarity = 'common';
-
-    // 1. Check for ultra-rare chance (Diamond)
-    const diamond = EMOJIS.find(e => e.id === 'ultra_rare');
-    if (diamond && roll < diamond.chance) {
-        result = diamond;
-        targetRarity = 'legendary';
+function openCrate(type = 'basic', count = 1) {
+    if (!GAME.crateQueue) GAME.crateQueue = [];
+    
+    // If it's a new batch, clear old queue
+    if (count > 1) {
+        GAME.crateQueue = [];
+        GAME.lastCrateBatchSize = count;
+        GAME.lastCrateType = type;
+    } else if (GAME.crateQueue.length === 0) {
+        // Single opening, store for 'Spin Again'
+        GAME.lastCrateBatchSize = 1;
+        GAME.lastCrateType = type;
     }
 
-    if (!result) {
-        if (type === 'legendary') {
-            // Legendary: 40% Rare, 45% Epic, 15% Legendary
-            if (roll < 15) targetRarity = 'legendary';
-            else if (roll < 60) targetRarity = 'epic';
-            else targetRarity = 'rare';
-        } else if (type === 'premium') {
-            // Premium: 50% Uncommon, 35% Rare, 14% Epic, 1% Legendary
-            if (roll < 1) targetRarity = 'legendary';
-            else if (roll < 15) targetRarity = 'epic';
-            else if (roll < 50) targetRarity = 'rare';
-            else targetRarity = 'uncommon';
-        } else {
-            // Basic: 70% Common, 25% Uncommon, 4.5% Rare, 0.4% Epic, 0.1% Legendary
-            if (roll < 0.1) targetRarity = 'legendary';
-            else if (roll < 0.5) targetRarity = 'epic';    
-            else if (roll < 5) targetRarity = 'rare';   
-            else if (roll < 30) targetRarity = 'uncommon';
-            else targetRarity = 'common';
+    const generateResult = (crateType) => {
+        const roll = Math.random() * 100;
+        let res = null;
+        let rarity = 'common';
+        const diamond = EMOJIS.find(e => e.id === 'ultra_rare');
+        if (diamond && roll < diamond.chance) {
+            res = diamond;
+            rarity = 'legendary';
         }
+        if (!res) {
+            if (crateType === 'legendary') {
+                if (roll < 15) rarity = 'legendary';
+                else if (roll < 60) rarity = 'epic';
+                else rarity = 'rare';
+            } else if (crateType === 'premium') {
+                if (roll < 1) rarity = 'legendary';
+                else if (roll < 15) rarity = 'epic';
+                else if (roll < 50) rarity = 'rare';
+                else rarity = 'uncommon';
+            } else {
+                if (roll < 0.1) rarity = 'legendary';
+                else if (roll < 0.5) rarity = 'epic';    
+                else if (roll < 5) rarity = 'rare';   
+                else if (roll < 30) rarity = 'uncommon';
+                else rarity = 'common';
+            }
+            const possible = EMOJIS.filter(e => e.rarity === rarity && e.id !== 'ultra_rare');
+            res = possible.length === 0 ? EMOJIS[0] : possible[Math.floor(Math.random() * possible.length)];
+        }
+        return res;
+    };
 
-        const possible = EMOJIS.filter(e => e.rarity === targetRarity && e.id !== 'ultra_rare');
-        result = possible.length === 0 ? EMOJIS[0] : possible[Math.floor(Math.random() * possible.length)];
+    const firstResult = generateResult(type);
+    
+    // Add rest to queue
+    for (let i = 1; i < count; i++) {
+        GAME.crateQueue.push(generateResult(type));
     }
 
-    if (!META.inventory) META.inventory = [];
-    const existing = META.inventory.find(i => i.id === result.id);
-    if (existing) existing.count++;
-    else META.inventory.push({ id: result.id, count: 1 });
+    // Add first to inventory
+    const addToInv = (item) => {
+        if (!META.inventory) META.inventory = [];
+        const existing = META.inventory.find(i => i.id === item.id);
+        if (existing) existing.count++;
+        else META.inventory.push({ id: item.id, count: 1 });
+        
+        if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalCratesOpened: 0 };
+        META.stats.totalCratesOpened = (META.stats.totalCratesOpened || 0) + 1;
+        saveMeta();
+        checkAchievements();
+    };
 
-    if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalCratesOpened: 0 };
-    META.stats.totalCratesOpened = (META.stats.totalCratesOpened || 0) + 1;
-
-    saveMeta();
-    checkAchievements();
-    startCrateAnimation(result, type);
+    addToInv(firstResult);
+    startCrateAnimation(firstResult, type);
 }
 
 function startCrateAnimation(winner, crateType = 'basic') {
@@ -2703,11 +2744,16 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 </div>
             </div>
 
-            <div id="crate-result-info" style="margin-top: 2rem; opacity: 0; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center;">
-                <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 5px; letter-spacing: 2px;">ZÍSKÁNO:</div>
-                <h3 style="color: #fff; font-size: 2.8rem; margin: 0; text-shadow: 0 0 30px rgba(255,255,255,0.1);">${winner.name}</h3>
-                <p style="color: ${getRarityColor(winner.rarity)}; font-weight: bold; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 3px; margin-top: 5px;">${winner.rarity}</p>
-                <button class="btn-restart" style="margin-top: 2rem; min-width: 280px; background: ${getRarityColor(winner.rarity)}; color: #000; box-shadow: 0 10px 40px ${getRarityColor(winner.rarity)}66; font-weight: 800; padding: 15px;">PŘIDAT DO SBÍRKY</button>
+            <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
+                <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; letter-spacing: 2px;">ZÍSKÁNO: ${GAME.crateQueue ? (GAME.lastCrateBatchSize - GAME.crateQueue.length) : 1} / ${GAME.lastCrateBatchSize || 1}</div>
+                <h3 style="color: #fff; font-size: 2.2rem; margin: 0; text-shadow: 0 0 30px rgba(255,255,255,0.1);">${winner.name}</h3>
+                <p style="color: ${getRarityColor(winner.rarity)}; font-weight: bold; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 3px; margin: 5px 0 1.5rem 0;">${winner.rarity}</p>
+                
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${GAME.crateQueue && GAME.crateQueue.length > 0 ? 'DALŠÍ (NEXT)' : 'PŘIDAT DO SBÍRKY'}</button>
+                    <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">PRODAT (+${winner.price})</button>
+                    <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${(!GAME.crateQueue || GAME.crateQueue.length === 0) ? 'block' : 'none'};">ZATOČIT ZNOVU</button>
+                </div>
             </div>
         </div>
     `;
@@ -2747,10 +2793,65 @@ function startCrateAnimation(winner, crateType = 'basic') {
         }
     }, 6200);
 
-    modal.querySelector('.btn-restart').onclick = () => {
-        clearTimeout(animTimeout);
+    const autoNextTimeout = GAME.crateQueue && GAME.crateQueue.length > 0 ? setTimeout(() => {
+        const nextBtn = document.getElementById('btn-crate-collect');
+        if (nextBtn) nextBtn.click();
+    }, 2500) : null;
+
+    modal.querySelector('#btn-crate-collect').onclick = () => {
+        if (autoNextTimeout) clearTimeout(autoNextTimeout);
+        if (GAME.crateQueue && GAME.crateQueue.length > 0) {
+            const nextWinner = GAME.crateQueue.shift();
+            // Add to inventory
+            if (!META.inventory) META.inventory = [];
+            const existing = META.inventory.find(i => i.id === nextWinner.id);
+            if (existing) existing.count++;
+            else META.inventory.push({ id: nextWinner.id, count: 1 });
+            
+            if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalCratesOpened: 0 };
+            META.stats.totalCratesOpened = (META.stats.totalCratesOpened || 0) + 1;
+            saveMeta();
+            
+            modal.remove();
+            startCrateAnimation(nextWinner, crateType);
+        } else {
+            modal.remove();
+            showMetaMenu();
+        }
+    };
+
+    modal.querySelector('#btn-crate-sell').onclick = () => {
+        if (autoNextTimeout) clearTimeout(autoNextTimeout);
+        // Sell logic
+        META.currency += winner.price;
+        // Remove one from inventory if just added
+        const invIdx = META.inventory.findIndex(i => i.id === winner.id);
+        if (invIdx !== -1) {
+            if (META.inventory[invIdx].count > 1) META.inventory[invIdx].count--;
+            else META.inventory.splice(invIdx, 1);
+        }
+        saveMeta();
+        showCurrencyNotification(winner.price, `PRODÁNO: ${winner.name}`);
+        
+        if (GAME.crateQueue && GAME.crateQueue.length > 0) {
+            document.getElementById('btn-crate-collect').click();
+        } else {
+            modal.remove();
+            showMetaMenu();
+        }
+    };
+
+    modal.querySelector('#btn-crate-again').onclick = () => {
+        const crateCost = { 'basic': 150, 'premium': 1000, 'legendary': 5000 }[GAME.lastCrateType];
+        const totalCost = crateCost * (GAME.lastCrateBatchSize || 1);
+        if (META.currency < totalCost) {
+            window.showCustomAlert(window.T("Nemáš dost Dogecoinu!"));
+            return;
+        }
+        META.currency -= totalCost;
+        saveMeta();
         modal.remove();
-        showMetaMenu();
+        openCrate(GAME.lastCrateType, GAME.lastCrateBatchSize);
     };
 }
 
