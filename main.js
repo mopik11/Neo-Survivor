@@ -171,6 +171,32 @@ const EMOJIS = [
     { id: 'saturn', name: 'Saturn', icon: '🪐', rarity: 'rare', price: 250 },
     { id: 'invader', name: 'Vetřelec', icon: '👾', rarity: 'epic', price: 550 },
     { id: 'spy', name: 'Špión', icon: '🕵️', rarity: 'rare', price: 200 },
+    { id: 'spy', name: 'Špión', icon: '🕵️', rarity: 'rare', price: 200 },
+    { id: 'fox', name: 'Liška', icon: '🦊', rarity: 'uncommon', price: 45 },
+    { id: 'bear', name: 'Medvěd', icon: '🐻', rarity: 'uncommon', price: 45 },
+    { id: 'panda', name: 'Panda', icon: '🐼', rarity: 'rare', price: 120 },
+    { id: 'koala', name: 'Koala', icon: '🐨', rarity: 'rare', price: 125 },
+    { id: 'tiger', name: 'Tygr', icon: '🐯', rarity: 'epic', price: 450 },
+    { id: 'lion', name: 'Lev', icon: '🦁', rarity: 'epic', price: 500 },
+    { id: 'frog', name: 'Žába', icon: '🐸', rarity: 'common', price: 20 },
+    { id: 'monkey', name: 'Opice', icon: '🐵', rarity: 'uncommon', price: 50 },
+    { id: 'penguin', name: 'Tučňák', icon: '🐧', rarity: 'rare', price: 180 },
+    { id: 'unicorn', name: 'Jednorožec', icon: '🦄', rarity: 'legendary', price: 4000 },
+    { id: 'butterfly', name: 'Motýl', icon: '🦋', rarity: 'rare', price: 160 },
+    { id: 'turtle', name: 'Želva', icon: '🐢', rarity: 'uncommon', price: 70 },
+    { id: 'octopus', name: 'Chobotnice', icon: '🐙', rarity: 'epic', price: 600 },
+    { id: 'whale', name: 'Velryba', icon: '🐳', rarity: 'epic', price: 650 },
+    { id: 'apple', name: 'Jablko', icon: '🍎', rarity: 'common', price: 15 },
+    { id: 'banana', name: 'Banán', icon: '🍌', rarity: 'common', price: 15 },
+    { id: 'watermelon', name: 'Meloun', icon: '🍉', rarity: 'uncommon', price: 35 },
+    { id: 'sushi_roll', name: 'Maki', icon: '🍣', rarity: 'rare', price: 240 },
+    { id: 'ramen', name: 'Ramen', icon: '🍜', rarity: 'rare', price: 260 },
+    { id: 'ice_cube', name: 'Led', icon: '🧊', rarity: 'common', price: 10 },
+    { id: 'crystal', name: 'Krystal', icon: '🔮', rarity: 'epic', price: 700 },
+    { id: 'rainbow', name: 'Duha', icon: '🌈', rarity: 'legendary', price: 4500 },
+    { id: 'clover', name: 'Čtyřlístek', icon: '🍀', rarity: 'rare', price: 300 },
+    { id: 'diamond_gem', name: 'Safír', icon: '🔷', rarity: 'rare', price: 400 },
+    { id: 'gold_bar', name: 'Zlato', icon: '🧱', rarity: 'epic', price: 800 },
     // ČEPICE (Legendární)
     { id: 'hat_crown', name: '👑 Koruna', icon: '👑', rarity: 'legendary', price: 1000, isHat: true, type: 'crown' },
     { id: 'hat_wizard', name: '🧙 Mág', icon: '🧙', rarity: 'legendary', price: 1200, isHat: true, type: 'wizard' },
@@ -2569,30 +2595,30 @@ function startCrateAnimation(winner) {
     const modal = document.createElement('div');
     modal.className = 'modal active';
     modal.style.zIndex = '2000000';
-    modal.style.background = 'rgba(0,0,0,0.9)';
+    modal.style.background = 'rgba(15, 23, 42, 0.85)'; // Semi-transparent dark background
+    modal.style.backdropFilter = 'blur(10px)';
     
-    // Create random list for animation
     const randomItems = [];
     for(let i=0; i<40; i++) {
         randomItems.push(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
     }
-    randomItems[35] = winner; // The winner is at a specific position
+    randomItems[35] = winner;
 
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 800px; width: 95vw; background: #0f172a; border: 1px solid #334155; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center;">
-            <h2 style="color: #94a3b8; font-size: 1rem; margin-bottom: 2rem; letter-spacing: 4px; text-transform: uppercase; opacity: 0.7;">OTEVÍRÁNÍ BEDNY...</h2>
+        <div class="modal-content" style="max-width: 800px; width: 95vw; background: #0f172a; border: 1px solid #334155; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+            <button id="btn-skip-crate" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 5px 15px; border-radius: 8px; cursor: pointer; font-size: 0.7rem; font-weight: bold; z-index: 200;">PŘESKOČIT (SKIP)</button>
+            <h2 style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem; letter-spacing: 4px; text-transform: uppercase; opacity: 0.7;">OTEVÍRÁNÍ BEDNY...</h2>
             
-            <div style="position: relative; width: 100%; height: 160px; overflow: hidden; background: rgba(0,0,0,0.3); border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center;">
-                <!-- CS:GO Marker -->
-                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 3px; height: 100%; background: #fbbf24; z-index: 100; box-shadow: 0 0 20px #fbbf24;">
-                    <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 10px solid #fbbf24;"></div>
-                    <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 10px solid #fbbf24;"></div>
+            <div style="position: relative; width: 100%; height: 160px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 40px rgba(0,0,0,0.5);">
+                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #fbbf24; z-index: 100; box-shadow: 0 0 15px #fbbf24;">
+                    <div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 12px solid #fbbf24;"></div>
+                    <div style="position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 12px solid #fbbf24;"></div>
                 </div>
                 
                 <div id="crate-carousel" style="display: flex; gap: 10px; width: fit-content; transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1); transform: translateX(0); padding-left: 50%;">
                     ${randomItems.map(item => `
-                        <div style="min-width: 130px; height: 130px; background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.1); border-bottom: 4px solid ${getRarityColor(item.rarity)}; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;">
-                            <div style="font-size: 3rem; filter: drop-shadow(0 0 10px rgba(255,255,255,0.1));">${item.icon}</div>
+                        <div style="min-width: 130px; height: 130px; background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.08); border-bottom: 4px solid ${getRarityColor(item.rarity)}; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;">
+                            <div style="font-size: 3rem; filter: drop-shadow(0 0 10px rgba(255,255,255,0.05));">${item.icon}</div>
                             <div style="font-size: 0.55rem; font-weight: 900; color: ${getRarityColor(item.rarity)}; letter-spacing: 1px;">${item.rarity.toUpperCase()}</div>
                         </div>
                     `).join('')}
@@ -2600,34 +2626,53 @@ function startCrateAnimation(winner) {
             </div>
 
             <div id="crate-result-info" style="margin-top: 2rem; opacity: 0; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center;">
-                <div style="font-size: 1rem; color: #64748b; margin-bottom: 5px;">ZÍSKÁNO:</div>
-                <h3 style="color: #fff; font-size: 2.5rem; margin: 0; text-shadow: 0 0 30px rgba(255,255,255,0.1);">${winner.name}</h3>
-                <p style="color: ${getRarityColor(winner.rarity)}; font-weight: bold; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px;">${winner.rarity}</p>
-                <button class="btn-restart" style="margin-top: 1.5rem; min-width: 250px; background: ${getRarityColor(winner.rarity)}; color: #000; box-shadow: 0 10px 30px ${getRarityColor(winner.rarity)}44;">PŘIDAT DO SBÍRKY</button>
+                <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 5px; letter-spacing: 2px;">ZÍSKÁNO:</div>
+                <h3 style="color: #fff; font-size: 2.8rem; margin: 0; text-shadow: 0 0 30px rgba(255,255,255,0.1);">${winner.name}</h3>
+                <p style="color: ${getRarityColor(winner.rarity)}; font-weight: bold; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 3px; margin-top: 5px;">${winner.rarity}</p>
+                <button class="btn-restart" style="margin-top: 2rem; min-width: 280px; background: ${getRarityColor(winner.rarity)}; color: #000; box-shadow: 0 10px 40px ${getRarityColor(winner.rarity)}66; font-weight: 800; padding: 15px;">PŘIDAT DO SBÍRKY</button>
             </div>
         </div>
     `;
 
     document.body.appendChild(modal);
     
+    const finishAnimation = () => {
+        const carousel = document.getElementById('crate-carousel');
+        if (!carousel) return;
+        carousel.style.transition = 'none';
+        const itemWidth = 140;
+        const offset = -(34 * itemWidth + (itemWidth / 2));
+        carousel.style.transform = `translateX(${offset}px)`;
+        document.getElementById('crate-result-info').style.opacity = '1';
+        document.getElementById('crate-result-info').style.transform = 'translateY(0)';
+        document.getElementById('btn-skip-crate').style.display = 'none';
+    };
+
+    modal.querySelector('#btn-skip-crate').onclick = () => {
+        finishAnimation();
+    };
+
     // Start animation
     setTimeout(() => {
         const carousel = document.getElementById('crate-carousel');
-        const itemWidth = 140; // 130px width + 10px gap
-        // We want to center the 35th item exactly on the marker (which is at 50% width of the container)
-        // Since we have padding-left: 50%, the 1st item starts at the marker.
-        // To get the 35th item there, we move back 34 items + half an item
+        if (!carousel) return;
+        const itemWidth = 140; 
         const offset = -(34 * itemWidth + (itemWidth / 2));
         carousel.style.transform = `translateX(${offset}px)`;
     }, 100);
 
-    // Show results
-    setTimeout(() => {
-        document.getElementById('crate-result-info').style.opacity = '1';
-        // Play sound or effect here if needed
+    // Show results normally after 6s
+    const animTimeout = setTimeout(() => {
+        const resultInfo = document.getElementById('crate-result-info');
+        if (resultInfo) {
+            resultInfo.style.opacity = '1';
+            resultInfo.style.transform = 'translateY(0)';
+            document.getElementById('btn-skip-crate').style.display = 'none';
+        }
     }, 6200);
 
-    modal.querySelector('button').onclick = () => {
+    modal.querySelector('.btn-restart').onclick = () => {
+        clearTimeout(animTimeout);
         modal.remove();
         showMetaMenu();
     };
