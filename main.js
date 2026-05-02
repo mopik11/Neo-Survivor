@@ -32,23 +32,27 @@ SOUNDS.bgMusic.loop = true;
 SOUNDS.bgMusic.volume = 0.3;
 
 function playSound(name) {
-    // 1. Force context resume on every sound play attempt
-    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') {
-        AudioEngine.ctx.resume();
+    if (!AudioEngine.ctx) {
+        AudioEngine.init();
     }
     
-    // 2. Use AudioEngine synthesis if possible for reliability
-    if (['menuOpen', 'upgrade', 'crateSpin', 'crateWin'].includes(name)) {
+    // Force resume on every attempt
+    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') {
+        AudioEngine.ctx.resume().then(() => {
+            console.log("AudioContext resumed for:", name);
+            AudioEngine.play(name);
+        });
+    } else {
         AudioEngine.play(name);
     }
 
-    // 3. Also try to play the MP3 as a secondary layer (if it works, it sounds better)
+    // Secondary layer MP3
     try {
         const s = SOUNDS[name];
         if (s) {
             s.currentTime = 0;
-            const p = s.play();
-            if (p) p.catch(() => {}); // Ignore errors, fallback is already playing
+            s.volume = (name === 'bgMusic') ? 0.3 : 0.8;
+            s.play().catch(e => console.warn("MP3 blocked:", name));
         }
     } catch(e) {}
 }
@@ -366,6 +370,7 @@ function updateKaktusUI(isActive, pct) {
 
 const AudioEngine = {
     ctx: null,
+    masterGain: null,
     musicStarted: false,
     menuInterval: null,
     menuPlaying: false,
@@ -374,6 +379,9 @@ const AudioEngine = {
         if (this.ctx) return;
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.connect(this.ctx.destination);
+            console.log("AudioEngine initialized.");
         } catch (e) { console.error("Audio init failed", e); }
     },
     startMenuMusic() {
@@ -415,13 +423,15 @@ const AudioEngine = {
         osc.stop(now + dur + 1.5);
     },
     play(type) {
+        if (!this.ctx) this.init();
         if (!this.ctx) return;
-        if (this.ctx.state === 'suspended') this.ctx.resume();
+        
+        const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
+        
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        const now = this.ctx.currentTime;
+        gain.connect(this.masterGain || this.ctx.destination);
         switch (type) {
             case 'shoot':
                 osc.type = 'triangle';
@@ -2459,11 +2469,31 @@ function showShipsMenu() {
 }
 
 function showMetaMenu() {
-    playSound('menuOpen');
-    // Start BG Music on first menu interaction if not playing
-    if (SOUNDS.bgMusic.paused) {
-        SOUNDS.bgMusic.play().catch(() => {});
+    // 1. ABSOLUTE STOP of any other menu music
+    if (window.AudioEngine) {
+        window.AudioEngine.stopMenuMusic();
+        window.AudioEngine.menuPlaying = false;
+        if (window.AudioEngine.menuInterval) {
+            clearTimeout(window.AudioEngine.menuInterval);
+            clearInterval(window.AudioEngine.menuInterval);
+        }
     }
+    
+    // 2. Clear MP3 music if it was playing elsewhere
+    if (SOUNDS.bgMusic) {
+        SOUNDS.bgMusic.pause();
+        SOUNDS.bgMusic.currentTime = 0;
+    }
+
+    // 3. Start the special music explicitly
+    setTimeout(() => {
+        if (SOUNDS.bgMusic) {
+            SOUNDS.bgMusic.volume = 0.4;
+            SOUNDS.bgMusic.play().catch(e => console.log("BG Music blocked"));
+        }
+    }, 100);
+
+    playSound('menuOpen');
 
     const container = document.getElementById('meta-options');
     if (!container) return;
@@ -4677,9 +4707,10 @@ function init() {
                 SOUNDS.bgMusic.pause();
                 SOUNDS.bgMusic.currentTime = 0;
             }
-            if (window.AudioEngine && window.AudioEngine.startMenuMusic) {
-                window.AudioEngine.startMenuMusic();
-            }
+            // Muted on user request - do NOT start menu music
+            // if (window.AudioEngine && window.AudioEngine.startMenuMusic) {
+            //     window.AudioEngine.startMenuMusic();
+            // }
         };
     }
 
