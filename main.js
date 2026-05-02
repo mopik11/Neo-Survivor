@@ -147,7 +147,13 @@ const EMOJIS = [
     { id: 'chick', name: 'Kuře', icon: '🐣', rarity: 'rare', price: 150 },
     { id: 'icecream', name: 'Zmrzlina', icon: '🍧', rarity: 'uncommon', price: 50 },
     { id: 'cake', name: 'Dort', icon: '🍰', rarity: 'rare', price: 180 },
-    { id: 'fishcake', name: 'Naruto', icon: '🍥', rarity: 'epic', price: 350 }
+    { id: 'fishcake', name: 'Naruto', icon: '🍥', rarity: 'epic', price: 350 },
+    // ČEPICE (Legendární)
+    { id: 'hat_crown', name: '👑 Koruna', icon: '👑', rarity: 'legendary', price: 1000, isHat: true, type: 'crown' },
+    { id: 'hat_wizard', name: '🧙 Mág', icon: '🧙', rarity: 'legendary', price: 1200, isHat: true, type: 'wizard' },
+    { id: 'hat_ninja', name: '🥷 Ninja', icon: '🥷', rarity: 'legendary', price: 1500, isHat: true, type: 'ninja' },
+    // EXTRÉMNÍ LEGENDÁRKA
+    { id: 'ultra_rare', name: '💎 Diamant', icon: '💎', rarity: 'legendary', price: 10000, chance: 0.001 }
 ];
 
 const ACHIEVEMENTS = [
@@ -2373,32 +2379,6 @@ function showMetaMenu() {
         upgradesGrid.appendChild(card);
     });
 
-    // 2. ČEPICE
-    const hatsSection = document.createElement('div');
-    hatsSection.innerHTML = `<h2 style="color: #ec4899; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(236,72,153,0.2); padding-bottom: 5px;">🎩 ČEPICE</h2>`;
-    const hatsGrid = document.createElement('div');
-    hatsGrid.className = 'menu-actions-grid';
-    hatsSection.appendChild(hatsGrid);
-
-    const hats = [
-        { id: 'hat_crown', name: '👑 Koruna', desc: 'Zlatá královská koruna', cost: 100, type: 'crown' },
-        { id: 'hat_wizard', name: '🧙 Mág', desc: 'Klobouk čaroděje', cost: 100, type: 'wizard' },
-        { id: 'hat_ninja', name: '🥷 Ninja', desc: 'Maska stínu', cost: 100, type: 'ninja' }
-    ];
-
-    hats.forEach(item => {
-        const card = document.createElement('div'); card.className = 'upgrade-card';
-        const owned = META.upgrades.hat === item.type;
-        card.innerHTML = `<h3>${window.T(item.name)}</h3><p>${window.T(item.desc)}</p><span class="cost">${owned ? window.T('AKTIVNÍ') : item.cost + ' DOGE'}</span>`;
-        if (owned) card.style.borderColor = '#fbbf24';
-        card.onclick = () => {
-            if (owned) { META.upgrades.hat = null; saveMeta(); showMetaMenu(); return; }
-            if (META.currency < item.cost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
-            META.upgrades.hat = item.type;
-            META.currency -= item.cost; saveMeta(); showMetaMenu();
-        };
-        hatsGrid.appendChild(card);
-    });
 
     // 3. BEDNY (CRATES)
     const cratesSection = document.createElement('div');
@@ -2420,12 +2400,12 @@ function showMetaMenu() {
     };
     cratesGrid.appendChild(crateCard);
 
-    // 4. SBÍRKA EMOJI
+    // 2. SBÍRKA EMOJI & ČEPIC
     const collectionSection = document.createElement('div');
     collectionSection.innerHTML = `<h2 style="color: #10b981; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(16,185,129,0.2); padding-bottom: 5px;">✨ TVÁ SBÍRKA</h2>`;
     const collectionGrid = document.createElement('div');
     collectionGrid.style.display = 'grid';
-    collectionGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(100px, 1fr))';
+    collectionGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(110px, 1fr))';
     collectionGrid.style.gap = '10px';
     collectionSection.appendChild(collectionGrid);
 
@@ -2438,13 +2418,33 @@ function showMetaMenu() {
             const card = document.createElement('div');
             card.className = 'upgrade-card';
             card.style.minHeight = 'auto';
-            card.style.padding = '10px';
+            card.style.padding = '12px';
+            
+            const isEquipped = emoji.isHat && META.upgrades.hat === emoji.type;
+            if (isEquipped) card.style.borderColor = '#fbbf24';
+
             card.innerHTML = `
-                <div style="font-size: 1.5rem;">${emoji.icon}</div>
-                <div style="font-size: 0.7rem; font-weight: bold; margin-top:5px">${emoji.name}</div>
-                <div style="font-size: 0.6rem; color: #94a3b8">x${inv.count}</div>
-                <button class="btn-sell" style="margin-top:8px; padding: 4px 8px; font-size: 0.6rem; border-radius: 6px; background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); cursor:pointer;">PRODAT (${emoji.price})</button>
+                <div style="font-size: 1.8rem;">${emoji.icon}</div>
+                <div style="font-size: 0.75rem; font-weight: bold; margin-top:5px; color: #f8fafc;">${emoji.name}</div>
+                <div style="font-size: 0.65rem; color: #94a3b8">x${inv.count}</div>
+                <div style="font-size: 0.6rem; color: ${getRarityColor(emoji.rarity)}; font-weight: bold; margin-bottom: 5px;">${emoji.rarity.toUpperCase()}</div>
+                
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                    ${emoji.isHat ? `<button class="btn-equip" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: ${isEquipped ? '#fbbf24' : 'rgba(255,255,255,0.1)'}; color: ${isEquipped ? '#000' : '#fff'}; border: none; cursor:pointer;">${isEquipped ? 'SUNDAT' : 'NASADIT'}</button>` : ''}
+                    <button class="btn-sell" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); cursor:pointer;">PRODAT (${emoji.price})</button>
+                </div>
             `;
+            
+            if (emoji.isHat) {
+                card.querySelector('.btn-equip').onclick = (e) => {
+                    e.stopPropagation();
+                    if (isEquipped) META.upgrades.hat = null;
+                    else META.upgrades.hat = emoji.type;
+                    saveMeta();
+                    showMetaMenu();
+                };
+            }
+            
             card.querySelector('.btn-sell').onclick = (e) => {
                 e.stopPropagation();
                 sellEmoji(inv.id);
@@ -2454,22 +2454,47 @@ function showMetaMenu() {
     }
 
     container.appendChild(upgradesSection);
-    container.appendChild(hatsSection);
     container.appendChild(cratesSection);
     container.appendChild(collectionSection);
 }
 
-function openCrate() {
-    // Rarity weights
-    const weights = { common: 60, uncommon: 25, rare: 10, epic: 5 };
-    const roll = Math.random() * 100;
-    let targetRarity = 'common';
-    if (roll < 5) targetRarity = 'epic';
-    else if (roll < 15) targetRarity = 'rare';
-    else if (roll < 40) targetRarity = 'uncommon';
+function getRarityColor(rarity) {
+    switch(rarity) {
+        case 'common': return '#94a3b8';
+        case 'uncommon': return '#38bdf8';
+        case 'rare': return '#fbbf24';
+        case 'epic': return '#a855f7';
+        case 'legendary': return '#ef4444';
+        default: return '#fff';
+    }
+}
 
-    const possible = EMOJIS.filter(e => e.rarity === targetRarity);
-    const result = possible[Math.floor(Math.random() * possible.length)];
+function openCrate() {
+    const roll = Math.random() * 100;
+    let result = null;
+    let targetRarity = 'common';
+
+    // 1. Check for specific item chances first (e.g. Diamond 0.001%)
+    const ultraRares = EMOJIS.filter(e => e.chance !== undefined).sort((a, b) => a.chance - b.chance);
+    for (const ur of ultraRares) {
+        if (roll < ur.chance) {
+            result = ur;
+            targetRarity = ur.rarity;
+            break;
+        }
+    }
+
+    // 2. Fallback to rarity-based roll
+    if (!result) {
+        if (roll < 0.5) targetRarity = 'legendary'; // 0.5% for legendary hats/rare items
+        else if (roll < 5) targetRarity = 'epic';    
+        else if (roll < 20) targetRarity = 'rare';   
+        else if (roll < 50) targetRarity = 'uncommon';
+        else targetRarity = 'common';
+
+        const possible = EMOJIS.filter(e => e.rarity === targetRarity && e.chance === undefined);
+        result = possible[Math.floor(Math.random() * possible.length)];
+    }
 
     if (!META.inventory) META.inventory = [];
     const existing = META.inventory.find(i => i.id === result.id);
@@ -2483,12 +2508,12 @@ function openCrate() {
     modal.className = 'modal active';
     modal.style.zIndex = '5000';
     modal.innerHTML = `
-        <div class="modal-content" style="background: rgba(15,23,42,0.98); border: 2px solid #fbbf24; box-shadow: 0 0 50px rgba(251,191,36,0.3);">
-            <h2 style="color: #fbbf24; font-size: 2rem;">📦 BEDNA OTEVŘENA!</h2>
+        <div class="modal-content" style="background: rgba(15,23,42,0.98); border: 2px solid ${getRarityColor(targetRarity)}; box-shadow: 0 0 50px ${getRarityColor(targetRarity)}44;">
+            <h2 style="color: ${getRarityColor(targetRarity)}; font-size: 2rem;">📦 BEDNA OTEVŘENA!</h2>
             <div style="font-size: 6rem; margin: 2rem 0; animation: bounce 0.5s infinite alternate;">${result.icon}</div>
             <h3 style="font-size: 1.5rem; color: #fff;">${result.name}</h3>
-            <p style="color: ${targetRarity === 'epic' ? '#a855f7' : (targetRarity === 'rare' ? '#fbbf24' : '#94a3b8')}; font-weight: bold; text-transform: uppercase;">${targetRarity}</p>
-            <button class="btn-restart" style="margin-top: 2rem; width: 100%;">SKVĚLÉ!</button>
+            <p style="color: ${getRarityColor(targetRarity)}; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">${targetRarity}</p>
+            <button class="btn-restart" style="margin-top: 2rem; width: 100%; background: ${getRarityColor(targetRarity)}; color: #000;">SKVĚLÉ!</button>
         </div>
     `;
     document.body.appendChild(modal);
