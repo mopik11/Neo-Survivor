@@ -919,9 +919,97 @@ canvas {
         background: rgba(15, 23, 42, 0.95) !important;
         border: 1px solid var(--accent-color) !important;
     }
-    #global-chat.mobile-active {
-        display: flex !important;
+}
+
+/* --- MOBILE RESPONSIVENESS --- */
+@media (max-width: 768px) {
+    :root {
+        --modal-padding: 1rem;
     }
+
+    h1 { font-size: 2.2rem !important; margin-bottom: 0.5rem !important; }
+    h2 { font-size: 1.2rem !important; }
+
+    .modal-content {
+        width: 90vw !important;
+        max-height: 85vh !important;
+        padding: 1.2rem !important;
+        border-radius: 24px !important;
+    }
+
+    .upgrade-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    .upgrade-card {
+        padding: 8px !important;
+        min-height: 110px !important;
+        border-radius: 12px !important;
+    }
+
+    .upgrade-card div {
+        font-size: 1.8rem !important;
+    }
+
+    .upgrade-card h3 {
+        font-size: 0.75rem !important;
+        margin: 4px 0 !important;
+    }
+
+    .upgrade-card p {
+        font-size: 0.6rem !important;
+        line-height: 1.1 !important;
+        margin-bottom: 4px !important;
+    }
+
+    .btn-buy {
+        padding: 8px !important;
+        font-size: 0.65rem !important;
+        border-radius: 8px !important;
+    }
+
+    /* Fix confirmation buttons */
+    #custom-confirm-modal .btn-restart {
+        min-width: 80px;
+        height: auto !important;
+        padding: 12px !important;
+        border-radius: 12px !important;
+        font-size: 0.9rem !important;
+        flex: 1;
+    }
+
+    .currency-display {
+        font-size: 0.9rem !important;
+        padding: 5px 12px !important;
+    }
+
+    .crate-anim-title {
+        font-size: 1rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .upgrade-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .menu-actions-grid {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+    }
+
+    .btn-restart {
+        font-size: 1rem !important;
+        padding: 12px !important;
+    }
+
+    #leaderboard-list {
+        max-height: 50vh !important;
+    }
+}
+
+@media (max-width: 768px) {
     #btn-chat-mobile {
         display: flex !important;
         align-items: center;

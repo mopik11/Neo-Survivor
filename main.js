@@ -2329,7 +2329,7 @@ function togglePause(isAFK = false) {
 }
 
 function tryFullscreen() {
-    const isFS = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+    const isFS = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullscreenElement || document.msFullscreenElement;
     if (isFS) return;
 
     try {
@@ -2676,23 +2676,23 @@ function startCrateAnimation(winner, crateType = 'basic') {
 
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 800px; width: 95vw; background: #0f172a; border: 1px solid #334155; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-            <button id="btn-skip-crate" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 5px 15px; border-radius: 8px; cursor: pointer; font-size: 0.7rem; font-weight: bold; z-index: 200;">PŘESKOČIT (SKIP)</button>
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom: 2rem; opacity: 0.7;">
-                <span style="font-size: 1.5rem;">${crateData.icon}</span>
-                <h2 style="color: ${crateData.color}; font-size: 0.9rem; margin:0; letter-spacing: 4px; text-transform: uppercase;">${crateData.name}</h2>
+            <button id="btn-skip-crate" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 0.6rem; font-weight: bold; z-index: 200;">SKIP</button>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom: 1.5rem; opacity: 0.7; flex-wrap: wrap; justify-content: center;">
+                <span style="font-size: 1.2rem;">${crateData.icon}</span>
+                <h2 class="crate-anim-title" style="color: ${crateData.color}; font-size: 0.9rem; margin:0; letter-spacing: 3px; text-transform: uppercase; text-align: center;">${crateData.name}</h2>
             </div>
             
-            <div style="position: relative; width: 100%; height: 160px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 40px rgba(0,0,0,0.5);">
-                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #fbbf24; z-index: 100; box-shadow: 0 0 15px #fbbf24;">
-                    <div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 12px solid #fbbf24;"></div>
-                    <div style="position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 12px solid #fbbf24;"></div>
+            <div style="position: relative; width: 100%; height: 140px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);">
+                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #fbbf24; z-index: 100; box-shadow: 0 0 10px #fbbf24;">
+                    <div style="position: absolute; top: -2px; left: 50%; transform: translateX(-50%); border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #fbbf24;"></div>
+                    <div style="position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid #fbbf24;"></div>
                 </div>
                 
-                <div id="crate-carousel" style="display: flex; gap: 10px; width: fit-content; transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1); transform: translateX(0); padding-left: 50%;">
+                <div id="crate-carousel" style="display: flex; gap: 8px; width: fit-content; transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1); transform: translateX(0); padding-left: 50%;">
                     ${randomItems.map(item => `
-                        <div style="min-width: 130px; height: 130px; background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.08); border-bottom: 4px solid ${getRarityColor(item.rarity)}; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;">
-                            <div style="font-size: 3rem; filter: drop-shadow(0 0 10px rgba(255,255,255,0.05));">${item.icon}</div>
-                            <div style="font-size: 0.55rem; font-weight: 900; color: ${getRarityColor(item.rarity)}; letter-spacing: 1px;">${item.rarity.toUpperCase()}</div>
+                        <div class="crate-item" style="min-width: 110px; height: 110px; background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.08); border-bottom: 3px solid ${getRarityColor(item.rarity)}; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+                            <div style="font-size: 2.5rem; filter: drop-shadow(0 0 8px rgba(255,255,255,0.05));">${item.icon}</div>
+                            <div style="font-size: 0.5rem; font-weight: 900; color: ${getRarityColor(item.rarity)}; letter-spacing: 1px;">${item.rarity.toUpperCase()}</div>
                         </div>
                     `).join('')}
                 </div>
@@ -2713,8 +2713,8 @@ function startCrateAnimation(winner, crateType = 'basic') {
         const carousel = document.getElementById('crate-carousel');
         if (!carousel) return;
         carousel.style.transition = 'none';
-        const itemWidth = 140;
-        // Winner is at index 35 (the 36th item)
+        const isMobile = window.innerWidth <= 768;
+        const itemWidth = isMobile ? 118 : 140; 
         const offset = -(35 * itemWidth + (itemWidth / 2));
         carousel.style.transform = `translateX(${offset}px)`;
         document.getElementById('crate-result-info').style.opacity = '1';
@@ -2730,7 +2730,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
     setTimeout(() => {
         const carousel = document.getElementById('crate-carousel');
         if (!carousel) return;
-        const itemWidth = 140; 
+        const itemWidth = window.innerWidth <= 768 ? 118 : 140; 
         const offset = -(35 * itemWidth + (itemWidth / 2));
         carousel.style.transform = `translateX(${offset}px)`;
     }, 100);
