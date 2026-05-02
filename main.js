@@ -2668,6 +2668,11 @@ function startCrateAnimation(winner, crateType = 'basic') {
         'legendary': { name: 'LEGENDÁRNÍ BEDNA', icon: '👑', color: '#fbbf24' }
     }[crateType];
 
+    const isMobile = window.innerWidth <= 768;
+    const itemSize = isMobile ? 110 : 130;
+    const itemGap = isMobile ? 8 : 10;
+    const itemWidth = itemSize + itemGap;
+
     const randomItems = [];
     for(let i=0; i<40; i++) {
         randomItems.push(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
@@ -2682,16 +2687,16 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 <h2 class="crate-anim-title" style="color: ${crateData.color}; font-size: 0.9rem; margin:0; letter-spacing: 3px; text-transform: uppercase; text-align: center;">${crateData.name}</h2>
             </div>
             
-            <div style="position: relative; width: 100%; height: 140px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);">
+            <div style="position: relative; width: 100%; height: ${itemSize + 30}px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);">
                 <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #fbbf24; z-index: 100; box-shadow: 0 0 10px #fbbf24;">
                     <div style="position: absolute; top: -2px; left: 50%; transform: translateX(-50%); border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #fbbf24;"></div>
                     <div style="position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid #fbbf24;"></div>
                 </div>
                 
-                <div id="crate-carousel" style="display: flex; gap: 8px; width: fit-content; transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1); transform: translateX(0); padding-left: 50%;">
+                <div id="crate-carousel" style="display: flex; gap: ${itemGap}px; width: fit-content; transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1); transform: translateX(0); padding-left: 50%;">
                     ${randomItems.map(item => `
-                        <div class="crate-item" style="min-width: 110px; height: 110px; background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.08); border-bottom: 3px solid ${getRarityColor(item.rarity)}; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
-                            <div style="font-size: 2.5rem; filter: drop-shadow(0 0 8px rgba(255,255,255,0.05));">${item.icon}</div>
+                        <div class="crate-item" style="min-width: ${itemSize}px; height: ${itemSize}px; background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.08); border-bottom: 3px solid ${getRarityColor(item.rarity)}; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+                            <div style="font-size: ${isMobile ? '2.5rem' : '3.5rem'}; filter: drop-shadow(0 0 8px rgba(255,255,255,0.05));">${item.icon}</div>
                             <div style="font-size: 0.5rem; font-weight: 900; color: ${getRarityColor(item.rarity)}; letter-spacing: 1px;">${item.rarity.toUpperCase()}</div>
                         </div>
                     `).join('')}
@@ -2713,9 +2718,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
         const carousel = document.getElementById('crate-carousel');
         if (!carousel) return;
         carousel.style.transition = 'none';
-        const isMobile = window.innerWidth <= 768;
-        const itemWidth = isMobile ? 118 : 140; 
-        const offset = -(35 * itemWidth + (itemWidth / 2));
+        const offset = -(35 * itemWidth);
         carousel.style.transform = `translateX(${offset}px)`;
         document.getElementById('crate-result-info').style.opacity = '1';
         document.getElementById('crate-result-info').style.transform = 'translateY(0)';
@@ -2730,8 +2733,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
     setTimeout(() => {
         const carousel = document.getElementById('crate-carousel');
         if (!carousel) return;
-        const itemWidth = window.innerWidth <= 768 ? 118 : 140; 
-        const offset = -(35 * itemWidth + (itemWidth / 2));
+        const offset = -(35 * itemWidth);
         carousel.style.transform = `translateX(${offset}px)`;
     }, 100);
 
