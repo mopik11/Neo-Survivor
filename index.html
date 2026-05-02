@@ -120,7 +120,7 @@
           </div>
 
           <div style="margin-top: 1.5rem; font-size: 0.75rem; color: #475569; letter-spacing: 2px;">
-            © 2026 mopik11, cenek | version: 1.245
+            © 2026 mopik11, cenek | version: 1.246
           </div>
 
         </div>
@@ -229,6 +229,7 @@
         <div class="modal-content">
           <h2 style="font-size: 3.5rem; color: var(--xp-color); text-shadow: 0 0 30px var(--xp-color);">LEVEL UP!</h2>
           <div id="upgrade-options" class="upgrade-grid"></div>
+          <button class="btn-restart" id="btn-random-upgrade" style="margin-top: 2rem; background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4);">🎲 NÁHODNÝ VÝBĚR</button>
         </div>
       </div>
 
@@ -362,6 +363,10 @@
             <div class="stat-item"><span>🛡️ Štít</span> <span class="val" id="stat-shield">0%</span></div>
             <div class="stat-item"><span>💊 Regenerace</span> <span class="val" id="stat-regen">0/s</span></div>
             <div class="stat-item"><span>🧛 Lifesteal</span> <span class="val" id="stat-lifesteal">0%</span></div>
+            <div class="stat-item" style="grid-column: span 2; margin-top: 15px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.9rem; opacity: 0.8;">🎲 Auto-výběr upgrádů</span>
+                <input type="checkbox" id="check-auto-random" style="width: 25px; height: 25px; cursor: pointer;">
+            </div>
           </div>
 
           <div class="menu-actions" style="width:100%;">

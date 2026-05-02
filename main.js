@@ -48,7 +48,7 @@ const CONFIG = {
     SPAWN_RADIUS: 700,
     GEM_VALUES: 10,
     XP_PER_LEVEL: 100,
-    BOSS_INTERVAL: 60,
+    BOSS_LEVEL_INTERVAL: 10,
     SNIPER_COOLDOWN: 15000,
     UPGRADES: [
         { id: 'damage', name: 'Zvýšení Síly', desc: 'Poškození x2', icon: '⚔️', rarity: 'common' },
@@ -1796,10 +1796,13 @@ function spawnEnemy() {
     const mod = Math.floor(GAME.time / 60) + 1;
 
     let enemy;
-    if (pivot.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL)) {
+    const isBossLevel = pivot.level > 0 && pivot.level % CONFIG.BOSS_LEVEL_INTERVAL === 0;
+    const bossAlreadySpawned = GAME.lastBossLevelSpawned === pivot.level;
+    
+    if (isBossLevel && !bossAlreadySpawned) {
         enemy = new Boss(x, y, mod);
         showBossWarning();
-        GAME.lastBossTime = GAME.time;
+        GAME.lastBossLevelSpawned = pivot.level;
     } else {
         let type = 1;
         if (pivot.level >= 3 && Math.random() < 0.15) type = 2;
@@ -1915,6 +1918,31 @@ function showLevelUp() {
         container.appendChild(card);
     });
     modal.classList.add('active');
+
+    // Náhodný výběr tlačítko
+    const btnRandom = document.getElementById('btn-random-upgrade');
+    if (btnRandom) {
+        btnRandom.onclick = () => {
+            const cards = container.querySelectorAll('.upgrade-card');
+            if (cards.length > 0) {
+                const randomCard = cards[Math.floor(Math.random() * cards.length)];
+                randomCard.click();
+            }
+        };
+    }
+
+    // Auto Random Select logika
+    if (META.autoRandomSelect) {
+        setTimeout(() => {
+            if (modal.classList.contains('active')) {
+                const cards = container.querySelectorAll('.upgrade-card');
+                if (cards.length > 0) {
+                    const randomCard = cards[Math.floor(Math.random() * cards.length)];
+                    randomCard.click();
+                }
+            }
+        }, 800);
+    }
 }
 
 function applyUpgrade(id) {
@@ -2007,6 +2035,9 @@ function togglePause(isAFK = false) {
         document.getElementById('stat-shield').innerText = Math.floor((1 - p.shield) * 100) + '%';
         document.getElementById('stat-regen').innerText = p.regen + ' HP/s';
         document.getElementById('stat-lifesteal').innerText = Math.floor(p.lifestealChance * 100) + '%';
+        
+        const checkAuto = document.getElementById('check-auto-random');
+        if (checkAuto) checkAuto.checked = META.autoRandomSelect || false;
     }
 
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
@@ -3989,6 +4020,16 @@ function init() {
     const btnCloseFeedback = document.getElementById('btn-close-feedback');
     if (btnCloseFeedback) btnCloseFeedback.onclick = () => document.getElementById('feedback-modal').classList.remove('active');
 
+    // Auto-random select toggle
+    const checkAutoRandom = document.getElementById('check-auto-random');
+    if (checkAutoRandom) {
+        checkAutoRandom.checked = META.autoRandomSelect || false;
+        checkAutoRandom.onchange = (e) => {
+            META.autoRandomSelect = e.target.checked;
+            saveMeta();
+        };
+    }
+
     const btnSendFeedback = document.getElementById('btn-send-feedback');
     if (btnSendFeedback) btnSendFeedback.onclick = () => {
         const text = document.getElementById('feedback-text').value;
@@ -4127,7 +4168,7 @@ function startGame() {
 }
 
 function resetGame() {
-    GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0;
+    GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0; GAME.lastBossLevelSpawned = 0;
     GAME.coinsCollected = 0;
     GAME.lastSpawnTime = Date.now();
     GAME.frozenUntil = 0;
@@ -4270,10 +4311,13 @@ function update(dt) {
                 }
 
                 const hasBoss = GAME.entities.enemies.some(e => e.isBoss);
-                if (GAME.entities.player.level >= 20 && (GAME.time - GAME.lastBossTime > CONFIG.BOSS_INTERVAL) && !hasBoss) {
+                const isBossLevel = GAME.entities.player.level > 0 && GAME.entities.player.level % CONFIG.BOSS_LEVEL_INTERVAL === 0;
+                const bossAlreadySpawned = GAME.lastBossLevelSpawned === GAME.entities.player.level;
+
+                if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
                     enemy = new Boss(x, y, mod);
                     showBossWarning();
-                    GAME.lastBossTime = GAME.time;
+                    GAME.lastBossLevelSpawned = GAME.entities.player.level;
                 } else {
                     enemy = new Enemy(x, y, mod * speedMod, Math.random().toString(36).substr(2, 9), type);
                     enemy.maxHp = hp; enemy.hp = hp;
