@@ -212,7 +212,9 @@ const ACHIEVEMENTS = [
     { id: 'veteran', name: 'Vesmírný Veterán', desc: 'Dosáhni levelu 50 v jedné hře', icon: '🎖️' },
     { id: 'collector', name: 'Sběratel', desc: 'Odemkni všechny 3 základní lodě', icon: '🚀' },
     { id: 'gambling', name: "Let's go gambling", desc: 'Zmáčkni 100x tlačítko pro náhodný výběr', icon: '🎰' },
-    { id: 'cookie', name: 'Cookie clicker', desc: 'Odehraj celkem 24 hodin', icon: '🍪' }
+    { id: 'cookie', name: 'Cookie clicker', desc: 'Odehraj celkem 24 hodin', icon: '🍪' },
+    { id: 'millionaire', name: 'Milionář', desc: 'Získej celkem 100 000 Dogecoinů', icon: '💎' },
+    { id: 'crate_opener', name: 'Zasloužilý Otevírač', desc: 'Otevři celkem 50 beden', icon: '📦' }
 ];
 
 const saveMetaLocalOnly = () => localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
@@ -2158,11 +2160,25 @@ function checkAchievements() {
         showAchievementUnlocked("Let's go gambling");
     }
 
-    // Cookie clicker: 24 hodin = 86400 sekund
+    // Cookie clicker: 24h = 86400 seconds
     if (!META.achievements.cookie && (META.stats.totalPlayTime || 0) >= 86400) {
         META.achievements.cookie = true;
         changed = true;
         showAchievementUnlocked('Cookie clicker');
+    }
+
+    // Milionář: 100,000 Dogecoins
+    if (!META.achievements.millionaire && (META.stats.totalDogecoins || 0) >= 100000) {
+        META.achievements.millionaire = true;
+        changed = true;
+        showAchievementUnlocked('Milionář');
+    }
+
+    // Crate Opener: 50 crates
+    if (!META.achievements.crate_opener && (META.stats.totalCratesOpened || 0) >= 50) {
+        META.achievements.crate_opener = true;
+        changed = true;
+        showAchievementUnlocked('Zasloužilý Otevírač');
     }
 
     if (changed) saveMeta();
@@ -2592,7 +2608,11 @@ function openCrate(type = 'basic') {
     if (existing) existing.count++;
     else META.inventory.push({ id: result.id, count: 1 });
 
+    if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalCratesOpened: 0 };
+    META.stats.totalCratesOpened = (META.stats.totalCratesOpened || 0) + 1;
+
     saveMeta();
+    checkAchievements();
     startCrateAnimation(result, type);
 }
 
@@ -2752,7 +2772,7 @@ function sellAllEmojis() {
     
     if (totalGain > 0) {
         META.currency += totalGain;
-        window.showCustomAlert(`Prodáno vše! Získal jsi ${totalGain} Dogecoinů.`);
+        showCustomAlert(`Prodáno vše! Získal jsi ${totalGain} Dogecoinů.`, 'gold');
         
         const menuModal = document.getElementById('meta-modal');
         const floating = document.createElement('div');
