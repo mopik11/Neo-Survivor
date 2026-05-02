@@ -422,6 +422,68 @@ const AudioEngine = {
         };
         playArp();
     },
+    crateMusicNode: null,
+    startCrateMusic() {
+        if (!this.ctx || this.crateMusicNode) return;
+        this.stopMenuMusic();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(110, now);
+        osc.frequency.exponentialRampToValueAtTime(220, now + 4);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.05, now + 1);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        this.crateMusicNode = { osc, gain };
+    },
+    stopCrateMusic() {
+        if (this.crateMusicNode) {
+            try {
+                this.crateMusicNode.osc.stop();
+                this.crateMusicNode.osc.disconnect();
+                this.crateMusicNode.gain.disconnect();
+            } catch(e){}
+            this.crateMusicNode = null;
+        }
+        if (document.getElementById('meta-menu') && document.getElementById('meta-menu').classList.contains('active')) {
+            this.startMenuMusic();
+        }
+    },
+    play(name) {
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        
+        if (name === 'crate_spin') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+            gain.gain.setValueAtTime(0.02, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.1);
+        } else if (name === 'crate_win') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        } else {
+            // Default sound or existing logic
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, now);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        }
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(now + 0.5);
+    },
     stopMenuMusic() {
         this.menuPlaying = false;
         if (this.menuInterval) clearTimeout(this.menuInterval);
@@ -2656,6 +2718,7 @@ function getRarityColor(rarity) {
 
 function openCrate(type = 'basic', count = 1) {
     if (!GAME.crateQueue) GAME.crateQueue = [];
+    GAME.currentBatchItems = []; // Track items in THIS specific batch
     
     // If it's a new batch, clear old queue
     if (count > 1) {
@@ -2663,7 +2726,6 @@ function openCrate(type = 'basic', count = 1) {
         GAME.lastCrateBatchSize = count;
         GAME.lastCrateType = type;
     } else if (GAME.crateQueue.length === 0) {
-        // Single opening, store for 'Spin Again'
         GAME.lastCrateBatchSize = 1;
         GAME.lastCrateType = type;
     }
@@ -2707,6 +2769,7 @@ function openCrate(type = 'basic', count = 1) {
         GAME.crateQueue.push(generateResult(type));
     }
 
+    AudioEngine.startCrateMusic();
     startCrateAnimation(firstResult, type);
 }
 
@@ -2727,7 +2790,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
 
     const modal = document.createElement('div');
     modal.className = 'modal active modal-crate-active';
-    modal.style.zIndex = '2000000';
+modal.style.zIndex = '2000000';
     modal.style.background = 'rgba(15, 23, 42, 0.95)'; 
     modal.style.backdropFilter = 'blur(15px)';
     
@@ -2749,6 +2812,9 @@ function startCrateAnimation(winner, crateType = 'basic') {
         randomItems.push(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
     }
     randomItems[35] = winner; // The 36th item is the target
+
+    const isLastOfBatch = !GAME.crateQueue || GAME.crateQueue.length === 0;
+    const showSellAll = isLastOfBatch && GAME.lastCrateBatchSize > 1;
 
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 800px; width: 95vw; background: ${crateData.bg}; border: 2px solid ${crateData.color}44; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 0 50px ${crateData.glow};">
@@ -2775,15 +2841,15 @@ function startCrateAnimation(winner, crateType = 'basic') {
             </div>
 
             <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
-                <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; letter-spacing: 2px;">ZÍSKÁNO: ${GAME.crateQueue ? (GAME.lastCrateBatchSize - GAME.crateQueue.length) : 1} / ${GAME.lastCrateBatchSize || 1}</div>
+                <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; letter-spacing: 2px;">ZÍSKÁNO: ${GAME.lastCrateBatchSize - (GAME.crateQueue ? GAME.crateQueue.length : 0)} / ${GAME.lastCrateBatchSize || 1}</div>
                 <h3 style="color: #fff; font-size: 2.2rem; margin: 0; text-shadow: 0 0 30px rgba(255,255,255,0.1);">${winner.name}</h3>
                 <p style="color: ${getRarityColor(winner.rarity)}; font-weight: bold; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 3px; margin: 5px 0 1.5rem 0;">${winner.rarity.toUpperCase()}</p>
                 
                 <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${(GAME.crateQueue && GAME.crateQueue.length > 0) ? 'DALŠÍ (NEXT)' : 'PŘIDAT DO SBÍRKY'}</button>
+                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${!isLastOfBatch ? 'DALŠÍ (NEXT)' : 'PŘIDAT DO SBÍRKY'}</button>
                     <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">PRODAT (+${winner.price})</button>
-                    ${(GAME.crateQueue && GAME.crateQueue.length > 0) ? `<button id="btn-crate-sell-all" class="btn-restart" style="min-width: 180px; background: rgba(239, 68, 68, 0.4); color: #fff; border: 1px solid #ef4444; font-weight: 800; padding: 12px; font-size: 0.9rem;">PRODAT VŠECHNO Z DÁVKY</button>` : ''}
-                    <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${(!GAME.crateQueue || GAME.crateQueue.length === 0) ? 'block' : 'none'};">ZATOČIT ZNOVU</button>
+                    ${showSellAll ? `<button id="btn-crate-sell-all" class="btn-restart" style="min-width: 180px; background: rgba(239, 68, 68, 0.4); color: #fff; border: 1px solid #ef4444; font-weight: 800; padding: 12px; font-size: 0.9rem;">PRODAT CELOU VÁRKU</button>` : ''}
+                    <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${isLastOfBatch ? 'block' : 'none'};">ZATOČIT ZNOVU</button>
                 </div>
             </div>
         </div>
@@ -2808,7 +2874,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
         const skipBtn = document.getElementById('btn-skip-crate');
         if (skipBtn) skipBtn.style.display = 'none';
         
-        playSound('crateWin');
+        AudioEngine.play('crate_win');
 
         // Auto-next after 3s
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
@@ -2825,7 +2891,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
     };
 
     // Start rotation
-    playSound('crateSpin');
+    AudioEngine.play('crate_spin');
     GAME.crateTimeouts.push(setTimeout(() => {
         const carousel = document.getElementById('crate-carousel');
         if (carousel) {
@@ -2845,8 +2911,9 @@ function startCrateAnimation(winner, crateType = 'basic') {
     if (existing) existing.count++;
     else META.inventory.push({ id: winner.id, count: 1 });
     
-    if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalCratesOpened: 0 };
-    META.stats.totalCratesOpened = (META.stats.totalCratesOpened || 0) + 1;
+    if (!GAME.currentBatchItems) GAME.currentBatchItems = [];
+    GAME.currentBatchItems.push(winner);
+
     saveMeta();
     checkAchievements();
 
@@ -2858,6 +2925,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
             startCrateAnimation(nextWinner, crateType);
         } else {
             modal.remove();
+            AudioEngine.stopCrateMusic();
             showMetaMenu();
         }
     };
@@ -2865,27 +2933,26 @@ function startCrateAnimation(winner, crateType = 'basic') {
     if (modal.querySelector('#btn-crate-sell-all')) {
         modal.querySelector('#btn-crate-sell-all').onclick = () => {
             clearCrateTimeouts();
-            let totalGot = winner.price;
+            let totalGot = 0;
             
-            // Sell current
-            const invIdx = META.inventory.findIndex(i => i.id === winner.id);
-            if (invIdx !== -1) {
-                if (META.inventory[invIdx].count > 1) META.inventory[invIdx].count--;
-                else META.inventory.splice(invIdx, 1);
-            }
-
-            // Sell everything in queue
-            if (GAME.crateQueue) {
-                GAME.crateQueue.forEach(item => {
-                    totalGot += item.price;
+            // Sell everything in batch results
+            if (GAME.currentBatchItems) {
+                GAME.currentBatchItems.forEach(winnerInBatch => {
+                    totalGot += winnerInBatch.price;
+                    const invIdx = META.inventory.findIndex(i => i.id === winnerInBatch.id);
+                    if (invIdx !== -1) {
+                        if (META.inventory[invIdx].count > 1) META.inventory[invIdx].count--;
+                        else META.inventory.splice(invIdx, 1);
+                    }
                 });
-                GAME.crateQueue = [];
+                GAME.currentBatchItems = [];
             }
 
             META.currency += totalGot;
             saveMeta();
-            showCurrencyNotification(totalGot, `PRODÁNA CELÁ DÁVKA`);
+            showCurrencyNotification(totalGot, `PRODÁNA CELÁ VÁRKA`);
             modal.remove();
+            AudioEngine.stopCrateMusic();
             showMetaMenu();
         };
     }
@@ -2898,6 +2965,11 @@ function startCrateAnimation(winner, crateType = 'basic') {
             if (META.inventory[invIdx].count > 1) META.inventory[invIdx].count--;
             else META.inventory.splice(invIdx, 1);
         }
+        
+        // Also remove from batch tracking so Sell All doesn't double-sell
+        const batchIdx = GAME.currentBatchItems.indexOf(winner);
+        if (batchIdx !== -1) GAME.currentBatchItems.splice(batchIdx, 1);
+
         saveMeta();
         showCurrencyNotification(winner.price, `PRODÁNO: ${winner.name}`);
         
@@ -2907,6 +2979,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
             startCrateAnimation(nextWinner, crateType);
         } else {
             modal.remove();
+            AudioEngine.stopCrateMusic();
             showMetaMenu();
         }
     };
