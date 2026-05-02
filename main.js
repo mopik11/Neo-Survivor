@@ -121,7 +121,7 @@ const META = {
     lastMoveTime: Date.now(),
     isAFK: false,
     achievements: {},
-    stats: { totalBossKills: 0, totalDogecoins: 0, totalGames: 0 }
+    stats: { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 }
 };
 
 const ACHIEVEMENTS = [
@@ -129,7 +129,9 @@ const ACHIEVEMENTS = [
     { id: 'cheapskate', name: 'Skrblík', desc: 'Získej celkem 5000 Dogecoinů', icon: '💰' },
     { id: 'boss_slayer', name: 'Lovec Bossů', desc: 'Poraz celkem 10 bossů', icon: '💀' },
     { id: 'veteran', name: 'Vesmírný Veterán', desc: 'Dosáhni levelu 50 v jedné hře', icon: '🎖️' },
-    { id: 'collector', name: 'Sběratel', desc: 'Odemkni všechny 3 základní lodě', icon: '🚀' }
+    { id: 'collector', name: 'Sběratel', desc: 'Odemkni všechny 3 základní lodě', icon: '🚀' },
+    { id: 'gambling', name: "Let's go gambling", desc: 'Zmáčkni 100x tlačítko pro náhodný výběr', icon: '🎰' },
+    { id: 'cookie', name: 'Cookie clicker', desc: 'Odehraj celkem 24 hodin', icon: '🍪' }
 ];
 
 const saveMetaLocalOnly = () => localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
@@ -1935,6 +1937,10 @@ function showLevelUp() {
         btnRandom.onclick = () => {
             const cards = container.querySelectorAll('.upgrade-card');
             if (cards.length > 0) {
+                if (!META.stats.totalRandomPicks) META.stats.totalRandomPicks = 0;
+                META.stats.totalRandomPicks++;
+                checkAchievements();
+                
                 const randomCard = cards[Math.floor(Math.random() * cards.length)];
                 randomCard.click();
             }
@@ -1947,6 +1953,10 @@ function showLevelUp() {
             if (modal.classList.contains('active')) {
                 const cards = container.querySelectorAll('.upgrade-card');
                 if (cards.length > 0) {
+                    if (!META.stats.totalRandomPicks) META.stats.totalRandomPicks = 0;
+                    META.stats.totalRandomPicks++;
+                    checkAchievements();
+                    
                     const randomCard = cards[Math.floor(Math.random() * cards.length)];
                     
                     // Přidat highlight efekt
@@ -2006,6 +2016,14 @@ function applyUpgrade(id) {
     } catch (e) { console.error("Upgrade error:", e); }
 
     document.getElementById('levelup-modal').classList.remove('active');
+
+    if (NET.isMultiplayer) {
+        const waitModal = document.getElementById('waiting-modal');
+        if (waitModal) waitModal.classList.add('active');
+        NET.socket.emit('upgradePicked');
+    } else {
+        GAME.paused = false;
+    }
 }
 
 function checkAchievements() {
@@ -2049,6 +2067,20 @@ function checkAchievements() {
         showAchievementUnlocked('Sběratel');
     }
 
+    // Let's go gambling: 100x random pick
+    if (!META.achievements.gambling && (META.stats.totalRandomPicks || 0) >= 100) {
+        META.achievements.gambling = true;
+        changed = true;
+        showAchievementUnlocked("Let's go gambling");
+    }
+
+    // Cookie clicker: 24 hodin = 86400 sekund
+    if (!META.achievements.cookie && (META.stats.totalPlayTime || 0) >= 86400) {
+        META.achievements.cookie = true;
+        changed = true;
+        showAchievementUnlocked('Cookie clicker');
+    }
+
     if (changed) saveMeta();
 }
 
@@ -2060,6 +2092,7 @@ function showAchievementUnlocked(name) {
 }
 
 function showAchievementsMenu() {
+    console.log("Opening Achievements Menu...");
     const container = document.getElementById('achievements-list');
     if (!container) return;
     container.innerHTML = '';
@@ -2089,14 +2122,6 @@ function showAchievementsMenu() {
     document.getElementById('achievements-modal').classList.add('active');
 }
 
-    if (NET.isMultiplayer) {
-        const waitModal = document.getElementById('waiting-modal');
-        if (waitModal) waitModal.classList.add('active');
-        NET.socket.emit('upgradePicked');
-    } else {
-        GAME.paused = false;
-    }
-}
 
 function gameOver() {
     GAME.active = false;
@@ -2104,9 +2129,10 @@ function gameOver() {
     META.currency += killsIncome;
     META.currency += (GAME.coinsCollected || 0);
     
-    if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0 };
+    if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 };
     META.stats.totalDogecoins += killsIncome + (GAME.coinsCollected || 0);
     META.stats.totalGames++;
+    META.stats.totalPlayTime = (META.stats.totalPlayTime || 0) + GAME.time;
     
     checkAchievements();
     saveMeta();
@@ -4004,6 +4030,21 @@ function init() {
     const btnCloseMeta = document.getElementById('btn-close-meta');
     if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
 
+    // Achievements Button Listener (Moved up for reliability)
+    const btnAch = document.getElementById('btn-achievements');
+    if (btnAch) {
+        btnAch.addEventListener('click', (e) => {
+            console.log("Achievement button clicked!");
+            showAchievementsMenu();
+        });
+    }
+    const btnCloseAch = document.getElementById('btn-close-achievements');
+    if (btnCloseAch) {
+        btnCloseAch.addEventListener('click', () => {
+            document.getElementById('achievements-modal').classList.remove('active');
+        });
+    }
+
 
 
     // --- GLOBAL CHAT LOGIC ---
@@ -4133,10 +4174,7 @@ function init() {
     const btnCloseFeedback = document.getElementById('btn-close-feedback');
     if (btnCloseFeedback) btnCloseFeedback.onclick = () => document.getElementById('feedback-modal').classList.remove('active');
 
-    const btnAch = document.getElementById('btn-achievements');
-    if (btnAch) btnAch.onclick = () => showAchievementsMenu();
-    const btnCloseAch = document.getElementById('btn-close-achievements');
-    if (btnCloseAch) btnCloseAch.onclick = () => document.getElementById('achievements-modal').classList.remove('active');
+    if (btnCloseFeedback) btnCloseFeedback.onclick = () => document.getElementById('feedback-modal').classList.remove('active');
 
     // Auto-random select toggle
     const checkAutoRandom = document.getElementById('check-auto-random');
