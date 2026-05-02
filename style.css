@@ -489,6 +489,17 @@ canvas {
     to { box-shadow: 0 0 40px rgba(16, 185, 129, 0.8); }
 }
 
+@keyframes bounce {
+    from { transform: scale(1) translateY(0); }
+    to { transform: scale(1.1) translateY(-20px); }
+}
+
+.rarity-common { color: #94a3b8; }
+.rarity-uncommon { color: #38bdf8; }
+.rarity-rare { color: #fbbf24; }
+.rarity-epic { color: #a855f7; }
+.rarity-legendary { color: #ef4444; }
+
 .upgrade-icon {
     font-size: 2.5rem;
     margin-bottom: 1rem;

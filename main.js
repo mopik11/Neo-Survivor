@@ -121,8 +121,34 @@ const META = {
     lastMoveTime: Date.now(),
     isAFK: false,
     achievements: {},
-    stats: { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 }
+    stats: { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 },
+    inventory: [] // Stores emoji objects { id, count }
 };
+
+const EMOJIS = [
+    { id: 'soap', name: 'Mýdlo', icon: '🫆', rarity: 'common', price: 20 },
+    { id: 'money', name: 'Peníze', icon: '💲', rarity: 'rare', price: 100 },
+    { id: 'smile', name: 'Úsměv', icon: '😃', rarity: 'common', price: 15 },
+    { id: 'nerd', name: 'Nerd', icon: '🤓', rarity: 'common', price: 15 },
+    { id: 'laugh', name: 'Smích', icon: '😆', rarity: 'common', price: 15 },
+    { id: 'ugh', name: 'Ugh', icon: '😖', rarity: 'common', price: 15 },
+    { id: 'surprise', name: 'Překvapení', icon: '😯', rarity: 'uncommon', price: 30 },
+    { id: 'dead', name: 'K.O.', icon: '😵', rarity: 'uncommon', price: 30 },
+    { id: 'hands_up', name: 'Ruce vzhůru', icon: '🤲', rarity: 'uncommon', price: 35 },
+    { id: 'dislike', name: 'Dislike', icon: '👎', rarity: 'common', price: 10 },
+    { id: 'heart', name: 'Srdce', icon: '🫶', rarity: 'rare', price: 80 },
+    { id: 'open_hands', name: 'Otevřené ruce', icon: '👐', rarity: 'uncommon', price: 40 },
+    { id: 'handshake', name: 'Podání ruky', icon: '🫱', rarity: 'uncommon', price: 40 },
+    { id: 'guard', name: 'Stráž', icon: '💂', rarity: 'epic', price: 250 },
+    { id: 'hero', name: 'Hrdina', icon: '🦸', rarity: 'epic', price: 300 },
+    { id: 'sunflower', name: 'Slunečnice', icon: '🌻', rarity: 'rare', price: 120 },
+    { id: 'leaf', name: 'List', icon: '🍁', rarity: 'common', price: 20 },
+    { id: 'owl', name: 'Sova', icon: '🦉', rarity: 'epic', price: 400 },
+    { id: 'chick', name: 'Kuře', icon: '🐣', rarity: 'rare', price: 150 },
+    { id: 'icecream', name: 'Zmrzlina', icon: '🍧', rarity: 'uncommon', price: 50 },
+    { id: 'cake', name: 'Dort', icon: '🍰', rarity: 'rare', price: 180 },
+    { id: 'fishcake', name: 'Naruto', icon: '🍥', rarity: 'epic', price: 350 }
+];
 
 const ACHIEVEMENTS = [
     { id: 'wide', name: 'Široký', desc: 'Získej 5x upgrade na šířku zdi v jedné hře', icon: '📏' },
@@ -161,6 +187,9 @@ const loadMeta = () => {
         if (!META.dailyStreak) META.dailyStreak = 0;
         if (!META.playerName) META.playerName = null;
         if (!META.maxLevel) META.maxLevel = 1;
+        if (!META.inventory) META.inventory = [];
+        if (!META.achievements) META.achievements = {};
+        if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 };
     }
 };
 
@@ -2310,31 +2339,180 @@ function showShipsMenu() {
 
 function showMetaMenu() {
     const container = document.getElementById('meta-options');
+    if (!container) return;
     document.getElementById('meta-currency').innerText = META.currency;
     container.innerHTML = '';
-    const items = [
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.gap = '30px';
+
+    // 1. ZÁKLADNÍ VYLEPŠENÍ
+    const upgradesSection = document.createElement('div');
+    upgradesSection.innerHTML = `<h2 style="color: #6366f1; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(99,102,241,0.2); padding-bottom: 5px;">🚀 ZÁKLADNÍ STATY</h2>`;
+    const upgradesGrid = document.createElement('div');
+    upgradesGrid.className = 'menu-actions-grid';
+    upgradesSection.appendChild(upgradesGrid);
+
+    const stats = [
         { id: 'hp', name: '❤️ Extra HP', desc: 'Počáteční HP +10', cost: 10, val: META.upgrades.hp },
         { id: 'speed', name: '👟 Rychlost', desc: 'Pohyb +2%', cost: 15, val: META.upgrades.speed },
         { id: 'luck', name: '🍀 Štěstí', desc: 'XP násobič +0.05', cost: 25, val: META.upgrades.luck },
         { id: 'regen', name: '💊 Regenerace', desc: 'HP/s +0.1', cost: 40, val: META.upgrades.regen || 0 },
-        { id: 'armor', name: '🛡️ Štít', desc: 'Redukce poškození +2%', cost: 50, val: META.upgrades.armor || 0 },
-        { id: 'hat_crown', name: '👑 Koruna', desc: 'Zlatá královská koruna', cost: 100, isHat: true, type: 'crown' },
-        { id: 'hat_wizard', name: '🧙 Mág', desc: 'Klobouk čaroděje', cost: 100, isHat: true, type: 'wizard' },
-        { id: 'hat_ninja', name: '🥷 Ninja', desc: 'Maska stínu', cost: 100, isHat: true, type: 'ninja' }
+        { id: 'armor', name: '🛡️ Štít', desc: 'Redukce poškození +2%', cost: 50, val: META.upgrades.armor || 0 }
     ];
-    items.forEach(item => {
+
+    stats.forEach(item => {
         const card = document.createElement('div'); card.className = 'upgrade-card';
-        const cost = item.isHat ? item.cost : Math.floor(item.cost * (1 + item.val * 0.5));
-        const owned = item.isHat && META.upgrades.hat === item.type;
-        card.innerHTML = `<h3>${window.T(item.name)}</h3><p>${window.T(item.desc)}</p><span class="cost">${owned ? window.T('VLASTNĚNO') : cost + ' DOGE'}</span>`;
+        const cost = Math.floor(item.cost * (1 + (item.val || 0) * 0.5));
+        card.innerHTML = `<h3>${window.T(item.name)}</h3><p>${window.T(item.desc)}</p><span class="cost">${cost} DOGE</span>`;
         card.onclick = () => {
             if (META.currency < cost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
-            if (item.isHat) { META.upgrades.hat = item.type; }
-            else { META.upgrades[item.id]++; }
+            META.upgrades[item.id] = (META.upgrades[item.id] || 0) + 1;
             META.currency -= cost; saveMeta(); showMetaMenu();
         };
-        container.appendChild(card);
+        upgradesGrid.appendChild(card);
     });
+
+    // 2. ČEPICE
+    const hatsSection = document.createElement('div');
+    hatsSection.innerHTML = `<h2 style="color: #ec4899; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(236,72,153,0.2); padding-bottom: 5px;">🎩 ČEPICE</h2>`;
+    const hatsGrid = document.createElement('div');
+    hatsGrid.className = 'menu-actions-grid';
+    hatsSection.appendChild(hatsGrid);
+
+    const hats = [
+        { id: 'hat_crown', name: '👑 Koruna', desc: 'Zlatá královská koruna', cost: 100, type: 'crown' },
+        { id: 'hat_wizard', name: '🧙 Mág', desc: 'Klobouk čaroděje', cost: 100, type: 'wizard' },
+        { id: 'hat_ninja', name: '🥷 Ninja', desc: 'Maska stínu', cost: 100, type: 'ninja' }
+    ];
+
+    hats.forEach(item => {
+        const card = document.createElement('div'); card.className = 'upgrade-card';
+        const owned = META.upgrades.hat === item.type;
+        card.innerHTML = `<h3>${window.T(item.name)}</h3><p>${window.T(item.desc)}</p><span class="cost">${owned ? window.T('AKTIVNÍ') : item.cost + ' DOGE'}</span>`;
+        if (owned) card.style.borderColor = '#fbbf24';
+        card.onclick = () => {
+            if (owned) { META.upgrades.hat = null; saveMeta(); showMetaMenu(); return; }
+            if (META.currency < item.cost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
+            META.upgrades.hat = item.type;
+            META.currency -= item.cost; saveMeta(); showMetaMenu();
+        };
+        hatsGrid.appendChild(card);
+    });
+
+    // 3. BEDNY (CRATES)
+    const cratesSection = document.createElement('div');
+    cratesSection.innerHTML = `<h2 style="color: #fbbf24; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(251,191,36,0.2); padding-bottom: 5px;">📦 VESMÍRNÉ BEDNY</h2>`;
+    const cratesGrid = document.createElement('div');
+    cratesGrid.className = 'menu-actions-grid';
+    cratesSection.appendChild(cratesGrid);
+
+    const crateCost = 150;
+    const crateCard = document.createElement('div');
+    crateCard.className = 'upgrade-card';
+    crateCard.style.background = 'linear-gradient(135deg, rgba(251,191,36,0.1) 0%, rgba(217,119,6,0.1) 100%)';
+    crateCard.innerHTML = `<h3>📦 BEDNA S EMOJI</h3><p>Obsahuje náhodné emoji do tvé sbírky!</p><span class="cost">${crateCost} DOGE</span>`;
+    crateCard.onclick = () => {
+        if (META.currency < crateCost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
+        META.currency -= crateCost;
+        saveMeta();
+        openCrate();
+    };
+    cratesGrid.appendChild(crateCard);
+
+    // 4. SBÍRKA EMOJI
+    const collectionSection = document.createElement('div');
+    collectionSection.innerHTML = `<h2 style="color: #10b981; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(16,185,129,0.2); padding-bottom: 5px;">✨ TVÁ SBÍRKA</h2>`;
+    const collectionGrid = document.createElement('div');
+    collectionGrid.style.display = 'grid';
+    collectionGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(100px, 1fr))';
+    collectionGrid.style.gap = '10px';
+    collectionSection.appendChild(collectionGrid);
+
+    if (!META.inventory || META.inventory.length === 0) {
+        collectionGrid.innerHTML = `<p style="color: #475569; grid-column: 1/-1; padding: 20px;">Zatím nemáš žádná emoji. Otevři bednu!</p>`;
+    } else {
+        META.inventory.forEach(inv => {
+            const emoji = EMOJIS.find(e => e.id === inv.id);
+            if (!emoji) return;
+            const card = document.createElement('div');
+            card.className = 'upgrade-card';
+            card.style.minHeight = 'auto';
+            card.style.padding = '10px';
+            card.innerHTML = `
+                <div style="font-size: 1.5rem;">${emoji.icon}</div>
+                <div style="font-size: 0.7rem; font-weight: bold; margin-top:5px">${emoji.name}</div>
+                <div style="font-size: 0.6rem; color: #94a3b8">x${inv.count}</div>
+                <button class="btn-sell" style="margin-top:8px; padding: 4px 8px; font-size: 0.6rem; border-radius: 6px; background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); cursor:pointer;">PRODAT (${emoji.price})</button>
+            `;
+            card.querySelector('.btn-sell').onclick = (e) => {
+                e.stopPropagation();
+                sellEmoji(inv.id);
+            };
+            collectionGrid.appendChild(card);
+        });
+    }
+
+    container.appendChild(upgradesSection);
+    container.appendChild(hatsSection);
+    container.appendChild(cratesSection);
+    container.appendChild(collectionSection);
+}
+
+function openCrate() {
+    // Rarity weights
+    const weights = { common: 60, uncommon: 25, rare: 10, epic: 5 };
+    const roll = Math.random() * 100;
+    let targetRarity = 'common';
+    if (roll < 5) targetRarity = 'epic';
+    else if (roll < 15) targetRarity = 'rare';
+    else if (roll < 40) targetRarity = 'uncommon';
+
+    const possible = EMOJIS.filter(e => e.rarity === targetRarity);
+    const result = possible[Math.floor(Math.random() * possible.length)];
+
+    if (!META.inventory) META.inventory = [];
+    const existing = META.inventory.find(i => i.id === result.id);
+    if (existing) existing.count++;
+    else META.inventory.push({ id: result.id, count: 1 });
+
+    saveMeta();
+    
+    // Show visual effect
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.style.zIndex = '5000';
+    modal.innerHTML = `
+        <div class="modal-content" style="background: rgba(15,23,42,0.98); border: 2px solid #fbbf24; box-shadow: 0 0 50px rgba(251,191,36,0.3);">
+            <h2 style="color: #fbbf24; font-size: 2rem;">📦 BEDNA OTEVŘENA!</h2>
+            <div style="font-size: 6rem; margin: 2rem 0; animation: bounce 0.5s infinite alternate;">${result.icon}</div>
+            <h3 style="font-size: 1.5rem; color: #fff;">${result.name}</h3>
+            <p style="color: ${targetRarity === 'epic' ? '#a855f7' : (targetRarity === 'rare' ? '#fbbf24' : '#94a3b8')}; font-weight: bold; text-transform: uppercase;">${targetRarity}</p>
+            <button class="btn-restart" style="margin-top: 2rem; width: 100%;">SKVĚLÉ!</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('button').onclick = () => {
+        modal.remove();
+        showMetaMenu();
+    };
+}
+
+function sellEmoji(id) {
+    const invIdx = META.inventory.findIndex(i => i.id === id);
+    if (invIdx === -1) return;
+    
+    const emoji = EMOJIS.find(e => e.id === id);
+    META.currency += emoji.price;
+    
+    if (META.inventory[invIdx].count > 1) {
+        META.inventory[invIdx].count--;
+    } else {
+        META.inventory.splice(invIdx, 1);
+    }
+    
+    saveMeta();
+    showMetaMenu();
 }
 
 window.softResetToMenu = () => {
