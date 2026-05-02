@@ -2440,12 +2440,23 @@ function showMetaMenu() {
 
     // 2. SBÍRKA EMOJI & ČEPIC
     const collectionSection = document.createElement('div');
-    collectionSection.innerHTML = `<h2 style="color: #10b981; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(16,185,129,0.2); padding-bottom: 5px;">✨ TVÁ SBÍRKA</h2>`;
+    collectionSection.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(16,185,129,0.2); margin-bottom: 15px; padding-bottom: 5px;">
+            <h2 style="color: #10b981; text-align: left; margin:0; font-size: 1.2rem;">✨ TVÁ SBÍRKA</h2>
+            ${META.inventory.length > 0 ? `<button id="btn-sell-all" style="padding: 5px 12px; font-size: 0.7rem; border-radius: 8px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); cursor:pointer; font-weight:bold;">PRODAT VŠE</button>` : ''}
+        </div>
+    `;
     const collectionGrid = document.createElement('div');
     collectionGrid.style.display = 'grid';
     collectionGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(110px, 1fr))';
     collectionGrid.style.gap = '10px';
     collectionSection.appendChild(collectionGrid);
+
+    if (META.inventory.length > 0) {
+        document.getElementById('btn-sell-all')?.addEventListener('click', () => {
+            window.showCustomConfirm(window.T("Opravdu chceš prodat všechna neaktivní emoji?"), () => sellAllEmojis());
+        });
+    }
 
     if (!META.inventory || META.inventory.length === 0) {
         collectionGrid.innerHTML = `<p style="color: #475569; grid-column: 1/-1; padding: 20px;">Zatím nemáš žádná emoji. Otevři bednu!</p>`;
@@ -2551,7 +2562,7 @@ function openCrate(type = 'basic') {
 function startCrateAnimation(winner) {
     const modal = document.createElement('div');
     modal.className = 'modal active';
-    modal.style.zIndex = '6000';
+    modal.style.zIndex = '2000000';
     modal.style.background = 'rgba(0,0,0,0.9)';
     
     // Create random list for animation
@@ -2639,6 +2650,55 @@ function sellEmoji(id) {
         META.inventory.splice(invIdx, 1);
     }
     
+    saveMeta();
+    showMetaMenu();
+}
+
+function sellAllEmojis() {
+    if (!META.inventory || META.inventory.length === 0) return;
+    
+    let totalGain = 0;
+    const newInventory = [];
+    
+    META.inventory.forEach(inv => {
+        const emoji = EMOJIS.find(e => e.id === inv.id);
+        if (!emoji) return;
+        
+        const isEquipped = emoji.isHat && META.upgrades.hat === emoji.type;
+        
+        if (isEquipped) {
+            newInventory.push(inv);
+        } else {
+            totalGain += emoji.price * inv.count;
+        }
+    });
+    
+    if (totalGain > 0) {
+        META.currency += totalGain;
+        window.showCustomAlert(`Prodáno vše! Získal jsi ${totalGain} Dogecoinů.`);
+        
+        const menuModal = document.getElementById('meta-modal');
+        const floating = document.createElement('div');
+        floating.innerText = `+${totalGain} DOGE`;
+        floating.style.position = 'absolute';
+        floating.style.top = '50%';
+        floating.style.left = '50%';
+        floating.style.color = '#fbbf24';
+        floating.style.fontWeight = 'bold';
+        floating.style.fontSize = '3rem';
+        floating.style.pointerEvents = 'none';
+        floating.style.zIndex = '1000';
+        floating.style.transition = 'all 1.5s ease-out';
+        menuModal.appendChild(floating);
+        
+        setTimeout(() => {
+            floating.style.transform = 'translateY(-150px)';
+            floating.style.opacity = '0';
+        }, 10);
+        setTimeout(() => floating.remove(), 1500);
+    }
+    
+    META.inventory = newInventory;
     saveMeta();
     showMetaMenu();
 }
