@@ -2191,6 +2191,40 @@ function showAchievementUnlocked(name) {
     }
 }
 
+function showCurrencyNotification(amount, source = "") {
+    const titles = ["PARÁDA!", "SKVĚLÉ!", "ÚSPĚCH!", "ZÍSKAL JSI!", "VÝBORNĚ!"];
+    const title = titles[Math.floor(Math.random() * titles.length)];
+    
+    const notification = document.createElement('div');
+    notification.style.position = 'fixed';
+    notification.style.top = '20%';
+    notification.style.left = '50%';
+    notification.style.transform = 'translate(-50%, -50%)';
+    notification.style.zIndex = '3000000';
+    notification.style.textAlign = 'center';
+    notification.style.pointerEvents = 'none';
+    notification.style.animation = 'achievementPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+    
+    notification.innerHTML = `
+        <div style="background: rgba(15, 23, 42, 0.9); border: 2px solid #fbbf24; padding: 20px 40px; border-radius: 20px; box-shadow: 0 0 50px rgba(251, 191, 36, 0.4); backdrop-filter: blur(10px);">
+            <div style="color: #fbbf24; font-weight: 900; font-size: 1.5rem; letter-spacing: 2px; margin-bottom: 5px;">${title}</div>
+            <div style="color: #fff; font-size: 2rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <span style="font-size: 1.5rem;">🪙</span> +${amount} DOGE
+            </div>
+            ${source ? `<div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px; text-transform: uppercase;">${source}</div>` : ''}
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.transition = 'all 0.5s ease-in';
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, -100px)';
+        setTimeout(() => notification.remove(), 500);
+    }, 2500);
+}
+
 function showAchievementsMenu() {
     console.log("Opening Achievements Menu...");
     const container = document.getElementById('achievements-list');
@@ -2228,6 +2262,11 @@ function gameOver() {
     const killsIncome = Math.floor(GAME.kills / 10);
     META.currency += killsIncome;
     META.currency += (GAME.coinsCollected || 0);
+    
+    const totalGained = killsIncome + (GAME.coinsCollected || 0);
+    if (totalGained > 0) {
+        showCurrencyNotification(totalGained, "VÝNOS Z BITVY");
+    }
     
     if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 };
     META.stats.totalDogecoins += killsIncome + (GAME.coinsCollected || 0);
@@ -2719,6 +2758,7 @@ function sellEmoji(id) {
     
     const emoji = EMOJIS.find(e => e.id === id);
     META.currency += emoji.price;
+    showCurrencyNotification(emoji.price, `PRODEJ: ${emoji.name}`);
     
     // Floating text effect in menu
     const menuModal = document.getElementById('meta-modal');
@@ -2730,17 +2770,6 @@ function sellEmoji(id) {
     floating.style.color = '#fbbf24';
     floating.style.fontWeight = 'bold';
     floating.style.fontSize = '2rem';
-    floating.style.pointerEvents = 'none';
-    floating.style.zIndex = '1000';
-    floating.style.transition = 'all 1s ease-out';
-    menuModal.appendChild(floating);
-    
-    setTimeout(() => {
-        floating.style.transform = 'translateY(-100px)';
-        floating.style.opacity = '0';
-    }, 10);
-    setTimeout(() => floating.remove(), 1000);
-
     if (META.inventory[invIdx].count > 1) {
         META.inventory[invIdx].count--;
     } else {
@@ -2772,27 +2801,7 @@ function sellAllEmojis() {
     
     if (totalGain > 0) {
         META.currency += totalGain;
-        showCustomAlert(`Prodáno vše! Získal jsi ${totalGain} Dogecoinů.`, 'gold');
-        
-        const menuModal = document.getElementById('meta-modal');
-        const floating = document.createElement('div');
-        floating.innerText = `+${totalGain} DOGE`;
-        floating.style.position = 'absolute';
-        floating.style.top = '50%';
-        floating.style.left = '50%';
-        floating.style.color = '#fbbf24';
-        floating.style.fontWeight = 'bold';
-        floating.style.fontSize = '3rem';
-        floating.style.pointerEvents = 'none';
-        floating.style.zIndex = '1000';
-        floating.style.transition = 'all 1.5s ease-out';
-        menuModal.appendChild(floating);
-        
-        setTimeout(() => {
-            floating.style.transform = 'translateY(-150px)';
-            floating.style.opacity = '0';
-        }, 10);
-        setTimeout(() => floating.remove(), 1500);
+        showCurrencyNotification(totalGain, "HROMADNÝ PRODEJ");
     }
     
     META.inventory = newInventory;
@@ -3378,7 +3387,7 @@ function init() {
             "💡 POKROČILÉ TIPY": "💡 ADVANCED TIPS",
             "Skvělá kombinace pro nesmrtelnost.": "Great combo for immortality.",
             "Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!": "Spawns every minute. Always dodge sideways!",
-            "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 kills = 1 Doge. Buy permanent upgrades!",
+            "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 kills = 1 Doge. 10 kills = 1 Doge. Buy permanent upgrades with them!",
             "ROZUMÍM, CHCI DO BOJE!": "UNDERSTOOD, LET'S FIGHT!",
             "Napiš mi, co bys chtěl vylepšit nebo nahlásit chybu.": "Tell me what to improve or report a bug.",
             "ODESLAT": "SUBMIT",
@@ -3715,7 +3724,7 @@ function init() {
             "Dogecoiny:": "Dogecoins:",
             "🚀 Průzkumník:": "🚀 Entdecker:",
             "⚡ Laserový křižník:": "⚡ Laserkreuzer:",
-            "🛡️ Obránce:": "🛡️ Verteidiger:",
+            "🛡️ Obránce:": "⚡ Verteidiger:",
             "💥 Brokovnice:": "💥 Schrotflinte:",
             "💀 Nekromancer:": "💀 Nekromant:",
             "Nemáš dost Dogecoinu!": "Nicht genug Dogecoin!",
@@ -4056,7 +4065,6 @@ function init() {
             "Klobouk čaroděje": "Sombrero de mago",
             "Ninja": "Ninja",
             "Maska stínu": "Máscara de sombra",
-            "Máscara de sombra": "Máscara de sombra",
             "✅ ZKOPÍROVÁNO!": "✅ ¡COPIADO!",
             "📋 KOPÍROVAT KÓD": "📋 COPIAR CÓDIGO",
             "ZADEJ KÓD...": "INTRODUCIR CÓDIGO...",
@@ -4115,7 +4123,7 @@ function init() {
             "Ultra Magnet": "Ultra Imán",
             "Pomalý sběr z celé mapy": "Recolección lenta de todo el mapa",
             "Orbitální Štít": "Escudo Orbital",
-            "Vypustí rotující projektil": "Libera proyectil rotatorio",
+            "Vypouští rotující projektil": "Libera proyectil rotatorio",
             "Lifesteal": "Robo de Vida",
             "10% šance vyléčit si 8% HP při killu": "10% de prob. de curar 8% de HP al matar",
             "Ohnivá Stopa": "Rastro de Fuego",
@@ -4374,9 +4382,7 @@ function init() {
             META.lastDailyGift = now;
             saveMeta();
             
-            document.getElementById('display-doge').innerText = META.currency;
-            
-            window.showCustomAlert(`🎉 ${window.T("DEN")} ${META.dailyStreak}: ${window.T("Dostal jsi")} ${reward} Doge! 🚀`);
+            showCurrencyNotification(reward, `DENNÍ ODMĚNA (${META.dailyStreak}. DEN)`);
             btnDaily.style.opacity = '0.5';
             btnDaily.style.filter = 'grayscale(1)';
             btnDaily.style.pointerEvents = 'none';
