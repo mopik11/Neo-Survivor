@@ -2681,12 +2681,26 @@ function openCrate(type = 'basic', count = 1) {
     startCrateAnimation(firstResult, type);
 }
 
+function clearCrateTimeouts() {
+    if (GAME.crateTimeouts) {
+        GAME.crateTimeouts.forEach(t => clearTimeout(t));
+    }
+    GAME.crateTimeouts = [];
+}
+
 function startCrateAnimation(winner, crateType = 'basic') {
+    // 1. CLEAR EVERYTHING BEFORE STARTING NEW ANIMATION
+    clearCrateTimeouts();
+    
+    // Remove any existing crate modals to be safe
+    const oldModals = document.querySelectorAll('.modal-crate-active');
+    oldModals.forEach(m => m.remove());
+
     const modal = document.createElement('div');
-    modal.className = 'modal active';
+    modal.className = 'modal active modal-crate-active';
     modal.style.zIndex = '2000000';
-    modal.style.background = 'rgba(15, 23, 42, 0.85)'; 
-    modal.style.backdropFilter = 'blur(10px)';
+    modal.style.background = 'rgba(15, 23, 42, 0.95)'; 
+    modal.style.backdropFilter = 'blur(15px)';
     
     const crateData = {
         'basic': { name: 'OBYČEJNÁ BEDNA', icon: '📦', color: '#94a3b8' },
@@ -2703,11 +2717,11 @@ function startCrateAnimation(winner, crateType = 'basic') {
     for(let i=0; i<40; i++) {
         randomItems.push(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
     }
-    randomItems[35] = winner;
+    randomItems[35] = winner; // The 36th item is the target
 
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 800px; width: 95vw; background: #0f172a; border: 1px solid #334155; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-            <button id="btn-skip-crate" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 0.55rem; font-weight: 900; z-index: 1000; letter-spacing: 1px; backdrop-filter: blur(5px);">SKIP</button>
+            <button id="btn-skip-crate" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.65rem; font-weight: 900; z-index: 1000; letter-spacing: 1px; backdrop-filter: blur(5px);">SKIP ANIMATION</button>
             <div style="display:flex; align-items:center; gap:10px; margin-bottom: 1.2rem; opacity: 0.8; flex-wrap: wrap; justify-content: center; width: 100%; padding: 0 40px;">
                 <span style="font-size: 1.2rem;">${crateData.icon}</span>
                 <h2 class="crate-anim-title" style="color: ${crateData.color}; font-size: 0.85rem; margin:0; letter-spacing: 2px; text-transform: uppercase; text-align: center;">${crateData.name}</h2>
@@ -2732,10 +2746,10 @@ function startCrateAnimation(winner, crateType = 'basic') {
             <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
                 <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; letter-spacing: 2px;">ZÍSKÁNO: ${GAME.crateQueue ? (GAME.lastCrateBatchSize - GAME.crateQueue.length) : 1} / ${GAME.lastCrateBatchSize || 1}</div>
                 <h3 style="color: #fff; font-size: 2.2rem; margin: 0; text-shadow: 0 0 30px rgba(255,255,255,0.1);">${winner.name}</h3>
-                <p style="color: ${getRarityColor(winner.rarity)}; font-weight: bold; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 3px; margin: 5px 0 1.5rem 0;">${winner.rarity}</p>
+                <p style="color: ${getRarityColor(winner.rarity)}; font-weight: bold; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 3px; margin: 5px 0 1.5rem 0;">${winner.rarity.toUpperCase()}</p>
                 
                 <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${GAME.crateQueue && GAME.crateQueue.length > 0 ? 'DALŠÍ (NEXT)' : 'PŘIDAT DO SBÍRKY'}</button>
+                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${(GAME.crateQueue && GAME.crateQueue.length > 0) ? 'DALŠÍ (NEXT)' : 'PŘIDAT DO SBÍRKY'}</button>
                     <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">PRODAT (+${winner.price})</button>
                     <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${(!GAME.crateQueue || GAME.crateQueue.length === 0) ? 'block' : 'none'};">ZATOČIT ZNOVU</button>
                 </div>
@@ -2745,63 +2759,52 @@ function startCrateAnimation(winner, crateType = 'basic') {
 
     document.body.appendChild(modal);
     
-    const finishAnimation = () => {
+    const showResults = () => {
+        clearCrateTimeouts(); // Stop any other timers
         const carousel = document.getElementById('crate-carousel');
-        if (!carousel) return;
-        carousel.style.transition = 'none';
-        const offset = -(35 * itemWidth + itemSize / 2);
-        carousel.style.transform = `translateX(${offset}px)`;
+        if (carousel) {
+            carousel.style.transition = 'none';
+            const offset = -(35 * itemWidth + itemSize / 2);
+            carousel.style.transform = `translateX(${offset}px)`;
+        }
         
         const resultInfo = document.getElementById('crate-result-info');
         if (resultInfo) {
             resultInfo.style.opacity = '1';
             resultInfo.style.transform = 'translateY(0)';
         }
-        document.getElementById('btn-skip-crate').style.display = 'none';
+        const skipBtn = document.getElementById('btn-skip-crate');
+        if (skipBtn) skipBtn.style.display = 'none';
 
-        // Also trigger auto-next if skipped
-        if (GAME.crateQueue && GAME.crateQueue.length > 0 && !GAME.currentAutoNextTimeout) {
-            GAME.currentAutoNextTimeout = setTimeout(() => {
+        // Auto-next after 3s
+        if (GAME.crateQueue && GAME.crateQueue.length > 0) {
+            const t = setTimeout(() => {
                 const nextBtn = document.getElementById('btn-crate-collect');
                 if (nextBtn) nextBtn.click();
             }, 3000);
+            GAME.crateTimeouts.push(t);
         }
     };
 
     modal.querySelector('#btn-skip-crate').onclick = () => {
-        finishAnimation();
+        showResults();
     };
 
-    // Start animation
-    setTimeout(() => {
+    // Start rotation
+    GAME.crateTimeouts.push(setTimeout(() => {
         const carousel = document.getElementById('crate-carousel');
-        if (!carousel) return;
-        const offset = -(35 * itemWidth + itemSize / 2);
-        carousel.style.transform = `translateX(${offset}px)`;
-    }, 100);
-
-    // Show results normally after 6s
-    const animTimeout = setTimeout(() => {
-        const resultInfo = document.getElementById('crate-result-info');
-        if (resultInfo) {
-            resultInfo.style.opacity = '1';
-            resultInfo.style.transform = 'translateY(0)';
-            document.getElementById('btn-skip-crate').style.display = 'none';
+        if (carousel) {
+            const offset = -(35 * itemWidth + itemSize / 2);
+            carousel.style.transform = `translateX(${offset}px)`;
         }
+    }, 100));
 
-        // AUTO-NEXT starts ONLY AFTER animation finishes + 3 seconds
-        if (GAME.crateQueue && GAME.crateQueue.length > 0) {
-            const autoNextTimeout = setTimeout(() => {
-                const nextBtn = document.getElementById('btn-crate-collect');
-                if (nextBtn) nextBtn.click();
-            }, 3000);
-            
-            // Store timeout ID to clear if user clicks manually
-            GAME.currentAutoNextTimeout = autoNextTimeout;
-        }
-    }, 6200);
+    // Wait for animation to finish
+    GAME.crateTimeouts.push(setTimeout(() => {
+        showResults();
+    }, 6200));
 
-    // Add winner to inventory immediately when animation starts to prevent loss
+    // Save to inventory
     if (!META.inventory) META.inventory = [];
     const existing = META.inventory.find(i => i.id === winner.id);
     if (existing) existing.count++;
@@ -2813,8 +2816,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
     checkAchievements();
 
     modal.querySelector('#btn-crate-collect').onclick = () => {
-        if (GAME.currentAutoNextTimeout) clearTimeout(GAME.currentAutoNextTimeout);
-        if (animTimeout) clearTimeout(animTimeout);
+        clearCrateTimeouts();
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
             const nextWinner = GAME.crateQueue.shift();
             modal.remove();
@@ -2826,12 +2828,8 @@ function startCrateAnimation(winner, crateType = 'basic') {
     };
 
     modal.querySelector('#btn-crate-sell').onclick = () => {
-        if (GAME.currentAutoNextTimeout) clearTimeout(GAME.currentAutoNextTimeout);
-        if (animTimeout) clearTimeout(animTimeout);
-        
-        // Sell logic
+        clearCrateTimeouts();
         META.currency += winner.price;
-        // Remove one from inventory if just added
         const invIdx = META.inventory.findIndex(i => i.id === winner.id);
         if (invIdx !== -1) {
             if (META.inventory[invIdx].count > 1) META.inventory[invIdx].count--;
@@ -2851,9 +2849,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
     };
 
     modal.querySelector('#btn-crate-again').onclick = () => {
-        if (GAME.currentAutoNextTimeout) clearTimeout(GAME.currentAutoNextTimeout);
-        if (animTimeout) clearTimeout(animTimeout);
-        
+        clearCrateTimeouts();
         const crateCost = { 'basic': 150, 'premium': 1000, 'legendary': 5000 }[GAME.lastCrateType];
         const totalCost = crateCost * (GAME.lastCrateBatchSize || 1);
         if (META.currency < totalCost) {
