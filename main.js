@@ -148,6 +148,29 @@ const EMOJIS = [
     { id: 'icecream', name: 'Zmrzlina', icon: '🍧', rarity: 'uncommon', price: 50 },
     { id: 'cake', name: 'Dort', icon: '🍰', rarity: 'rare', price: 180 },
     { id: 'fishcake', name: 'Naruto', icon: '🍥', rarity: 'epic', price: 350 },
+    { id: 'alien', name: 'Mimozemšťan', icon: '👽', rarity: 'epic', price: 500 },
+    { id: 'ghost', name: 'Duch', icon: '👻', rarity: 'uncommon', price: 60 },
+    { id: 'robot', name: 'Robot', icon: '🤖', rarity: 'rare', price: 200 },
+    { id: 'fire', name: 'Oheň', icon: '🔥', rarity: 'rare', price: 150 },
+    { id: 'star', name: 'Hvězda', icon: '⭐', rarity: 'uncommon', price: 45 },
+    { id: 'pizza', name: 'Pizza', icon: '🍕', rarity: 'uncommon', price: 55 },
+    { id: 'burger', name: 'Burger', icon: '🍔', rarity: 'uncommon', price: 55 },
+    { id: 'sushi', name: 'Sushi', icon: '🍣', rarity: 'rare', price: 220 },
+    { id: 'taco', name: 'Taco', icon: '🌮', rarity: 'rare', price: 210 },
+    { id: 'coffee', name: 'Káva', icon: '☕', rarity: 'common', price: 25 },
+    { id: 'beer', name: 'Pivo', icon: '🍺', rarity: 'uncommon', price: 40 },
+    { id: 'rocket', name: 'Raketa', icon: '🚀', rarity: 'epic', price: 600 },
+    { id: 'ufo', name: 'UFO', icon: '🛸', rarity: 'legendary', price: 2000 },
+    { id: 'ring', name: 'Prsten', icon: '💍', rarity: 'legendary', price: 5000 },
+    { id: 'oni', name: 'Oni', icon: '👹', rarity: 'epic', price: 450 },
+    { id: 'vampire', name: 'Upír', icon: '🧛', rarity: 'epic', price: 480 },
+    { id: 'zombie', name: 'Zombie', icon: '🧟', rarity: 'uncommon', price: 40 },
+    { id: 'dragon', name: 'Drak', icon: '🐉', rarity: 'legendary', price: 3500 },
+    { id: 'volcano', name: 'Sopka', icon: '🌋', rarity: 'rare', price: 180 },
+    { id: 'galaxy', name: 'Galaxie', icon: '🌌', rarity: 'legendary', price: 6000 },
+    { id: 'saturn', name: 'Saturn', icon: '🪐', rarity: 'rare', price: 250 },
+    { id: 'invader', name: 'Vetřelec', icon: '👾', rarity: 'epic', price: 550 },
+    { id: 'spy', name: 'Špión', icon: '🕵️', rarity: 'rare', price: 200 },
     // ČEPICE (Legendární)
     { id: 'hat_crown', name: '👑 Koruna', icon: '👑', rarity: 'legendary', price: 1000, isHat: true, type: 'crown' },
     { id: 'hat_wizard', name: '🧙 Mág', icon: '🧙', rarity: 'legendary', price: 1200, isHat: true, type: 'wizard' },
@@ -2497,16 +2520,14 @@ function openCrate(type = 'basic') {
     }
 
     if (!result) {
-        // 2. Adjust rarity based on crate type
         if (type === 'legendary') {
-            if (roll < 20) targetRarity = 'legendary'; // 20% for Legendary in Legendary crate
-            else targetRarity = 'epic'; // 80% for Epic
+            if (roll < 20) targetRarity = 'legendary';
+            else targetRarity = 'epic';
         } else if (type === 'premium') {
             if (roll < 2) targetRarity = 'legendary';
             else if (roll < 30) targetRarity = 'epic';
             else targetRarity = 'rare';
         } else {
-            // Basic crate
             if (roll < 0.5) targetRarity = 'legendary';
             else if (roll < 5) targetRarity = 'epic';    
             else if (roll < 20) targetRarity = 'rare';   
@@ -2515,12 +2536,7 @@ function openCrate(type = 'basic') {
         }
 
         const possible = EMOJIS.filter(e => e.rarity === targetRarity && e.id !== 'ultra_rare');
-        if (possible.length === 0) { // Fallback if no emojis in that rarity
-             result = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
-             targetRarity = result.rarity;
-        } else {
-             result = possible[Math.floor(Math.random() * possible.length)];
-        }
+        result = possible.length === 0 ? EMOJIS[0] : possible[Math.floor(Math.random() * possible.length)];
     }
 
     if (!META.inventory) META.inventory = [];
@@ -2529,21 +2545,60 @@ function openCrate(type = 'basic') {
     else META.inventory.push({ id: result.id, count: 1 });
 
     saveMeta();
-    
-    // Show visual effect
+    startCrateAnimation(result);
+}
+
+function startCrateAnimation(winner) {
     const modal = document.createElement('div');
     modal.className = 'modal active';
-    modal.style.zIndex = '5000';
+    modal.style.zIndex = '6000';
+    modal.style.background = 'rgba(0,0,0,0.9)';
+    
+    // Create random list for animation
+    const randomItems = [];
+    for(let i=0; i<40; i++) {
+        randomItems.push(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
+    }
+    randomItems[35] = winner; // The winner is at a specific position
+
     modal.innerHTML = `
-        <div class="modal-content" style="background: rgba(15,23,42,0.98); border: 2px solid ${getRarityColor(targetRarity)}; box-shadow: 0 0 50px ${getRarityColor(targetRarity)}44;">
-            <h2 style="color: ${getRarityColor(targetRarity)}; font-size: 2rem;">📦 BEDNA OTEVŘENA!</h2>
-            <div style="font-size: 6rem; margin: 2rem 0; animation: bounce 0.5s infinite alternate;">${result.icon}</div>
-            <h3 style="font-size: 1.5rem; color: #fff;">${result.name}</h3>
-            <p style="color: ${getRarityColor(targetRarity)}; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">${targetRarity}</p>
-            <button class="btn-restart" style="margin-top: 2rem; width: 100%; background: ${getRarityColor(targetRarity)}; color: #000;">SKVĚLÉ!</button>
+        <div class="modal-content" style="max-width: 800px; width: 95vw; background: #0f172a; border: 1px solid #334155; padding: 2rem; overflow: hidden; position: relative;">
+            <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 4px; height: 100%; background: #fbbf24; z-index: 10; box-shadow: 0 0 20px #fbbf24;"></div>
+            <h2 style="color: #94a3b8; font-size: 1.2rem; margin-bottom: 2rem; letter-spacing: 4px;">OTEVÍRÁNÍ BEDNY...</h2>
+            
+            <div id="crate-carousel" style="display: flex; gap: 10px; width: fit-content; transition: transform 6s cubic-bezier(0.1, 0, 0.1, 1); transform: translateX(0);">
+                ${randomItems.map(item => `
+                    <div style="min-width: 120px; height: 150px; background: rgba(255,255,255,0.05); border: 2px solid ${getRarityColor(item.rarity)}44; border-bottom: 4px solid ${getRarityColor(item.rarity)}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;">
+                        <div style="font-size: 3rem;">${item.icon}</div>
+                        <div style="font-size: 0.6rem; font-weight: bold; color: ${getRarityColor(item.rarity)}">${item.rarity.toUpperCase()}</div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div id="crate-result-info" style="margin-top: 3rem; opacity: 0; transition: opacity 0.5s;">
+                <h3 style="color: #fff; font-size: 2rem; margin: 0;">${winner.name}</h3>
+                <p style="color: ${getRarityColor(winner.rarity)}; font-weight: bold; font-size: 1.1rem; text-transform: uppercase;">${winner.rarity}</p>
+                <button class="btn-restart" style="margin-top: 1rem; width: 200px; background: ${getRarityColor(winner.rarity)}; color: #000;">DO SBÍRKY</button>
+            </div>
         </div>
     `;
+
     document.body.appendChild(modal);
+    
+    // Start animation
+    setTimeout(() => {
+        const carousel = document.getElementById('crate-carousel');
+        const itemWidth = 130; // 120px width + 10px gap
+        const offset = -(35 * itemWidth) + (400 - itemWidth/2); // Center the 35th item
+        carousel.style.transform = `translateX(${offset}px)`;
+    }, 100);
+
+    // Show results
+    setTimeout(() => {
+        document.getElementById('crate-result-info').style.opacity = '1';
+        // Play sound or effect here if needed
+    }, 6200);
+
     modal.querySelector('button').onclick = () => {
         modal.remove();
         showMetaMenu();
@@ -2557,6 +2612,27 @@ function sellEmoji(id) {
     const emoji = EMOJIS.find(e => e.id === id);
     META.currency += emoji.price;
     
+    // Floating text effect in menu
+    const menuModal = document.getElementById('meta-modal');
+    const floating = document.createElement('div');
+    floating.innerText = `+${emoji.price} DOGE`;
+    floating.style.position = 'absolute';
+    floating.style.top = '50%';
+    floating.style.left = '50%';
+    floating.style.color = '#fbbf24';
+    floating.style.fontWeight = 'bold';
+    floating.style.fontSize = '2rem';
+    floating.style.pointerEvents = 'none';
+    floating.style.zIndex = '1000';
+    floating.style.transition = 'all 1s ease-out';
+    menuModal.appendChild(floating);
+    
+    setTimeout(() => {
+        floating.style.transform = 'translateY(-100px)';
+        floating.style.opacity = '0';
+    }, 10);
+    setTimeout(() => floating.remove(), 1000);
+
     if (META.inventory[invIdx].count > 1) {
         META.inventory[invIdx].count--;
     } else {
