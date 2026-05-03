@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.285
+ * NEO SURVIVOR - Core Game Logic - v1.286
  */
 
 window.onerror = function (msg, url, line, col, error) {
@@ -58,8 +58,8 @@ function switchMusic(target) {
                 m.currentTime = 0;
                 m.play().catch(e => console.warn("Music play blocked", k, e));
             }
-            let vol = 0.4;
-            if (target === 'upgrades') vol = 0.4;
+            let vol = 0.2;
+            if (target === 'upgrades') vol = 0.2;
             fadeVolume(m, vol);
         } else if (target === 'upgrades' && k === 'menu') {
             fadeVolume(m, 0.08); // Keep menu music dim
@@ -2898,8 +2898,10 @@ function startCrateAnimation(winner, crateType = 'basic') {
             
             <div style="position: relative; width: 100%; height: ${itemSize + 30}px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);">
                 <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #fbbf24; z-index: 100; box-shadow: 0 0 10px #fbbf24;">
-                    <div style="position: absolute; top: -2px; left: 50%; transform: translateX(-50%); border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #fbbf24;"></div>
-                    <div style="position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid #fbbf24;"></div>
+                    <!-- Top Triangle -->
+                    <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 12px; height: 8px; background: #fbbf24; clip-path: polygon(0 0, 100% 0, 50% 100%);"></div>
+                    <!-- Bottom Triangle -->
+                    <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 12px; height: 8px; background: #fbbf24; clip-path: polygon(50% 0, 0 100%, 100% 100%);"></div>
                 </div>
                 
                 <div id="crate-carousel" style="display: flex; gap: ${itemGap}px; width: fit-content; transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1); transform: translateX(0); padding-left: 50%;">
