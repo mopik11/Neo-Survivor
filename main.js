@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.294
+ * NEO SURVIVOR - Core Game Logic - v1.295
  */
 
 window.addEventListener('beforeunload', () => {
@@ -2716,9 +2716,9 @@ function showMetaMenu() {
     cratesSection.appendChild(cratesGrid);
 
     const crateTypes = [
-        { id: 'basic', name: '📦 OBYČEJNÁ', cost: 150, color: 'rgba(148, 163, 184, 0.1)', border: '#94a3b8' },
-        { id: 'premium', name: '💎 PRÉMIOVÁ', cost: 1000, color: 'rgba(99, 102, 241, 0.1)', border: '#6366f1' },
-        { id: 'legendary', name: '👑 LEGENDÁRNÍ', cost: 5000, color: 'rgba(251, 191, 36, 0.1)', border: '#fbbf24' }
+        { id: 'basic', name: window.T('📦 OBYČEJNÁ'), cost: 150, color: 'rgba(148, 163, 184, 0.1)', border: '#94a3b8' },
+        { id: 'premium', name: window.T('💎 PRÉMIOVÁ'), cost: 1000, color: 'rgba(99, 102, 241, 0.1)', border: '#6366f1' },
+        { id: 'legendary', name: window.T('👑 LEGENDÁRNÍ'), cost: 5000, color: 'rgba(251, 191, 36, 0.1)', border: '#fbbf24' }
     ];
 
     crateTypes.forEach(type => {
@@ -2937,9 +2937,9 @@ function startCrateAnimation(winner, crateType = 'basic') {
     modal.style.backdropFilter = 'blur(15px)';
     
     const crateData = {
-        'basic': { name: 'OBYČEJNÁ BEDNA', icon: '📦', color: '#94a3b8', glow: 'rgba(148, 163, 184, 0.3)', bg: '#0f172a' },
-        'premium': { name: 'PRÉMIOVÁ BEDNA', icon: '💎', color: '#6366f1', glow: 'rgba(99, 102, 241, 0.5)', bg: '#060b1a' },
-        'legendary': { name: 'LEGENDÁRNÍ BEDNA', icon: '👑', color: '#fbbf24', glow: 'rgba(251, 191, 36, 0.6)', bg: '#1a1404' }
+        'basic': { name: window.T('OBYČEJNÁ BEDNA'), icon: '📦', color: '#94a3b8', glow: 'rgba(148, 163, 184, 0.3)', bg: '#0f172a' },
+        'premium': { name: window.T('PRÉMIOVÁ BEDNA'), icon: '💎', color: '#6366f1', glow: 'rgba(99, 102, 241, 0.5)', bg: '#060b1a' },
+        'legendary': { name: window.T('LEGENDÁRNÍ BEDNA'), icon: '👑', color: '#fbbf24', glow: 'rgba(251, 191, 36, 0.6)', bg: '#1a1404' }
     }[crateType];
 
     const isMobile = window.innerWidth <= 768;
@@ -4234,6 +4234,12 @@ function init() {
             "TVÁ SBÍRKA": "YOUR COLLECTION",
             "Stiskni 'T' pro psaní...": "Press 'T' to chat...",
             "Zatím nemáš žádná emoji. Otevři bednu!": "You don't have any emojis yet. Open a crate!",
+            "📦 OBYČEJNÁ": "📦 BASIC",
+            "💎 PRÉMIOVÁ": "💎 PREMIUM",
+            "👑 LEGENDÁRNÍ": "👑 LEGENDARY",
+            "OBYČEJNÁ BEDNA": "BASIC CRATE",
+            "PRÉMIOVÁ BEDNA": "PREMIUM CRATE",
+            "LEGENDÁRNÍ BEDNA": "LEGENDARY CRATE",
             "Extrémně rychlý, vybuchuje okamžitě při dotyku!": "Extremely fast, explodes immediately on contact!",
             "Má odolný přední štít, který pohlcuje 50% damage.": "Has a durable front shield that absorbs 50% damage.",
             "PAUZA": "PAUSE",
@@ -5546,6 +5552,11 @@ function loop(time) {
             update(timeStep);
             accumulator -= timeStep;
         }
+    } else {
+        // Advanced timer and reset accumulator during pause to prevent bursts
+        accumulator = 0;
+        GAME.lastSpawnTime = Date.now();
+        if (GAME.paused) GAME.pauseStartTime = GAME.pauseStartTime || Date.now(); // Track pause duration for AFK
     }
 
     render();
@@ -5568,7 +5579,6 @@ function update(dt) {
     }
 
     if (GAME.paused || !GAME.entities || !GAME.entities.player) {
-        if (GAME.paused) GAME.lastSpawnTime = now; // Neustále posouváme časovač spawnu během pauzy
         return;
     }
 
