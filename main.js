@@ -32,6 +32,7 @@ const SOUND_URLS = {
 const SOUND_BUFFERS = {};
 
 function playSound(name) {
+    if (!META.settings.sfx) return;
     if (AudioEngine.ctx) {
         if (AudioEngine.ctx.state === 'suspended') {
             AudioEngine.ctx.resume().then(() => AudioEngine.play(name));
@@ -65,6 +66,20 @@ function switchMusic(target) {
             fadeVolume(m, 0.08); // Keep menu music dim
         } else {
             fadeVolume(m, 0);
+        }
+    });
+}
+
+function updateMusicVolume() {
+    Object.keys(MUSIC).forEach(k => {
+        const m = MUSIC[k];
+        const isMenu = k === 'menu' || k === 'crates' || k === 'upgrades';
+        const enabled = isMenu ? META.settings.musicMenu : META.settings.musicGame;
+        if (!enabled) {
+            m.muted = true;
+            m.pause();
+        } else {
+            m.muted = false;
         }
     });
 }
@@ -210,15 +225,16 @@ const META = {
     lastDailyGift: 0,
     dailyStreak: 0,
     upgrades: { hp: 0, speed: 0, luck: 0, regen: 0, armor: 0, hat: null },
-    ships: { 1: true, 2: false, 3: false },
+    ships: { 1: true, 2: false, 3: false, 4: false, 5: false },
     selectedShip: 1,
-    abilities: { 1: true, 2: false, 3: false },
+    abilities: { 1: true, 2: false, 3: false, 4: false },
     selectedAbility: 1,
     lastMoveTime: Date.now(),
     isAFK: false,
     achievements: {},
     stats: { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 },
-    inventory: [] // Stores emoji objects { id, count }
+    inventory: [],
+    settings: { musicMenu: true, musicGame: true, sfx: true }
 };
 
 const EMOJIS = [
@@ -343,6 +359,8 @@ const loadMeta = () => {
         if (!META.inventory) META.inventory = [];
         if (!META.achievements) META.achievements = {};
         if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 };
+        if (!META.settings) META.settings = { musicMenu: true, musicGame: true, sfx: true };
+        if (META.upgrades && META.upgrades.hat === undefined) META.upgrades.hat = null;
     }
 };
 
@@ -2898,10 +2916,8 @@ function startCrateAnimation(winner, crateType = 'basic') {
             
             <div style="position: relative; width: 100%; height: ${itemSize + 30}px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);">
                 <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #fbbf24; z-index: 100; box-shadow: 0 0 10px #fbbf24;">
-                    <!-- Top Triangle -->
-                    <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 12px; height: 8px; background: #fbbf24; clip-path: polygon(0 0, 100% 0, 50% 100%);"></div>
-                    <!-- Bottom Triangle -->
-                    <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 12px; height: 8px; background: #fbbf24; clip-path: polygon(50% 0, 0 100%, 100% 100%);"></div>
+                    <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 12px solid #fbbf24;"></div>
+                    <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 12px solid #fbbf24;"></div>
                 </div>
                 
                 <div id="crate-carousel" style="display: flex; gap: ${itemGap}px; width: fit-content; transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1); transform: translateX(0); padding-left: 50%;">
@@ -5041,6 +5057,36 @@ function init() {
     };
     const btnCloseSettings = document.getElementById('btn-close-settings');
     if (btnCloseSettings) btnCloseSettings.onclick = () => document.getElementById('settings-modal').classList.remove('active');
+    
+    const updateSettingUI = () => {
+        const btnMM = document.getElementById('btn-toggle-music-menu');
+        const btnMG = document.getElementById('btn-toggle-music-game');
+        const btnSFX = document.getElementById('btn-toggle-sfx');
+        if (btnMM) btnMM.style.background = META.settings.musicMenu ? 'rgba(255,255,255,0.1)' : '#ef4444';
+        if (btnMG) btnMG.style.background = META.settings.musicGame ? 'rgba(255,255,255,0.1)' : '#ef4444';
+        if (btnSFX) btnSFX.style.background = META.settings.sfx ? 'rgba(255,255,255,0.1)' : '#ef4444';
+        updateMusicVolume();
+    };
+
+    if (document.getElementById('btn-toggle-music-menu')) {
+        document.getElementById('btn-toggle-music-menu').onclick = () => {
+            META.settings.musicMenu = !META.settings.musicMenu;
+            saveMeta(); updateSettingUI();
+        };
+    }
+    if (document.getElementById('btn-toggle-music-game')) {
+        document.getElementById('btn-toggle-music-game').onclick = () => {
+            META.settings.musicGame = !META.settings.musicGame;
+            saveMeta(); updateSettingUI();
+        };
+    }
+    if (document.getElementById('btn-toggle-sfx')) {
+        document.getElementById('btn-toggle-sfx').onclick = () => {
+            META.settings.sfx = !META.settings.sfx;
+            saveMeta(); updateSettingUI();
+        };
+    }
+    updateSettingUI();
 
     const btnCloseMP = document.getElementById('btn-close-mp');
     if (btnCloseMP) btnCloseMP.onclick = () => {
@@ -5661,8 +5707,6 @@ function update(dt) {
                         const totalXp = GAME.entities.gems.length * Math.round(10 * (p.luckFactor || 1));
                         p.addXp(totalXp);
                         GAME.entities.gems = [];
-                    } else {
-                        p.addXp(Math.round(10 * (p.luckFactor || 1)));
                     }
                     GAME.coinsCollected++;
                     playSound('coin');
