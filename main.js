@@ -32,10 +32,10 @@ function playSound(name) {
     try {
         const s = SOUNDS[name];
         if (s) {
-            s.currentTime = 0;
-            s.play().catch(e => console.log("Audio sample blocked:", name));
+            const clone = s.cloneNode();
+            clone.volume = s.volume || 1.0;
+            clone.play().catch(e => {});
         } else {
-            // Fallback to AudioEngine synths
             AudioEngine.play(name);
         }
     } catch(e) {}
@@ -2786,6 +2786,10 @@ function openCrate(type = 'basic', count = 1) {
         GAME.crateQueue.push(generateResult(type));
     }
 
+    if (!GAME.currentBatchResults) GAME.currentBatchResults = [];
+    GAME.currentBatchResults.push(firstResult);
+    GAME.crateQueue.forEach(item => GAME.currentBatchResults.push(item));
+
     startCrateAnimation(firstResult, type);
 }
 
@@ -2854,10 +2858,6 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 </div>
             </div>
 
-            <script>
-                // This is a dummy script block, we handle logic in main.js
-            </script>
-
             <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
                 <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; letter-spacing: 2px;">ZÍSKÁNO: ${GAME.crateQueue ? (GAME.lastCrateBatchSize - GAME.crateQueue.length) : 1} / ${GAME.lastCrateBatchSize || 1}</div>
                 <h3 style="color: #fff; font-size: 2.2rem; margin: 0; text-shadow: 0 0 30px rgba(255,255,255,0.1);">${winner.name}</h3>
@@ -2866,6 +2866,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                     <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${(GAME.crateQueue && GAME.crateQueue.length > 0) ? 'DALŠÍ (NEXT)' : 'PŘIDAT DO SBÍRKY'}</button>
                     <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">PRODAT (+${winner.price})</button>
+                    ${(GAME.crateQueue.length === 0 && GAME.lastCrateBatchSize > 1) ? `<button id="btn-crate-sell-all" class="btn-restart" style="min-width: 150px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem;">PRODAT CELOU VÁRKU</button>` : ''}
                     <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${(!GAME.crateQueue || GAME.crateQueue.length === 0) ? 'block' : 'none'};">ZATOČIT ZNOVU</button>
                 </div>
             </div>
@@ -2884,21 +2885,14 @@ function startCrateAnimation(winner, crateType = 'basic') {
     GAME.crateTickInterval = setInterval(() => {
         const carousel = document.getElementById('crate-carousel');
         if (!carousel) { clearInterval(GAME.crateTickInterval); return; }
-        
-        // Get current transform to detect movement
         const style = window.getComputedStyle(carousel);
         const matrix = new WebKitCSSMatrix(style.transform);
         const currentX = matrix.m41;
-        
-        // Calculate which item is currently under the pointer
-        // We use a simplified calculation based on itemWidth
         const itemIdx = Math.floor(Math.abs(currentX) / itemWidth);
-        
         if (itemIdx !== lastTickIdx && itemIdx < 40) {
-            playSound('crateSpin'); // Use spin sound for tick
+            playSound('crateSpin');
             lastTickIdx = itemIdx;
         }
-
         if (Date.now() - startTime > 7000) clearInterval(GAME.crateTickInterval);
     }, 30);
 
@@ -2910,21 +2904,15 @@ function startCrateAnimation(winner, crateType = 'basic') {
         }
     }, 100);
 
-    const tResult = setTimeout(() => {
-        showResults();
-    }, 6500);
-    GAME.crateTimeouts.push(tResult);
-
     const showResults = () => {
         if (GAME.crateTickInterval) clearInterval(GAME.crateTickInterval);
-        clearCrateTimeouts(); // Stop any other timers
+        clearCrateTimeouts();
         const carousel = document.getElementById('crate-carousel');
         if (carousel) {
             carousel.style.transition = 'none';
             const offset = -(35 * itemWidth + itemSize / 2);
             carousel.style.transform = `translateX(${offset}px)`;
         }
-        
         const resultInfo = document.getElementById('crate-result-info');
         if (resultInfo) {
             resultInfo.style.opacity = '1';
@@ -2947,11 +2935,10 @@ function startCrateAnimation(winner, crateType = 'basic') {
             showConfetti(30);
             playSound('crateWin');
         } else {
-            showConfetti(10); // Small burst for common
+            showConfetti(10);
             playSound('crateWin');
         }
 
-        // Auto-next after 3s
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
             const t = setTimeout(() => {
                 const nextBtn = document.getElementById('btn-crate-collect');
@@ -2965,17 +2952,6 @@ function startCrateAnimation(winner, crateType = 'basic') {
         showResults();
     };
 
-    // Start rotation
-    playSound('crateSpin');
-    GAME.crateTimeouts.push(setTimeout(() => {
-        const carousel = document.getElementById('crate-carousel');
-        if (carousel) {
-            const offset = -(35 * itemWidth + itemSize / 2);
-            carousel.style.transform = `translateX(${offset}px)`;
-        }
-    }, 100));
-
-    // Wait for animation to finish
     GAME.crateTimeouts.push(setTimeout(() => {
         showResults();
     }, 6200));
@@ -2986,36 +2962,25 @@ function startCrateAnimation(winner, crateType = 'basic') {
     if (existing) existing.count++;
     else META.inventory.push({ id: winner.id, count: 1 });
     
-    if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalCratesOpened: 0 };
+    if (!META.stats) META.stats = { totalCratesOpened: 0 };
     META.stats.totalCratesOpened = (META.stats.totalCratesOpened || 0) + 1;
     saveMeta();
     checkAchievements();
 
     modal.querySelector('#btn-crate-collect').onclick = () => {
         clearCrateTimeouts();
-        if (!GAME.currentBatchResults) GAME.currentBatchResults = [];
-        GAME.currentBatchResults.push(winner);
-
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
             const nextWinner = GAME.crateQueue.shift();
             modal.remove();
             startCrateAnimation(nextWinner, crateType);
         } else {
             modal.remove();
-            if (GAME.lastCrateBatchSize > 1) {
-                showBatchSummary();
-            } else {
-                showMetaMenu();
-            }
+            showMetaMenu();
         }
     };
 
-// NO LONGER HANDLED HERE
-
     modal.querySelector('#btn-crate-sell').onclick = () => {
         clearCrateTimeouts();
-        
-        // Sell current (remove from inventory since added at start)
         META.currency += winner.price;
         const invIdx = META.inventory.findIndex(i => i.id === winner.id);
         if (invIdx !== -1) {
@@ -3024,20 +2989,37 @@ function startCrateAnimation(winner, crateType = 'basic') {
         }
         saveMeta();
         showCurrencyNotification(winner.price, `PRODÁNO: ${winner.name}`);
-        
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
             const nextWinner = GAME.crateQueue.shift();
             modal.remove();
             startCrateAnimation(nextWinner, crateType);
         } else {
             modal.remove();
-            if (GAME.lastCrateBatchSize > 1) {
-                showBatchSummary();
-            } else {
-                showMetaMenu();
-            }
+            showMetaMenu();
         }
     };
+
+    const btnSellAll = modal.querySelector('#btn-crate-sell-all');
+    if (btnSellAll) {
+        btnSellAll.onclick = () => {
+            clearCrateTimeouts();
+            const results = GAME.currentBatchResults || [];
+            let total = 0;
+            results.forEach(item => {
+                total += item.price;
+                const invIdx = META.inventory.findIndex(i => i.id === item.id);
+                if (invIdx !== -1) {
+                    if (META.inventory[invIdx].count > 1) META.inventory[invIdx].count--;
+                    else META.inventory.splice(invIdx, 1);
+                }
+            });
+            META.currency += total;
+            saveMeta();
+            showCurrencyNotification(total, `VŠE PRODÁNO!`);
+            modal.remove();
+            showMetaMenu();
+        };
+    }
 
     modal.querySelector('#btn-crate-again').onclick = () => {
         clearCrateTimeouts();
