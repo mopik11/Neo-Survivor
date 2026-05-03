@@ -438,6 +438,7 @@ const loadMeta = () => {
         if (!META.settings) META.settings = { musicMenu: true, musicGame: true, sfx: true };
         if (META.upgrades && META.upgrades.hat === undefined) META.upgrades.hat = null;
     }
+    updateCurrencyUI();
 };
 
 const GAME = {
@@ -5299,7 +5300,7 @@ function init() {
 
     loadMeta();
     document.getElementById('display-max-level').innerText = META.maxLevel || 0;
-    document.getElementById('display-doge').innerText = META.currency || 0;
+    updateCurrencyUI();
 
     initSocket();
 
@@ -5351,7 +5352,7 @@ function init() {
                     
                     saveMetaLocalOnly();
                     document.getElementById('display-max-level').innerText = META.maxLevel || 1;
-                    document.getElementById('display-doge').innerText = META.currency || 0;
+                    updateCurrencyUI();
                 }
             });
         }
