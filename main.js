@@ -2799,7 +2799,7 @@ function showShipsMenu() {
     const container = document.getElementById('ships-options');
     if (!container) return;
 
-    document.getElementById('ships-currency').innerText = META.currency;
+    updateCurrencyUI();
     container.innerHTML = `
         <h3 style="width:100%; text-align:left; color:#a5b4fc; margin-bottom:10px;">${window.T('LODĚ')}</h3>
         <div id="ships-grid" class="upgrade-grid"></div>
@@ -2893,7 +2893,7 @@ function showMetaMenu() {
     
     const container = document.getElementById('meta-options');
     if (!container) return;
-    document.getElementById('meta-currency').innerText = META.currency;
+    updateCurrencyUI();
     container.innerHTML = '';
     container.style.display = 'flex';
     container.style.flexDirection = 'column';
