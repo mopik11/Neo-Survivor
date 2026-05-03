@@ -2467,11 +2467,6 @@ function showShipsMenu() {
 
 function showMetaMenu() {
     playSound('menuOpen');
-    // Start BG Music on first menu interaction if not playing
-    if (SOUNDS.bgMusic.paused) {
-        SOUNDS.bgMusic.play().catch(() => {});
-    }
-
     const container = document.getElementById('meta-options');
     if (!container) return;
     document.getElementById('meta-currency').innerText = META.currency;
@@ -2653,16 +2648,14 @@ function getRarityColor(rarity) {
 
 function openCrate(type = 'basic', count = 1) {
     if (!GAME.crateQueue) GAME.crateQueue = [];
+    GAME.currentBatchResults = []; // Track what user collects
     
-    // If it's a new batch, clear old queue and tracking
+    // If it's a new batch, clear old queue
     if (count > 1) {
         GAME.crateQueue = [];
-        GAME.currentBatchResults = []; // Track IDs for "Sell All Batch" at the end
         GAME.lastCrateBatchSize = count;
         GAME.lastCrateType = type;
-    } else if (GAME.crateQueue.length === 0) {
-        // Single opening
-        GAME.currentBatchResults = [];
+    } else {
         GAME.lastCrateBatchSize = 1;
         GAME.lastCrateType = type;
     }
@@ -2717,12 +2710,10 @@ function clearCrateTimeouts() {
 }
 
 function startCrateAnimation(winner, crateType = 'basic') {
+    // 1. CLEAR EVERYTHING BEFORE STARTING NEW ANIMATION
     clearCrateTimeouts();
     
-    // Tracking for "Sell Entire Batch"
-    if (!GAME.currentBatchResults) GAME.currentBatchResults = [];
-    GAME.currentBatchResults.push(winner);
-
+    // Remove any existing crate modals to be safe
     const oldModals = document.querySelectorAll('.modal-crate-active');
     oldModals.forEach(m => m.remove());
 
@@ -2749,11 +2740,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
     for(let i=0; i<40; i++) {
         randomItems.push(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
     }
-    randomItems[35] = winner; 
-
-    // Show "Sell Batch" only if it was a batch and we are at the last one
-    const isBatch = GAME.lastCrateBatchSize > 1;
-    const isLastOfBatch = isBatch && (!GAME.crateQueue || GAME.crateQueue.length === 0);
+    randomItems[35] = winner; // The 36th item is the target
 
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 800px; width: 95vw; background: ${crateData.bg}; border: 2px solid ${crateData.color}44; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 0 50px ${crateData.glow};">
@@ -2768,6 +2755,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
                     <div style="position: absolute; top: -2px; left: 50%; transform: translateX(-50%); border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #fbbf24;"></div>
                     <div style="position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid #fbbf24;"></div>
                 </div>
+                
                 <div id="crate-carousel" style="display: flex; gap: ${itemGap}px; width: fit-content; transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1); transform: translateX(0); padding-left: 50%;">
                     ${randomItems.map(item => `
                         <div class="crate-item" style="min-width: ${itemSize}px; height: ${itemSize}px; background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.08); border-bottom: 3px solid ${getRarityColor(item.rarity)}; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
@@ -2779,14 +2767,13 @@ function startCrateAnimation(winner, crateType = 'basic') {
             </div>
 
             <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
-                <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; letter-spacing: 2px;">ZÍSKÁNO: ${GAME.currentBatchResults.length} / ${GAME.lastCrateBatchSize || 1}</div>
+                <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; letter-spacing: 2px;">ZÍSKÁNO: ${GAME.crateQueue ? (GAME.lastCrateBatchSize - GAME.crateQueue.length) : 1} / ${GAME.lastCrateBatchSize || 1}</div>
                 <h3 style="color: #fff; font-size: 2.2rem; margin: 0; text-shadow: 0 0 30px rgba(255,255,255,0.1);">${winner.name}</h3>
                 <p style="color: ${getRarityColor(winner.rarity)}; font-weight: bold; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 3px; margin: 5px 0 1.5rem 0;">${winner.rarity.toUpperCase()}</p>
                 
                 <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${(GAME.crateQueue && GAME.crateQueue.length > 0) ? 'DALŠÍ (NEXT)' : 'ZAVŘÍT'}</button>
+                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${(GAME.crateQueue && GAME.crateQueue.length > 0) ? 'DALŠÍ (NEXT)' : 'PŘIDAT DO SBÍRKY'}</button>
                     <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">PRODAT (+${winner.price})</button>
-                    ${isLastOfBatch ? `<button id="btn-crate-sell-all" class="btn-restart" style="min-width: 220px; background: #ef4444; color: #fff; border: 1px solid #ef4444; font-weight: 800; padding: 12px; font-size: 0.9rem; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);">PRODAT CELOU VÁRKU (+${GAME.currentBatchResults.reduce((sum, item) => sum + item.price, 0)})</button>` : ''}
                     <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${(!GAME.crateQueue || GAME.crateQueue.length === 0) ? 'block' : 'none'};">ZATOČIT ZNOVU</button>
                 </div>
             </div>
@@ -2796,13 +2783,14 @@ function startCrateAnimation(winner, crateType = 'basic') {
     document.body.appendChild(modal);
     
     const showResults = () => {
-        clearCrateTimeouts();
+        clearCrateTimeouts(); // Stop any other timers
         const carousel = document.getElementById('crate-carousel');
         if (carousel) {
             carousel.style.transition = 'none';
             const offset = -(35 * itemWidth + itemSize / 2);
             carousel.style.transform = `translateX(${offset}px)`;
         }
+        
         const resultInfo = document.getElementById('crate-result-info');
         if (resultInfo) {
             resultInfo.style.opacity = '1';
@@ -2813,16 +2801,21 @@ function startCrateAnimation(winner, crateType = 'basic') {
         
         playSound('crateWin');
 
+        // Auto-next after 3s
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
-            GAME.crateTimeouts.push(setTimeout(() => {
+            const t = setTimeout(() => {
                 const nextBtn = document.getElementById('btn-crate-collect');
                 if (nextBtn) nextBtn.click();
-            }, 3000));
+            }, 3000);
+            GAME.crateTimeouts.push(t);
         }
     };
 
-    modal.querySelector('#btn-skip-crate').onclick = () => showResults();
+    modal.querySelector('#btn-skip-crate').onclick = () => {
+        showResults();
+    };
 
+    // Start rotation
     playSound('crateSpin');
     GAME.crateTimeouts.push(setTimeout(() => {
         const carousel = document.getElementById('crate-carousel');
@@ -2832,74 +2825,69 @@ function startCrateAnimation(winner, crateType = 'basic') {
         }
     }, 100));
 
-    GAME.crateTimeouts.push(setTimeout(() => showResults(), 6200));
+    // Wait for animation to finish
+    GAME.crateTimeouts.push(setTimeout(() => {
+        showResults();
+    }, 6200));
 
-    // Add to inventory immediately
+    // Save to inventory
     if (!META.inventory) META.inventory = [];
-    const invItem = META.inventory.find(i => i.id === winner.id);
-    if (invItem) invItem.count++;
+    const existing = META.inventory.find(i => i.id === winner.id);
+    if (existing) existing.count++;
     else META.inventory.push({ id: winner.id, count: 1 });
     
+    if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalCratesOpened: 0 };
     META.stats.totalCratesOpened = (META.stats.totalCratesOpened || 0) + 1;
     saveMeta();
+    checkAchievements();
 
-    // Handlers
     modal.querySelector('#btn-crate-collect').onclick = () => {
         clearCrateTimeouts();
+        if (!GAME.currentBatchResults) GAME.currentBatchResults = [];
+        GAME.currentBatchResults.push(winner);
+
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
             const nextWinner = GAME.crateQueue.shift();
             modal.remove();
             startCrateAnimation(nextWinner, crateType);
         } else {
             modal.remove();
-            showMetaMenu();
+            if (GAME.lastCrateBatchSize > 1) {
+                showBatchSummary();
+            } else {
+                showMetaMenu();
+            }
         }
     };
 
+// NO LONGER HANDLED HERE
+
     modal.querySelector('#btn-crate-sell').onclick = () => {
         clearCrateTimeouts();
+        
+        // Sell current (remove from inventory since added at start)
         META.currency += winner.price;
         const invIdx = META.inventory.findIndex(i => i.id === winner.id);
         if (invIdx !== -1) {
             if (META.inventory[invIdx].count > 1) META.inventory[invIdx].count--;
             else META.inventory.splice(invIdx, 1);
         }
-        // Remove from batch tracking if sold individually
-        const bIdx = GAME.currentBatchResults.findIndex(i => i.id === winner.id);
-        if (bIdx !== -1) GAME.currentBatchResults.splice(bIdx, 1);
-
         saveMeta();
         showCurrencyNotification(winner.price, `PRODÁNO: ${winner.name}`);
+        
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
             const nextWinner = GAME.crateQueue.shift();
             modal.remove();
             startCrateAnimation(nextWinner, crateType);
         } else {
             modal.remove();
-            showMetaMenu();
+            if (GAME.lastCrateBatchSize > 1) {
+                showBatchSummary();
+            } else {
+                showMetaMenu();
+            }
         }
     };
-
-    if (isLastOfBatch && modal.querySelector('#btn-crate-sell-all')) {
-        modal.querySelector('#btn-crate-sell-all').onclick = () => {
-            clearCrateTimeouts();
-            let totalGain = 0;
-            GAME.currentBatchResults.forEach(item => {
-                totalGain += item.price;
-                const invIdx = META.inventory.findIndex(i => i.id === item.id);
-                if (invIdx !== -1) {
-                    if (META.inventory[invIdx].count > 1) META.inventory[invIdx].count--;
-                    else META.inventory.splice(invIdx, 1);
-                }
-            });
-            GAME.currentBatchResults = [];
-            META.currency += totalGain;
-            saveMeta();
-            showCurrencyNotification(totalGain, "CELÁ VÁRKA PRODÁNA");
-            modal.remove();
-            showMetaMenu();
-        };
-    }
 
     modal.querySelector('#btn-crate-again').onclick = () => {
         clearCrateTimeouts();
@@ -2914,6 +2902,62 @@ function startCrateAnimation(winner, crateType = 'basic') {
         saveMeta();
         modal.remove();
         openCrate(GAME.lastCrateType, GAME.lastCrateBatchSize);
+    };
+}
+
+function showBatchSummary() {
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.style.zIndex = '3000000';
+    modal.style.background = 'rgba(15, 23, 42, 0.98)';
+    modal.style.backdropFilter = 'blur(20px)';
+    
+    const items = GAME.currentBatchResults || [];
+    const totalValue = items.reduce((sum, i) => sum + i.price, 0);
+
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 600px; width: 90vw; padding: 2.5rem; text-align: center; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 0 50px rgba(0,0,0,0.5);">
+            <h2 style="color: #fbbf24; font-size: 1.8rem; margin-bottom: 0.5rem;">VÁRKA DOKONČENA</h2>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem;">Získal jsi ${items.length} předmětů</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; max-height: 40vh; overflow-y: auto; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 12px; margin-bottom: 2rem;">
+                ${items.map(item => `
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid ${getRarityColor(item.rarity)}44; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                        <span style="font-size: 1.8rem;">${item.icon}</span>
+                        <span style="font-size: 0.6rem; font-weight: 800; color: ${getRarityColor(item.rarity)};">${item.rarity.toUpperCase()}</span>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button id="btn-batch-collect" class="btn-restart" style="width: 100%; background: #10b981; color: #fff; font-weight: 800; padding: 15px;">PONECHAT VŠE VE SBÍRCE</button>
+                <button id="btn-batch-sell" class="btn-restart" style="width: 100%; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 15px;">PRODAT CELOU VÁRKU (+${totalValue} DOGE)</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btn-batch-collect').onclick = () => {
+        modal.remove();
+        showMetaMenu();
+    };
+
+    modal.querySelector('#btn-batch-sell').onclick = () => {
+        // Sell everything that was collected in this batch
+        items.forEach(item => {
+            const invIdx = META.inventory.findIndex(i => i.id === item.id);
+            if (invIdx !== -1) {
+                if (META.inventory[invIdx].count > 1) META.inventory[invIdx].count--;
+                else META.inventory.splice(invIdx, 1);
+            }
+        });
+        
+        META.currency += totalValue;
+        saveMeta();
+        showCurrencyNotification(totalValue, "VÁRKA PRODÁNA");
+        modal.remove();
+        showMetaMenu();
     };
 }
 
@@ -4660,18 +4704,9 @@ function init() {
     if (btnCloseShips) btnCloseShips.onclick = () => document.getElementById('ships-modal').classList.remove('active');
 
     const btnMeta = document.getElementById('btn-meta-menu');
-    if (btnMeta) btnMeta.onclick = () => { 
-        showMetaMenu(); 
-        document.getElementById('meta-modal').classList.add('active'); 
-        // Audio switching logic is now also inside showMetaMenu, but double check here
-    };
-    
+    if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
     const btnCloseMeta = document.getElementById('btn-close-meta');
-    if (btnCloseMeta) {
-        btnCloseMeta.onclick = () => {
-            document.getElementById('meta-modal').classList.remove('active');
-        };
-    }
+    if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
 
     // Achievements Button Listener (Moved up for reliability)
     const btnAch = document.getElementById('btn-achievements');
