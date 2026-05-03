@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.297
+ * NEO SURVIVOR - Core Game Logic - v1.298
  */
 
 window.addEventListener('beforeunload', () => {
@@ -2511,7 +2511,7 @@ function togglePause(isAFK = false) {
     GAME.pauseStartTime = GAME.paused ? Date.now() : null;
 
     const pauseTitle = document.querySelector('#pause-modal h1');
-    if (pauseTitle) pauseTitle.innerText = isAFK ? "AFK" : "PAUZA";
+    if (pauseTitle) pauseTitle.innerText = isAFK ? window.T('AFK') : window.T('PAUZA');
 
     if (GAME.paused) {
         const p = GAME.entities.player;
@@ -2528,14 +2528,34 @@ function togglePause(isAFK = false) {
         
         const checkAuto = document.getElementById('check-auto-random');
         if (checkAuto) checkAuto.checked = META.autoRandomSelect || false;
+
+        // In multiplayer: disconnect socket immediately when paused/AFK
+        // This stops the server from spawning enemies for this player
+        if (NET.isMultiplayer && NET.socket) {
+            console.log('[PAUSE/AFK] Disconnecting from server to stop enemy accumulation');
+            // Save session progress before disconnecting
+            if (GAME.entities && GAME.entities.player && !GAME.entities.player.dead) {
+                META.lastSession = {
+                    level: GAME.entities.player.level,
+                    xp: GAME.entities.player.xp,
+                    nextLevelXp: GAME.entities.player.nextLevelXp,
+                    upgrades: GAME.entities.player.appliedUpgrades || []
+                };
+                saveMeta();
+            }
+            NET.socket.disconnect();
+            NET.socket = null;
+            NET.isMultiplayer = false;
+            NET.roomId = null;
+        }
     }
 
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
 
-    // Reset AFK časovače a spawnování při odpauzování
+    // Reset AFK timer and spawn timer when unpausing
     if (!GAME.paused) {
         META.lastMoveTime = Date.now();
-        GAME.lastSpawnTime = Date.now(); // Prevence armády nepřátel po pauze
+        GAME.lastSpawnTime = Date.now();
         META.isAFK = false;
         GAME.lastActivity = Date.now();
     }
@@ -5591,33 +5611,14 @@ function update(dt) {
     const isMoving = GAME.input.w || GAME.input.a || GAME.input.s || GAME.input.d || GAME.joystick.active;
     if (isMoving) {
         if (GAME.paused && META.isAFK && !NET.isMultiplayer) {
-            // Only auto-resume from AFK pause in solo
-            togglePause(false);
+            togglePause(false); // Only auto-resume in solo
         }
         META.lastMoveTime = now;
         META.isAFK = false;
-    } else if (GAME.active && !GAME.paused && (now - (META.lastMoveTime || now) > 30000)) {
-        // AFK after 30s of no movement
+    } else if (GAME.active && !GAME.paused && (now - (META.lastMoveTime || now) > 10000)) {
+        // AFK after 10s – show AFK screen (togglePause also disconnects MP socket)
         META.isAFK = true;
-        if (NET.isMultiplayer) {
-            // Multiplayer: disconnect immediately, save session
-            console.log('[AFK] Disconnecting from multiplayer due to inactivity');
-            if (GAME.entities && GAME.entities.player && !GAME.entities.player.dead) {
-                META.lastSession = {
-                    level: GAME.entities.player.level,
-                    xp: GAME.entities.player.xp,
-                    nextLevelXp: GAME.entities.player.nextLevelXp,
-                    upgrades: GAME.entities.player.appliedUpgrades || []
-                };
-                saveMeta();
-            }
-            window.showCustomAlert(window.T('Odpojen pro AFK. Postup uložen.'));
-            softResetToMenu();
-            return;
-        } else {
-            // Solo: just pause
-            togglePause(true);
-        }
+        togglePause(true);
     }
 
     if (GAME.paused || !GAME.entities || !GAME.entities.player) {
