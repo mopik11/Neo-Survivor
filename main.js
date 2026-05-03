@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.286
+ * NEO SURVIVOR - Core Game Logic - v1.287
  */
 
 window.onerror = function (msg, url, line, col, error) {
@@ -44,7 +44,6 @@ function playSound(name) {
 
 const MUSIC = {
     menu: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'),
-    upgrades: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3'),
     crates: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3')
 };
 Object.values(MUSIC).forEach(m => { m.loop = true; m.volume = 0; });
@@ -55,33 +54,40 @@ function switchMusic(target) {
     Object.keys(MUSIC).forEach(k => {
         const m = MUSIC[k];
         if (k === target) {
+            const enabled = (k === 'menu') ? META.settings.musicMenu : META.settings.musicGame;
+            if (!enabled) {
+                m.pause();
+                return;
+            }
             if (m.paused) {
                 m.currentTime = 0;
                 m.play().catch(e => console.warn("Music play blocked", k, e));
             }
-            let vol = 0.2;
-            if (target === 'upgrades') vol = 0.2;
-            fadeVolume(m, vol);
-        } else if (target === 'upgrades' && k === 'menu') {
-            fadeVolume(m, 0.08); // Keep menu music dim
+            fadeVolume(m, 0.2);
         } else {
             fadeVolume(m, 0);
         }
     });
+    // Special handling for game music
+    if (target === 'game' && !META.settings.musicGame) {
+        AudioEngine.stopMusic();
+    }
 }
 
 function updateMusicVolume() {
     Object.keys(MUSIC).forEach(k => {
         const m = MUSIC[k];
-        const isMenu = k === 'menu' || k === 'crates' || k === 'upgrades';
-        const enabled = isMenu ? META.settings.musicMenu : META.settings.musicGame;
+        const enabled = (k === 'menu') ? META.settings.musicMenu : META.settings.musicGame;
         if (!enabled) {
             m.muted = true;
             m.pause();
+            m.volume = 0;
         } else {
             m.muted = false;
         }
     });
+    if (!META.settings.musicMenu) AudioEngine.stopMenuMusic();
+    if (!META.settings.musicGame) AudioEngine.stopMusic();
 }
 
 function fadeVolume(audio, target) {
@@ -513,7 +519,7 @@ const AudioEngine = {
         let step = 0;
 
         const playArp = () => {
-            if (!this.menuPlaying) return;
+            if (!this.menuPlaying || !META.settings.musicMenu) return;
             const now = this.ctx.currentTime;
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
@@ -643,11 +649,17 @@ const AudioEngine = {
                 osc.start(); osc.stop(now + 0.1); break;
         }
     },
+    stopMusic() {
+        this.musicStarted = false;
+        if (this.musicInterval) clearInterval(this.musicInterval);
+        this.musicInterval = null;
+    },
     startMusic() {
         if (this.musicStarted || !this.ctx) return;
         this.musicStarted = true;
 
         const playSynth = (time, freq, vol, duration, type = 'square') => {
+            if (!META.settings.musicGame) return;
             const osc = this.ctx.createOscillator();
             const g = this.ctx.createGain();
             osc.type = type; osc.frequency.setValueAtTime(freq, time);
@@ -658,6 +670,7 @@ const AudioEngine = {
         };
 
         const playNoise = (time, vol, duration) => {
+            if (!META.settings.musicGame) return;
             const bufferSize = this.ctx.sampleRate * duration;
             const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
             const data = buffer.getChannelData(0);
@@ -675,8 +688,9 @@ const AudioEngine = {
         const bassNotes = [55, 55, 62, 49, 55, 55, 73, 65, 55, 55, 62, 49, 55, 55, 82, 98];
         const melodyNotes = [110, 0, 165, 0, 110, 0, 220, 196, 110, 0, 165, 0, 110, 220, 330, 440];
 
-        setInterval(() => {
-            if (GAME.active && !GAME.paused) {
+        if (this.musicInterval) clearInterval(this.musicInterval);
+        this.musicInterval = setInterval(() => {
+            if (GAME.active && !GAME.paused && META.settings.musicGame) {
                 const now = this.ctx.currentTime;
                 playSynth(now, bassNotes[step % 16], 0.03, 0.4, 'sawtooth');
                 if (step % 2 === 0) playSynth(now, 60, 0.08, 0.2, 'sine');
@@ -2622,7 +2636,7 @@ function showShipsMenu() {
 
 function showMetaMenu() {
     playSound('menuOpen');
-    switchMusic('upgrades');
+    switchMusic('menu');
     const menu = document.getElementById('meta-modal');
     if (menu) menu.classList.add('active');
     
@@ -2915,7 +2929,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
             </div>
             
             <div style="position: relative; width: 100%; height: ${itemSize + 30}px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);">
-                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #fbbf24; z-index: 100; box-shadow: 0 0 10px #fbbf24;">
+                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #fbbf24; z-index: 100;">
                     <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 12px solid #fbbf24;"></div>
                     <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 12px solid #fbbf24;"></div>
                 </div>

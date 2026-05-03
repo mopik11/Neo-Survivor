@@ -1031,6 +1031,19 @@ canvas {
         grid-template-columns: repeat(2, 1fr) !important;
     }
 
+    .upgrade-card {
+        padding: 1rem !important;
+        min-height: 120px !important;
+    }
+
+    .upgrade-card h3 {
+        font-size: 0.9rem !important;
+    }
+
+    .upgrade-card p {
+        font-size: 0.7rem !important;
+    }
+
     .menu-actions-grid {
         grid-template-columns: 1fr !important;
         gap: 8px !important;
