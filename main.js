@@ -2533,9 +2533,10 @@ function togglePause(isAFK = false) {
         // This stops the server from spawning enemies for this player
         if (NET.isMultiplayer && NET.socket) {
             console.log('[PAUSE/AFK] Disconnecting from server to stop enemy accumulation');
-            // Save session progress before disconnecting
+            // Save session progress AND roomId before disconnecting
             if (GAME.entities && GAME.entities.player && !GAME.entities.player.dead) {
                 META.lastSession = {
+                    roomId: NET.roomId,  // Save room to reconnect later
                     level: GAME.entities.player.level,
                     xp: GAME.entities.player.xp,
                     nextLevelXp: GAME.entities.player.nextLevelXp,
@@ -3505,6 +3506,25 @@ function initSocket() {
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
             if (NET.serverPollingInterval) clearInterval(NET.serverPollingInterval);
 
+            // Restore session if rejoining after AFK/pause disconnect
+            if (META.lastSession && META.lastSession.roomId === roomId) {
+                console.log('[REJOIN] Restoring session for room:', roomId);
+                const session = META.lastSession;
+                if (GAME.entities && GAME.entities.player) {
+                    GAME.entities.player.level = session.level || 1;
+                    GAME.entities.player.xp = session.xp || 0;
+                    GAME.entities.player.nextLevelXp = session.nextLevelXp || 100;
+                    if (session.upgrades && session.upgrades.length > 0) {
+                        session.upgrades.forEach(u => {
+                            try { GAME.entities.player.applyUpgrade(u, false); } catch(e) {}
+                        });
+                    }
+                }
+                META.lastSession = null; // Clear after restore
+                saveMeta();
+                window.showCustomAlert(window.T('Postup obnoven! Zpět ve hře.'));
+            }
+
             if (!GAME.active) {
                 startGame();
 
@@ -4235,6 +4255,7 @@ function init() {
             "📦 LOOTBOXY A BEDNY": "📦 LOOT BOXES & CRATES",
             "Odpojen pro AFK. Postup uložen.": "Disconnected for AFK. Progress saved.",
             "Odpojen pro příliš dlouhou pauzu. Postup uložen.": "Disconnected for long pause. Progress saved.",
+            "Postup obnoven! Zpět ve hře.": "Progress restored! Back in the game.",
             "🌟 ÚSPĚCHY": "🌟 ACHIEVEMENTS",
             "VESMÍRNÉ ÚSPĚCHY": "SPACE ACHIEVEMENTS",
             "Auto-výběr upgrádů": "Auto-select upgrades",
@@ -5351,7 +5372,21 @@ function init() {
     }
 
     const btnResume = document.getElementById('btn-resume');
-    if (btnResume) btnResume.onclick = () => togglePause(false);
+    if (btnResume) btnResume.onclick = () => {
+        if (META.lastSession && META.lastSession.roomId) {
+            // Was disconnected from MP room – reconnect to the same room
+            const savedRoomId = META.lastSession.roomId;
+            console.log('[RESUME] Reconnecting to room:', savedRoomId);
+            // Close pause modal first
+            document.getElementById('pause-modal').classList.remove('active');
+            GAME.paused = false;
+            GAME.active = false; // Will be set back by server join
+            // Rejoin – session will be restored in 'joined' handler
+            window.joinCloudServer(savedRoomId);
+        } else {
+            togglePause(false);
+        }
+    };
 
     const mobilePause = document.getElementById('mobile-pause');
     if (mobilePause) mobilePause.onclick = (e) => { e.stopPropagation(); togglePause(false); };
@@ -5579,27 +5614,11 @@ function loop(time) {
             update(timeStep);
             accumulator -= timeStep;
         }
-    } else if (GAME.active && GAME.paused && NET.isMultiplayer) {
-        // In multiplayer: disconnect after 60s of pause to prevent enemy accumulation
-        accumulator = 0;
-        if (GAME.pauseStartTime && (Date.now() - GAME.pauseStartTime > 60000)) {
-            console.log('[PAUSE] 60s timeout in multiplayer – disconnecting');
-            if (GAME.entities && GAME.entities.player && !GAME.entities.player.dead) {
-                META.lastSession = {
-                    level: GAME.entities.player.level,
-                    xp: GAME.entities.player.xp,
-                    nextLevelXp: GAME.entities.player.nextLevelXp,
-                    upgrades: GAME.entities.player.appliedUpgrades || []
-                };
-                saveMeta();
-            }
-            window.showCustomAlert(window.T('Odpojen pro příliš dlouhou pauzu. Postup uložen.'));
-            softResetToMenu();
-            return;
-        }
     } else {
+        // Reset accumulator during pause to prevent update bursts after resuming
         accumulator = 0;
     }
+
 
     render();
     requestAnimationFrame(loop);
@@ -5610,13 +5629,13 @@ function update(dt) {
     
     const isMoving = GAME.input.w || GAME.input.a || GAME.input.s || GAME.input.d || GAME.joystick.active;
     if (isMoving) {
-        if (GAME.paused && META.isAFK && !NET.isMultiplayer) {
-            togglePause(false); // Only auto-resume in solo
+        if (GAME.paused && META.isAFK) {
+            togglePause(false); // Resume from AFK in both solo and multiplayer
         }
         META.lastMoveTime = now;
         META.isAFK = false;
     } else if (GAME.active && !GAME.paused && (now - (META.lastMoveTime || now) > 10000)) {
-        // AFK after 10s – show AFK screen (togglePause also disconnects MP socket)
+        // AFK after 10s – show AFK screen (togglePause also saves session + disconnects MP socket)
         META.isAFK = true;
         togglePause(true);
     }
