@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.298
+ * NEO SURVIVOR - Core Game Logic - v1.300
  */
 
 window.addEventListener('beforeunload', () => {
@@ -5985,6 +5985,9 @@ function update(dt) {
                         const totalXp = GAME.entities.gems.length * Math.round(10 * (p.luckFactor || 1));
                         p.addXp(totalXp);
                         GAME.entities.gems = [];
+                    } else {
+                        // Normal gem
+                        p.addXp(10);
                     }
                     GAME.coinsCollected++;
                     playSound('coin');
