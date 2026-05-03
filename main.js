@@ -330,7 +330,7 @@ const EMOJIS = [
     { id: 'hat_wizard', name: '🧙 Mág', icon: '🧙', rarity: 'legendary', price: 1200, isHat: true, type: 'wizard' },
     { id: 'hat_ninja', name: '🥷 Ninja', icon: '🥷', rarity: 'legendary', price: 1500, isHat: true, type: 'ninja' },
     // EXTRÉMNÍ LEGENDÁRKA
-    { id: 'ultra_rare', name: '💎 Diamant', icon: '💎', rarity: 'legendary', price: 10000, chance: 0.001 }
+    { id: 'ultra_rare', name: '💎 Diamant', icon: '💎', rarity: 'legendary', price: 20000, chance: 0.001 }
 ];
 
 const ACHIEVEMENTS = [
@@ -4217,6 +4217,10 @@ function init() {
             "ODESLAT ZPRÁVU": "SEND MESSAGE",
             "DENNÍ DÁREK": "DAILY REWARD",
             "Další dárek za ": "Next reward in ",
+            "💎 SBÍRKA EMOJI": "💎 EMOJI COLLECTION",
+            "Vzácná emoji můžeš prodat za Dogecoiny:": "Rare emojis can be sold for Dogecoins:",
+            "💎 EXTRÉMNÍ NÁLEZ!": "💎 EXTREME FIND!",
+            "Diamant (💎) má hodnotu 20,000 Doge a může padnout z JAKÉKOLIV bedny!": "The Diamond (💎) is worth 20,000 Doge and can drop from ANY crate!",
             "Chyba: Nejseš připojen k serveru.": "Error: Not connected to server.",
             "LODĚ": "SHIPS",
             "SCHOPNOSTI (Místo Sniperu)": "ABILITIES (Replaces Sniper)",
@@ -4624,6 +4628,10 @@ function init() {
             "ODESLAT ZPRÁVU": "NACHRICHT SENDEN",
             "DENNÍ DÁREK": "TÄGLICHES GESCHENK",
             "Další dárek za ": "Nächstes Geschenk in ",
+            "💎 SBÍRKA EMOJI": "💎 EMOJI-SAMMLUNG",
+            "Vzácná emoji můžeš prodat za Dogecoiny:": "Seltene Emojis können gegen Dogecoins verkauft werden:",
+            "💎 EXTRÉMNÍ NÁLEZ!": "💎 EXTREMER FUND!",
+            "Diamant (💎) má hodnotu 20,000 Doge a může padnout z JAKÉKOLIV bedny!": "Der Diamant (💎) ist 20.000 Doge wert und kann aus JEDER Kiste droppen!",
             "Chyba: Nejseš připojen k serveru.": "Fehler: Nicht mit dem Server verbunden.",
             "LODĚ": "SCHIFFE",
             "SCHOPNOSTI (Místo Sniperu)": "FÄHIGKEITEN (Ersetzt Sniper)",
@@ -4925,6 +4933,10 @@ function init() {
             "ODESLAT ZPRÁVU": "ENVIAR MENSAJE",
             "DENNÍ DÁREK": "REGALO DIARIO",
             "Další dárek za ": "Próximo regalo en ",
+            "💎 SBÍRKA EMOJI": "💎 COLECCIÓN DE EMOJIS",
+            "Vzácná emoji můžeš prodat za Dogecoiny:": "Los emojis raros se pueden vender por Dogecoins:",
+            "💎 EXTRÉMNÍ NÁLEZ!": "💎 ¡HALLAZGO EXTREMO!",
+            "Diamant (💎) má hodnotu 20,000 Doge a může padnout z JAKÉKOLIV bedny!": "¡El Diamante (💎) vale 20,000 Doge y puede caer en CUALQUIER caja!",
             "Chyba: Nejseš připojen k serveru.": "Error: No conectado al servidor.",
             "LODĚ": "NAVES",
             "SCHOPNOSTI (Místo Sniperu)": "HABILIDADES (Reemplaza Francotirador)",
