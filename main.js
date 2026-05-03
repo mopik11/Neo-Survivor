@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.279
+ * NEO SURVIVOR - Core Game Logic - v1.284
  */
 
 window.onerror = function (msg, url, line, col, error) {
@@ -25,7 +25,8 @@ const SOUNDS = {
     menuOpen: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-modern-technology-select-3124.mp3'),
     upgrade: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-button-click-interface-1002.mp3'),
     crateSpin: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-quick-mechanical-click-2510.mp3'),
-    crateWin: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3')
+    crateWin: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3'),
+    coin: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-changing-tab-206.mp3')
 };
 
 function playSound(name) {
@@ -33,8 +34,13 @@ function playSound(name) {
         const s = SOUNDS[name];
         if (s) {
             const clone = s.cloneNode();
-            clone.volume = s.volume || 1.0;
-            clone.play().catch(e => {});
+            clone.volume = 1.0; // Force full volume for SFX
+            clone.play().catch(e => {
+                // Fallback to original if clone fails
+                s.currentTime = 0;
+                s.volume = 1.0;
+                s.play().catch(() => {});
+            });
         } else {
             AudioEngine.play(name);
         }
@@ -3166,6 +3172,8 @@ function startGame() {
     
     // Start game music
     AudioEngine.startMusic();
+    META.lastMoveTime = Date.now();
+    META.isAFK = false;
 }
 
 function resetGame() {
@@ -5607,6 +5615,7 @@ function update(dt) {
                         p.addXp(Math.round(10 * (p.luckFactor || 1)));
                     }
                     GAME.coinsCollected++;
+                    playSound('coin');
                 }
                 GAME.entities.gems.splice(i, 1);
             }
