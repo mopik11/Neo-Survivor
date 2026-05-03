@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.308
+ * NEO SURVIVOR - Core Game Logic - v1.309
  */
 
 window.addEventListener('beforeunload', () => {
@@ -856,7 +856,7 @@ class Fire {
         this.life -= 1 / 60;
         if (this.isLocal && GAME.entities && GAME.entities.enemies) {
             GAME.entities.enemies.forEach(e => {
-                if (e && e.hp > 0 && dist(this.x, this.y, e.x, e.y) < this.radius + e.radius) {
+                if (e && e.hp > 0 && !e.possessed && dist(this.x, this.y, e.x, e.y) < this.radius + e.radius) {
                     const dmg = this.damage * (1 / 60);
                     let finalDmg = dmg;
                     if (e.type === 8) finalDmg *= 0.5; // Shielder reduction
@@ -921,7 +921,7 @@ class FriendlyMinion {
             let minDist = Infinity;
             for (let i = 0; i < enemies.length; i++) {
                 const e = enemies[i];
-                if (!e || e.hp <= 0) continue;
+                if (!e || e.hp <= 0 || e.possessed) continue;
                 const d = dist(this.x, this.y, e.x, e.y);
                 if (d < minDist) {
                     minDist = d;
@@ -1147,7 +1147,7 @@ class Orbiter {
 
         if (this.owner.isLocal && GAME.entities && GAME.entities.enemies) {
             GAME.entities.enemies.forEach(e => {
-                if (e && e.hp > 0 && dist(x, y, e.x, e.y) < this.size + e.radius) {
+                if (e && e.hp > 0 && !e.possessed && dist(x, y, e.x, e.y) < this.size + e.radius) {
                     const dmg = this.owner.damage * 0.3 * 3;
                     let finalDmg = dmg;
                     if (e.type === 8) finalDmg *= 0.5; // Shielder reduction
@@ -1796,7 +1796,7 @@ class Player {
                 const enemies = GAME.entities.enemies;
                 if (enemies && enemies.length > 0) {
                     const range = 400 + this.laserRangeBonus;
-                    const inRange = enemies.filter(e => e && e.hp > 0 && dist(this.x, this.y, e.x, e.y) < range);
+                    const inRange = enemies.filter(e => e && e.hp > 0 && !e.possessed && dist(this.x, this.y, e.x, e.y) < range);
                     inRange.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y));
 
                     const primaryTargets = inRange.slice(0, this.projectileCount);
@@ -6364,7 +6364,8 @@ function render() {
             playersList.sort((a, b) => b.kills - a.kills);
 
             ctx.save();
-            const sbWidth = mapSize;
+            const sbWidth = 220;
+            const startX_sb = GAME.canvas.width - sbWidth - padding;
             const sbHeight = 35 + playersList.length * 25;
             const sbY = startY + mapSize + 15;
             
@@ -6373,28 +6374,28 @@ function render() {
             ctx.lineWidth = 2;
             if (ctx.roundRect) {
                 ctx.beginPath();
-                ctx.roundRect(startX, sbY, sbWidth, sbHeight, 8);
+                ctx.roundRect(startX_sb, sbY, sbWidth, sbHeight, 8);
                 ctx.fill(); ctx.stroke();
             } else {
-                ctx.fillRect(startX, sbY, sbWidth, sbHeight);
-                ctx.strokeRect(startX, sbY, sbWidth, sbHeight);
+                ctx.fillRect(startX_sb, sbY, sbWidth, sbHeight);
+                ctx.strokeRect(startX_sb, sbY, sbWidth, sbHeight);
             }
 
             ctx.fillStyle = '#a5b4fc';
             ctx.font = 'bold 12px Outfit, sans-serif';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
-            ctx.fillText(window.T('Hráči:') + ' ' + playersList.length, startX + 15, sbY + 12);
+            ctx.fillText(window.T('Hráči:') + ' ' + playersList.length, startX_sb + 15, sbY + 12);
             
             ctx.textAlign = 'center';
-            ctx.fillText('HP', startX + sbWidth / 2 + 10, sbY + 12);
+            ctx.fillText('HP', startX_sb + sbWidth / 2 + 10, sbY + 12);
 
             ctx.textAlign = 'right';
-            ctx.fillText(window.T('Zabití'), startX + sbWidth - 15, sbY + 12);
+            ctx.fillText(window.T('Zabití'), startX_sb + sbWidth - 15, sbY + 12);
 
             ctx.beginPath();
-            ctx.moveTo(startX + 10, sbY + 30);
-            ctx.lineTo(startX + sbWidth - 10, sbY + 30);
+            ctx.moveTo(startX_sb + 10, sbY + 30);
+            ctx.lineTo(startX_sb + sbWidth - 10, sbY + 30);
             ctx.strokeStyle = 'rgba(255,255,255,0.1)';
             ctx.stroke();
 
@@ -6406,23 +6407,23 @@ function render() {
                 ctx.textAlign = 'left';
                 let dispName = pl.name;
                 if (dispName.length > 10) dispName = dispName.substring(0, 8) + '..';
-                ctx.fillText(dispName, startX + 15, rowY);
+                ctx.fillText(dispName, startX_sb + 15, rowY);
                 
                 // HP
                 ctx.textAlign = 'center';
                 if (!pl.dead) {
                     const hpText = Math.ceil(pl.hp).toString();
                     ctx.fillStyle = pl.hp < pl.maxHp * 0.3 ? '#ef4444' : (pl.isMe ? '#10b981' : '#f8fafc');
-                    ctx.fillText(hpText, startX + sbWidth / 2 + 10, rowY);
+                    ctx.fillText(hpText, startX_sb + sbWidth / 2 + 10, rowY);
                 } else {
                     ctx.fillStyle = '#64748b';
-                    ctx.fillText('DEAD', startX + sbWidth / 2 + 10, rowY);
+                    ctx.fillText('DEAD', startX_sb + sbWidth / 2 + 10, rowY);
                 }
 
                 // Kills
                 ctx.fillStyle = pl.dead ? '#64748b' : (pl.isMe ? '#10b981' : '#f8fafc');
                 ctx.textAlign = 'right';
-                ctx.fillText(pl.kills.toString(), startX + sbWidth - 15, rowY);
+                ctx.fillText(pl.kills.toString(), startX_sb + sbWidth - 15, rowY);
             });
             ctx.restore();
         }
