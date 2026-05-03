@@ -920,6 +920,9 @@ canvas {
         background: rgba(15, 23, 42, 0.95) !important;
         border: 1px solid var(--accent-color) !important;
     }
+    #global-chat.mobile-active {
+        display: flex !important;
+    }
 }
 
 /* --- MOBILE RESPONSIVENESS --- */

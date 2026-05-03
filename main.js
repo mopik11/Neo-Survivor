@@ -3254,6 +3254,15 @@ function startGame() {
     AudioEngine.startMusic();
     META.lastMoveTime = Date.now();
     META.isAFK = false;
+
+    // Show chat and handle mobile chat button
+    const chat = document.getElementById('global-chat');
+    const chatBtn = document.getElementById('btn-chat-mobile');
+    if (chat) chat.style.display = 'flex';
+    if (chatBtn) {
+        if (window.innerWidth <= 850) chatBtn.style.display = 'flex';
+        else chatBtn.style.display = 'none';
+    }
 }
 
 function resetGame() {
@@ -3415,10 +3424,6 @@ function initSocket() {
 
             if (!GAME.active) {
                 startGame();
-                const chat = document.getElementById('global-chat');
-                const chatBtn = document.getElementById('btn-chat-mobile');
-                if (chat) chat.style.display = 'flex';
-                if (chatBtn) chatBtn.style.display = 'flex';
 
                 if (playerState && (playerState.x !== 0 || playerState.y !== 0)) {
                     GAME.entities.player.x = playerState.x;
@@ -5118,7 +5123,11 @@ function init() {
             if (chat) {
                 chat.classList.toggle('mobile-active');
                 if (chat.classList.contains('mobile-active')) {
+                    GAME.chatActive = true;
                     if (chatInput) chatInput.focus();
+                } else {
+                    GAME.chatActive = false;
+                    if (chatInput) chatInput.blur();
                 }
             }
         };
