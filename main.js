@@ -389,7 +389,23 @@ const ACHIEVEMENTS = [
     { id: 'crate_opener', name: 'Zasloužilý Otevírač', desc: 'Otevři celkem 50 beden', icon: '📦' }
 ];
 
-const saveMetaLocalOnly = () => localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
+const formatNumber = (num) => {
+    return (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+};
+
+const updateCurrencyUI = () => {
+    const formatted = formatNumber(META.currency);
+    const elements = ['display-doge', 'ships-currency', 'meta-currency'];
+    elements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = formatted;
+    });
+};
+
+const saveMetaLocalOnly = () => {
+    localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
+    updateCurrencyUI();
+};
 const saveMeta = () => {
     saveMetaLocalOnly();
     const savedUser = localStorage.getItem('neoSurvivor_user');
@@ -2809,7 +2825,7 @@ function showShipsMenu() {
             <div class="upgrade-icon">${item.icon}</div>
             <h3>${window.T(item.name)}</h3>
             <p>${window.T(item.desc)}</p>
-            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? window.T('VYBRÁNO') : (owned ? window.T('VLASTNĚNO (Klikni)') : item.cost + ' DOGE')}</span>
+            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? window.T('VYBRÁNO') : (owned ? window.T('VLASTNĚNO (Klikni)') : formatNumber(item.cost) + ' DOGE')}</span>
         `;
         card.onclick = () => {
             if (owned) {
@@ -2847,7 +2863,7 @@ function showShipsMenu() {
             <div class="upgrade-icon">${item.icon}</div>
             <h3>${window.T(item.name)}</h3>
             <p>${window.T(item.desc)}</p>
-            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? window.T('VYBRÁNO') : (owned ? window.T('VLASTNĚNO (Klikni)') : item.cost + ' DOGE')}</span>
+            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? window.T('VYBRÁNO') : (owned ? window.T('VLASTNĚNO (Klikni)') : formatNumber(item.cost) + ' DOGE')}</span>
         `;
         card.onclick = () => {
             if (owned) {
@@ -2900,7 +2916,7 @@ function showMetaMenu() {
     stats.forEach(item => {
         const card = document.createElement('div'); card.className = 'upgrade-card';
         const cost = Math.floor(item.cost * (1 + (item.val || 0) * 0.5));
-        card.innerHTML = `<h3>${window.T(item.name)}</h3><p>${window.T(item.desc)}</p><span class="cost">${cost} DOGE</span>`;
+        card.innerHTML = `<h3>${window.T(item.name)}</h3><p>${window.T(item.desc)}</p><span class="cost">${formatNumber(cost)} DOGE</span>`;
         card.onclick = () => {
             if (META.currency < cost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
             playSound('upgrade');
@@ -2935,7 +2951,7 @@ function showMetaMenu() {
 
         card.innerHTML = `
             <h3>${window.T(type.name)}</h3>
-            <div style="font-size: 0.7rem; color: #fbbf24; font-weight: 800; margin-bottom: 5px;">${type.cost} DOGE / ks</div>
+            <div style="font-size: 0.7rem; color: #fbbf24; font-weight: 800; margin-bottom: 5px;">${formatNumber(type.cost)} DOGE / ks</div>
             <div class="crate-multipliers" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; position: absolute; bottom: 10px; left: 10px; right: 10px;">
                 ${[1, 2, 5, 10].map(count => `
                     <button class="btn-bulk" data-count="${count}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 10px 0; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; transition: all 0.2s;">${count}x</button>
@@ -2973,7 +2989,7 @@ function showMetaMenu() {
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(16,185,129,0.2); margin-bottom: 15px; padding-bottom: 5px;">
             <div style="display:flex; flex-direction:column; align-items: flex-start;">
                 <h2 style="color: #10b981; text-align: left; margin:0; font-size: 1.2rem;" data-i18n="TVÁ SBÍRKA">✨ TVÁ SBÍRKA</h2>
-                <div style="font-size: 0.7rem; color: #64748b; font-weight: bold; margin-top: 2px;">${window.T('Celková hodnota:')} <span style="color: #fbbf24;">${META.inventory.reduce((sum, inv) => sum + (EMOJIS.find(e => e.id === inv.id)?.price || 0) * inv.count, 0)} DOGE</span></div>
+                <div style="font-size: 0.7rem; color: #64748b; font-weight: bold; margin-top: 2px;">${window.T('Celková hodnota:')} <span style="color: #fbbf24;">${formatNumber(META.inventory.reduce((sum, inv) => sum + (EMOJIS.find(e => e.id === inv.id)?.price || 0) * inv.count, 0))} DOGE</span></div>
             </div>
             ${META.inventory.length > 0 ? `<button id="btn-sell-all" style="padding: 5px 12px; font-size: 0.7rem; border-radius: 8px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); cursor:pointer; font-weight:bold;">${window.T('PRODAT VŠE')}</button>` : ''}
         </div>
@@ -3006,7 +3022,7 @@ function showMetaMenu() {
                 
                 <div style="display:flex; flex-direction:column; gap:5px;">
                     <button class="btn-equip" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: ${isEquipped ? '#fbbf24' : 'rgba(255,255,255,0.1)'}; color: ${isEquipped ? '#000' : '#fff'}; border: none; cursor:pointer;">${isEquipped ? window.T('SUNDAT') : window.T('NASADIT')}</button>
-                    <button class="btn-sell" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); cursor:pointer;">${window.T('PRODAT')} (${emoji.price})</button>
+                    <button class="btn-sell" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); cursor:pointer;">${window.T('PRODAT')} (${formatNumber(emoji.price)})</button>
                 </div>
             `;
             
@@ -3250,21 +3266,25 @@ function startCrateAnimation(winner, crateType = 'basic') {
         const skipBtn = document.getElementById('btn-skip-crate');
         if (skipBtn) skipBtn.style.display = 'none';
         
-        if (winner.rarity === 'legendary') {
-            showConfetti(300);
+        if (winner.id === 'ultra_rare') {
+            showConfetti(2000);
+            playSound('crateWin');
+            setTimeout(() => playSound('upgrade'), 300);
+        } else if (winner.rarity === 'legendary') {
+            showConfetti(600);
             playSound('crateWin');
             setTimeout(() => playSound('upgrade'), 300);
         } else if (winner.rarity === 'epic') {
-            showConfetti(150);
+            showConfetti(300);
             playSound('crateWin');
         } else if (winner.rarity === 'rare') {
-            showConfetti(70);
+            showConfetti(150);
             playSound('crateWin');
         } else if (winner.rarity === 'uncommon') {
-            showConfetti(30);
+            showConfetti(60);
             playSound('crateWin');
         } else {
-            showConfetti(10);
+            showConfetti(20);
             playSound('crateWin');
         }
 
