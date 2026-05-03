@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.300
+ * NEO SURVIVOR - Core Game Logic - v1.302
  */
 
 window.addEventListener('beforeunload', () => {
@@ -3536,6 +3536,12 @@ function initSocket() {
                     GAME.entities.player.level = playerState.level;
                 }
             }
+            
+            // AUTOMATIC UNBLOCK: If the server is currently stuck waiting for players to pick an upgrade,
+            // the new player will never see the level-up modal and will block the game forever.
+            // By emitting 'upgradePicked' immediately upon joining, we ensure the server doesn't wait for us.
+            // If the game is NOT in a level-up state, the server will simply ignore this or reset it on the next level-up.
+            NET.socket.emit('upgradePicked');
         });
 
         NET.socket.on('stateUpdate', (data) => {
