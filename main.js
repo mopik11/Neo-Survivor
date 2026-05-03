@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.305
+ * NEO SURVIVOR - Core Game Logic - v1.306
  */
 
 window.addEventListener('beforeunload', () => {
@@ -3707,6 +3707,8 @@ function initSocket() {
                 newOthers[pId].laserTargetsIds = data.players[pId].laserTargetsIds || [];
                 newOthers[pId].remoteName = data.players[pId].name || "Hráč";
                 newOthers[pId].kills = data.players[pId].kills || 0;
+                newOthers[pId].hp = data.players[pId].hp || 0;
+                newOthers[pId].maxHp = data.players[pId].maxHp || 100;
             }
             NET.others = newOthers;
             GAME.time = data.time;
@@ -6300,11 +6302,26 @@ function render() {
         ctx.restore();
 
         if (NET.isMultiplayer) {
-            let playersList = [{ name: (localStorage.getItem('neoSurvivor_user') || "Já"), kills: GAME.kills || 0, isMe: true }];
+            let pMe = GAME.entities.player;
+            let playersList = [{ 
+                name: (localStorage.getItem('neoSurvivor_user') || "Já"), 
+                kills: GAME.kills || 0, 
+                isMe: true,
+                hp: pMe ? pMe.hp : 0,
+                maxHp: pMe ? pMe.maxHp : 100,
+                dead: pMe ? pMe.dead : false
+            }];
             for (const id in NET.others) {
                 const op = NET.others[id];
                 if (op) {
-                    playersList.push({ name: op.remoteName || "Hráč", kills: op.kills || 0, isMe: false, dead: op.dead });
+                    playersList.push({ 
+                        name: op.remoteName || "Hráč", 
+                        kills: op.kills || 0, 
+                        isMe: false, 
+                        dead: op.dead,
+                        hp: op.hp || 0,
+                        maxHp: op.maxHp || 100
+                    });
                 }
             }
             playersList.sort((a, b) => b.kills - a.kills);
@@ -6332,6 +6349,9 @@ function render() {
             ctx.textBaseline = 'top';
             ctx.fillText(window.T('Hráči:') + ' ' + playersList.length, startX + 15, sbY + 12);
             
+            ctx.textAlign = 'center';
+            ctx.fillText('HP', startX + sbWidth / 2 + 10, sbY + 12);
+
             ctx.textAlign = 'right';
             ctx.fillText(window.T('Zabití'), startX + sbWidth - 15, sbY + 12);
 
@@ -6342,13 +6362,30 @@ function render() {
             ctx.stroke();
 
             playersList.forEach((pl, idx) => {
+                const rowY = sbY + 40 + idx * 25;
                 ctx.fillStyle = pl.dead ? '#64748b' : (pl.isMe ? '#10b981' : '#f8fafc');
+                
+                // Name
                 ctx.textAlign = 'left';
                 let dispName = pl.name;
                 if (dispName.length > 10) dispName = dispName.substring(0, 8) + '..';
-                ctx.fillText(dispName, startX + 15, sbY + 40 + idx * 25);
+                ctx.fillText(dispName, startX + 15, rowY);
+                
+                // HP
+                ctx.textAlign = 'center';
+                if (!pl.dead) {
+                    const hpText = Math.ceil(pl.hp).toString();
+                    ctx.fillStyle = pl.hp < pl.maxHp * 0.3 ? '#ef4444' : (pl.isMe ? '#10b981' : '#f8fafc');
+                    ctx.fillText(hpText, startX + sbWidth / 2 + 10, rowY);
+                } else {
+                    ctx.fillStyle = '#64748b';
+                    ctx.fillText('DEAD', startX + sbWidth / 2 + 10, rowY);
+                }
+
+                // Kills
+                ctx.fillStyle = pl.dead ? '#64748b' : (pl.isMe ? '#10b981' : '#f8fafc');
                 ctx.textAlign = 'right';
-                ctx.fillText(pl.kills.toString(), startX + sbWidth - 15, sbY + 40 + idx * 25);
+                ctx.fillText(pl.kills.toString(), startX + sbWidth - 15, rowY);
             });
             ctx.restore();
         }
