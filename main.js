@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.289
+ * NEO SURVIVOR - Core Game Logic - v1.290
  */
 
 window.onerror = function (msg, url, line, col, error) {
@@ -3244,6 +3244,7 @@ function sellAllEmojis() {
 function startGame() {
     switchMusic(null);
     if (GAME.active) return;
+    resetGame();
     GAME.active = true;
     GAME.paused = false;
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -4133,6 +4134,13 @@ function init() {
             "Cookie clicker": "Cookie clicker", "Odehraj celkem 24 hodin": "Play for total 24 hours",
             "Milionář": "Millionaire", "Získej celkem 100 000 Dogecoinů": "Collect total 100,000 Dogecoins",
             "Zasloužilý Otevírač": "Crate Opener", "Otevři celkem 50 beden": "Open total 50 crates",
+            "ZVUKY A HUDBA:": "SOUNDS & MUSIC:",
+            "MENU": "MENU",
+            "HRA": "GAME",
+            "SFX": "SFX",
+            "Sebevrah:": "Suicider:",
+            "Štítonoš:": "Shielder:",
+            "📦 LOOTBOXY A BEDNY": "📦 LOOT BOXES & CRATES",
             "PARÁDA!": "AWESOME!", "SKVĚLÉ!": "GREAT!", "ÚSPĚCH!": "SUCCESS!", "ZÍSKAL JSI!": "YOU GOT!", "VÝBORNĚ!": "EXCELLENT!", "VÝNOS Z BITVY": "BATTLE INCOME"
         },
         de: {
