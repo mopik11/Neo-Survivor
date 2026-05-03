@@ -3107,6 +3107,33 @@ function startGame() {
     GAME.entities.player.hp = GAME.entities.player.maxHp;
 }
 
+function resetGame() {
+    GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0; GAME.lastBossLevelSpawned = 0;
+    GAME.wallWidthUpgrades = 0;
+    GAME.coinsCollected = 0;
+    GAME.lastSpawnTime = Date.now();
+    GAME.frozenUntil = 0;
+
+    GAME.entities = {
+        player: new Player(true),
+        enemies: [],
+        projectiles: [],
+        gems: [],
+        pickedGems: new Set(),
+        particles: [],
+        fire: [],
+        baits: [],
+        floatingTexts: []
+    };
+
+    GAME.stars = [];
+    for (let i = 0; i < 150; i++) {
+        GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
+    }
+    updateSpeedFactor();
+    updateUI();
+}
+
 window.softResetToMenu = () => {
     GAME.active = false;
     GAME.paused = false;
@@ -5092,54 +5119,7 @@ function useUltimate(cx, cy) {
     }
 }
 
-function startGame() {
-    resetGame();
-    GAME.active = true;
-    GAME.startTime = Date.now();
-    META.lastMoveTime = Date.now();
-    
-    const chat = document.getElementById('global-chat');
-    const chatBtn = document.getElementById('btn-chat-mobile');
-    
-    if (chat) chat.style.display = NET.isMultiplayer ? 'flex' : 'none';
-    if (chatBtn) chatBtn.style.display = NET.isMultiplayer ? 'flex' : 'none';
-    if (chat) chat.classList.remove('mobile-active');
 
-    AudioEngine.stopMenuMusic();
-    AudioEngine.startMusic();
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-
-    if (!NET.isMultiplayer) {
-        GAME.lastSpawnTime = Date.now();
-    }
-}
-
-function resetGame() {
-    GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0; GAME.lastBossLevelSpawned = 0;
-    GAME.wallWidthUpgrades = 0;
-    GAME.coinsCollected = 0;
-    GAME.lastSpawnTime = Date.now();
-    GAME.frozenUntil = 0;
-
-    GAME.entities = {
-        player: new Player(true),
-        enemies: [],
-        projectiles: [],
-        gems: [],
-        pickedGems: new Set(),
-        particles: [],
-        fire: [],
-        baits: [],
-        floatingTexts: []
-    };
-
-    GAME.stars = [];
-    for (let i = 0; i < 150; i++) {
-        GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
-    }
-    updateSpeedFactor();
-    updateUI();
-}
 
 let lastTime = 0;
 let accumulator = 0;
