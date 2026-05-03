@@ -38,6 +38,69 @@ function playSound(name) {
     } catch(e) {}
 }
 
+const MUSIC = {
+    menu: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'),
+    upgrades: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3'),
+    crates: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3')
+};
+Object.values(MUSIC).forEach(m => { m.loop = true; m.volume = 0; });
+
+function switchMusic(target) {
+    Object.keys(MUSIC).forEach(k => {
+        const m = MUSIC[k];
+        if (k === target) {
+            m.play().catch(() => {});
+            let vol = (k === 'menu' && target === 'upgrades') ? 0.1 : 0.4;
+            fadeVolume(m, vol);
+        } else if (target === 'upgrades' && k === 'menu') {
+            fadeVolume(m, 0.1); // Keep menu music dim
+        } else {
+            fadeVolume(m, 0);
+        }
+    });
+}
+
+function fadeVolume(audio, target) {
+    const step = 0.02;
+    const interval = setInterval(() => {
+        if (audio.volume < target) {
+            audio.volume = Math.min(target, audio.volume + step);
+        } else if (audio.volume > target) {
+            audio.volume = Math.max(target, audio.volume - step);
+        }
+        if (Math.abs(audio.volume - target) < 0.01) {
+            audio.volume = target;
+            if (target === 0) audio.pause();
+            clearInterval(interval);
+        }
+    }, 50);
+}
+
+function showConfetti() {
+    const container = document.createElement('div');
+    container.style.position = 'fixed'; container.style.inset = '0'; container.style.pointerEvents = 'none'; container.style.zIndex = '9999999';
+    document.body.appendChild(container);
+    for(let i=0; i<100; i++) {
+        const p = document.createElement('div');
+        p.style.position = 'absolute'; p.style.width = '10px'; p.style.height = '10px';
+        p.style.background = `hsl(${Math.random()*360}, 100%, 50%)`;
+        p.style.left = '50%'; p.style.top = '50%';
+        p.style.borderRadius = '2px';
+        container.appendChild(p);
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 5 + Math.random() * 15;
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed - 10;
+        let x = 0, y = 0, grav = 0.5;
+        const anim = setInterval(() => {
+            x += vx; y += vy; vy += grav;
+            p.style.transform = `translate(${x}px, ${y}px) rotate(${x}deg)`;
+            if (y > window.innerHeight) { clearInterval(anim); p.remove(); }
+        }, 16);
+    }
+    setTimeout(() => container.remove(), 4000);
+}
+
 window.showCustomConfirm = function (msg, onConfirm) {
     const modal = document.getElementById('custom-confirm-modal');
     const text = document.getElementById('custom-confirm-text');
@@ -2376,6 +2439,10 @@ function toggleFullscreen(element, force = false) {
 }
 
 function showShipsMenu() {
+    switchMusic('upgrades');
+    const modal = document.getElementById('ships-modal');
+    if (modal) modal.classList.add('active');
+    
     const container = document.getElementById('ships-options');
     if (!container) return;
 
@@ -2466,7 +2533,10 @@ function showShipsMenu() {
 }
 
 function showMetaMenu() {
-    playSound('menuOpen');
+    switchMusic('upgrades');
+    const menu = document.getElementById('meta-modal');
+    if (menu) menu.classList.add('active');
+    
     const container = document.getElementById('meta-options');
     if (!container) return;
     document.getElementById('meta-currency').innerText = META.currency;
@@ -2710,6 +2780,7 @@ function clearCrateTimeouts() {
 }
 
 function startCrateAnimation(winner, crateType = 'basic') {
+    switchMusic('crates');
     // 1. CLEAR EVERYTHING BEFORE STARTING NEW ANIMATION
     clearCrateTimeouts();
     
@@ -2799,6 +2870,9 @@ function startCrateAnimation(winner, crateType = 'basic') {
         const skipBtn = document.getElementById('btn-skip-crate');
         if (skipBtn) skipBtn.style.display = 'none';
         
+        if (['rare', 'epic', 'legendary'].includes(winner.rarity)) {
+            showConfetti();
+        }
         playSound('crateWin');
 
         // Auto-next after 3s
@@ -2940,6 +3014,7 @@ function showBatchSummary() {
 
     modal.querySelector('#btn-batch-collect').onclick = () => {
         modal.remove();
+        switchMusic('upgrades');
         showMetaMenu();
     };
 
@@ -2957,6 +3032,7 @@ function showBatchSummary() {
         saveMeta();
         showCurrencyNotification(totalValue, "VÁRKA PRODÁNA");
         modal.remove();
+        switchMusic('upgrades');
         showMetaMenu();
     };
 }
@@ -3018,6 +3094,19 @@ function sellAllEmojis() {
     showMetaMenu();
 }
 
+function startGame() {
+    switchMusic(null);
+    if (GAME.active) return;
+    GAME.active = true;
+    GAME.paused = false;
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    GAME.startTime = Date.now();
+    GAME.lastSpawnTime = Date.now();
+    GAME.kills = 0;
+    GAME.coinsCollected = 0;
+    GAME.entities.player.hp = GAME.entities.player.maxHp;
+}
+
 window.softResetToMenu = () => {
     GAME.active = false;
     GAME.paused = false;
@@ -3045,6 +3134,7 @@ window.softResetToMenu = () => {
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     document.getElementById('menu-modal').classList.add('active');
 
+    switchMusic('menu');
     resetGame();
     AudioEngine.startMenuMusic();
 };
@@ -3508,6 +3598,29 @@ function init() {
     updateSpeedFactor();
     window.addEventListener('resize', () => { GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight; updateSpeedFactor(); });
     GAME.canvas.width = window.innerWidth; GAME.canvas.height = window.innerHeight;
+
+    // --- MODAL CLOSE HANDLERS FOR MUSIC ---
+    const closeButtons = [
+        { id: 'btn-close-meta', music: 'menu' },
+        { id: 'btn-close-ships', music: 'menu' },
+        { id: 'btn-close-achievements', music: 'menu' },
+        { id: 'btn-close-settings', music: 'menu' },
+        { id: 'btn-close-leaderboard', music: 'menu' },
+        { id: 'btn-close-mp', music: 'menu' }
+    ];
+
+    closeButtons.forEach(btn => {
+        const el = document.getElementById(btn.id);
+        if (el) {
+            const originalOnclick = el.onclick;
+            el.onclick = (e) => {
+                if (originalOnclick) originalOnclick(e);
+                const modal = el.closest('.modal');
+                if (modal) modal.classList.remove('active');
+                switchMusic(btn.music);
+            };
+        }
+    });
 
     GAME.ctx.fillStyle = '#020617';
     GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
@@ -4316,7 +4429,7 @@ function init() {
             "Obří Střely": "Tiros Gigantes",
             "+30% velikost projektilu": "+30% tamaño del proyectil",
             "XP Multiplikátor": "Multiplicador de XP",
-            "+20% bonus k XP": "+20% bono de XP",
+            "+20% bono de XP": "+20% bono de XP",
             "Odraz": "Rebote",
             "Střely se odráží k dalšímu cíli": "Los tiros rebotan al siguiente objetivo",
             "Magnet na XP": "Imán de XP",
@@ -4340,7 +4453,7 @@ function init() {
             "Kaktus": "Cactus",
             "Zabíjí dotykem (10s on, 30s off)": "Mata al tocar (10s on, 30s off)",
             "Zkušenostní Pole": "Campo de XP",
-            "Generuje 1 XP automaticky": "Genera 1 XP automáticamente",
+            "Generuje 1 XP automáticamente": "Genera 1 XP automáticamente",
             "Větší Výběr": "Mayor Elección",
             "+1 možnost při levelu": "+1 opción al subir de nivel",
             "Mraziv Aura": "Aura Congelante",
