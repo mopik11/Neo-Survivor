@@ -49,14 +49,20 @@ const MUSIC = {
 Object.values(MUSIC).forEach(m => { m.loop = true; m.volume = 0; });
 
 function switchMusic(target) {
+    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume();
+    
     Object.keys(MUSIC).forEach(k => {
         const m = MUSIC[k];
         if (k === target) {
-            m.play().catch(() => {});
-            let vol = (k === 'menu' && target === 'upgrades') ? 0.1 : 0.4;
+            if (m.paused) {
+                m.currentTime = 0;
+                m.play().catch(e => console.warn("Music play blocked", k, e));
+            }
+            let vol = 0.4;
+            if (target === 'upgrades') vol = 0.4;
             fadeVolume(m, vol);
         } else if (target === 'upgrades' && k === 'menu') {
-            fadeVolume(m, 0.1); // Keep menu music dim
+            fadeVolume(m, 0.08); // Keep menu music dim
         } else {
             fadeVolume(m, 0);
         }
@@ -85,11 +91,11 @@ function fadeVolume(audio, target) {
     }, 50);
 }
 
-function showConfetti() {
+function showConfetti(count = 100) {
     const container = document.createElement('div');
     container.style.position = 'fixed'; container.style.inset = '0'; container.style.pointerEvents = 'none'; container.style.zIndex = '9999999';
     document.body.appendChild(container);
-    for(let i=0; i<100; i++) {
+    for(let i=0; i<count; i++) {
         const p = document.createElement('div');
         p.style.position = 'absolute'; p.style.width = '10px'; p.style.height = '10px';
         p.style.background = `hsl(${Math.random()*360}, 100%, 50%)`;
@@ -2848,6 +2854,10 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 </div>
             </div>
 
+            <script>
+                // This is a dummy script block, we handle logic in main.js
+            </script>
+
             <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
                 <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; letter-spacing: 2px;">ZÍSKÁNO: ${GAME.crateQueue ? (GAME.lastCrateBatchSize - GAME.crateQueue.length) : 1} / ${GAME.lastCrateBatchSize || 1}</div>
                 <h3 style="color: #fff; font-size: 2.2rem; margin: 0; text-shadow: 0 0 30px rgba(255,255,255,0.1);">${winner.name}</h3>
@@ -2864,7 +2874,49 @@ function startCrateAnimation(winner, crateType = 'basic') {
 
     document.body.appendChild(modal);
     
+    // Play initial spin sound
+    playSound('crateSpin');
+
+    // Ticking logic - plays sound as items pass the center line
+    if (GAME.crateTickInterval) clearInterval(GAME.crateTickInterval);
+    let lastTickIdx = -1;
+    const startTime = Date.now();
+    GAME.crateTickInterval = setInterval(() => {
+        const carousel = document.getElementById('crate-carousel');
+        if (!carousel) { clearInterval(GAME.crateTickInterval); return; }
+        
+        // Get current transform to detect movement
+        const style = window.getComputedStyle(carousel);
+        const matrix = new WebKitCSSMatrix(style.transform);
+        const currentX = matrix.m41;
+        
+        // Calculate which item is currently under the pointer
+        // We use a simplified calculation based on itemWidth
+        const itemIdx = Math.floor(Math.abs(currentX) / itemWidth);
+        
+        if (itemIdx !== lastTickIdx && itemIdx < 40) {
+            playSound('crateSpin'); // Use spin sound for tick
+            lastTickIdx = itemIdx;
+        }
+
+        if (Date.now() - startTime > 7000) clearInterval(GAME.crateTickInterval);
+    }, 30);
+
+    setTimeout(() => {
+        const carousel = document.getElementById('crate-carousel');
+        if (carousel) {
+            const offset = -(35 * itemWidth + itemSize / 2);
+            carousel.style.transform = `translateX(${offset}px)`;
+        }
+    }, 100);
+
+    const tResult = setTimeout(() => {
+        showResults();
+    }, 6500);
+    GAME.crateTimeouts.push(tResult);
+
     const showResults = () => {
+        if (GAME.crateTickInterval) clearInterval(GAME.crateTickInterval);
         clearCrateTimeouts(); // Stop any other timers
         const carousel = document.getElementById('crate-carousel');
         if (carousel) {
@@ -2881,10 +2933,23 @@ function startCrateAnimation(winner, crateType = 'basic') {
         const skipBtn = document.getElementById('btn-skip-crate');
         if (skipBtn) skipBtn.style.display = 'none';
         
-        if (['rare', 'epic', 'legendary'].includes(winner.rarity)) {
-            showConfetti();
+        if (winner.rarity === 'legendary') {
+            showConfetti(300);
+            playSound('crateWin');
+            setTimeout(() => playSound('upgrade'), 300);
+        } else if (winner.rarity === 'epic') {
+            showConfetti(150);
+            playSound('crateWin');
+        } else if (winner.rarity === 'rare') {
+            showConfetti(70);
+            playSound('crateWin');
+        } else if (winner.rarity === 'uncommon') {
+            showConfetti(30);
+            playSound('crateWin');
+        } else {
+            showConfetti(10); // Small burst for common
+            playSound('crateWin');
         }
-        playSound('crateWin');
 
         // Auto-next after 3s
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
