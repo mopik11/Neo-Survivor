@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.302
+ * NEO SURVIVOR - Core Game Logic - v1.303
  */
 
 window.addEventListener('beforeunload', () => {
@@ -5063,13 +5063,35 @@ function init() {
                     // Safer merge to protect nested properties
                     if (res.meta) {
                         for (let key in res.meta) {
+                            // Protect selected properties from being overwritten by older server data on refresh
+                            if ((key === 'selectedShip' || key === 'selectedAbility' || key === 'autoRandomSelect' || key === 'settings') && META[key] !== undefined) {
+                                // Keep local version, but ensure we sync it up later
+                                continue;
+                            }
+                            
                             if (typeof res.meta[key] === 'object' && res.meta[key] !== null && !Array.isArray(res.meta[key])) {
+                                // Special protection for hat selection within upgrades
+                                let localHat = undefined;
+                                if (key === 'upgrades' && META.upgrades && META.upgrades.hat !== undefined) {
+                                    localHat = META.upgrades.hat;
+                                }
+                                
                                 META[key] = { ...META[key], ...res.meta[key] };
+                                
+                                if (localHat !== undefined) {
+                                    META.upgrades.hat = localHat;
+                                }
                             } else {
                                 META[key] = res.meta[key];
                             }
                         }
                     }
+                    
+                    // Immediately sync our (potentially newer) local settings up to the server
+                    if (NET.socket && NET.socket.connected) {
+                        NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META });
+                    }
+                    
                     saveMetaLocalOnly();
                     document.getElementById('display-max-level').innerText = META.maxLevel || 1;
                     document.getElementById('display-doge').innerText = META.currency || 0;
