@@ -1978,10 +1978,12 @@ class Player {
 
         if (this.shipType === 5) { // NEKROMANCER
             if (!GAME.entities.minions) GAME.entities.minions = [];
-            if (GAME.entities.minions.length < 10 + this.projectileCount * 2) {
-                const minion = new FriendlyMinion(this.x, this.y, this.damage * 0.5, this);
-                GAME.entities.minions.push(minion);
-                // V multiplayeru by to chtělo sync, ale zatím solo focus
+            const spawnCount = 1 + (this.projectileCount || 0);
+            for (let i = 0; i < spawnCount; i++) {
+                if (GAME.entities.minions.length < 10 + (this.projectileCount || 0) * 3) {
+                    const minion = new FriendlyMinion(this.x, this.y, this.damage * 0.5, this);
+                    GAME.entities.minions.push(minion);
+                }
             }
         }
 
@@ -5280,13 +5282,51 @@ function init() {
             btnDaily.style.pointerEvents = 'none';
         };
 
-        // Update button state on load
-        const timeSinceLast = Date.now() - (META.lastDailyGift || 0);
-        if (timeSinceLast < 24 * 3600 * 1000) {
-            btnDaily.style.opacity = '0.5';
-            btnDaily.style.filter = 'grayscale(1)';
-            btnDaily.style.pointerEvents = 'none';
+        // Daily Timer Logic
+        const updateDailyTimer = () => {
+            const now = Date.now();
+            const lastClaim = META.lastDailyGift || 0;
+            const day = 24 * 3600 * 1000;
+            const timeSince = now - lastClaim;
+            const timerSpan = document.getElementById('daily-timer');
+            
+            if (timeSince < day) {
+                const remaining = day - timeSince;
+                const h = Math.floor(remaining / (3600 * 1000));
+                const m = Math.floor((remaining % (3600 * 1000)) / (60 * 1000));
+                const s = Math.floor((remaining % (60 * 1000)) / 1000);
+                
+                if (timerSpan) timerSpan.innerText = `${h}h ${m}m ${s}s`;
+                btnDaily.style.opacity = '0.5';
+                btnDaily.style.filter = 'grayscale(1)';
+                btnDaily.style.pointerEvents = 'none';
+            } else {
+                if (timerSpan) timerSpan.innerText = '';
+                btnDaily.style.opacity = '1';
+                btnDaily.style.filter = 'none';
+                btnDaily.style.pointerEvents = 'auto';
+                
+                // Pulsing effect when ready
+                btnDaily.style.animation = 'pulse-gift 2s infinite';
+            }
+        };
+
+        // Add CSS for pulsing effect if not exists
+        if (!document.getElementById('gift-style')) {
+            const style = document.createElement('style');
+            style.id = 'gift-style';
+            style.innerHTML = `
+                @keyframes pulse-gift {
+                    0% { transform: scale(1); box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); }
+                    50% { transform: scale(1.1); box-shadow: 0 0 40px rgba(251, 191, 36, 0.8); }
+                    100% { transform: scale(1); box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); }
+                }
+            `;
+            document.head.appendChild(style);
         }
+
+        setInterval(updateDailyTimer, 1000);
+        updateDailyTimer();
     }
 
     document.getElementById('btn-reset-progress').onclick = () => {

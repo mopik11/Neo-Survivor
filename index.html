@@ -81,7 +81,10 @@
           <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
 
           <!-- Daily Gift Floating Button -->
-          <button id="btn-daily-gift" style="display:none; position: absolute; top: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); cursor: pointer; justify-content: center; align-items: center; font-size: 1.8rem; z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">🎁</button>
+          <button id="btn-daily-gift" style="display:none; position: absolute; top: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); cursor: pointer; justify-content: center; align-items: center; font-size: 1.8rem; z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            🎁
+            <span id="daily-timer" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: #fbbf24; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.5); white-space: nowrap; pointer-events: none; opacity: 0.9;"></span>
+          </button>
           
           <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem; letter-spacing: 1px;">
             <span data-i18n="Hráč:">Hráč:</span> <span id="display-player-name" style="color: var(--accent-color); font-weight: bold;">---</span> | <span data-i18n="Nej. Level:">Nej. Level:</span> <span id="display-max-level" style="color: var(--xp-color); font-weight: bold;">0</span> | Doge: <span id="display-doge" style="color: #fbbf24; font-weight: bold;">0</span>
@@ -121,7 +124,7 @@
           </div>
 
           <div style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-            © 2026 mopik11, cenek | version: 1.310
+            © 2026 mopik11, cenek | version: 1.311
           </div>
 
         </div>
@@ -488,6 +491,6 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script type="module" src="./main.js?v=1.310"></script>
+    <script type="module" src="./main.js?v=1.311"></script>
   </body>
 </html>
