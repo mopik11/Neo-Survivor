@@ -118,27 +118,71 @@ function fadeVolume(audio, target) {
 
 function showConfetti(count = 100) {
     const container = document.createElement('div');
-    container.style.position = 'fixed'; container.style.inset = '0'; container.style.pointerEvents = 'none'; container.style.zIndex = '9999999';
+    container.style.position = 'fixed';
+    container.style.inset = '0';
+    container.style.pointerEvents = 'none';
+    container.style.zIndex = '9999999';
     document.body.appendChild(container);
-    for(let i=0; i<count; i++) {
+
+    const particles = [];
+    const colors = ['#38bdf8', '#fbbf24', '#f43f5e', '#10b981', '#a855f7', '#f97316'];
+
+    for (let i = 0; i < count; i++) {
         const p = document.createElement('div');
-        p.style.position = 'absolute'; p.style.width = '10px'; p.style.height = '10px';
-        p.style.background = `hsl(${Math.random()*360}, 100%, 50%)`;
-        p.style.left = '50%'; p.style.top = '50%';
-        p.style.borderRadius = '2px';
+        const size = 5 + Math.random() * 10;
+        p.style.position = 'absolute';
+        p.style.width = size + 'px';
+        p.style.height = size + 'px';
+        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+        p.style.left = '50%';
+        p.style.top = '50%';
+        p.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        p.style.opacity = '1';
         container.appendChild(p);
+
         const angle = Math.random() * Math.PI * 2;
-        const speed = 5 + Math.random() * 15;
-        const vx = Math.cos(angle) * speed;
-        const vy = Math.sin(angle) * speed - 10;
-        let x = 0, y = 0, grav = 0.5;
-        const anim = setInterval(() => {
-            x += vx; y += vy; vy += grav;
-            p.style.transform = `translate(${x}px, ${y}px) rotate(${x}deg)`;
-            if (y > window.innerHeight) { clearInterval(anim); p.remove(); }
-        }, 16);
+        const velocity = 5 + Math.random() * 20;
+        particles.push({
+            el: p,
+            x: 0,
+            y: 0,
+            vx: Math.cos(angle) * velocity,
+            vy: Math.sin(angle) * velocity - 10,
+            rotation: Math.random() * 360,
+            vr: (Math.random() - 0.5) * 20,
+            gravity: 0.4 + Math.random() * 0.3,
+            opacity: 1
+        });
     }
-    setTimeout(() => container.remove(), 4000);
+
+    let startTime = Date.now();
+    function update() {
+        const now = Date.now();
+        const elapsed = now - startTime;
+        if (elapsed > 4000) {
+            container.remove();
+            return;
+        }
+
+        particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += p.gravity;
+            p.vx *= 0.98; // Air resistance
+            p.rotation += p.vr;
+            
+            if (elapsed > 2000) {
+                p.opacity -= 0.02;
+            }
+
+            p.el.style.transform = `translate(${p.x}px, ${p.y}px) rotate(${p.rotation}deg)`;
+            p.el.style.opacity = p.opacity;
+        });
+
+        requestAnimationFrame(update);
+    }
+
+    requestAnimationFrame(update);
 }
 
 window.showCustomConfirm = function (msg, onConfirm) {
@@ -5344,6 +5388,7 @@ function init() {
             saveMeta();
             
             showCurrencyNotification(reward, `DENNÍ ODMĚNA (${META.dailyStreak}. DEN)`);
+            showConfetti(100);
             btnDaily.style.opacity = '0.5';
             btnDaily.style.filter = 'grayscale(1)';
             btnDaily.style.pointerEvents = 'none';
