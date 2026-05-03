@@ -21,30 +21,24 @@ window.showCustomAlert = function (msg) {
 };
 
 // --- AUDIO SYSTEM ---
-const SOUNDS = {
-    menuOpen: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-modern-technology-select-3124.mp3'),
-    upgrade: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-button-click-interface-1002.mp3'),
-    crateSpin: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-quick-mechanical-click-2510.mp3'),
-    crateWin: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3'),
-    coin: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-changing-tab-206.mp3')
+const SOUND_URLS = {
+    menuOpen: 'https://assets.mixkit.co/sfx/preview/mixkit-modern-technology-select-3124.mp3',
+    upgrade: 'https://assets.mixkit.co/sfx/preview/mixkit-button-click-interface-1002.mp3',
+    crateSpin: 'https://assets.mixkit.co/sfx/preview/mixkit-quick-mechanical-click-2510.mp3',
+    crateWin: 'https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3',
+    coin: 'https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-changing-tab-206.mp3'
 };
 
+const SOUND_BUFFERS = {};
+
 function playSound(name) {
-    try {
-        const s = SOUNDS[name];
-        if (s) {
-            const clone = s.cloneNode();
-            clone.volume = 1.0; // Force full volume for SFX
-            clone.play().catch(e => {
-                // Fallback to original if clone fails
-                s.currentTime = 0;
-                s.volume = 1.0;
-                s.play().catch(() => {});
-            });
+    if (AudioEngine.ctx) {
+        if (AudioEngine.ctx.state === 'suspended') {
+            AudioEngine.ctx.resume().then(() => AudioEngine.playBuffer(name));
         } else {
-            AudioEngine.play(name);
+            AudioEngine.playBuffer(name);
         }
-    } catch(e) {}
+    }
 }
 
 const MUSIC = {
@@ -443,7 +437,34 @@ const AudioEngine = {
         if (this.ctx) return;
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.loadAllBuffers();
         } catch (e) { console.error("Audio init failed", e); }
+    },
+    async loadAllBuffers() {
+        for (const [name, url] of Object.entries(SOUND_URLS)) {
+            try {
+                const response = await fetch(url);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+                SOUND_BUFFERS[name] = audioBuffer;
+            } catch (e) {
+                console.warn("Failed to load sound buffer:", name, e);
+            }
+        }
+    },
+    playBuffer(name) {
+        if (!this.ctx || !SOUND_BUFFERS[name]) {
+            // Fallback to procedural sounds if buffer not found
+            this.play(name);
+            return;
+        }
+        const source = this.ctx.createBufferSource();
+        source.buffer = SOUND_BUFFERS[name];
+        const gainNode = this.ctx.createGain();
+        gainNode.gain.setValueAtTime(1.0, this.ctx.currentTime);
+        source.connect(gainNode);
+        gainNode.connect(this.ctx.destination);
+        source.start(0);
     },
     startMenuMusic() {
         if (!this.ctx || this.menuPlaying) return;

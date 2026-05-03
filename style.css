@@ -660,24 +660,25 @@ canvas {
 
   .btn-restart {
     width: 100% !important;
-    padding: 0.45rem 0.15rem !important;
-    font-size: 0.65rem !important;
+    padding: 1rem 0.5rem !important;
+    font-size: 1rem !important;
     white-space: normal !important;
-    line-height: 1.1 !important;
+    line-height: 1.2 !important;
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    border-radius: 15px !important;
   }
-  .btn-main { font-size: 0.75rem !important; padding: 0.6rem 0.3rem !important; }
-  .btn-sub { font-size: 0.52rem !important; padding: 0.4rem 0.05rem !important; }
-  .btn-mini { font-size: 0.48rem !important; padding: 0.3rem 0.02rem !important; }
-  .btn-mini span { font-size: 0.9rem !important; margin-bottom: 2px !important; }
-  .menu-group-title { font-size: 0.52rem !important; }
-  .tutorial-card h3 { font-size: 0.75rem !important; }
-  .tutorial-card p { font-size: 0.6rem !important; }
-  .menu-actions-grid.secondary { gap: 4px !important; }
+  .btn-main { font-size: 1.1rem !important; padding: 1.2rem 0.5rem !important; }
+  .btn-sub { font-size: 0.9rem !important; padding: 0.8rem 0.2rem !important; }
+  .btn-mini { font-size: 0.8rem !important; padding: 0.6rem 0.2rem !important; }
+  .btn-mini span { font-size: 1.2rem !important; margin-bottom: 2px !important; }
+  .menu-group-title { font-size: 0.75rem !important; margin-top: 10px; }
+  .tutorial-card h3 { font-size: 0.9rem !important; }
+  .tutorial-card p { font-size: 0.75rem !important; }
+  .menu-actions-grid.secondary { gap: 8px !important; }
   .menu-actions-row { flex-direction: column !important; gap: 8px !important; }
 
   .join-group {
@@ -704,21 +705,21 @@ canvas {
 
   .upgrade-grid {
     grid-template-columns: 1fr;
-    max-height: 45vh;
+    max-height: 50vh;
     overflow-y: auto;
     padding-right: 5px;
-    gap: 10px;
+    gap: 15px;
   }
   
   .stats-grid {
       grid-template-columns: 1fr;
-      padding: 10px;
-      gap: 5px;
+      padding: 15px;
+      gap: 10px;
   }
 
   .upgrade-card {
-    min-height: 120px;
-    padding: 1rem;
+    min-height: 140px;
+    padding: 1.2rem;
   }
 
   .upgrade-icon {
@@ -794,8 +795,8 @@ canvas {
     }
 
     .stat-item {
-        padding: 4px 8px !important;
-        font-size: 0.75rem !important;
+        padding: 6px 12px !important;
+        font-size: 0.9rem !important;
     }
 
     .upgrade-grid {
