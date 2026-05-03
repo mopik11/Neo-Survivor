@@ -201,7 +201,7 @@ const CONFIG = {
 
         { id: 'xpgen', name: 'Zkušenostní Pole', desc: 'Generuje 1 XP automaticky', icon: '💎', rarity: 'legendary' },
         { id: 'luck', name: 'Větší Výběr', desc: '+1 možnost při levelu', icon: '🍀', rarity: 'legendary' },
-        { id: 'aura', name: 'Mraziv Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' },
+        { id: 'aura', name: 'Mrazivá Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' },
         { id: 'bait', name: 'Návnada', desc: 'Vypouští chutné cíle pro ufony', icon: '🪤', rarity: 'legendary' },
         { id: 'possession_plus', name: 'Velitel Duchů', desc: 'Ability: Posedne o +2 více nepřátel', icon: '👻', rarity: 'rare' },
         
@@ -2071,13 +2071,27 @@ class Player {
 
         if (this.aura) {
             const range = this.auraRange || 150;
-            ctx.fillStyle = 'rgba(165, 243, 252, 0.1)';
-            ctx.strokeStyle = 'rgba(165, 243, 252, 0.4)';
-            ctx.lineWidth = 2;
+            const level = this.auraLevel || 1;
+            const opacity = Math.min(0.3, 0.05 + level * 0.05);
+            const borderOpacity = Math.min(0.8, 0.3 + level * 0.1);
+            
+            ctx.fillStyle = `rgba(165, 243, 252, ${opacity})`;
+            ctx.strokeStyle = `rgba(165, 243, 252, ${borderOpacity})`;
+            ctx.lineWidth = 1 + level;
+            
             ctx.beginPath();
             ctx.arc(this.x - cam.x, this.y - cam.y, range, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
+            
+            // Subtle pulse effect for higher levels
+            if (level > 1) {
+                const pulse = Math.sin(Date.now() / 200) * 5 * (level - 1);
+                ctx.strokeStyle = `rgba(165, 243, 252, ${borderOpacity * 0.5})`;
+                ctx.beginPath();
+                ctx.arc(this.x - cam.x, this.y - cam.y, range + pulse, 0, Math.PI * 2);
+                ctx.stroke();
+            }
         }
 
         if (this.kaktus) {
@@ -2410,7 +2424,12 @@ function applyUpgrade(id, record = true) {
             case 'knockback': p.knockbackForce *= 1.5; break;
             case 'xpboost': p.xpMultiplier += 0.2; break;
             case 'lifesteal': p.lifestealChance += 0.10; break;
-            case 'aura': p.aura = true; p.auraRange += 20; p.auraPower *= 0.8; break;
+            case 'aura': 
+                p.aura = true; 
+                p.auraLevel = (p.auraLevel || 0) + 1;
+                p.auraRange = 150 + p.auraLevel * 40; 
+                p.auraPower = Math.max(0.1, 0.5 * Math.pow(0.7, p.auraLevel - 1)); 
+                break;
             case 'bounce': p.bounces += 1; break;
             case 'fire': 
                 p.fireTrail = true; 
@@ -4290,7 +4309,7 @@ function init() {
             "Generuje 1 XP automaticky": "Generates 1 XP automatically",
             "Větší Výběr": "Bigger Choice",
             "+1 možnost při levelu": "+1 choice on level up",
-            "Mraziv Aura": "Freezing Aura",
+            "Mrazivá Aura": "Freezing Aura",
             "Zpomaluje blízké nepřátele": "Slows nearby enemies",
             "Návnada": "Bait",
             "Vypouští chutné cíle pro ufony": "Releases tasty targets for aliens",
@@ -4685,7 +4704,7 @@ function init() {
             "Generuje 1 XP automaticky": "Generiert automatisch 1 XP",
             "Větší Výběr": "Größere Auswahl",
             "+1 možnost při levelu": "+1 Auswahl beim Levelaufstieg",
-            "Mraziv Aura": "Frost-Aura",
+            "Mrazivá Aura": "Frost-Aura",
             "Zpomaluje blízké nepřátele": "Verlangsamt nahe Feinde",
             "Návnada": "Köder",
             "Vypouští chutné cíle pro ufony": "Lässt schmackhafte Ziele für Aliens frei",
@@ -4974,7 +4993,7 @@ function init() {
             "Generuje 1 XP automáticamente": "Genera 1 XP automáticamente",
             "Větší Výběr": "Mayor Elección",
             "+1 možnost při levelu": "+1 opción al subir de nivel",
-            "Mraziv Aura": "Aura Congelante",
+            "Mrazivá Aura": "Aura Congelante",
             "Zpomaluje blízké nepřátele": "Ralentiza a los enemigos cercanos",
             "Návnada": "Cebo",
             "Vypouští chutné cíle pro ufony": "Libera objetivos deliciosos para alienígenas",
