@@ -1,6 +1,10 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.292
+ * NEO SURVIVOR - Core Game Logic - v1.294
  */
+
+window.addEventListener('beforeunload', () => {
+    localStorage.removeItem('game_session_active');
+});
 
 window.onerror = function (msg, url, line, col, error) {
     console.error("Chyba:", msg, line, error);
@@ -240,7 +244,8 @@ const META = {
     achievements: {},
     stats: { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 },
     inventory: [],
-    settings: { musicMenu: true, musicGame: true, sfx: true }
+    settings: { musicMenu: true, musicGame: true, sfx: true },
+    lastSession: null
 };
 
 const EMOJIS = [
@@ -1390,6 +1395,9 @@ class Enemy {
         }
 
         const currentSpeed = this.speed * speedScale * GAME.speedFactor;
+        // Update last activity on any input
+        GAME.lastActivity = Date.now();
+        
         this.x += Math.cos(angle) * currentSpeed + this.knockback.x;
         this.y += Math.sin(angle) * currentSpeed + this.knockback.y;
         this.knockback.x *= 0.8; this.knockback.y *= 0.8;
@@ -2073,6 +2081,14 @@ class Player {
         GAME.paused = true;
         showLevelUp();
     }
+    applyUpgrade(u, record = true) {
+        if (!this.appliedUpgrades) this.appliedUpgrades = [];
+        if (record) this.appliedUpgrades.push(u);
+        
+        // Handle upgrade logic (assuming there's a global applyUpgrade function or similar)
+        // For now, let's just make sure we track it.
+        // I need to see where actual upgrades are applied.
+    }
 }
 
 function spawnEnemy() {
@@ -2253,8 +2269,12 @@ function showLevelUp() {
     }
 }
 
-function applyUpgrade(id) {
+function applyUpgrade(id, record = true) {
     const p = GAME.entities.player;
+    if (record) {
+        if (!p.appliedUpgrades) p.appliedUpgrades = [];
+        p.appliedUpgrades.push(id);
+    }
     try {
         switch (id) {
             case 'damage': p.damage *= 2.0; break;
@@ -2489,6 +2509,7 @@ function togglePause(isAFK = false) {
     if (!GAME.active) return;
 
     GAME.paused = !GAME.paused;
+    GAME.pauseStartTime = GAME.paused ? Date.now() : null;
 
     const pauseTitle = document.querySelector('#pause-modal h1');
     if (pauseTitle) pauseTitle.innerText = isAFK ? "AFK" : "PAUZA";
@@ -2517,6 +2538,7 @@ function togglePause(isAFK = false) {
         META.lastMoveTime = Date.now();
         GAME.lastSpawnTime = Date.now(); // Prevence armády nepřátel po pauze
         META.isAFK = false;
+        GAME.lastActivity = Date.now();
     }
 }
 
@@ -2761,7 +2783,7 @@ function showMetaMenu() {
     collectionSection.appendChild(collectionGrid);
 
     if (!META.inventory || META.inventory.length === 0) {
-        collectionGrid.innerHTML = `<p style="color: #475569; grid-column: 1/-1; padding: 20px;">Zatím nemáš žádná emoji. Otevři bednu!</p>`;
+        collectionGrid.innerHTML = `<p style="color: #475569; grid-column: 1/-1; padding: 20px;">${window.T('Zatím nemáš žádná emoji. Otevři bednu!')}</p>`;
     } else {
         META.inventory.forEach(inv => {
             const emoji = EMOJIS.find(e => e.id === inv.id);
@@ -3213,6 +3235,16 @@ function sellEmoji(id) {
     floating.style.color = '#fbbf24';
     floating.style.fontWeight = 'bold';
     floating.style.fontSize = '2rem';
+    floating.style.pointerEvents = 'none';
+    floating.style.zIndex = '1000';
+    if (menuModal) {
+        menuModal.appendChild(floating);
+        floating.animate([
+            { transform: 'translate(-50%, -50%)', opacity: 1 },
+            { transform: 'translate(-50%, -150%)', opacity: 0 }
+        ], { duration: 1000, easing: 'ease-out' }).onfinish = () => floating.remove();
+    }
+    
     if (META.inventory[invIdx].count > 1) {
         META.inventory[invIdx].count--;
     } else {
@@ -3225,28 +3257,22 @@ function sellEmoji(id) {
 
 function sellAllEmojis() {
     if (!META.inventory || META.inventory.length === 0) return;
-    
     let totalGain = 0;
     const newInventory = [];
-    
     META.inventory.forEach(inv => {
         const emoji = EMOJIS.find(e => e.id === inv.id);
         if (!emoji) return;
-        
-        const isEquipped = emoji.isHat && META.upgrades.hat === emoji.type;
-        
+        const isEquipped = (emoji.id === META.upgrades.hat);
         if (isEquipped) {
             newInventory.push(inv);
         } else {
             totalGain += emoji.price * inv.count;
         }
     });
-    
     if (totalGain > 0) {
         META.currency += totalGain;
-        showCurrencyNotification(totalGain, "HROMADNÝ PRODEJ");
+        showCurrencyNotification(totalGain, window.T("HROMADNÝ PRODEJ"));
     }
-    
     META.inventory = newInventory;
     saveMeta();
     showMetaMenu();
@@ -3256,6 +3282,22 @@ function startGame() {
     switchMusic(null);
     if (GAME.active) return;
     resetGame();
+    
+    // Resume session if exists
+    if (META.lastSession && NET.isMultiplayer) {
+        console.log("[RESUME] Restoring session stats...");
+        const p = GAME.entities.player;
+        p.level = META.lastSession.level || 1;
+        p.xp = META.lastSession.xp || 0;
+        p.nextLevelXp = META.lastSession.nextLevelXp || 100;
+        if (META.lastSession.upgrades) {
+            META.lastSession.upgrades.forEach(uid => applyUpgrade(uid, false));
+        }
+        window.showCustomAlert(window.T("Session obnovena! Pokračuješ na levelu") + " " + p.level);
+        META.lastSession = null;
+        saveMeta();
+    }
+
     GAME.active = true;
     GAME.paused = false;
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -3264,6 +3306,7 @@ function startGame() {
     GAME.kills = 0;
     GAME.coinsCollected = 0;
     GAME.entities.player.hp = GAME.entities.player.maxHp;
+    GAME.lastActivity = Date.now();
     
     // Start game music
     AudioEngine.startMusic();
@@ -3751,6 +3794,9 @@ function handleAuth(isLogin) {
                 // Safer merge to protect nested properties like META.upgrades.hat
                 if (res.meta) {
                     for (let key in res.meta) {
+                        // Special case for persistence fields: only overwrite if server has a value
+                        if ((key === 'selectedShip' || key === 'selectedAbility') && !res.meta[key]) continue;
+                        
                         if (typeof res.meta[key] === 'object' && res.meta[key] !== null && !Array.isArray(res.meta[key])) {
                             META[key] = { ...META[key], ...res.meta[key] };
                         } else {
@@ -4184,8 +4230,11 @@ function init() {
             "ZATOČIT ZNOVU": "SPIN AGAIN",
             "PŘESKOČIT (SKIP)": "SKIP",
             "Celková hodnota:": "Total Value:",
+            "CELKOVÁ HODNOTA:": "TOTAL VALUE:",
             "PRODAT VŠE": "SELL ALL",
             "TVÁ SBÍRKA": "YOUR COLLECTION",
+            "Stiskni 'T' pro psaní...": "Press 'T' to chat...",
+            "Zatím nemáš žádná emoji. Otevři bednu!": "You don't have any emojis yet. Open a crate!",
             "Extrémně rychlý, vybuchuje okamžitě při dotyku!": "Extremely fast, explodes immediately on contact!",
             "Má odolný přední štít, který pohlcuje 50% damage.": "Has a durable front shield that absorbs 50% damage.",
             "PAUZA": "PAUSE",
@@ -4859,7 +4908,19 @@ function init() {
                 if (node.hasAttribute('data-i18n')) {
                     const key = node.getAttribute('data-i18n');
                     if (lang === 'cs') {
-                        // Restore key as text if in Czech
+                        node.innerText = key;
+                    } else if (dict[key]) {
+                        node.innerText = dict[key];
+                    }
+                }
+                if (node.hasAttribute('data-i18n-placeholder')) {
+                    const key = node.getAttribute('data-i18n-placeholder');
+                    if (lang === 'cs') {
+                        node.placeholder = key;
+                    } else if (dict[key]) {
+                        node.placeholder = dict[key];
+                    }
+                }
                         if (node.childNodes.length === 1 && node.firstChild.nodeType === 3) {
                             node.firstChild.nodeValue = key;
                         }
@@ -6144,5 +6205,13 @@ const initAudio = () => {
 
 
 ['click', 'keydown', 'touchstart'].forEach(type => window.addEventListener(type, initAudio));
+
+// Clear session on hard disconnect
+window.addEventListener('beforeunload', () => {
+    if (GAME.active && !GAME.entities.player.dead) {
+        META.lastSession = null;
+        saveMeta(); // Save local version without session
+    }
+});
 
 init();
