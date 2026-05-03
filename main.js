@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.287
+ * NEO SURVIVOR - Core Game Logic - v1.289
  */
 
 window.onerror = function (msg, url, line, col, error) {
@@ -584,7 +584,7 @@ const AudioEngine = {
         osc.stop(now + dur + 1.5);
     },
     play(type) {
-        if (!this.ctx) return;
+        if (!this.ctx || !META.settings.sfx) return;
         if (this.ctx.state === 'suspended') this.ctx.resume();
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -615,9 +615,9 @@ const AudioEngine = {
                 osc.start(); osc.stop(now + 0.5); break;
             case 'gem':
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(660, now);
-                osc.frequency.exponentialRampToValueAtTime(1320, now + 0.05);
-                gain.gain.setValueAtTime(0.1, now);
+                osc.frequency.setValueAtTime(880, now);
+                osc.frequency.exponentialRampToValueAtTime(1760, now + 0.05);
+                gain.gain.setValueAtTime(0.2, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
                 osc.start(); osc.stop(now + 0.1); break;
             case 'crateSpin':
@@ -642,11 +642,11 @@ const AudioEngine = {
                 break;
             case 'coin':
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(987.77, now);
-                osc.frequency.exponentialRampToValueAtTime(1318.51, now + 0.1);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-                osc.start(); osc.stop(now + 0.1); break;
+                osc.frequency.setValueAtTime(659.25, now);
+                osc.frequency.exponentialRampToValueAtTime(1318.51, now + 0.15);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.start(); osc.stop(now + 0.15); break;
         }
     },
     stopMusic() {
@@ -1978,7 +1978,7 @@ class Player {
         ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
 
         const displayName = this.isLocal ? META.playerName : this.remoteName;
-        const hat = this.isLocal ? META.upgrades.hat : this.remoteHat;
+        const hat = this.isLocal ? (META.upgrades.hat || null) : this.remoteHat;
 
         if (displayName) {
             ctx.fillStyle = this.isLocal ? '#818cf8' : '#fb7185';
@@ -1990,9 +1990,10 @@ class Player {
         }
 
         if (hat) {
-            ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-            const h = { 'crown': '👑', 'wizard': '🧙', 'ninja': '🥷', 'cap': '🧢' }[hat];
-            ctx.fillText(h || '🎩', this.x - cam.x, this.y - cam.y - this.radius + 8);
+            ctx.font = '24px "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Twemoji Mozilla", "Noto Color Emoji", "EmojiOne Color", "Android Emoji", serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+            const emojiObj = EMOJIS.find(e => e.id === hat || e.type === hat || e.icon === hat);
+            ctx.fillText(emojiObj ? emojiObj.icon : hat, this.x - cam.x, this.y - cam.y - this.radius - 10);
         }
 
         ctx.strokeStyle = this.isLocal ? '#6366f1' : '#f43f5e'; ctx.lineWidth = 4; ctx.stroke();
@@ -2375,7 +2376,8 @@ function showAchievementUnlocked(name) {
 
 function showCurrencyNotification(amount, source = "") {
     const titles = ["PARÁDA!", "SKVĚLÉ!", "ÚSPĚCH!", "ZÍSKAL JSI!", "VÝBORNĚ!"];
-    const title = titles[Math.floor(Math.random() * titles.length)];
+    const title = window.T(titles[Math.floor(Math.random() * titles.length)]);
+    const translatedSource = source ? window.T(source) : "";
     
     const notification = document.createElement('div');
     notification.style.position = 'fixed';
@@ -2393,7 +2395,7 @@ function showCurrencyNotification(amount, source = "") {
             <div style="color: #fff; font-size: 2rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px;">
                 <span style="font-size: 1.5rem;">🪙</span> +${amount} DOGE
             </div>
-            ${source ? `<div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px; text-transform: uppercase;">${source}</div>` : ''}
+            ${source ? `<div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px; text-transform: uppercase;">${translatedSource}</div>` : ''}
         </div>
     `;
     
@@ -2427,8 +2429,8 @@ function showAchievementsMenu() {
         item.innerHTML = `
             <div style="font-size: 2rem; opacity: ${isUnlocked ? 1 : 0.3};">${ach.icon}</div>
             <div style="flex: 1;">
-                <h3 style="margin: 0; color: ${isUnlocked ? '#fbbf24' : '#94a3b8'}; font-size: 1.1rem;">${ach.name}</h3>
-                <p style="margin: 5px 0 0 0; color: #64748b; font-size: 0.85rem;">${ach.desc}</p>
+                <h3 style="margin: 0; color: ${isUnlocked ? '#fbbf24' : '#94a3b8'}; font-size: 1.1rem;">${window.T(ach.name)}</h3>
+                <p style="margin: 5px 0 0 0; color: #64748b; font-size: 0.85rem;">${window.T(ach.desc)}</p>
             </div>
             <div style="font-size: 1.5rem; color: #fbbf24;">${isUnlocked ? '⭐' : '🌑'}</div>
         `;
@@ -2679,7 +2681,7 @@ function showMetaMenu() {
 
     // 3. VESMÍRNÉ BEDNY (CRATES)
     const cratesSection = document.createElement('div');
-    cratesSection.innerHTML = `<h2 style="color: #fbbf24; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(251,191,36,0.2); padding-bottom: 5px;">📦 VESMÍRNÉ BEDNY</h2>`;
+    cratesSection.innerHTML = `<h2 style="color: #fbbf24; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(251,191,36,0.2); padding-bottom: 5px;">📦 ${window.T('VESMÍRNÉ BEDNY')}</h2>`;
     const cratesGrid = document.createElement('div');
     cratesGrid.className = 'menu-actions-grid';
     cratesSection.appendChild(cratesGrid);
@@ -2700,7 +2702,7 @@ function showMetaMenu() {
         card.style.paddingBottom = '60px'; // Space for buttons
 
         card.innerHTML = `
-            <h3>${type.name}</h3>
+            <h3>${window.T(type.name)}</h3>
             <div style="font-size: 0.7rem; color: #fbbf24; font-weight: 800; margin-bottom: 5px;">${type.cost} DOGE / ks</div>
             <div class="crate-multipliers" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; position: absolute; bottom: 10px; left: 10px; right: 10px;">
                 ${[1, 2, 5, 10].map(count => `
@@ -2758,26 +2760,27 @@ function showMetaMenu() {
             card.style.minHeight = 'auto';
             card.style.padding = '12px';
             
-            const isEquipped = emoji.isHat && META.upgrades.hat === emoji.type;
+            const isEquipped = META.upgrades.hat === emoji.id;
             if (isEquipped) card.style.borderColor = '#fbbf24';
 
             card.innerHTML = `
                 <div style="font-size: 1.8rem;">${emoji.icon}</div>
-                <div style="font-size: 0.75rem; font-weight: bold; margin-top:5px; color: #f8fafc;">${emoji.name}</div>
+                <div style="font-size: 0.75rem; font-weight: bold; margin-top:5px; color: #f8fafc;">${window.T(emoji.name)}</div>
                 <div style="font-size: 0.65rem; color: #94a3b8">x${inv.count}</div>
                 <div style="font-size: 0.6rem; color: ${getRarityColor(emoji.rarity)}; font-weight: bold; margin-bottom: 5px;">${emoji.rarity.toUpperCase()}</div>
                 
                 <div style="display:flex; flex-direction:column; gap:5px;">
-                    ${emoji.isHat ? `<button class="btn-equip" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: ${isEquipped ? '#fbbf24' : 'rgba(255,255,255,0.1)'}; color: ${isEquipped ? '#000' : '#fff'}; border: none; cursor:pointer;">${isEquipped ? 'SUNDAT' : 'NASADIT'}</button>` : ''}
-                    <button class="btn-sell" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); cursor:pointer;">PRODAT (${emoji.price})</button>
+                    <button class="btn-equip" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: ${isEquipped ? '#fbbf24' : 'rgba(255,255,255,0.1)'}; color: ${isEquipped ? '#000' : '#fff'}; border: none; cursor:pointer;">${isEquipped ? window.T('SUNDAT') : window.T('NASADIT')}</button>
+                    <button class="btn-sell" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); cursor:pointer;">${window.T('PRODAT')} (${emoji.price})</button>
                 </div>
             `;
             
-            if (emoji.isHat) {
-                card.querySelector('.btn-equip').onclick = (e) => {
+            const btnEquip = card.querySelector('.btn-equip');
+            if (btnEquip) {
+                btnEquip.onclick = (e) => {
                     e.stopPropagation();
                     if (isEquipped) META.upgrades.hat = null;
-                    else META.upgrades.hat = emoji.type;
+                    else META.upgrades.hat = emoji.id;
                     saveMeta();
                     showMetaMenu();
                 };
@@ -4111,7 +4114,26 @@ function init() {
             "💡 POKROČILÉ TIPY": "💡 ADVANCED TIPS",
             "Skvělá kombinace pro nesmrtelnost.": "Great combo for immortality.",
             "Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!": "Spawns every minute. Always try to dodge sideways!",
-            "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 kills = 1 Doge. Buy permanent upgrades with them!"
+            "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 kills = 1 Doge. Buy permanent upgrades with them!",
+            "VESMÍRNÉ BEDNY": "SPACE CRATES",
+            "📦 OBYČEJNÁ": "📦 COMMON",
+            "💎 PRÉMIOVÁ": "💎 PREMIUM",
+            "👑 LEGENDÁRNÍ": "👑 LEGENDARY",
+            "SUNDAT": "UNEQUIP",
+            "NASADIT": "EQUIP",
+            "PRODAT": "SELL",
+            "Opravdu chceš prodat všechna neaktivní emoji?": "Do you really want to sell all inactive emojis?",
+            "Mýdlo": "Soap", "Peníze": "Money", "Úsměv": "Smile", "Nerd": "Nerd", "Smích": "Laugh", "Ugh": "Ugh", "Překvapení": "Surprise", "K.O.": "K.O.", "Ruce vzhůru": "Hands Up", "Dislike": "Dislike", "Srdce": "Heart", "Otevřené ruce": "Open Hands", "Podání ruky": "Handshake", "Stráž": "Guard", "Hrdina": "Hero", "Slunečnice": "Sunflower", "List": "Leaf", "Sova": "Owl", "Kuře": "Chick", "Zmrzlina": "Ice Cream", "Dort": "Cake", "Naruto": "Naruto", "Mimozemšťan": "Alien", "Duch": "Ghost", "Robot": "Robot", "Oheň": "Fire", "Hvězda": "Star", "Pizza": "Pizza", "Burger": "Burger", "Sushi": "Sushi", "Taco": "Taco", "Káva": "Coffee", "Pivo": "Beer", "Raketa": "Rocket", "UFO": "UFO", "Prsten": "Ring", "Oni": "Oni", "Upír": "Vampire", "Zombie": "Zombie", "Drak": "Dragon", "Sopka": "Volcano", "Galaxie": "Galaxy", "Saturn": "Saturn", "Vetřelec": "Invader", "Špión": "Spy", "Liška": "Fox", "Medvěd": "Bear", "Panda": "Panda", "Koala": "Koala", "Tygr": "Tiger", "Lev": "Lion", "Žába": "Frog", "Opice": "Monkey", "Tučňák": "Penguin", "Jednorožec": "Unicorn", "Motýl": "Butterfly", "Želva": "Turtle", "Chobotnice": "Octopus", "Velryba": "Whale", "Jablko": "Apple", "Banán": "Banana", "Meloun": "Watermelon", "Maki": "Maki", "Ramen": "Ramen", "Led": "Ice", "Krystal": "Crystal", "Duha": "Rainbow", "Čtyřlístek": "Clover", "Safír": "Sapphire", "Zlato": "Gold", "👑 Koruna": "👑 Crown", "🧙 Mág": "🧙 Wizard", "🥷 Ninja": "🥷 Ninja", "💎 Diamant": "💎 Diamond",
+            "Široký": "Wide", "Získej 5x upgrade na šířku zdi v jedné hře": "Get 5x wall width upgrade in one game",
+            "Skrblík": "Cheapskate", "Získej celkem 5000 Dogecoinů": "Collect total 5000 Dogecoins",
+            "Lovec Bossů": "Boss Slayer", "Poraz celkem 10 bossů": "Defeat total 10 bosses",
+            "Vesmírný Veterán": "Space Veteran", "Dosáhni levelu 50 v jedné hře": "Reach level 50 in one game",
+            "Sběratel": "Collector", "Odemkni všechny 3 základní lodě": "Unlock all 3 basic ships",
+            "Let's go gambling": "Let's go gambling", "Zmáčkni 100x tlačítko pro náhodný výběr": "Press random pick button 100x",
+            "Cookie clicker": "Cookie clicker", "Odehraj celkem 24 hodin": "Play for total 24 hours",
+            "Milionář": "Millionaire", "Získej celkem 100 000 Dogecoinů": "Collect total 100,000 Dogecoins",
+            "Zasloužilý Otevírač": "Crate Opener", "Otevři celkem 50 beden": "Open total 50 crates",
+            "PARÁDA!": "AWESOME!", "SKVĚLÉ!": "GREAT!", "ÚSPĚCH!": "SUCCESS!", "ZÍSKAL JSI!": "YOU GOT!", "VÝBORNĚ!": "EXCELLENT!", "VÝNOS Z BITVY": "BATTLE INCOME"
         },
         de: {
             "VÍTEJ!": "WILLKOMMEN!",
@@ -4155,7 +4177,7 @@ function init() {
             "👟 Rychlost": "👟 Geschw.",
             "🍀 Štěstí": "🍀 Glück",
             "👑 Koruna": "👑 Krone",
-            "🧙 Mág": "🧙 Magier",
+            "🧙 Mág": "🧙 Zauberer",
             "🥷 Ninja": "🥷 Ninja",
             "VESMÍRNÝ MANUÁL": "WELTRAUM-HANDBUCH",
             "Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.": "Alles, was Sie wissen müssen, um im tiefen Weltraum zu überleben.",
@@ -4169,29 +4191,39 @@ function init() {
             "Název serveru...": "Servername...",
             "ZPĚT": "ZURÜCK",
             "LEVEL UP!": "STUFENAUFSTIEG!",
-            "VESMÍRNÝ MANUÁL": "WELTRAUM-HANDBUCH",
-            "Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.": "Alles, was du zum Überleben im Weltraum wissen musst.",
-            "🕹️ ZÁKLADNÍ OVLÁDÁNÍ": "🕹️ GRUNDSTEUERUNG",
             "Pohyb:": "Bewegung:",
             "Schopnost:": "Fähigkeit:",
             "Pauza:": "Pause:",
-            "🧬 VÝVOJ A LEVELY": "🧬 EVOLUTION UND LEVEL",
             "Zabíjej nepřátele a sbírej": "Töte Feinde und sammle",
             "Každý nový level ti nabídne 3 náhodná vylepšení.": "Jedes Level bietet 3 zufällige Upgrades.",
             "Tip: Zaměř se nejdřív na poškození (Damage) a pak na dosah (Magnet)!": "Tipp: Fokus auf Schaden, dann Magnet-Reichweite!",
-            "🎁 TAKTICKÁ VÝBAVA": "🎁 TAKTISCHE AUSRÜSTUNG",
             "Vymaže vše na obrazovce.": "Löscht alles auf dem Bildschirm.",
             "Přitáhne všechny gemy z dálky.": "Zieht alle Edelsteine aus der Ferne an.",
             "Opraví poškozený trup lodi.": "Repariert die beschädigte Schiffshülle.",
-            "💡 POKROČILÉ TIPY": "💡 FORTGESCHRITTENE TIPPS",
             "Skvělá kombinace pro nesmrtelnost.": "Tolle Kombination für Unsterblichkeit.",
             "Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!": "Erscheint jede Minute. Immer seitlich ausweichen!",
             "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 Kills = 1 Doge. Kaufe permanente Upgrades!",
+            "VESMÍRNÉ BEDNY": "WELTRAUMKISTEN",
+            "📦 OBYČEJNÁ": "📦 GEWÖHNLICH",
+            "💎 PRÉMIOVÁ": "💎 PREMIUM",
+            "👑 LEGENDÁRNÍ": "👑 LEGENDÄR",
+            "SUNDAT": "ABLEGEN",
+            "NASADIT": "ANLEGEN",
+            "PRODAT": "VERKAUFEN",
+            "Opravdu chceš prodat všechna neaktivní emoji?": "Möchtest du wirklich alle inaktiven Emojis verkaufen?",
+            "Mýdlo": "Seife", "Peníze": "Geld", "Úsměv": "Lächeln", "Nerd": "Nerd", "Smích": "Lachen", "Ugh": "Ugh", "Překvapení": "Überraschung", "K.O.": "K.O.", "Ruce vzhůru": "Hände hoch", "Dislike": "Dislike", "Srdce": "Herz", "Otevřené ruce": "Offene Hände", "Podání ruky": "Handschlag", "Stráž": "Wache", "Hrdina": "Held", "Slunečnice": "Sonnenblume", "List": "Blatt", "Sova": "Eule", "Kuře": "Küken", "Zmrzlina": "Eis", "Dort": "Kuchen", "Naruto": "Naruto", "Mimozemšťan": "Alien", "Duch": "Geist", "Robot": "Roboter", "Oheň": "Feuer", "Hvězda": "Stern", "Pizza": "Pizza", "Burger": "Burger", "Sushi": "Sushi", "Taco": "Taco", "Káva": "Kaffee", "Pivo": "Bier", "Raketa": "Rakete", "UFO": "UFO", "Prsten": "Ring", "Oni": "Oni", "Upír": "Vampir", "Zombie": "Zombie", "Drak": "Drache", "Sopka": "Vulkan", "Galaxie": "Galaxie", "Saturn": "Saturn", "Vetřelec": "Invader", "Špión": "Spion", "Liška": "Fuchs", "Medvěd": "Bär", "Panda": "Panda", "Koala": "Koala", "Tygr": "Tiger", "Lev": "Löwe", "Žába": "Frosch", "Opice": "Affe", "Tučňák": "Pinguin", "Jednorožec": "Einhorn", "Motýl": "Schmetterling", "Želva": "Schildkröte", "Chobotnice": "Krake", "Velryba": "Wal", "Jablko": "Apfel", "Banán": "Banane", "Meloun": "Wassermelone", "Maki": "Maki", "Ramen": "Ramen", "Led": "Eis", "Krystal": "Kristall", "Duha": "Regenbogen", "Čtyřlístek": "Kleeblatt", "Safír": "Saphir", "Zlato": "Gold", "👑 Koruna": "👑 Krone", "🧙 Mág": "🧙 Zauberer", "🥷 Ninja": "🥷 Ninja", "💎 Diamant": "💎 Diamant",
+            "Široký": "Breit", "Získej 5x upgrade na šířku zdi v jedné hře": "Erhalte 5x Wandbreiten-Upgrade in einem Spiel",
+            "Skrblík": "Geizhals", "Získej celkem 5000 Dogecoinů": "Sammle insgesamt 5000 Dogecoins",
+            "Lovec Bossů": "Boss-Jäger", "Poraz celkem 10 bossů": "Besiege insgesamt 10 Bosse",
+            "Vesmírný Veterán": "Weltraum-Veteran", "Dosáhni levelu 50 v jedné hře": "Erreiche Level 50 in einem Spiel",
+            "Sběratel": "Sammler", "Odemkni všechny 3 základní lodě": "Schalte alle 3 Basisschiffe frei",
+            "Let's go gambling": "Let's go gambling", "Zmáčkni 100x tlačítko pro náhodný výběr": "Drücke 100x die Zufallstaste",
+            "Cookie clicker": "Cookie clicker", "Odehraj celkem 24 hodin": "Spiele insgesamt 24 Stunden",
+            "Milionář": "Millionär", "Získej celkem 100 000 Dogecoinů": "Sammle insgesamt 100.000 Dogecoins",
+            "Zasloužilý Otevírač": "Kistenöffner", "Otevři celkem 50 beden": "Öffne insgesamt 50 Kisten",
             "ROZUMÍM, CHCI DO BOJE!": "VERSTANDEN, AUF IN DEN KAMPF!",
             "Napiš mi, co bys chtěl vylepšit nebo nahlásit chybu.": "Schreibe mir, was du verbessern möchtest oder melde einen Fehler.",
             "ODESLAT": "ABSENDEN",
-            "🚀 FLOTILA LODÍ": "🚀 SCHIFFSFLOTTE",
-            "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ALIEN-ATLAS",
             "Základní vyvážená loď.": "Ausgewogenes Basisschiff.",
             "Střílí zničující lasery na více cílů.": "Schießt verheerende Laser auf mehrere Ziele.",
             "Základní útok tvoří rotující bariéru.": "Basisangriff bildet eine rotierende Barriere.",
@@ -4349,66 +4381,66 @@ function init() {
             "Zabití": "Kills",
             "PAUZA": "PAUSE",
             "❤️ HP": "❤️ HP",
-            "⚔️ Poškození": "⚔️ Damage",
-            "👟 Rychlost": "👟 Speed",
-            "🌀 Počet Střel": "🌀 Projectiles",
-            "🔥 Prodleva": "🔥 Fire Rate",
-            "🎯 Krit. Šance": "🎯 Crit Chance",
-            "💥 Krit. Násobič": "💥 Crit Multi",
-            "🛡️ Štít": "🛡️ Shield",
-            "💊 Regenerace": "💊 Regen",
-            "🧛 Lifesteal": "🧛 Lifesteal",
-            "Tvoje zpráva...": "Your message...",
-            "ODESLAT ZPRÁVU": "SEND MESSAGE",
-            "ČEKÁNÍ...": "WAITING...",
-            "Čekáme, až si ostatní hráči vyberou vylepšení.": "Waiting for other players to choose upgrades.",
-            "Napiš mi, co bys chtěl vylepšit nebo nahlásit chybu.": "Tell me what to improve or report a bug.",
-            "ROZUMÍM, CHCI DO BOJE!": "UNDERSTOOD, LET'S FIGHT!",
-            "VESMÍRNÝ MANUÁL": "SPACE MANUAL",
-            "Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.": "Everything you need to know to survive in deep space.",
-            "🕹️ ZÁKLADNÍ OVLÁDÁNÍ": "🕹️ BASIC CONTROLS",
-            "Klávesy": "Keys",
-            "nebo": "or",
-            "na mobilu.": "on mobile.",
-            "Levý klik": "Left click",
-            "Klepnutí": "Tap",
-            "(pravá strana mobilu).": "(right side of mobile).",
-            "Klávesa": "Key",
-            "pro statistiky a pauzu.": "for stats and pause.",
-            "🧬 VÝVOJ A LEVELY": "🧬 EVOLUTION AND LEVELS",
-            "Zabíjej nepřátele a sbírej": "Kill enemies and collect",
-            ". Každý nový level ti nabídne 3 náhodná vylepšení.": ". Each new level offers 3 random upgrades.",
-            "Tip: Zaměř se nejdřív na poškození (Damage) a pak na dosah (Magnet)!": "Tip: Focus on damage first, then magnet range!",
-            "🚀 FLOTILA LODÍ": "🚀 SHIP FLEET",
-            "🚀 Průzkumník:": "🚀 Explorer:",
-            "Základní vyvážená loď.": "Basic balanced ship.",
-            "⚡ Laserový křižník:": "⚡ Laser Cruiser:",
-            "Střílí zničující lasery na více cílů.": "Shoots devastating lasers at multiple targets.",
-            "🛡️ Obránce:": "🛡️ Defender:",
-            "Základní útok tvoří rotující bariéru.": "Basic attack forms a rotating barrier.",
-            "💥 Brokovnice:": "💥 Shotgun:",
-            "Střílí salvu nábojů zblízka.": "Fires a shotgun blast at close range.",
-            "💀 Nekromancer:": "💀 Necromancer:",
-            "Vyvolává armádu pomocníků z mrtvých.": "Summons an army of helpers from the dead.",
-            "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ALIEN ATLAS",
-            "Základní červený nepřítel, útočí ve vlnách.": "Basic red enemy, attacks in waves.",
-            "Zvláštní fialový/modrý tvar, pohybuje se jinak.": "Special purple/blue shape, moves differently.",
-            "Rychle se přiblíží a vybuchne, když zasáhne cíl.": "Quickly approaches and explodes on impact.",
-            "Zlatá hvězdička, je neuvěřitelně rychlý!": "Golden star, incredibly fast!",
-            "Léčí a posiluje ostatní ufony v okolí.": "Heals and buffs other aliens nearby.",
-            "Vyznačí si cíl a bleskově tam doskočí.": "Marks a target and leaps there lightning fast.",
-            "Obří mnohostěn s velkým HP. Každou minutu.": "Giant polygon with huge HP. Every minute.",
-            "🎁 TAKTICKÁ VÝBAVA": "🎁 TACTICAL GEAR",
+            "⚔️ Poškození": "⚔️ Schaden",
+            "👟 Rychlost": "👟 Geschwindigkeit",
+            "🌀 Počet Střel": "🌀 Projektile",
+            "🔥 Prodleva": "🔥 Feuerrate",
+            "🎯 Krit. Šance": "🎯 Krit-Chance",
+            "💥 Krit. Násobič": "💥 Krit-Multiplikator",
+            "🛡️ Štít": "🛡️ Schild",
+            "💊 Regenerace": "💊 Regeneration",
+            "🧛 Lifesteal": "🧛 Lebensraub",
+            "Tvoje zpráva...": "Deine Nachricht...",
+            "ODESLAT ZPRÁVU": "NACHRICHT SENDEN",
+            "ČEKÁNÍ...": "WARTEN...",
+            "Čekáme, až si ostatní hráči vyberou vylepšení.": "Wir warten darauf, dass andere Spieler Upgrades wählen.",
+            "Napiš mi, co bys chtěl vylepšit nebo nahlásit chybu.": "Schreib mir, was du verbessern möchtest oder melde einen Fehler.",
+            "ROZUMÍM, CHCI DO BOJE!": "VERSTANDEN, AUF IN DEN KAMPF!",
+            "VESMÍRNÝ MANUÁL": "WELTRAUM-HANDBUCH",
+            "Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.": "Alles, was du wissen musst, um im tiefen Weltraum zu überleben.",
+            "🕹️ ZÁKLADNÍ OVLÁDÁNÍ": "🕹️ GRUNDSTEUERUNG",
+            "Klávesy": "Tasten",
+            "nebo": "oder",
+            "na mobilu.": "auf dem Handy.",
+            "Levý klik": "Linksklick",
+            "Klepnutí": "Tippen",
+            "(pravá strana mobilu).": "(rechte Seite des Handys).",
+            "Klávesa": "Taste",
+            "pro statistiky a pauzu.": "für Statistiken und Pause.",
+            "🧬 VÝVOJ A LEVELY": "🧬 ENTWICKLUNG UND LEVEL",
+            "Zabíjej nepřátele a sbírej": "Töte Feinde und sammle",
+            ". Každý nový level ti nabídne 3 náhodná vylepšení.": ". Jedes neue Level bietet 3 zufällige Upgrades.",
+            "Tip: Zaměř se nejdřív na poškození (Damage) a pak na dosah (Magnet)!": "Tipp: Konzentriere dich zuerst auf Schaden und dann auf die Magnetreichweite!",
+            "🚀 FLOTILA LODÍ": "🚀 SCHIFFSFLOTTE",
+            "🚀 Průzkumník:": "🚀 Aufklärer:",
+            "Základní vyvážená loď.": "Basis-ausgewogenes Schiff.",
+            "⚡ Laserový křižník:": "⚡ Laserkreuzer:",
+            "Střílí zničující lasery na více cílů.": "Schießt verheerende Laser auf mehrere Ziele.",
+            "🛡️ Obránce:": "🛡️ Verteidiger:",
+            "Základní útok tvoří rotující bariéru.": "Der Basisangriff bildet eine rotierende Barriere.",
+            "💥 Brokovnice:": "💥 Schrotflinte:",
+            "Střílí salvu nábojů zblízka.": "Feuert eine Salve aus nächster Nähe ab.",
+            "💀 Nekromancer:": "💀 Nekromant:",
+            "Vyvolává armádu pomocníků z mrtvých.": "Beschwört eine Armee von Helfern von den Toten.",
+            "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ALIEN-ATLAS",
+            "Základní červený nepřítel, útočí ve vlnách.": "Roter Basis-Feind, greift in Wellen an.",
+            "Zvláštní fialový/modrý tvar, pohybuje se jinak.": "Besondere lila/blaue Form, bewegt sich anders.",
+            "Rychle se přiblíží a vybuchne, když zasáhne cíl.": "Nähert sich schnell und explodiert beim Aufprall.",
+            "Zlatá hvězdička, je neuvěřitelně rychlý!": "Goldener Stern, unglaublich schnell!",
+            "Léčí a posiluje ostatní ufony v okolí.": "Heilt und stärkt andere Aliens in der Nähe.",
+            "Vyznačí si cíl a bleskově tam doskočí.": "Markiert ein Ziel und springt blitzschnell dorthin.",
+            "Obří mnohostěn s velkým HP. Každou minutu.": "Riesiges Polyeder mit viel HP. Jede Minute.",
+            "🎁 TAKTICKÁ VÝBAVA": "🎁 TAKTISCHE AUSRÜSTUNG",
             "☢️ Nuke:": "☢️ Nuke:",
-            "Vymaže vše na obrazovce.": "Wipes everything on screen.",
+            "Vymaže vše na obrazovce.": "Löscht alles auf dem Bildschirm.",
             "🧲 Magnet:": "🧲 Magnet:",
-            "Přitáhne všechny gemy z dálky.": "Pulls all gems from afar.",
+            "Přitáhne všechny gemy z dálky.": "Zieht alle Gems aus der Ferne an.",
             "➕ Lékárna:": "➕ Medkit:",
-            "Opraví poškozený trup lodi.": "Repairs damaged ship hull.",
-            "💡 POKROČILÉ TIPY": "💡 ADVANCED TIPS",
-            "Skvělá kombinace pro nesmrtelnost.": "Great combo for immortality.",
-            "Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!": "Spawns every minute. Always try to dodge sideways!",
-            "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 kills = 1 Doge. Buy permanent upgrades with them!"
+            "Opraví poškozený trup lodi.": "Repariert den beschädigten Schiffsrumpf.",
+            "💡 POKROČILÉ TIPY": "💡 FORTGESCHRITTENE TIPPS",
+            "Skvělá kombinace pro nesmrtelnost.": "Tolle Kombination für Unsterblichkeit.",
+            "Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!": "Erscheint jede Minute. Versuche immer, seitlich auszuweichen!",
+            "PARÁDA!": "FANTASTISCH!", "SKVĚLÉ!": "KLASSE!", "ÚSPĚCH!": "ERFOLG!", "ZÍSKAL JSI!": "DU HAST ERHALTEN!", "VÝBORNĚ!": "AUSGEZEICHNET!", "VÝNOS Z BITVY": "KAMPFERTRAG"
         },
         es: {
             "VÍTEJ!": "¡BIENVENIDO!",
@@ -4466,29 +4498,21 @@ function init() {
             "Název serveru...": "Nombre del servidor...",
             "ZPĚT": "ATRÁS",
             "LEVEL UP!": "¡SUBISTE DE NIVEL!",
-            "VESMÍRNÝ MANUÁL": "MANUAL ESPACIAL",
-            "Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.": "Todo lo que necesitas saber para sobrevivir en el espacio.",
-            "🕹️ ZÁKLADNÍ OVLÁDÁNÍ": "🕹️ CONTROLES BÁSICOS",
             "Pohyb:": "Movimiento:",
             "Schopnost:": "Habilidad:",
             "Pauza:": "Pausa:",
-            "🧬 VÝVOJ A LEVELY": "🧬 EVOLUCIÓN Y NIVELES",
             "Zabíjej nepřátele a sbírej": "Mata enemigos y recolecta",
             "Každý nový level ti nabídne 3 náhodná vylepšení.": "Cada nivel te ofrece 3 mejoras aleatorias.",
             "Tip: Zaměř se nejdřív na poškození (Damage) a pak na dosah (Magnet)!": "Consejo: ¡Concéntrate en el daño primero, luego en el imán!",
-            "🎁 TAKTICKÁ VÝBAVA": "🎁 EQUIPO TÁCTICO",
             "Vymaže vše na obrazovce.": "Borra todo en la pantalla.",
             "Přitáhne všechny gemy z dálky.": "Atrae todas las gemas desde lejos.",
             "Opraví poškozený trup lodi.": "Repara el casco de la nave dañado.",
-            "💡 POKROČILÉ TIPY": "💡 CONSEJOS AVANZADOS",
             "Skvělá kombinace pro nesmrtelnost.": "Gran combinación para la inmortalidad.",
             "Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!": "Aparece cada minuto. ¡Siempre esquiva hacia los lados!",
             "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "Por 10 kills obtienes 1 Doge. ¡Compra mejoras permanentes!",
             "ROZUMÍM, CHCI DO BOJE!": "¡ENTENDIDO, A PELEAR!",
             "Napiš mi, co bys chtěl vylepšit nebo nahlásit chybu.": "Escríbeme qué te gustaría mejorar o reportar un error.",
             "ODESLAT": "ENVIAR",
-            "🚀 FLOTILA LODÍ": "🚀 FLOTA DE NAVES",
-            "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ATLAS DE EXTRATERRESTRES",
             "Základní vyvážená loď.": "Nave básica equilibrada.",
             "Střílí zničující lasery na více cílů.": "Dispara láseres devastadores a múltiples objetivos.",
             "Základní útok tvoří rotující bariéru.": "El ataque básico forma una barrera giratoria.",
@@ -4642,6 +4666,24 @@ function init() {
             "Vypouští chutné cíle pro ufony": "Libera objetivos deliciosos para alienígenas",
             "Velitel Duchů": "Comandante Fantasma",
             "Ability: Posedne o +2 více nepřátel": "Habilidad: Posee +2 enemigos más",
+            "VESMÍRNÉ BEDNY": "CAJAS ESPACIALES",
+            "📦 OBYČEJNÁ": "📦 COMÚN",
+            "💎 PRÉMIOVÁ": "💎 PREMIUM",
+            "👑 LEGENDÁRNÍ": "👑 LEGENDARIA",
+            "SUNDAT": "DESEQUIPAR",
+            "NASADIT": "EQUIPAR",
+            "PRODAT": "VENDER",
+            "Opravdu chceš prodat všechna neaktivní emoji?": "¿Realmente quieres vender todos los emojis inactivos?",
+            "Mýdlo": "Jabón", "Peníze": "Dinero", "Úsměv": "Sonrisa", "Nerd": "Nerd", "Smích": "Risa", "Ugh": "Ugh", "Překvapení": "Sorpresa", "K.O.": "K.O.", "Ruce vzhůru": "Manos Arriba", "Dislike": "No me gusta", "Srdce": "Corazón", "Otevřené ruce": "Manos Abiertas", "Podání ruky": "Apretón de manos", "Stráž": "Guardia", "Hrdina": "Héroe", "Slunečnice": "Girasol", "List": "Hoja", "Sova": "Búho", "Kuře": "Pollito", "Zmrzlina": "Helado", "Dort": "Pastel", "Naruto": "Naruto", "Mimozemšťan": "Alienígena", "Duch": "Fantasma", "Robot": "Robot", "Oheň": "Fuego", "Hvězda": "Estrella", "Pizza": "Pizza", "Burger": "Hamburguesa", "Sushi": "Sushi", "Taco": "Taco", "Káva": "Café", "Pivo": "Cerveza", "Raketa": "Cohete", "UFO": "UFO", "Prsten": "Anillo", "Oni": "Oni", "Upír": "Vampiro", "Zombie": "Zombie", "Drak": "Dragón", "Sopka": "Volcán", "Galaxie": "Galaxia", "Saturn": "Saturno", "Vetřelec": "Invasor", "Špión": "Espía", "Liška": "Zorro", "Medvěd": "Oso", "Panda": "Panda", "Koala": "Koala", "Tygr": "Tigre", "Lev": "León", "Žába": "Rana", "Opice": "Mono", "Tučňák": "Pingüino", "Jednorožec": "Unicornio", "Motýl": "Mariposa", "Želva": "Tortuga", "Chobotnice": "Pulpo", "Velryba": "Ballena", "Jablko": "Manzana", "Banán": "Plátano", "Meloun": "Sandía", "Maki": "Maki", "Ramen": "Ramen", "Led": "Hielo", "Krystal": "Cristal", "Duha": "Arcoíris", "Čtyřlístek": "Trébol", "Safír": "Zafiro", "Zlato": "Oro", "👑 Koruna": "👑 Corona", "🧙 Mág": "🧙 Mago", "🥷 Ninja": "🥷 Ninja", "💎 Diamant": "💎 Diamante",
+            "Široký": "Ancho", "Získej 5x upgrade na šířku zdi v jedné hře": "Obtén 5 mejoras de ancho de muro en un juego",
+            "Skrblík": "Tacaño", "Získej celkem 5000 Dogecoinů": "Recoge un total de 5000 Dogecoins",
+            "Lovec Bossů": "Cazador de Jefes", "Poraz celkem 10 bossů": "Derrota a un total de 10 jefes",
+            "Vesmírný Veterán": "Veterano Espacial", "Dosáhni levelu 50 v jedné hře": "Llega al nivel 50 en un juego",
+            "Sběratel": "Coleccionista", "Odemkni všechny 3 základní lodě": "Desbloquea las 3 naves básicas",
+            "Let's go gambling": "Let's go gambling", "Zmáčkni 100x tlačítko pro náhodný výběr": "Presiona el botón aleatorio 100 veces",
+            "Cookie clicker": "Cookie clicker", "Odehraj celkem 24 hodin": "Juega un total de 24 horas",
+            "Milionář": "Millonario", "Získej celkem 100 000 Dogecoinů": "Recoge un total de 100.000 Dogecoins",
+            "Zasloužilý Otevírač": "Abridor de Cajas", "Otevři celkem 50 beden": "Abre un total de 50 cajas",
             "Hráči:": "Jugadores:",
             "Zabití": "Bajas",
             "PAUZA": "PAUSA",
@@ -4705,7 +4747,8 @@ function init() {
             "💡 POKROČILÉ TIPY": "💡 CONSEJOS AVANZADOS",
             "Skvělá kombinace pro nesmrtelnost.": "Gran combinación para la inmortalidad.",
             "Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!": "Aparece cada minuto. ¡Intenta siempre esquivar hacia los lados!",
-            "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 bajas = 1 Doge. ¡Compra mejoras permanentes con ellos!"
+            "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 bajas = 1 Doge. ¡Compra mejoras permanentes con ellos!",
+            "PARÁDA!": "¡GENIAL!", "SKVĚLÉ!": "¡ESTUPENDO!", "ÚSPĚCH!": "¡ÉXITO!", "ZÍSKAL JSI!": "¡HAS GANADO!", "VÝBORNĚ!": "¡EXCELENTE!", "VÝNOS Z BITVY": "GANANCIAS DE BATALLA"
         }
     };
 
@@ -5339,6 +5382,7 @@ function handleEnemyDeath(enemy) {
         }
     }
     GAME.kills++;
+    if (GAME.kills % 10 === 0) playSound('coin');
 
     const p = GAME.entities.player;
     if (p && p.lifestealChance > 0 && Math.random() < p.lifestealChance) {
