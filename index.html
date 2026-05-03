@@ -105,7 +105,7 @@
                 <button class="btn-restart btn-sub" id="btn-ships-menu" style="background: rgba(16, 185, 129, 0.15);"><span>🚀</span> VÝBAVA</button>
                 <button class="btn-restart btn-sub" id="btn-meta-menu" style="background: rgba(255, 255, 255, 0.05);"><span>🧬</span> VYLEPŠENÍ</button>
                 <button class="btn-restart btn-sub" id="btn-leaderboard" style="background: rgba(245, 158, 11, 0.15);"><span>🏆</span> ŽEBŘÍČEK</button>
-                <button class="btn-restart btn-sub" id="btn-achievements" style="background: rgba(251, 191, 36, 0.2); border: 2px solid #fbbf24 !important; position: relative; z-index: 10;"><span>🌟</span> ÚSPĚCHY</button>
+                <button class="btn-restart btn-sub" id="btn-achievements" style="background: rgba(251, 191, 36, 0.2); border: 2px solid #fbbf24 !important; position: relative; z-index: 10;" data-i18n="ÚSPĚCHY"><span>🌟</span> ÚSPĚCHY</button>
               </div>
             </div>
 
@@ -121,7 +121,7 @@
           </div>
 
           <div style="margin-top: 1.5rem; font-size: 0.75rem; color: #475569; letter-spacing: 2px;">
-            © 2026 mopik11, cenek | version: 1.290
+            © 2026 mopik11, cenek | version: 1.292
           </div>
 
         </div>
@@ -139,7 +139,7 @@
 
       <div id="achievements-modal" class="modal">
         <div class="modal-content" style="max-width: 600px;">
-          <h2 style="font-size: 2.5rem; margin-bottom: 1rem; color: #fbbf24; text-shadow: 0 0 20px rgba(245, 158, 11, 0.4);">VESMÍRNÉ ÚSPĚCHY</h2>
+          <h2 style="font-size: 2.5rem; margin-bottom: 1rem; color: #fbbf24; text-shadow: 0 0 20px rgba(245, 158, 11, 0.4);" data-i18n="VESMÍRNÉ ÚSPĚCHY">VESMÍRNÉ ÚSPĚCHY</h2>
           <div id="achievements-list" style="width: 100%; max-height: 55vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 5px;">
               <!-- Dynamically populated -->
           </div>
@@ -371,7 +371,7 @@
 
       <div id="gameover-modal" class="modal">
         <div class="modal-content">
-          <h1 class="logo">KONEC<span>HRY</span></h1>
+          <h1 class="logo"><span data-i18n="KONEC">KONEC</span><span data-i18n="HRY">HRY</span></h1>
           <div id="gameover-stats" style="margin: 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div class="stat-chip">LEVEL: <span id="final-level">1</span></div>
             <div class="stat-chip">KILLS: <span id="final-kills">0</span></div>
@@ -401,7 +401,7 @@
             <div class="stat-item"><span>💊 Regenerace</span> <span class="val" id="stat-regen">0/s</span></div>
             <div class="stat-item"><span>🧛 Lifesteal</span> <span class="val" id="stat-lifesteal">0%</span></div>
             <div class="stat-item" style="grid-column: span 2; margin-top: 15px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.9rem; opacity: 0.8;">🎲 Auto-výběr upgrádů</span>
+                <span style="font-size: 0.9rem; opacity: 0.8;" data-i18n="Auto-výběr upgrádů">🎲 Auto-výběr upgrádů</span>
                 <input type="checkbox" id="check-auto-random" style="width: 25px; height: 25px; cursor: pointer;">
             </div>
           </div>
@@ -442,6 +442,6 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script type="module" src="./main.js?v=1.290"></script>
+    <script type="module" src="./main.js?v=1.292"></script>
   </body>
 </html>

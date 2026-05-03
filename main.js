@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.290
+ * NEO SURVIVOR - Core Game Logic - v1.292
  */
 
 window.onerror = function (msg, url, line, col, error) {
@@ -847,8 +847,10 @@ class Fire {
             GAME.entities.enemies.forEach(e => {
                 if (e && e.hp > 0 && dist(this.x, this.y, e.x, e.y) < this.radius + e.radius) {
                     const dmg = this.damage * (1 / 60);
-                    e.hp -= dmg;
-                    if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: dmg });
+                    let finalDmg = dmg;
+                    if (e.type === 8) finalDmg *= 0.5; // Shielder reduction
+                    e.hp -= finalDmg;
+                    if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: finalDmg });
 
                     if (e.hp <= 0) {
                         AudioEngine.play('hit');
@@ -907,10 +909,12 @@ class FriendlyMinion {
                 this.y += Math.sin(angle) * this.speed * GAME.speedFactor;
 
                 if (minDist < this.radius + target.radius) {
-                    target.hp -= this.damage * GAME.speedFactor;
+                    let finalDmg = this.damage * GAME.speedFactor;
+                    if (target.type === 8) finalDmg *= 0.5;
+                    target.hp -= finalDmg;
                     if (target.hp <= 0) handleEnemyDeath(target);
                     this.hp -= 2 * GAME.speedFactor;
-                    if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: target.id, damage: this.damage });
+                    if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: target.id, damage: finalDmg });
                 }
             }
         }
@@ -1075,9 +1079,11 @@ class Orbiter {
             GAME.entities.enemies.forEach(e => {
                 if (e && e.hp > 0 && dist(x, y, e.x, e.y) < this.size + e.radius) {
                     const dmg = this.owner.damage * 0.3 * 3;
-                    e.hp -= dmg;
+                    let finalDmg = dmg;
+                    if (e.type === 8) finalDmg *= 0.5; // Shielder reduction
+                    e.hp -= finalDmg;
                     if (NET.isMultiplayer) {
-                        NET.socket.emit('enemyHit', { id: e.id, damage: dmg });
+                        NET.socket.emit('enemyHit', { id: e.id, damage: finalDmg });
                     }
                     if (e.hp <= 0) {
                         AudioEngine.play('hit');
@@ -1742,7 +1748,9 @@ class Player {
                         this.laserTargets.forEach(chain => {
                             chain.forEach(target => {
                                 if (!target) return;
-                                target.hp -= finalDamage;
+                                let finalDmgActual = finalDamage;
+                                if (target.type === 8) finalDmgActual *= 0.5;
+                                target.hp -= finalDmgActual;
 
                                 if (isCrit) {
                                     if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
@@ -3190,7 +3198,7 @@ function sellEmoji(id) {
     
     const emoji = EMOJIS.find(e => e.id === id);
     META.currency += emoji.price;
-    showCurrencyNotification(emoji.price, `PRODEJ: ${emoji.name}`);
+    showCurrencyNotification(emoji.price, `${window.T("PRODEJ:")} ${window.T(emoji.name)}`);
     
     // Floating text effect in menu
     const menuModal = document.getElementById('meta-modal');
@@ -3270,6 +3278,7 @@ function startGame() {
 }
 
 function resetGame() {
+    GAME.active = false;
     GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0; GAME.lastBossLevelSpawned = 0;
     GAME.wallWidthUpgrades = 0;
     GAME.coinsCollected = 0;
@@ -3735,7 +3744,17 @@ function handleAuth(isLogin) {
             if (res.success) {
                 console.log(`[AUTH] ${eventName} success!`);
                 META.playerName = nameVal.toLowerCase().trim();
-                Object.assign(META, res.meta);
+                
+                // Safer merge to protect nested properties like META.upgrades.hat
+                if (res.meta) {
+                    for (let key in res.meta) {
+                        if (typeof res.meta[key] === 'object' && res.meta[key] !== null && !Array.isArray(res.meta[key])) {
+                            META[key] = { ...META[key], ...res.meta[key] };
+                        } else {
+                            META[key] = res.meta[key];
+                        }
+                    }
+                }
 
                 localStorage.setItem('neoSurvivor_user', META.playerName);
                 localStorage.setItem('neoSurvivor_pass', passVal);
@@ -4141,6 +4160,19 @@ function init() {
             "Sebevrah:": "Suicider:",
             "Štítonoš:": "Shielder:",
             "📦 LOOTBOXY A BEDNY": "📦 LOOT BOXES & CRATES",
+            "ÚSPĚCHY": "ACHIEVEMENTS",
+            "VESMÍRNÉ ÚSPĚCHY": "SPACE ACHIEVEMENTS",
+            "Auto-výběr upgrádů": "Auto-select upgrades",
+            "Získávání:": "Obtaining:",
+            "Bedny padají z bossů nebo je lze koupit v menu.": "Crates drop from bosses or can be bought in the menu.",
+            "Otevírání:": "Opening:",
+            "V menu \"VYLEPŠENÍ\" klikni na bednu. Animaci lze přeskočit (SKIP).": "In the \"UPGRADES\" menu, click on a crate. Animation can be skipped (SKIP).",
+            "Prodej:": "Selling:",
+            "Nepotřebné věci z beden můžeš hned prodat za Dogecoiny.": "Unneeded items from crates can be sold immediately for Dogecoins.",
+            "KONEC": "GAME",
+            "HRY": "OVER",
+            "ZKUSIT ZNOVU": "TRY AGAIN",
+            "PRODEJ:": "SALE:",
             "PARÁDA!": "AWESOME!", "SKVĚLÉ!": "GREAT!", "ÚSPĚCH!": "SUCCESS!", "ZÍSKAL JSI!": "YOU GOT!", "VÝBORNĚ!": "EXCELLENT!", "VÝNOS Z BITVY": "BATTLE INCOME"
         },
         de: {
@@ -4876,7 +4908,17 @@ function init() {
             NET.socket.once('loginResponse', (res) => {
                 if (res.success) {
                     META.playerName = savedUser;
-                    Object.assign(META, res.meta);
+                    
+                    // Safer merge to protect nested properties
+                    if (res.meta) {
+                        for (let key in res.meta) {
+                            if (typeof res.meta[key] === 'object' && res.meta[key] !== null && !Array.isArray(res.meta[key])) {
+                                META[key] = { ...META[key], ...res.meta[key] };
+                            } else {
+                                META[key] = res.meta[key];
+                            }
+                        }
+                    }
                     saveMetaLocalOnly();
                     document.getElementById('display-max-level').innerText = META.maxLevel || 1;
                     document.getElementById('display-doge').innerText = META.currency || 0;
