@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.295
+ * NEO SURVIVOR - Core Game Logic - v1.297
  */
 
 window.addEventListener('beforeunload', () => {
@@ -3312,13 +3312,18 @@ function startGame() {
     META.lastMoveTime = Date.now();
     META.isAFK = false;
 
-    // Show chat and handle mobile chat button
+    // Show chat only in multiplayer
     const chat = document.getElementById('global-chat');
     const chatBtn = document.getElementById('btn-chat-mobile');
-    if (chat) chat.style.display = 'flex';
-    if (chatBtn) {
-        if (window.innerWidth <= 850) chatBtn.style.display = 'flex';
-        else chatBtn.style.display = 'none';
+    if (NET.isMultiplayer) {
+        if (chat) chat.style.display = 'flex';
+        if (chatBtn) {
+            if (window.innerWidth <= 850) chatBtn.style.display = 'flex';
+            else chatBtn.style.display = 'none';
+        }
+    } else {
+        if (chat) chat.style.display = 'none';
+        if (chatBtn) chatBtn.style.display = 'none';
     }
 }
 
@@ -4208,7 +4213,7 @@ function init() {
             "Sebevrah:": "Suicider:",
             "Štítonoš:": "Shielder:",
             "📦 LOOTBOXY A BEDNY": "📦 LOOT BOXES & CRATES",
-            "ÚSPĚCHY": "ACHIEVEMENTS",
+            "🌟 ÚSPĚCHY": "🌟 ACHIEVEMENTS",
             "VESMÍRNÉ ÚSPĚCHY": "SPACE ACHIEVEMENTS",
             "Auto-výběr upgrádů": "Auto-select upgrades",
             "Získávání:": "Obtaining:",
