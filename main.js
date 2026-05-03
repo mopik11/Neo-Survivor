@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic
+ * NEO SURVIVOR - Core Game Logic - v1.279
  */
 
 window.onerror = function (msg, url, line, col, error) {
@@ -33,7 +33,10 @@ function playSound(name) {
         const s = SOUNDS[name];
         if (s) {
             s.currentTime = 0;
-            s.play().catch(e => console.log("Audio play blocked"));
+            s.play().catch(e => console.log("Audio sample blocked:", name));
+        } else {
+            // Fallback to AudioEngine synths
+            AudioEngine.play(name);
         }
     } catch(e) {}
 }
@@ -61,17 +64,23 @@ function switchMusic(target) {
 }
 
 function fadeVolume(audio, target) {
-    const step = 0.02;
-    const interval = setInterval(() => {
+    if (audio.fadeInterval) clearInterval(audio.fadeInterval);
+    const step = 0.05;
+    audio.fadeInterval = setInterval(() => {
         if (audio.volume < target) {
             audio.volume = Math.min(target, audio.volume + step);
         } else if (audio.volume > target) {
             audio.volume = Math.max(target, audio.volume - step);
         }
+        
         if (Math.abs(audio.volume - target) < 0.01) {
             audio.volume = target;
-            if (target === 0) audio.pause();
-            clearInterval(interval);
+            if (target === 0) {
+                audio.pause();
+                audio.currentTime = 0;
+            }
+            clearInterval(audio.fadeInterval);
+            audio.fadeInterval = null;
         }
     }, 50);
 }
@@ -530,28 +539,28 @@ const AudioEngine = {
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(440, now);
                 osc.frequency.exponentialRampToValueAtTime(110, now + 0.1);
-                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.setValueAtTime(0.15, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
                 osc.start(); osc.stop(now + 0.1); break;
             case 'hit':
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(100, now);
                 osc.frequency.linearRampToValueAtTime(50, now + 0.1);
-                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.setValueAtTime(0.2, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
                 osc.start(); osc.stop(now + 0.1); break;
             case 'lvlup':
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(220, now);
                 osc.frequency.exponentialRampToValueAtTime(880, now + 0.5);
-                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.setValueAtTime(0.25, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
                 osc.start(); osc.stop(now + 0.5); break;
             case 'gem':
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(660, now);
                 osc.frequency.exponentialRampToValueAtTime(1320, now + 0.05);
-                gain.gain.setValueAtTime(0.03, now);
+                gain.gain.setValueAtTime(0.1, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
                 osc.start(); osc.stop(now + 0.1); break;
         }
@@ -2439,6 +2448,7 @@ function toggleFullscreen(element, force = false) {
 }
 
 function showShipsMenu() {
+    playSound('menuOpen');
     switchMusic('upgrades');
     const modal = document.getElementById('ships-modal');
     if (modal) modal.classList.add('active');
@@ -2533,6 +2543,7 @@ function showShipsMenu() {
 }
 
 function showMetaMenu() {
+    playSound('menuOpen');
     switchMusic('upgrades');
     const menu = document.getElementById('meta-modal');
     if (menu) menu.classList.add('active');
@@ -3105,6 +3116,9 @@ function startGame() {
     GAME.kills = 0;
     GAME.coinsCollected = 0;
     GAME.entities.player.hp = GAME.entities.player.maxHp;
+    
+    // Start game music
+    AudioEngine.startMusic();
 }
 
 function resetGame() {
@@ -3163,7 +3177,6 @@ window.softResetToMenu = () => {
 
     switchMusic('menu');
     resetGame();
-    AudioEngine.startMenuMusic();
 };
 
 document.addEventListener('click', (e) => {
@@ -5813,7 +5826,7 @@ const initAudio = () => {
     AudioEngine.init();
     tryFullscreen();
     if (document.getElementById('menu-modal') && document.getElementById('menu-modal').classList.contains('active')) {
-        AudioEngine.startMenuMusic();
+        switchMusic('menu');
     }
     // Odstraníme listenery po úspěšné inicializaci (pokud chceme, ale Fullscreen můžeme zkoušet dál)
     if (AudioEngine.ctx && AudioEngine.ctx.state === 'running' && (document.fullscreenElement || document.webkitFullscreenElement)) {
