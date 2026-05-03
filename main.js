@@ -294,7 +294,6 @@ const EMOJIS = [
     { id: 'saturn', name: 'Saturn', icon: '🪐', rarity: 'rare', price: 250 },
     { id: 'invader', name: 'Vetřelec', icon: '👾', rarity: 'epic', price: 550 },
     { id: 'spy', name: 'Špión', icon: '🕵️', rarity: 'rare', price: 200 },
-    { id: 'spy', name: 'Špión', icon: '🕵️', rarity: 'rare', price: 200 },
     { id: 'fox', name: 'Liška', icon: '🦊', rarity: 'uncommon', price: 45 },
     { id: 'bear', name: 'Medvěd', icon: '🐻', rarity: 'uncommon', price: 45 },
     { id: 'panda', name: 'Panda', icon: '🐼', rarity: 'rare', price: 120 },
@@ -4921,16 +4920,7 @@ function init() {
                         node.placeholder = dict[key];
                     }
                 }
-                        if (node.childNodes.length === 1 && node.firstChild.nodeType === 3) {
-                            node.firstChild.nodeValue = key;
-                        }
-                    } else if (dict[key]) {
-                        // Replace text content if dictionary has entry
-                        if (node.childNodes.length === 1 && node.firstChild.nodeType === 3) {
-                            node.firstChild.nodeValue = dict[key];
-                        }
-                    }
-                }
+
                 
                 // Recursively walk children
                 for (let i = 0; i < node.childNodes.length; i++) walk(node.childNodes[i]);
@@ -5371,8 +5361,6 @@ function init() {
     const btnFeedback = document.getElementById('btn-feedback');
     if (btnFeedback) btnFeedback.onclick = () => document.getElementById('feedback-modal').classList.add('active');
     const btnCloseFeedback = document.getElementById('btn-close-feedback');
-    if (btnCloseFeedback) btnCloseFeedback.onclick = () => document.getElementById('feedback-modal').classList.remove('active');
-
     if (btnCloseFeedback) btnCloseFeedback.onclick = () => document.getElementById('feedback-modal').classList.remove('active');
 
     // Auto-random select toggle
