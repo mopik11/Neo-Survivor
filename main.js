@@ -4213,6 +4213,8 @@ function init() {
             "Sebevrah:": "Suicider:",
             "Štítonoš:": "Shielder:",
             "📦 LOOTBOXY A BEDNY": "📦 LOOT BOXES & CRATES",
+            "Odpojen pro AFK. Postup uložen.": "Disconnected for AFK. Progress saved.",
+            "Odpojen pro příliš dlouhou pauzu. Postup uložen.": "Disconnected for long pause. Progress saved.",
             "🌟 ÚSPĚCHY": "🌟 ACHIEVEMENTS",
             "VESMÍRNÉ ÚSPĚCHY": "SPACE ACHIEVEMENTS",
             "Auto-výběr upgrádů": "Auto-select upgrades",
@@ -5557,11 +5559,26 @@ function loop(time) {
             update(timeStep);
             accumulator -= timeStep;
         }
-    } else {
-        // Advanced timer and reset accumulator during pause to prevent bursts
+    } else if (GAME.active && GAME.paused && NET.isMultiplayer) {
+        // In multiplayer: disconnect after 60s of pause to prevent enemy accumulation
         accumulator = 0;
-        GAME.lastSpawnTime = Date.now();
-        if (GAME.paused) GAME.pauseStartTime = GAME.pauseStartTime || Date.now(); // Track pause duration for AFK
+        if (GAME.pauseStartTime && (Date.now() - GAME.pauseStartTime > 60000)) {
+            console.log('[PAUSE] 60s timeout in multiplayer – disconnecting');
+            if (GAME.entities && GAME.entities.player && !GAME.entities.player.dead) {
+                META.lastSession = {
+                    level: GAME.entities.player.level,
+                    xp: GAME.entities.player.xp,
+                    nextLevelXp: GAME.entities.player.nextLevelXp,
+                    upgrades: GAME.entities.player.appliedUpgrades || []
+                };
+                saveMeta();
+            }
+            window.showCustomAlert(window.T('Odpojen pro příliš dlouhou pauzu. Postup uložen.'));
+            softResetToMenu();
+            return;
+        }
+    } else {
+        accumulator = 0;
     }
 
     render();
@@ -5573,14 +5590,34 @@ function update(dt) {
     
     const isMoving = GAME.input.w || GAME.input.a || GAME.input.s || GAME.input.d || GAME.joystick.active;
     if (isMoving) {
-        if (GAME.paused && META.isAFK) {
+        if (GAME.paused && META.isAFK && !NET.isMultiplayer) {
+            // Only auto-resume from AFK pause in solo
             togglePause(false);
         }
         META.lastMoveTime = now;
         META.isAFK = false;
-    } else if (GAME.active && !GAME.paused && (now - (META.lastMoveTime || now) > 10000)) {
+    } else if (GAME.active && !GAME.paused && (now - (META.lastMoveTime || now) > 30000)) {
+        // AFK after 30s of no movement
         META.isAFK = true;
-        togglePause(true); // Aktivuje pauzu s nápisem AFK
+        if (NET.isMultiplayer) {
+            // Multiplayer: disconnect immediately, save session
+            console.log('[AFK] Disconnecting from multiplayer due to inactivity');
+            if (GAME.entities && GAME.entities.player && !GAME.entities.player.dead) {
+                META.lastSession = {
+                    level: GAME.entities.player.level,
+                    xp: GAME.entities.player.xp,
+                    nextLevelXp: GAME.entities.player.nextLevelXp,
+                    upgrades: GAME.entities.player.appliedUpgrades || []
+                };
+                saveMeta();
+            }
+            window.showCustomAlert(window.T('Odpojen pro AFK. Postup uložen.'));
+            softResetToMenu();
+            return;
+        } else {
+            // Solo: just pause
+            togglePause(true);
+        }
     }
 
     if (GAME.paused || !GAME.entities || !GAME.entities.player) {
