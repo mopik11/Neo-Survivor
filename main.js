@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.307
+ * NEO SURVIVOR - Core Game Logic - v1.308
  */
 
 window.addEventListener('beforeunload', () => {
@@ -844,10 +844,11 @@ class MenuAnimation {
 }
 
 class Fire {
-    constructor(x, y, damage, isLocal = true, type = 'fire') {
+    constructor(x, y, damage, isLocal = true, type = 'fire', radius = null, life = null) {
         this.x = x; this.y = y; this.damage = damage;
-        this.radius = type === 'neon' ? 12 : 25; 
-        this.life = type === 'neon' ? 0.8 : 1.5;
+        this.radius = radius || (type === 'neon' ? 12 : 25); 
+        this.maxLife = life || (type === 'neon' ? 0.8 : 1.5);
+        this.life = this.maxLife;
         this.isLocal = isLocal;
         this.type = type;
     }
@@ -873,7 +874,7 @@ class Fire {
         }
     }
     draw(ctx, cam) {
-        ctx.globalAlpha = Math.max(0, this.life / (this.type === 'neon' ? 0.8 : 1.5));
+        ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
         if (this.type === 'neon') {
             ctx.shadowBlur = 15; ctx.shadowColor = '#00f2ff';
             ctx.fillStyle = '#00f2ff';
@@ -893,18 +894,18 @@ class FriendlyMinion {
         this.x = x; this.y = y; this.damage = damage; this.owner = owner;
         this.radius = 12;
         
-        let hpMult = owner.hasNecroHealth ? 2 : 1;
+        let hpMult = 1 + (owner.necroHealthLevel || 0);
         this.hp = 30 * hpMult; 
         this.maxHp = 30 * hpMult; 
         this.life = 10 * hpMult; // Sekundy
         
         this.id = Math.random().toString(36).substr(2, 9);
         
-        let speedMult = owner.hasNecroSpeed ? 1.5 : 1;
+        let speedMult = 1 + (owner.necroSpeedLevel || 0) * 0.5;
         this.speed = 1.75 * speedMult;
 
         this.isAlien = false;
-        if (owner.hasNecroAlien && Math.random() < 0.10) {
+        if (owner.necroAlienLevel > 0 && Math.random() < (0.10 * owner.necroAlienLevel)) {
             this.isAlien = true;
             // 1-8 are regular enemies, avoid 8 (Shielder) maybe? Just pick 1-7.
             this.alienType = Math.floor(Math.random() * 7) + 1;
@@ -1699,6 +1700,12 @@ class Player {
         this.lifestealChance = 0;
         this.aura = false; this.auraRange = 150;
         this.bounces = 0; this.fireTrail = false;
+        this.fireRadius = 25; this.fireLife = 1.5;
+        this.shotgunBackLevel = 0;
+        this.shotgunShellsLevel = 0;
+        this.necroHealthLevel = 0;
+        this.necroSpeedLevel = 0;
+        this.necroAlienLevel = 0;
 
         this.hasKaktus = false;
         this.kaktus = false;
@@ -1775,7 +1782,7 @@ class Player {
                 const now = Date.now();
                 if (now - (this.lastFireTrail || 0) > 150 && dist(oldX, oldY, this.x, this.y) > 0.5) {
                     const trailType = this.shipType === 2 ? 'neon' : 'fire';
-                    if (GAME.entities.fire) GAME.entities.fire.push(new Fire(this.x, this.y, 0, false, trailType));
+                    if (GAME.entities.fire) GAME.entities.fire.push(new Fire(this.x, this.y, 0, false, trailType, this.fireRadius, this.fireLife));
                     this.lastFireTrail = now;
                 }
             }
@@ -1887,7 +1894,7 @@ class Player {
 
             const now = Date.now();
             if (this.fireTrail && now - this.lastFireTrail > 150) {
-                if (GAME.entities.fire) GAME.entities.fire.push(new Fire(this.x, this.y, this.damage * this.fireDamageMult, true));
+                if (GAME.entities.fire) GAME.entities.fire.push(new Fire(this.x, this.y, this.damage * this.fireDamageMult, true, 'fire', this.fireRadius, this.fireLife));
                 this.lastFireTrail = now;
             }
         }
@@ -2004,7 +2011,7 @@ class Player {
             const spread = Math.PI / 6;
 
             const firePellets = (angleToFire, isBackwards = false) => {
-                const count = isBackwards ? 3 : pellets;
+                const count = isBackwards ? (3 + ((this.shotgunBackLevel || 1) - 1) * 2) : pellets;
                 for (let i = 0; i < count; i++) {
                     const isCrit = Math.random() < this.critChance;
                     const finalDamage = (isCrit ? this.damage * this.critMultiplier : this.damage) * 0.7;
@@ -2030,12 +2037,12 @@ class Player {
             };
 
             firePellets(baseAngle);
-            if (this.hasShotgunBack) {
+            if (this.shotgunBackLevel > 0) {
                 firePellets(baseAngle + Math.PI, true);
             }
 
-            if (this.hasShotgunShells) {
-                for (let i = 0; i < 2; i++) {
+            if (this.shotgunShellsLevel > 0) {
+                for (let i = 0; i < (2 + ((this.shotgunShellsLevel || 1) - 1)); i++) {
                     const shellAngle = Math.random() * Math.PI * 2;
                     const dist = Math.random() * 20;
                     const finalDamage = this.damage * 0.7;
@@ -2403,16 +2410,21 @@ function applyUpgrade(id, record = true) {
             case 'lifesteal': p.lifestealChance += 0.10; break;
             case 'aura': p.aura = true; p.auraRange += 20; p.auraPower *= 0.8; break;
             case 'bounce': p.bounces += 1; break;
-            case 'fire': p.fireTrail = true; p.fireDamageMult += 0.5; break;
+            case 'fire': 
+                p.fireTrail = true; 
+                p.fireDamageMult += 0.5; 
+                p.fireRadius = (p.fireRadius || 25) + 5;
+                p.fireLife = (p.fireLife || 1.5) + 0.2;
+                break;
             case 'kaktus': p.hasKaktus = true; p.kaktus = true; p.lastKaktusToggle = Date.now(); break;
             case 'bait': p.bait = true; p.baitHpMult += 5; p.lastBait = Date.now(); break;
             case 'growth': p.maxHp += Math.floor(p.maxHp * 0.1); p.hp = p.maxHp; break;
             case 'possession_plus': p.maxPossessions += 2; break;
-            case 'shotgun_shells': p.hasShotgunShells = true; break;
-            case 'shotgun_back': p.hasShotgunBack = true; break;
-            case 'necro_health': p.hasNecroHealth = true; break;
-            case 'necro_speed': p.hasNecroSpeed = true; break;
-            case 'necro_good_alien': p.hasNecroAlien = true; break;
+            case 'shotgun_shells': p.shotgunShellsLevel = (p.shotgunShellsLevel || 0) + 1; break;
+            case 'shotgun_back': p.shotgunBackLevel = (p.shotgunBackLevel || 0) + 1; break;
+            case 'necro_health': p.necroHealthLevel = (p.necroHealthLevel || 0) + 1; break;
+            case 'necro_speed': p.necroSpeedLevel = (p.necroSpeedLevel || 0) + 1; break;
+            case 'necro_good_alien': p.necroAlienLevel = (p.necroAlienLevel || 0) + 1; break;
         }
     } catch (e) { console.error("Upgrade error:", e); }
 
