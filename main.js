@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.306
+ * NEO SURVIVOR - Core Game Logic - v1.307
  */
 
 window.addEventListener('beforeunload', () => {
@@ -946,18 +946,43 @@ class FriendlyMinion {
     }
     draw(ctx, cam) {
         if (this.isAlien) {
-            // Nakreslíme "hodného" ufona (zelený)
-            ctx.shadowBlur = 15; ctx.shadowColor = '#22c55e'; ctx.fillStyle = '#22c55e';
+            // Nakreslíme "hodného" ufona (modrý)
+            const color = '#6366f1';
+            ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
             
-            if (this.alienType === 1) { // Kamikadze style
-                ctx.rotate(Date.now() / 200);
-                ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(10, 0); ctx.lineTo(0, 15); ctx.lineTo(-10, 0); ctx.closePath(); ctx.fill();
-            } else if (this.alienType === 2 || this.alienType === 3) { // Spinner style
+            if (this.alienType === 1) { // Dron
+                const players = getAllAlivePlayers();
+                const target = players.length > 0 ? players.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0] : { x: 0, y: 0 };
+                const angle = Math.atan2(target.y - this.y, target.x - this.x);
+                ctx.rotate(angle);
+                ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, 12); ctx.lineTo(-12, -12); ctx.closePath(); ctx.fill();
+            } else if (this.alienType === 2) { // Kostka
                 ctx.rotate(Date.now() / 1000);
-                ctx.fillRect(-10, -10, 20, 20);
-            } else { // Generic
-                ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.fillRect(-15, -15, 30, 30);
+            } else if (this.alienType === 3) { // Kamikadze
+                ctx.rotate(Date.now() / 200);
+                ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(15, 0); ctx.lineTo(0, 20); ctx.lineTo(-15, 0); ctx.closePath(); ctx.fill();
+            } else if (this.alienType === 6) { // Leaper
+                ctx.beginPath();
+                ctx.moveTo(0, -20); ctx.lineTo(15, 10); ctx.lineTo(-15, 10); ctx.closePath(); ctx.fill();
+            } else if (this.alienType === 4) { // Goblin
+                ctx.rotate(-Date.now() / 500);
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    const a = (i / 5) * Math.PI * 2;
+                    ctx.lineTo(Math.cos(a) * 15, Math.sin(a) * 15);
+                    const a2 = ((i + 0.5) / 5) * Math.PI * 2;
+                    ctx.lineTo(Math.cos(a2) * 7, Math.sin(a2) * 7);
+                }
+                ctx.closePath(); ctx.fill();
+            } else if (this.alienType === 5) { // Support
+                ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
+            } else if (this.alienType === 7) { // Sebevrah
+                ctx.rotate(Date.now() / 50);
+                ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-8, 8); ctx.lineTo(-8, -8); ctx.closePath(); ctx.fill();
+            } else { // Generic / Shield Bearer
+                ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.fill();
             }
             
             ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
@@ -1523,7 +1548,7 @@ class Enemy {
     draw(ctx, cam) {
         const ratio = this.hp / this.maxHp;
         if (this.type === 1) {
-            const color = this.possessed ? '#22c55e' : `rgb(255, ${Math.floor(255 * (1 - ratio))}, 80)`;
+            const color = this.possessed ? '#6366f1' : `rgb(255, ${Math.floor(255 * (1 - ratio))}, 80)`;
             ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
             const players = getAllAlivePlayers();
             const target = players.length > 0 ? players.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0] : { x: 0, y: 0 };
@@ -1538,7 +1563,7 @@ class Enemy {
             const r = Math.floor(168 * ratio + 34 * (1 - ratio));
             const g = Math.floor(85 * ratio + 197 * (1 - ratio));
             const b = Math.floor(247 * ratio + 94 * (1 - ratio));
-            const color = this.possessed ? '#22c55e' : `rgb(${r}, ${g}, ${b})`;
+            const color = this.possessed ? '#6366f1' : `rgb(${r}, ${g}, ${b})`;
 
             ctx.shadowBlur = 20; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
@@ -1551,7 +1576,7 @@ class Enemy {
         } else if (this.type === 3) {
             // Kamikadze (kosočtverec)
             const flash = Math.sin(Date.now() / 100) > 0 ? '#ef4444' : '#f97316';
-            const color = this.possessed ? '#22c55e' : flash;
+            const color = this.possessed ? '#6366f1' : flash;
             ctx.shadowBlur = 25; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
             ctx.rotate(Date.now() / 200);
@@ -1560,7 +1585,7 @@ class Enemy {
             ctx.restore(); ctx.shadowBlur = 0;
         } else if (this.type === 6) {
             // Leaper (trojúhelník s "nohama" nebo barvou)
-            const color = this.possessed ? '#22c55e' : '#f43f5e';
+            const color = this.possessed ? '#6366f1' : '#f43f5e';
             ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
 
@@ -1581,7 +1606,7 @@ class Enemy {
             }
         } else if (this.type === 4) {
             // Goblin (hvězdička nebo něco rychlého)
-            const color = this.possessed ? '#22c55e' : '#eab308';
+            const color = this.possessed ? '#6366f1' : '#eab308';
             ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
             ctx.rotate(-Date.now() / 500);
@@ -1597,7 +1622,7 @@ class Enemy {
             ctx.restore(); ctx.shadowBlur = 0;
         } else if (this.type === 5) {
             // Support (kříž nebo ovál s aurou)
-            const color = this.possessed ? '#22c55e' : '#0ea5e9';
+            const color = this.possessed ? '#6366f1' : '#0ea5e9';
 
             // Healing Aura effect
             ctx.save();
@@ -1612,14 +1637,14 @@ class Enemy {
             ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
             ctx.restore(); ctx.shadowBlur = 0;
         } else if (this.type === 7) {
-            const color = this.possessed ? '#22c55e' : '#f87171';
+            const color = this.possessed ? '#6366f1' : '#f87171';
             ctx.shadowBlur = 10; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
             ctx.rotate(Date.now() / 50);
             ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-8, 8); ctx.lineTo(-8, -8); ctx.closePath(); ctx.fill();
             ctx.restore(); ctx.shadowBlur = 0;
         } else if (this.type === 8) {
-            const color = this.possessed ? '#22c55e' : '#38bdf8';
+            const color = this.possessed ? '#6366f1' : '#38bdf8';
             ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
             const players = getAllAlivePlayers();
