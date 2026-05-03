@@ -3102,9 +3102,14 @@ function startCrateAnimation(winner, crateType = 'basic') {
             </div>
             
             <div style="position: relative; width: 100%; height: ${itemSize + 30}px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);">
-                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #fbbf24; z-index: 100;">
-                    <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 12px solid #fbbf24;"></div>
-                    <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 12px solid #fbbf24;"></div>
+                <!-- Pointer/Marker -->
+                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #fbbf24; z-index: 100; pointer-events: none;">
+                    <svg style="position: absolute; top: 0; left: 50%; transform: translateX(-50%);" width="20" height="15" viewBox="0 0 20 15">
+                        <path d="M0 0 L20 0 L10 15 Z" fill="#fbbf24" />
+                    </svg>
+                    <svg style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);" width="20" height="15" viewBox="0 0 20 15">
+                        <path d="M0 15 L20 15 L10 0 Z" fill="#fbbf24" />
+                    </svg>
                 </div>
                 
                 <div id="crate-carousel" style="display: flex; gap: ${itemGap}px; width: fit-content; transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1); transform: translateX(0); padding-left: 50%;">
