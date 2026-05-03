@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.303
+ * NEO SURVIVOR - Core Game Logic - v1.305
  */
 
 window.addEventListener('beforeunload', () => {
@@ -203,7 +203,13 @@ const CONFIG = {
         { id: 'luck', name: 'Větší Výběr', desc: '+1 možnost při levelu', icon: '🍀', rarity: 'legendary' },
         { id: 'aura', name: 'Mraziv Aura', desc: 'Zpomaluje blízké nepřátele', icon: '❄️', rarity: 'legendary' },
         { id: 'bait', name: 'Návnada', desc: 'Vypouští chutné cíle pro ufony', icon: '🪤', rarity: 'legendary' },
-        { id: 'possession_plus', name: 'Velitel Duchů', desc: 'Ability: Posedne o +2 více nepřátel', icon: '👻', rarity: 'rare' }
+        { id: 'possession_plus', name: 'Velitel Duchů', desc: 'Ability: Posedne o +2 více nepřátel', icon: '👻', rarity: 'rare' },
+        
+        { id: 'shotgun_shells', name: 'Prázdné Nábojnice', desc: 'Shotgun: Zanechá na zemi nesmrtelné náboje', icon: '🪫', rarity: 'epic' },
+        { id: 'shotgun_back', name: 'Jednoruční Zbraň', desc: 'Shotgun: Střílí další projektily i za sebe', icon: '🔙', rarity: 'rare' },
+        { id: 'necro_health', name: 'Do Posledního', desc: 'Necromancer: Výrazně větší výdrž poskoků', icon: '☠️', rarity: 'common' },
+        { id: 'necro_speed', name: 'Maratoňan', desc: 'Necromancer: Rychlejší poskoci', icon: '🏃', rarity: 'uncommon' },
+        { id: 'necro_good_alien', name: 'Transformer', desc: 'Necromancer: Šance, že poskok bude hodné UFO', icon: '👽', rarity: 'legendary' }
     ],
     RARITIES: {
         common: { chance: 40, color: '#94a3b8', name: 'COMMON' },
@@ -885,9 +891,24 @@ class Fire {
 class FriendlyMinion {
     constructor(x, y, damage, owner) {
         this.x = x; this.y = y; this.damage = damage; this.owner = owner;
-        this.radius = 12; this.hp = 30; this.maxHp = 30; this.life = 10; // Sekundy
+        this.radius = 12;
+        
+        let hpMult = owner.hasNecroHealth ? 2 : 1;
+        this.hp = 30 * hpMult; 
+        this.maxHp = 30 * hpMult; 
+        this.life = 10 * hpMult; // Sekundy
+        
         this.id = Math.random().toString(36).substr(2, 9);
-        this.speed = 1.75;
+        
+        let speedMult = owner.hasNecroSpeed ? 1.5 : 1;
+        this.speed = 1.75 * speedMult;
+
+        this.isAlien = false;
+        if (owner.hasNecroAlien && Math.random() < 0.10) {
+            this.isAlien = true;
+            // 1-8 are regular enemies, avoid 8 (Shielder) maybe? Just pick 1-7.
+            this.alienType = Math.floor(Math.random() * 7) + 1;
+        }
     }
     update() {
         this.life -= 1 / 60;
@@ -924,12 +945,31 @@ class FriendlyMinion {
         }
     }
     draw(ctx, cam) {
-        ctx.shadowBlur = 15; ctx.shadowColor = '#6366f1'; ctx.fillStyle = '#818cf8';
-        ctx.beginPath();
-        ctx.moveTo(this.x - cam.x, this.y - cam.y - 12);
-        ctx.lineTo(this.x - cam.x + 10, this.y - cam.y + 8);
-        ctx.lineTo(this.x - cam.x - 10, this.y - cam.y + 8);
-        ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+        if (this.isAlien) {
+            // Nakreslíme "hodného" ufona (zelený)
+            ctx.shadowBlur = 15; ctx.shadowColor = '#22c55e'; ctx.fillStyle = '#22c55e';
+            ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
+            
+            if (this.alienType === 1) { // Kamikadze style
+                ctx.rotate(Date.now() / 200);
+                ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(10, 0); ctx.lineTo(0, 15); ctx.lineTo(-10, 0); ctx.closePath(); ctx.fill();
+            } else if (this.alienType === 2 || this.alienType === 3) { // Spinner style
+                ctx.rotate(Date.now() / 1000);
+                ctx.fillRect(-10, -10, 20, 20);
+            } else { // Generic
+                ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2); ctx.fill();
+            }
+            
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.restore(); ctx.shadowBlur = 0;
+        } else {
+            ctx.shadowBlur = 15; ctx.shadowColor = '#6366f1'; ctx.fillStyle = '#818cf8';
+            ctx.beginPath();
+            ctx.moveTo(this.x - cam.x, this.y - cam.y - 12);
+            ctx.lineTo(this.x - cam.x + 10, this.y - cam.y + 8);
+            ctx.lineTo(this.x - cam.x - 10, this.y - cam.y + 8);
+            ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+        }
     }
 }
 
@@ -1938,27 +1978,55 @@ class Player {
             const pellets = 4 + this.projectileCount;
             const spread = Math.PI / 6;
 
-            for (let i = 0; i < pellets; i++) {
-                const isCrit = Math.random() < this.critChance;
-                const finalDamage = (isCrit ? this.damage * this.critMultiplier : this.damage) * 0.7;
+            const firePellets = (angleToFire, isBackwards = false) => {
+                const count = isBackwards ? 3 : pellets;
+                for (let i = 0; i < count; i++) {
+                    const isCrit = Math.random() < this.critChance;
+                    const finalDamage = (isCrit ? this.damage * this.critMultiplier : this.damage) * 0.7;
 
-                const angleOffset = -spread / 2 + (spread / (pellets - 1 || 1)) * i;
-                const shootAngle = baseAngle + angleOffset;
+                    const angleOffset = -spread / 2 + (spread / (count - 1 || 1)) * i;
+                    const shootAngle = angleToFire + angleOffset;
 
-                const tx = this.x + Math.cos(shootAngle) * 500;
-                const ty = this.y + Math.sin(shootAngle) * 500;
+                    const tx = this.x + Math.cos(shootAngle) * 500;
+                    const ty = this.y + Math.sin(shootAngle) * 500;
 
-                const proj = new Projectile(this.x, this.y, tx, ty, finalDamage, {
-                    size: this.projSize * 0.8,
-                    pierce: this.pierceCount,
-                    bounce: this.bounces,
-                    isCrit: isCrit,
-                    type: 'default',
-                    life: 60 + (Math.random() * 20), // Lepší dostřel
-                    speed: CONFIG.PROJECTILE_SPEED * (1.1 + Math.random() * 0.3)
-                });
-                if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
-                if (NET.isMultiplayer) syncShot(proj);
+                    const proj = new Projectile(this.x, this.y, tx, ty, finalDamage, {
+                        size: this.projSize * 0.8,
+                        pierce: this.pierceCount,
+                        bounce: this.bounces,
+                        isCrit: isCrit,
+                        type: 'default',
+                        life: 60 + (Math.random() * 20), // Lepší dostřel
+                        speed: CONFIG.PROJECTILE_SPEED * (1.1 + Math.random() * 0.3)
+                    });
+                    if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
+                    if (NET.isMultiplayer) syncShot(proj);
+                }
+            };
+
+            firePellets(baseAngle);
+            if (this.hasShotgunBack) {
+                firePellets(baseAngle + Math.PI, true);
+            }
+
+            if (this.hasShotgunShells) {
+                for (let i = 0; i < 2; i++) {
+                    const shellAngle = Math.random() * Math.PI * 2;
+                    const dist = Math.random() * 20;
+                    const finalDamage = this.damage * 0.7;
+                    const proj = new Projectile(this.x + Math.cos(shellAngle) * dist, this.y + Math.sin(shellAngle) * dist, this.x + Math.cos(shellAngle) * dist, this.y + Math.sin(shellAngle) * dist, finalDamage, {
+                        size: this.projSize * 0.8,
+                        pierce: 0,
+                        bounce: 0,
+                        isCrit: false,
+                        type: 'default',
+                        life: Infinity,
+                        speed: 0
+                    });
+                    proj.vx = 0; proj.vy = 0;
+                    if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
+                    if (NET.isMultiplayer) syncShot(proj);
+                }
             }
         }
 
@@ -2165,15 +2233,15 @@ function showLevelUp() {
         if (u.id === 'kaktus' && GAME.entities.player.hasKaktus) return false;
 
         if (pShip === 1) {
-            if (['wall_range', 'wall_width', 'laser_range', 'possession_plus'].includes(u.id)) return false;
+            if (['wall_range', 'wall_width', 'laser_range', 'possession_plus', 'shotgun_shells', 'shotgun_back', 'necro_health', 'necro_speed', 'necro_good_alien'].includes(u.id)) return false;
         } else if (pShip === 2) {
-            if (['wall_range', 'wall_width', 'bounce', 'possession_plus'].includes(u.id)) return false;
+            if (['wall_range', 'wall_width', 'bounce', 'possession_plus', 'shotgun_shells', 'shotgun_back', 'necro_health', 'necro_speed', 'necro_good_alien'].includes(u.id)) return false;
         } else if (pShip === 3) {
-            if (['count', 'pierce', 'bounce', 'laser_range', 'possession_plus'].includes(u.id)) return false;
-        } else if (pShip === 4) {
-            if (['wall_range', 'wall_width', 'laser_range', 'possession_plus'].includes(u.id)) return false;
+            if (['count', 'pierce', 'bounce', 'laser_range', 'possession_plus', 'shotgun_shells', 'shotgun_back', 'necro_health', 'necro_speed', 'necro_good_alien'].includes(u.id)) return false;
+        } else if (pShip === 4) { // Shotgun
+            if (['wall_range', 'wall_width', 'laser_range', 'possession_plus', 'necro_health', 'necro_speed', 'necro_good_alien'].includes(u.id)) return false;
         } else if (pShip === 5) { // Nekromancer
-            if (['wall_range', 'wall_width', 'laser_range', 'pierce', 'bounce', 'size'].includes(u.id)) return false;
+            if (['wall_range', 'wall_width', 'laser_range', 'pierce', 'bounce', 'size', 'shotgun_shells', 'shotgun_back', 'possession_plus'].includes(u.id)) return false;
         }
 
 
@@ -2190,7 +2258,14 @@ function showLevelUp() {
         else if (rand < 35) rarity = 'rare';
         else if (rand < 60) rarity = 'uncommon';
 
-        const possible = CONFIG.UPGRADES.filter(u => isUpgradeValid(u) && u.rarity === rarity && !usedIds.has(u.id));
+        const getEffectiveRarity = (u) => {
+            if (GAME.entities.player.shipType === 4 && (u.id === 'pierce' || u.id === 'bounce')) {
+                return 'rare';
+            }
+            return u.rarity;
+        };
+
+        const possible = CONFIG.UPGRADES.filter(u => isUpgradeValid(u) && getEffectiveRarity(u) === rarity && !usedIds.has(u.id));
 
         if (possible.length > 0) {
             const pick = possible[Math.floor(Math.random() * possible.length)];
@@ -2308,6 +2383,11 @@ function applyUpgrade(id, record = true) {
             case 'bait': p.bait = true; p.baitHpMult += 5; p.lastBait = Date.now(); break;
             case 'growth': p.maxHp += Math.floor(p.maxHp * 0.1); p.hp = p.maxHp; break;
             case 'possession_plus': p.maxPossessions += 2; break;
+            case 'shotgun_shells': p.hasShotgunShells = true; break;
+            case 'shotgun_back': p.hasShotgunBack = true; break;
+            case 'necro_health': p.hasNecroHealth = true; break;
+            case 'necro_speed': p.hasNecroSpeed = true; break;
+            case 'necro_good_alien': p.hasNecroAlien = true; break;
         }
     } catch (e) { console.error("Upgrade error:", e); }
 
@@ -5935,7 +6015,7 @@ function update(dt) {
                         hitDist = proj.radius + enemy.radius;
                     }
 
-                    if (!proj.hitEnemies.has(enemy) && d < hitDist) {
+                    if (!proj.hitEnemies.has(enemy) && d < hitDist && !enemy.possessed) {
                         let damage = proj.damage;
                         if (enemy.type === 8) damage *= 0.5; // Shield reduction
                         enemy.hp -= damage;
