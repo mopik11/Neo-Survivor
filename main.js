@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.284
+ * NEO SURVIVOR - Core Game Logic - v1.285
  */
 
 window.onerror = function (msg, url, line, col, error) {
@@ -34,9 +34,9 @@ const SOUND_BUFFERS = {};
 function playSound(name) {
     if (AudioEngine.ctx) {
         if (AudioEngine.ctx.state === 'suspended') {
-            AudioEngine.ctx.resume().then(() => AudioEngine.playBuffer(name));
+            AudioEngine.ctx.resume().then(() => AudioEngine.play(name));
         } else {
-            AudioEngine.playBuffer(name);
+            AudioEngine.play(name);
         }
     }
 }
@@ -595,6 +595,33 @@ const AudioEngine = {
                 osc.frequency.exponentialRampToValueAtTime(1320, now + 0.05);
                 gain.gain.setValueAtTime(0.1, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(); osc.stop(now + 0.1); break;
+            case 'crateSpin':
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(400, now + 0.03);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+                osc.start(); osc.stop(now + 0.03); break;
+            case 'crateWin':
+                // Arpeggio
+                [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+                    const o = this.ctx.createOscillator();
+                    const g = this.ctx.createGain();
+                    o.type = 'triangle';
+                    o.frequency.setValueAtTime(f, now + i * 0.1);
+                    g.gain.setValueAtTime(0.15, now + i * 0.1);
+                    g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.3);
+                    o.connect(g); g.connect(this.ctx.destination);
+                    o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.3);
+                });
+                break;
+            case 'coin':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(987.77, now);
+                osc.frequency.exponentialRampToValueAtTime(1318.51, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
                 osc.start(); osc.stop(now + 0.1); break;
         }
     },
