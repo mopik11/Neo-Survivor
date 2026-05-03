@@ -2747,8 +2747,11 @@ function showMetaMenu() {
     const collectionSection = document.createElement('div');
     collectionSection.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(16,185,129,0.2); margin-bottom: 15px; padding-bottom: 5px;">
-            <h2 style="color: #10b981; text-align: left; margin:0; font-size: 1.2rem;">✨ TVÁ SBÍRKA</h2>
-            ${META.inventory.length > 0 ? `<button id="btn-sell-all" style="padding: 5px 12px; font-size: 0.7rem; border-radius: 8px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); cursor:pointer; font-weight:bold;">PRODAT VŠE</button>` : ''}
+            <div style="display:flex; flex-direction:column; align-items: flex-start;">
+                <h2 style="color: #10b981; text-align: left; margin:0; font-size: 1.2rem;" data-i18n="TVÁ SBÍRKA">✨ TVÁ SBÍRKA</h2>
+                <div style="font-size: 0.7rem; color: #64748b; font-weight: bold; margin-top: 2px;">${window.T('Celková hodnota:')} <span style="color: #fbbf24;">${META.inventory.reduce((sum, inv) => sum + (EMOJIS.find(e => e.id === inv.id)?.price || 0) * inv.count, 0)} DOGE</span></div>
+            </div>
+            ${META.inventory.length > 0 ? `<button id="btn-sell-all" style="padding: 5px 12px; font-size: 0.7rem; border-radius: 8px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); cursor:pointer; font-weight:bold;">${window.T('PRODAT VŠE')}</button>` : ''}
         </div>
     `;
     const collectionGrid = document.createElement('div');
@@ -2933,10 +2936,10 @@ function startCrateAnimation(winner, crateType = 'basic') {
 
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 800px; width: 95vw; background: ${crateData.bg}; border: 2px solid ${crateData.color}44; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 0 50px ${crateData.glow};">
-            <button id="btn-skip-crate" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.65rem; font-weight: 900; z-index: 1000; letter-spacing: 1px; backdrop-filter: blur(5px);">SKIP ANIMATION</button>
+            <button id="btn-skip-crate" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px 20px; border-radius: 12px; cursor: pointer; font-weight: 800; z-index: 10;">${window.T('PŘESKOČIT (SKIP)')}</button>
             <div style="display:flex; align-items:center; gap:10px; margin-bottom: 1.2rem; opacity: 0.8; flex-wrap: wrap; justify-content: center; width: 100%; padding: 0 40px;">
                 <span style="font-size: 1.2rem;">${crateData.icon}</span>
-                <h2 class="crate-anim-title" style="color: ${crateData.color}; font-size: 0.85rem; margin:0; letter-spacing: 2px; text-transform: uppercase; text-align: center;">${crateData.name}</h2>
+                <h2 class="crate-anim-title" style="color: ${crateData.color}; font-size: 0.85rem; margin:0; letter-spacing: 2px; text-transform: uppercase; text-align: center;">${window.T(crateData.name)}</h2>
             </div>
             
             <div style="position: relative; width: 100%; height: ${itemSize + 30}px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);">
@@ -2956,15 +2959,15 @@ function startCrateAnimation(winner, crateType = 'basic') {
             </div>
 
             <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
-                <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; letter-spacing: 2px;">ZÍSKÁNO: ${GAME.crateQueue ? (GAME.lastCrateBatchSize - GAME.crateQueue.length) : 1} / ${GAME.lastCrateBatchSize || 1}</div>
-                <h3 style="color: #fff; font-size: 2.2rem; margin: 0; text-shadow: 0 0 30px rgba(255,255,255,0.1);">${winner.name}</h3>
-                <p style="color: ${getRarityColor(winner.rarity)}; font-weight: bold; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 3px; margin: 5px 0 1.5rem 0;">${winner.rarity.toUpperCase()}</p>
+                <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;">${window.T('ZÍSKÁNO:')} ${GAME.lastCrateBatchSize - (GAME.crateQueue ? GAME.crateQueue.length : 0)} / ${GAME.lastCrateBatchSize || 1}</p>
+                <h2 id="crate-winner-name" style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 5px; text-shadow: 0 0 20px rgba(255,255,255,0.2);">${window.T(winner.name)}</h2>
+                <div id="crate-winner-rarity" style="font-size: 1.1rem; font-weight: 800; color: ${getRarityColor(winner.rarity)}; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 30px;">${winner.rarity.toUpperCase()}</div>
                 
-                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${(GAME.crateQueue && GAME.crateQueue.length > 0) ? 'DALŠÍ (NEXT)' : 'PŘIDAT DO SBÍRKY'}</button>
-                    <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">PRODAT (+${winner.price})</button>
-                    ${(GAME.crateQueue.length === 0 && GAME.lastCrateBatchSize > 1) ? `<button id="btn-crate-sell-all" class="btn-restart" style="min-width: 150px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem;">PRODAT CELOU VÁRKU</button>` : ''}
-                    <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${(!GAME.crateQueue || GAME.crateQueue.length === 0) ? 'block' : 'none'};">ZATOČIT ZNOVU</button>
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${(GAME.crateQueue && GAME.crateQueue.length > 0) ? window.T('DALŠÍ') : window.T('PŘIDAT DO SBÍRKY')}</button>
+                    <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">${window.T('PRODAT')} (+${winner.price})</button>
+                    ${(GAME.crateQueue.length === 0 && GAME.lastCrateBatchSize > 1) ? `<button id="btn-crate-sell-all" class="btn-restart" style="min-width: 150px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem;">${window.T('PRODAT CELOU VÁRKU')}</button>` : ''}
+                    <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${(!GAME.crateQueue || GAME.crateQueue.length === 0) ? 'block' : 'none'};">${window.T('ZATOČIT ZNOVU')}</button>
                 </div>
             </div>
         </div>
@@ -4173,7 +4176,44 @@ function init() {
             "HRY": "OVER",
             "ZKUSIT ZNOVU": "TRY AGAIN",
             "PRODEJ:": "SALE:",
-            "PARÁDA!": "AWESOME!", "SKVĚLÉ!": "GREAT!", "ÚSPĚCH!": "SUCCESS!", "ZÍSKAL JSI!": "YOU GOT!", "VÝBORNĚ!": "EXCELLENT!", "VÝNOS Z BITVY": "BATTLE INCOME"
+            "ZÍSKÁNO:": "COLLECTED:",
+            "DALŠÍ": "NEXT",
+            "PŘIDAT DO SBÍRKY": "ADD TO COLLECTION",
+            "PRODAT": "SELL",
+            "PRODAT CELOU VÁRKU": "SELL FULL BATCH",
+            "ZATOČIT ZNOVU": "SPIN AGAIN",
+            "PŘESKOČIT (SKIP)": "SKIP",
+            "Celková hodnota:": "Total Value:",
+            "PRODAT VŠE": "SELL ALL",
+            "TVÁ SBÍRKA": "YOUR COLLECTION",
+            "Extrémně rychlý, vybuchuje okamžitě při dotyku!": "Extremely fast, explodes immediately on contact!",
+            "Má odolný přední štít, který pohlcuje 50% damage.": "Has a durable front shield that absorbs 50% damage.",
+            "PAUZA": "PAUSE",
+            "V menu \"VYLEPŠENÍ\" klikni na bednu. Animaci lze přeskočit (SKIP).": "In the \"UPGRADES\" menu, click on a crate. Animation can be skipped (SKIP).",
+            "Redukce poškození +2%": "Damage reduction +2%",
+            "Mýdlo": "Soap", "Peníze": "Money", "Úsměv": "Smile", "Nerd": "Nerd", "Motýl": "Butterfly", "Mňau": "Meow", "Kaktus": "Cactus", "Démon": "Demon", "Šerif": "Sheriff", "Gesto": "Hand Gesture", "Doge": "Doge", "Mimozemšťan": "Alien", "Měsíc": "Moon", "Srdce": "Heart", "Plamen": "Flame", "Pizza": "Pizza", "Hovno": "Poop", "Robot": "Robot", "Diamant": "Diamond", "Lebka": "Skull", "Piráti": "Pirates", "Ninja": "Ninja", "Astronaut": "Astronaut", "Jednorožec": "Unicorn", "Drak": "Dragon", "Král": "King", "Bůh": "God",
+            "PARÁDA!": "AWESOME!", "SKVĚLÉ!": "GREAT!", "ÚSPĚCH!": "SUCCESS!", "ZÍSKAL JSI!": "YOU GOT!", "VÝBORNĚ!": "EXCELLENT!", "VÝNOS Z BITVY": "BATTLE INCOME",
+            "❤️ HP": "❤️ HP",
+            "⚔️ Poškození": "⚔️ Damage",
+            "👟 Rychlost": "👟 Speed",
+            "🌀 Počet Střel": "🌀 Projectiles",
+            "🔥 Prodleva": "🔥 Fire Rate",
+            "🎯 Krit. Šance": "🎯 Crit Chance",
+            "💥 Krit. Násobič": "💥 Crit Multi",
+            "🛡️ Štít": "🛡️ Shield",
+            "💊 Regenerace": "💊 Regen",
+            "🧛 Lifesteal": "🧛 Lifesteal",
+            "MÍSTNOST": "ROOM",
+            "PŘIPOJIT": "JOIN",
+            "ZRUŠIT": "CANCEL",
+            "ČEKÁNÍ...": "WAITING...",
+            "Čekáme, až si ostatní hráči vyberou vylepšení.": "Waiting for other players to pick upgrades.",
+            "UPOZORNĚNÍ": "WARNING",
+            "POTVRZENÍ": "CONFIRMATION",
+            "ROZUMÍM": "OK",
+            "ANO": "YES",
+            "NE": "NO",
+            "Stiskni 'T' pro psaní...": "Press 'T' to chat..."
         },
         de: {
             "VÍTEJ!": "WILLKOMMEN!",
