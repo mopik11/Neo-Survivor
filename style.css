@@ -762,6 +762,19 @@ canvas {
     margin-top: 1.5rem;
     font-size: 0.75rem;
   }
+
+  #btn-daily-gift {
+    width: 50px !important;
+    height: 50px !important;
+    top: 10px !important;
+    right: 10px !important;
+    font-size: 1.5rem !important;
+  }
+
+  #daily-timer {
+    font-size: 0.85rem !important;
+    bottom: -25px !important;
+  }
 }
 
 @media screen and (max-height: 600px) {

@@ -3421,6 +3421,20 @@ function startCrateAnimation(winner, crateType = 'basic') {
         const skipBtn = document.getElementById('btn-skip-crate');
         if (skipBtn) skipBtn.style.display = 'none';
         
+        // Proactive exit check: If user cannot afford another spin, hide the "Spin Again" button
+        const crateCost = { 'basic': 150, 'premium': 1000, 'legendary': 5000 }[crateType];
+        const totalBatchCost = crateCost * (GAME.lastCrateBatchSize || 1);
+        const canAffordAgain = META.currency >= totalBatchCost;
+        
+        const btnAgain = document.getElementById('btn-crate-again');
+        if (btnAgain) {
+            if (!canAffordAgain) {
+                btnAgain.style.display = 'none';
+            } else {
+                btnAgain.style.display = 'block';
+            }
+        }
+
         if (winner.id === 'ultra_rare') {
             showConfetti(2000);
             playSound('crateWin');
@@ -4782,7 +4796,11 @@ function init() {
             "MINCE:": "COINS:",
             "ČAS:": "TIME:",
             "ZKUSIT ZNOVU": "TRY AGAIN",
-            "MENU": "MENU"
+            "MENU": "MENU",
+            "h": "h",
+            "m": "m",
+            "s": "s",
+            "verze:": "version:"
         }
     };
 
@@ -5014,7 +5032,7 @@ function init() {
                 const m = Math.floor((remaining % (3600 * 1000)) / (60 * 1000));
                 const s = Math.floor((remaining % (60 * 1000)) / 1000);
                 
-                if (timerSpan) timerSpan.innerText = `${h}h ${m}m ${s}s`;
+                if (timerSpan) timerSpan.innerText = `${h}${window.T('h')} ${m}${window.T('m')} ${s}${window.T('s')}`;
                 btnDaily.style.opacity = '0.5';
                 btnDaily.style.filter = 'grayscale(1)';
                 btnDaily.style.pointerEvents = 'none';
