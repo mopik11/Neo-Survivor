@@ -1264,8 +1264,8 @@ class Bait {
 }
 
 class Meteorite {
-    constructor(x, y) {
-        this.x = x; this.y = y; this.radius = 60;
+    constructor(x, y, radius = 40 + Math.random() * 40) {
+        this.x = x; this.y = y; this.radius = radius;
         this.id = Math.random().toString(36).substr(2, 9);
         this.maxHp = 1000;
         this.hp = this.maxHp;
@@ -5972,9 +5972,9 @@ function update(dt) {
                 let hp = CONFIG.ENEMY_BASE_HEALTH * mod;
                 let type = 1;
 
-                // Spawnování JEDNOHO meteoritu s 1000 HP
+                // Spawnování meteoritů s 1000 HP a kolizí
                 if (!GAME.entities.meteorites) GAME.entities.meteorites = [];
-                if (Math.random() < 0.05 && GAME.entities.meteorites.length < 1) {
+                if (Math.random() < 0.1 && GAME.entities.meteorites.length < 15) {
                     const ma = Math.random() * Math.PI * 2;
                     const mx = pivot.x + Math.cos(ma) * (CONFIG.SPAWN_RADIUS + 200);
                     const my = pivot.y + Math.sin(ma) * (CONFIG.SPAWN_RADIUS + 200);
