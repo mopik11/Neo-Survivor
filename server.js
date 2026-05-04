@@ -50,7 +50,8 @@ const CONFIG = {
     ENEMY_BASE_HEALTH: 20,
     ENEMY_BASE_SPEED: 4.5,
     SPAWN_INTERVAL: 800,
-    BOSS_INTERVAL: 60
+    BOSS_INTERVAL: 60,
+    BOSS_LEVEL_INTERVAL: 10
 };
 
 function dist(x1, y1, x2, y2) {
@@ -245,11 +246,15 @@ io.on('connection', (socket) => {
                 playerName: user,
                 maxLevel: 1,
                 currency: 0,
-                upgrades: { hp: 0, speed: 0, luck: 0, hat: null },
-                ships: { 1: true, 2: false, 3: false },
                 selectedShip: 1,
                 abilities: { 1: true, 2: false, 3: false },
-                selectedAbility: 1
+                selectedAbility: 1,
+                inventory: [],
+                settings: { musicMenu: true, musicGame: true, sfx: true },
+                selectedLanguage: 'cs',
+                achievements: {},
+                claimedAchievements: {},
+                stats: { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 }
             };
 
             console.log(`[REGISTER] Creating new account: "${user}"`);
@@ -418,7 +423,8 @@ io.on('connection', (socket) => {
                 cleanupTimer: null,
                 frozenUntil: 0, // Logika pro zamrznutí času
                 tombstones: [],
-                obstacles: []
+                obstacles: [],
+                lastBossLevelSpawned: 0
             };
         } else {
             if (ROOMS[roomId].cleanupTimer) {
@@ -472,6 +478,7 @@ io.on('connection', (socket) => {
                     ROOMS[r].paused = false;
                     ROOMS[r].readyCount = 0;
                     ROOMS[r].frozenUntil = 0;
+                    ROOMS[r].lastBossLevelSpawned = 0;
 
                     setTimeout(() => {
                         if (ROOMS[r]) ROOMS[r].isGameOver = false;
@@ -723,12 +730,15 @@ setInterval(() => {
                 }
 
                 const hasBoss = room.enemies.some(e => e.isBoss);
-                if (room.level >= 20 && (room.time - room.lastBossTime > CONFIG.BOSS_INTERVAL) && !hasBoss) {
+                const isBossLevel = room.level > 0 && room.level % CONFIG.BOSS_LEVEL_INTERVAL === 0;
+                const bossAlreadySpawned = room.lastBossLevelSpawned === room.level;
+
+                if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
                     isBoss = true;
                     hp = CONFIG.ENEMY_BASE_HEALTH * 30 * mod;
                     type = 1;
                     speedMod = 1;
-                    room.lastBossTime = room.time;
+                    room.lastBossLevelSpawned = room.level;
                 }
 
                 room.enemies.push({

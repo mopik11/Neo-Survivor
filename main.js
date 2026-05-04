@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.309
+ * NEO SURVIVOR - Core Game Logic - v1.337
  */
 
 window.addEventListener('beforeunload', () => {
@@ -295,6 +295,7 @@ const META = {
     stats: { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 },
     inventory: [],
     settings: { musicMenu: true, musicGame: true, sfx: true },
+    selectedLanguage: 'cs',
     lastSession: null
 };
 
@@ -469,6 +470,8 @@ const loadMeta = () => {
         if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 };
         if (!META.settings) META.settings = { musicMenu: true, musicGame: true, sfx: true };
         if (META.upgrades && META.upgrades.hat === undefined) META.upgrades.hat = null;
+        if (META.upgrades && META.upgrades.autoSelect === undefined) META.upgrades.autoSelect = false;
+        if (!META.selectedLanguage) META.selectedLanguage = 'cs';
     }
     updateCurrencyUI();
 };
@@ -2375,7 +2378,7 @@ function updateUI() {
 }
 
 function showLevelUp() {
-    if (!NET.isMultiplayer) GAME.entities.enemies = [];
+    if (!NET.isMultiplayer) GAME.entities.enemies = GAME.entities.enemies.filter(e => e.isBoss);
     const modal = document.getElementById('levelup-modal');
     const container = document.getElementById('upgrade-options');
     container.innerHTML = '';
@@ -4247,6 +4250,8 @@ function handleAuth(isLogin) {
                 document.getElementById('display-player-name').innerText = META.playerName;
                 document.getElementById('display-max-level').innerText = META.maxLevel || 1;
                 document.getElementById('display-doge').innerText = META.currency || 0;
+                
+                if (META.selectedLanguage) window.setLanguage(META.selectedLanguage);
 
                 document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
                 document.getElementById('menu-modal').classList.add('active');
@@ -4800,12 +4805,15 @@ function init() {
             "h": "h",
             "m": "m",
             "s": "s",
-            "verze:": "version:"
+            "verze:": "version:",
+            "Zatím nemáš žádná emoji. Otevři bednu!": "No emojis yet. Open a crate!"
         }
     };
 
     window.ORIGINAL_TEXTS = window.ORIGINAL_TEXTS || new WeakMap();
     window.setLanguage = function(lang) {
+        META.selectedLanguage = lang;
+        saveMeta();
         localStorage.setItem('neoSurvivor_lang', lang);
         const dict = I18N[lang] || {};
         
@@ -4953,6 +4961,7 @@ function init() {
                         NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META });
                     }
                     
+                    if (META.selectedLanguage) window.setLanguage(META.selectedLanguage);
                     saveMetaLocalOnly();
                     document.getElementById('display-max-level').innerText = META.maxLevel || 1;
                     updateCurrencyUI();
@@ -5903,6 +5912,7 @@ function update(dt) {
                 if (NET.isMultiplayer) {
                     GAME.entities.pickedGems.add(g.id);
                     NET.socket.emit('gemPickup', g.id);
+                    playSound('coin');
                 } else {
                     if (g.isNuke) {
                         GAME.entities.enemies.forEach(e => {

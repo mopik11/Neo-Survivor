@@ -764,16 +764,22 @@ canvas {
   }
 
   #btn-daily-gift {
-    width: 50px !important;
-    height: 50px !important;
-    top: 10px !important;
-    right: 10px !important;
-    font-size: 1.5rem !important;
+    position: relative !important;
+    top: 0 !important;
+    right: 0 !important;
+    margin: 0 auto 30px auto !important;
+    width: 55px !important;
+    height: 55px !important;
+    font-size: 1.6rem !important;
   }
 
   #daily-timer {
-    font-size: 0.85rem !important;
-    bottom: -25px !important;
+    font-size: 0.8rem !important;
+    bottom: -22px !important;
+    background: rgba(0,0,0,0.6);
+    padding: 2px 8px;
+    border-radius: 10px;
+    backdrop-filter: blur(4px);
   }
 }
 
