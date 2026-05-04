@@ -2999,7 +2999,7 @@ function showMetaMenu() {
     collectionSection.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(16,185,129,0.2); margin-bottom: 15px; padding-bottom: 5px;">
             <div style="display:flex; flex-direction:column; align-items: flex-start;">
-                <h2 style="color: #10b981; text-align: left; margin:0; font-size: 1.2rem;" data-i18n="TVÁ SBÍRKA">✨ TVÁ SBÍRKA</h2>
+                <h2 style="color: #10b981; text-align: left; margin:0; font-size: 1.2rem;">✨ ${window.T('TVÁ SBÍRKA')}</h2>
                 <div style="font-size: 0.7rem; color: #64748b; font-weight: bold; margin-top: 2px;">${window.T('Celková hodnota:')} <span style="color: #fbbf24;">${formatNumber(META.inventory.reduce((sum, inv) => sum + (EMOJIS.find(e => e.id === inv.id)?.price || 0) * inv.count, 0))} DOGE</span></div>
             </div>
             ${META.inventory.length > 0 ? `<button id="btn-sell-all" style="padding: 5px 12px; font-size: 0.7rem; border-radius: 8px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); cursor:pointer; font-weight:bold;">${window.T('PRODAT VŠE')}</button>` : ''}
@@ -3214,7 +3214,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 </div>
             </div>
 
-            <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
+            <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; visibility: hidden; pointer-events: none; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
                 <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;">${window.T('ZÍSKÁNO:')} ${GAME.lastCrateBatchSize - (GAME.crateQueue ? GAME.crateQueue.length : 0)} / ${GAME.lastCrateBatchSize || 1}</p>
                 <h2 id="crate-winner-name" style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 5px; text-shadow: 0 0 20px rgba(255,255,255,0.2);">${window.T(winner.name)}</h2>
                 <div id="crate-winner-rarity" style="font-size: 1.1rem; font-weight: 800; color: ${getRarityColor(winner.rarity)}; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 30px;">${winner.rarity.toUpperCase()}</div>
@@ -3272,6 +3272,8 @@ function startCrateAnimation(winner, crateType = 'basic') {
         const resultInfo = document.getElementById('crate-result-info');
         if (resultInfo) {
             resultInfo.style.opacity = '1';
+            resultInfo.style.visibility = 'visible';
+            resultInfo.style.pointerEvents = 'auto';
             resultInfo.style.transform = 'translateY(0)';
         }
         const skipBtn = document.getElementById('btn-skip-crate');
