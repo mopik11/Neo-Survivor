@@ -475,6 +475,7 @@ const loadMeta = () => {
         if (!META.maxLevel) META.maxLevel = 1;
         if (!META.inventory) META.inventory = [];
         if (!META.achievements) META.achievements = {};
+        if (!META.claimedAchievements) META.claimedAchievements = {};
         if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 };
         if (!META.settings) META.settings = { musicMenu: true, musicGame: true, sfx: true };
         if (META.upgrades && META.upgrades.hat === undefined) META.upgrades.hat = null;
@@ -2668,10 +2669,7 @@ function showAchievementUnlocked(name) {
     const icon = ach ? ach.icon : '🌟';
     const reward = ach ? (ach.reward || 0) : 0;
     
-    // Grant reward
-    if (reward > 0) {
-        addCurrency(reward);
-    }
+    // reward is now claimed manually
 
     const notification = document.createElement('div');
     notification.style.position = 'fixed';
@@ -2745,14 +2743,26 @@ function showAchievementsMenu() {
 
     ACHIEVEMENTS.forEach(ach => {
         const isUnlocked = META.achievements && META.achievements[ach.id];
+        const isClaimed = META.claimedAchievements && META.claimedAchievements[ach.id];
+        
         const item = document.createElement('div');
-        item.style.background = 'rgba(255,255,255,0.05)';
+        item.style.background = isClaimed ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.05)';
         item.style.padding = '15px';
         item.style.borderRadius = '12px';
         item.style.display = 'flex';
         item.style.alignItems = 'center';
         item.style.gap = '15px';
         item.style.border = isUnlocked ? '1px solid rgba(251, 191, 36, 0.4)' : '1px solid rgba(255,255,255,0.1)';
+        if (isClaimed) item.style.opacity = '0.6';
+
+        let claimButton = '';
+        if (isUnlocked && !isClaimed) {
+            claimButton = `<button class="btn-restart" style="padding: 8px 15px; font-size: 0.75rem; background: #10b981; margin: 0; min-width: 120px;" onclick="window.claimAchievement('${ach.id}')">${window.T('VYDĚLAT:')} ${ach.reward} DOGE</button>`;
+        } else if (isClaimed) {
+            claimButton = `<div style="color: #64748b; font-size: 0.75rem; font-weight: 800; text-transform: uppercase;">${window.T('VYDĚLÁNO')} (${ach.reward} DOGE)</div>`;
+        } else {
+            claimButton = `<div style="color: #475569; font-size: 1.5rem;">🌑</div>`;
+        }
 
         item.innerHTML = `
             <div style="font-size: 2rem; opacity: ${isUnlocked ? 1 : 0.3};">${ach.icon}</div>
@@ -2760,13 +2770,30 @@ function showAchievementsMenu() {
                 <h3 style="margin: 0; color: ${isUnlocked ? '#fbbf24' : '#94a3b8'}; font-size: 1.1rem;">${window.T(ach.name)}</h3>
                 <p style="margin: 5px 0 0 0; color: #64748b; font-size: 0.85rem;">${window.T(ach.desc)}</p>
             </div>
-            <div style="font-size: 1.5rem; color: #fbbf24;">${isUnlocked ? '⭐' : '🌑'}</div>
+            ${claimButton}
         `;
         container.appendChild(item);
     });
 
     document.getElementById('achievements-modal').classList.add('active');
 }
+
+window.claimAchievement = function(id) {
+    const ach = ACHIEVEMENTS.find(a => a.id === id);
+    if (!ach) return;
+    if (!META.achievements[id]) return;
+    if (META.claimedAchievements && META.claimedAchievements[id]) return;
+
+    if (!META.claimedAchievements) META.claimedAchievements = {};
+    META.claimedAchievements[id] = true;
+    
+    addCurrency(ach.reward);
+    saveMeta();
+    showAchievementsMenu(); // Refresh
+    
+    AudioEngine.play('coin');
+    window.showCustomAlert(window.T("Odměna vybrána!") + " +" + ach.reward + " DOGE");
+};
 
 
 function gameOver() {
@@ -4583,23 +4610,26 @@ function init() {
             "CELKOVÁ HODNOTA:": "TOTAL VALUE:",
             "PRODAT VŠE": "SELL ALL",
             "TVÁ SBÍRKA": "YOUR COLLECTION",
-            "Stiskni 'T' pro psaní...": "Press 'T' to chat...",
-            "Zatím nemáš žádná emoji. Otevři bednu!": "You don't have any emojis yet. Open a crate!",
-            "📦 OBYČEJNÁ": "📦 BASIC",
-            "💎 PRÉMIOVÁ": "💎 PREMIUM",
-            "👑 LEGENDÁRNÍ": "👑 LEGENDARY",
-            "OBYČEJNÁ BEDNA": "BASIC CRATE",
-            "PRÉMIOVÁ BEDNA": "PREMIUM CRATE",
-            "LEGENDÁRNÍ BEDNA": "LEGENDARY CRATE",
-            "Extrémně rychlý, vybuchuje okamžitě při dotyku!": "Extremely fast, explodes immediately on contact!",
-            "Má odolný přední štít, který pohlcuje 50% damage.": "Has a durable front shield that absorbs 50% damage.",
-            "PAUZA": "PAUSE",
-            "V menu \"VYLEPŠENÍ\" klikni na bednu. Animaci lze přeskočit (SKIP).": "In the \"UPGRADES\" menu, click on a crate. Animation can be skipped (SKIP).",
-            "Redukce poškození +2%": "Damage reduction +2%",
+            "🌟 ÚSPĚCHY": "🌟 ACHIEVEMENTS",
+            "🌟 VESMÍRNÉ ÚSPĚCHY": "🌟 SPACE ACHIEVEMENTS",
+            "VYDĚLAT:": "CLAIM:",
+            "VYDĚLÁNO": "CLAIMED",
+            "ZAVŘÍT": "CLOSE",
+            "VÝBAVA": "EQUIPMENT",
+            "VYLEPŠENÍ": "UPGRADES",
+            "ŽEBŘÍČEK": "LEADERBOARD",
+            "NÁVOD": "MANUAL",
+            "FEEDBACK": "FEEDBACK",
+            "NASTAVENÍ": "SETTINGS",
+            "ODHLÁSIT": "LOGOUT",
             "Mýdlo": "Soap", "Peníze": "Money", "Úsměv": "Smile", "Nerd": "Nerd", "Motýl": "Butterfly", "Mňau": "Meow", "Kaktus": "Cactus", "Démon": "Demon", "Šerif": "Sheriff", "Gesto": "Hand Gesture", "Doge": "Doge", "Mimozemšťan": "Alien", "Měsíc": "Moon", "Srdce": "Heart", "Plamen": "Flame", "Pizza": "Pizza", "Hovno": "Poop", "Robot": "Robot", "Diamant": "Diamond", "Lebka": "Skull", "Piráti": "Pirates", "Ninja": "Ninja", "Astronaut": "Astronaut", "Jednorožec": "Unicorn", "Drak": "Dragon", "Král": "King", "Bůh": "God",
             "PARÁDA!": "AWESOME!", "SKVĚLÉ!": "GREAT!", "ÚSPĚCH!": "SUCCESS!", "ZÍSKAL JSI!": "YOU GOT!", "VÝBORNĚ!": "EXCELLENT!", "VÝNOS Z BITVY": "BATTLE INCOME",
-            "MÍSTNOST": "ROOM",
-            "PŘIPOJIT": "JOIN",
+            "Odměna vybrána!": "Reward claimed!",
+            "Zatím žádné záznamy. Buď první!": "No entries yet. Be the first!",
+            "Žádné aktivní servery": "No active servers",
+            "Postup obnoven! Zpět ve hře.": "Progress restored! Back in the game.",
+            "v bitvě": "in battle",
+            "Zobrazit vše": "Show all",
             "ZRUŠIT": "CANCEL",
             "ČEKÁNÍ...": "WAITING...",
             "Čekáme, až si ostatní hráči vyberou vylepšení.": "Waiting for other players to pick upgrades.",
@@ -4609,35 +4639,83 @@ function init() {
             "ANO": "YES",
             "NE": "NO",
             "Vrah": "Murderer",
+            "Zabij celkem 1 000 nepřátel": "Kill 1,000 enemies total",
             "Genocida": "Genocide",
+            "Zabij celkem 10 000 nepřátel": "Kill 10,000 enemies total",
             "Bůh Smrti": "God of Death",
+            "Zabij celkem 100 000 nepřátel": "Kill 100,000 enemies total",
             "Lovec Hlav": "Headhunter",
+            "Poraz celkem 50 bossů": "Defeat 50 bosses total",
             "Noční Můra Bossů": "Boss's Nightmare",
+            "Poraz celkem 100 bossů": "Defeat 100 bosses total",
             "Elitní Pilot": "Elite Pilot",
+            "Dosáhni levelu 75 v jedné hře": "Reach level 75 in one game",
             "Legendární Pilot": "Legendary Pilot",
+            "Dosáhni levelu 100 v jedné hře": "Reach level 100 in one game",
             "Průzkumník Fanoušek": "Explorer Fan",
+            "Odehraj 50 her za Průzkumníka": "Play 50 games as Explorer",
             "Laser Fanoušek": "Laser Fan",
+            "Odehraj 50 her za Laserovou Loď": "Play 50 games as Laser Ship",
             "Obránce Fanoušek": "Defender Fan",
+            "Odehraj 50 her za Obránce": "Play 50 games as Defender",
             "Brokovnice Fanoušek": "Shotgun Fan",
+            "Odehraj 50 her za Brokovnici": "Play 50 games as Shotgun",
             "Nekromant Fanoušek": "Necromancer Fan",
+            "Odehraj 50 her za Nekromancera": "Play 50 games as Necromancer",
             "Atombombarďák": "Nuker",
+            "Použij celkem 50 atomovek": "Use 50 nukes total",
             "Magnetický Mistr": "Magnet Master",
+            "Použij celkem 100 magnetů": "Use 100 magnets total",
             "Zdravotník": "Medic",
+            "Použij celkem 100 lékárniček": "Use 100 medkits total",
             "Mistr Času": "Time Master",
+            "Použij zastavení času 50x": "Use time stop 50x",
             "Loutkař": "Puppet Master",
+            "Použij posednutí 50x": "Use possession 50x",
             "Léčitel": "Healer",
+            "Vyléč celkem 5000 HP aurou": "Heal 5,000 HP with aura",
             "Sběratel Gemů": "Gem Collector",
+            "Posbírej celkem 50 000 gemů": "Collect 50,000 gems total",
             "Rychlostní Démon": "Speed Demon",
+            "Vylepši Rychlost na maximum v jedné hře": "Max out Speed in one game",
             "Tank": "Tank",
+            "Vylepši HP na maximum v jedné hře": "Max out HP in one game",
             "Skleněné Dělo": "Glass Cannon",
+            "Maxuj Damage bez vylepšení HP": "Max out Damage without HP upgrades",
             "Pařmen": "Gamer",
+            "Odehraj 20 multiplayerových her": "Play 20 multiplayer games",
             "Boháč": "Rich Kid",
+            "Měj u sebe 50 000 Dogecoinů najednou": "Have 50,000 Dogecoins at once",
             "Šťastná Hvězda": "Lucky Star",
+            "Získej Diamant (Ultra Rare) z bedny": "Get Diamond (Ultra Rare) from crate",
             "Těžař Asteroidů": "Asteroid Miner",
+            "Znič celkem 100 meteoritů": "Destroy 100 meteorites total",
             "Ničitel Asteroidů": "Asteroid Destroyer",
+            "Znič celkem 500 meteoritů": "Destroy 500 meteorites total",
             "Přeživší": "Survivor",
+            "Přežij alespoň 10 minut v jedné hře": "Survive at least 10 minutes",
             "Veterán Přežití": "Survival Veteran",
-            "Nesmrtelný": "Immortal"
+            "Přežij alespoň 20 minut v jedné hře": "Survive at least 20 minutes",
+            "Nesmrtelný": "Immortal",
+            "Přežij alespoň 30 minut v jedné hře": "Survive at least 30 minutes",
+            "Široký": "Wide",
+            "Získej 5x upgrade na šířku zdi v jedné hře": "Get 5x wall width upgrades in one game",
+            "Skrblík": "Cheapskate",
+            "Získej celkem 5000 Dogecoinů": "Collect 5,000 Dogecoins total",
+            "Lovec Bossů": "Boss Slayer",
+            "Poraz celkem 10 bossů": "Defeat 10 bosses total",
+            "Vesmírný Veterán": "Space Veteran",
+            "Dosáhni levelu 50 v jedné hře": "Reach level 50 in one game",
+            "Sběratel": "Collector",
+            "Odemkni všechny 3 základní lodě": "Unlock all 3 basic ships",
+            "Let's go gambling": "Let's go gambling",
+            "Zmáčkni 100x tlačítko pro náhodný výběr": "Press random pick button 100x",
+            "Cookie clicker": "Cookie clicker",
+            "Odehraj celkem 24 hodin": "Play for 24 hours total",
+            "Milionář": "Milionaire",
+            "Získej celkem 100 000 Dogecoinů": "Collect 100,000 Dogecoins total",
+            "Zasloužilý Otevírač": "Crate Opener",
+            "Otevři celkem 50 beden": "Open 50 crates total"
         }
     };
 
