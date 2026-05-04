@@ -3375,7 +3375,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
                     <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${(GAME.crateQueue && GAME.crateQueue.length > 0) ? window.T('DALŠÍ') : window.T('PŘIDAT DO SBÍRKY')}</button>
                     <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">${window.T('PRODAT')} (+${winner.price})</button>
                     ${(GAME.crateQueue.length === 0 && GAME.lastCrateBatchSize > 1) ? `<button id="btn-crate-sell-all" class="btn-restart" style="min-width: 150px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem;">${window.T('HROMADNÝ PRODEJ')}</button>` : ''}
-                    <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${(!GAME.crateQueue || GAME.crateQueue.length === 0) ? 'block' : 'none'};">${window.T('ZATOČIT ZNOVU')}</button>
+                    <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: none;">${window.T('ZATOČIT ZNOVU')}</button>
                 </div>
             </div>
         </div>
@@ -3458,7 +3458,9 @@ function startCrateAnimation(winner, crateType = 'basic') {
                     collectBtn.style.border = '1px solid rgba(239, 68, 68, 0.3)';
                 }
             } else {
-                btnAgain.style.display = 'block';
+                // Show "Spin Again" ONLY if we are at the end of the current batch
+                const isLastInBatch = GAME.crateQueue && GAME.crateQueue.length === 0;
+                btnAgain.style.display = isLastInBatch ? 'block' : 'none';
             }
         }
 
@@ -3566,7 +3568,8 @@ function startCrateAnimation(winner, crateType = 'basic') {
         };
     }
 
-    modal.querySelector('#btn-crate-again').onclick = () => {
+    const btnCrateAgain = modal.querySelector('#btn-crate-again');
+    if (btnCrateAgain) btnCrateAgain.onclick = () => {
         clearCrateTimeouts();
         const crateCost = { 'basic': 150, 'premium': 1000, 'legendary': 5000 }[GAME.lastCrateType];
         const totalCost = crateCost * (GAME.lastCrateBatchSize || 1);
@@ -4709,7 +4712,7 @@ function init() {
             "DALŠÍ": "NEXT",
             "PŘIDAT DO SBÍRKY": "COLLECT",
             "ZATOČIT ZNOVU": "SPIN AGAIN",
-            "PŘESKOČIT (SKIP)": "SKIP",
+            "PŘESKOČIT": "SKIP",
             "ZÍSKÁNO:": "COLLECTED:",
             "VESMÍRNÉ BEDNY": "SPACE CRATES",
             "OBYČEJNÁ BEDNA": "COMMON CRATE",
