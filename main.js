@@ -1835,6 +1835,7 @@ class Player {
         this.auraPower = 0.5;
 
         this.orbitersList = [];
+        this.appliedUpgrades = [];
 
         this.shipType = META.selectedShip || 1;
         this.wallRangeBonus = 0;
@@ -2385,7 +2386,7 @@ function updateUI() {
 }
 
 function showLevelUp() {
-    if (!NET.isMultiplayer) GAME.entities.enemies = GAME.entities.enemies.filter(e => e.isBoss);
+    GAME.entities.enemies = GAME.entities.enemies.filter(e => e.isBoss);
     const modal = document.getElementById('levelup-modal');
     const container = document.getElementById('upgrade-options');
     container.innerHTML = '';
@@ -3903,25 +3904,7 @@ function initSocket() {
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
             if (NET.serverPollingInterval) clearInterval(NET.serverPollingInterval);
 
-            // Restore session if rejoining after AFK/pause disconnect
-            if (META.lastSession && META.lastSession.roomId === roomId) {
-                console.log('[REJOIN] Restoring session for room:', roomId);
-                const session = META.lastSession;
-                if (GAME.entities && GAME.entities.player) {
-                    GAME.entities.player.level = session.level || 1;
-                    GAME.entities.player.xp = session.xp || 0;
-                    GAME.entities.player.nextLevelXp = session.nextLevelXp || 100;
-                    if (session.upgrades && session.upgrades.length > 0) {
-                        session.upgrades.forEach(u => {
-                            try { GAME.entities.player.applyUpgrade(u, false); } catch(e) {}
-                        });
-                    }
-                }
-                META.lastSession = null; // Clear after restore
-                saveMeta();
-                window.showCustomAlert(window.T('Postup obnoven! Zpět ve hře.'));
-            }
-
+            // Session logic moved below startGame to ensure player exists
             if (!GAME.active) {
                 startGame();
 
@@ -3932,6 +3915,25 @@ function initSocket() {
                     GAME.entities.player.maxHp = playerState.maxHp;
                     GAME.entities.player.level = playerState.level;
                 }
+            }
+
+            // Restore session if rejoining after AFK/pause disconnect
+            if (META.lastSession && META.lastSession.roomId === roomId) {
+                console.log('[REJOIN] Restoring session for room:', roomId);
+                const session = META.lastSession;
+                if (GAME.entities && GAME.entities.player) {
+                    GAME.entities.player.level = session.level || 1;
+                    GAME.entities.player.xp = session.xp || 0;
+                    GAME.entities.player.nextLevelXp = session.nextLevelXp || 100;
+                    if (session.upgrades && session.upgrades.length > 0) {
+                        session.upgrades.forEach(u => {
+                            try { applyUpgrade(u, false); } catch(e) {}
+                        });
+                    }
+                }
+                META.lastSession = null; // Clear after restore
+                saveMeta();
+                window.showCustomAlert(window.T('Postup obnoven! Zpět ve hře.'));
             }
             
             // AUTOMATIC UNBLOCK: If the server is currently stuck waiting for players to pick an upgrade,
@@ -5054,7 +5056,7 @@ function init() {
                 btnDaily.style.filter = 'grayscale(1)';
                 btnDaily.style.pointerEvents = 'none';
             } else {
-                if (timerSpan) timerSpan.innerText = '';
+                if (timerSpan) timerSpan.innerText = window.T('PŘIPRAVENO');
                 btnDaily.style.opacity = '1';
                 btnDaily.style.filter = 'none';
                 btnDaily.style.pointerEvents = 'auto';
