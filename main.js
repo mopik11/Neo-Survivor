@@ -4610,6 +4610,8 @@ function init() {
             "CELKOVÁ HODNOTA:": "TOTAL VALUE:",
             "PRODAT VŠE": "SELL ALL",
             "TVÁ SBÍRKA": "YOUR COLLECTION",
+            "ÚSPĚCHY": "ACHIEVEMENTS",
+            "VESMÍRNÉ ÚSPĚCHY": "SPACE ACHIEVEMENTS",
             "🌟 ÚSPĚCHY": "🌟 ACHIEVEMENTS",
             "🌟 VESMÍRNÉ ÚSPĚCHY": "🌟 SPACE ACHIEVEMENTS",
             "VYDĚLAT:": "CLAIM:",
