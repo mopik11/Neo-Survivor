@@ -2449,15 +2449,18 @@ function showLevelUp() {
             <h3 style="font-size: 1rem; color: white; margin-bottom: 5px;">${window.T(u.name)}</h3>
             <p style="font-size: 0.8rem; color: #cbd5e1; line-height: 1.2;">${window.T(u.desc)}</p>
         `;
-        card.onclick = () => applyUpgrade(u.id);
+        card.addEventListener('click', (e) => {
+            e.stopPropagation();
+            applyUpgrade(u.id);
+        });
         container.appendChild(card);
     });
     modal.classList.add('active');
 
-    // Náhodný výběr tlačítko
     const btnRandom = document.getElementById('btn-random-upgrade');
     if (btnRandom) {
-        btnRandom.onclick = () => {
+        btnRandom.onclick = (e) => {
+            e.stopPropagation();
             const cards = container.querySelectorAll('.upgrade-card');
             if (cards.length > 0) {
                 if (!META.stats.totalRandomPicks) META.stats.totalRandomPicks = 0;
@@ -2466,7 +2469,6 @@ function showLevelUp() {
                 
                 const randomIdx = Math.floor(Math.random() * cards.length);
                 applyUpgrade(selected[randomIdx].id);
-                modal.classList.remove('active');
             }
         };
     }
@@ -2573,6 +2575,7 @@ function applyUpgrade(id, record = true) {
 }
 
 function checkAchievements() {
+    if (!GAME) return;
     if (!META.achievements) META.achievements = {};
     if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0 };
 
@@ -2624,12 +2627,12 @@ function checkAchievements() {
             case 'rich_kid': if (META.currency >= 50000) unlocked = true; break;
             case 'lucky_star': if (META.stats.foundUltraRare) unlocked = true; break;
             
-            case 'asteroid_miner': if ((META.stats.totalMeteoritesDestroyed || 0) >= 100) unlocked = true; break;
-            case 'asteroid_destroyer': if ((META.stats.totalMeteoritesDestroyed || 0) >= 500) unlocked = true; break;
+            case 'asteroid_miner': if (GAME.entities && (META.stats.totalMeteoritesDestroyed || 0) >= 100) unlocked = true; break;
+            case 'asteroid_destroyer': if (GAME.entities && (META.stats.totalMeteoritesDestroyed || 0) >= 500) unlocked = true; break;
             
-            case 'first_win': if (GAME.timer >= 600) unlocked = true; break;
-            case 'survivor': if (GAME.timer >= 1200) unlocked = true; break;
-            case 'immortal': if (GAME.timer >= 1800) unlocked = true; break;
+            case 'first_win': if (GAME.timer !== undefined && GAME.timer >= 600) unlocked = true; break;
+            case 'survivor': if (GAME.timer !== undefined && GAME.timer >= 1200) unlocked = true; break;
+            case 'immortal': if (GAME.timer !== undefined && GAME.timer >= 1800) unlocked = true; break;
         }
 
         if (unlocked) {
@@ -3024,7 +3027,7 @@ function showMetaMenu() {
 
     // 1. ZÁKLADNÍ VYLEPŠENÍ
     const upgradesSection = document.createElement('div');
-    upgradesSection.innerHTML = `<h2 style="color: #6366f1; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(99,102,241,0.2); padding-bottom: 5px;">🚀 ZÁKLADNÍ STATY</h2>`;
+    upgradesSection.innerHTML = `<h2 style="color: #6366f1; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(99,102,241,0.2); padding-bottom: 5px;">🚀 ${window.T('ZÁKLADNÍ STATY')}</h2>`;
     const upgradesGrid = document.createElement('div');
     upgradesGrid.className = 'menu-actions-grid';
     upgradesSection.appendChild(upgradesGrid);
@@ -3327,7 +3330,8 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 </div>
             </div>
 
-            <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; visibility: hidden; pointer-events: none; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
+            <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; visibility: hidden; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%; position: relative;">
+                <div id="crate-blocker" style="position: absolute; inset: -50px; z-index: 999; cursor: wait;"></div>
                 <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;">${window.T('ZÍSKÁNO:')} ${GAME.lastCrateBatchSize - (GAME.crateQueue ? GAME.crateQueue.length : 0)} / ${GAME.lastCrateBatchSize || 1}</p>
                 <h2 id="crate-winner-name" style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 5px; text-shadow: 0 0 20px rgba(255,255,255,0.2);">${window.T(winner.name)}</h2>
                 <div id="crate-winner-rarity" style="font-size: 1.1rem; font-weight: 800; color: ${getRarityColor(winner.rarity)}; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 30px;">${winner.rarity.toUpperCase()}</div>
@@ -3386,10 +3390,13 @@ function startCrateAnimation(winner, crateType = 'basic') {
         if (resultInfo) {
             resultInfo.style.opacity = '1';
             resultInfo.style.visibility = 'visible';
-            resultInfo.style.pointerEvents = 'auto';
             resultInfo.style.transform = 'translateY(0)';
             
-            // Force pointer-events on buttons too
+            const blocker = modal.querySelector('#crate-blocker');
+            if (blocker) blocker.remove();
+
+            // Re-enable clicks globally just in case
+            resultInfo.style.pointerEvents = 'auto';
             resultInfo.querySelectorAll('.btn-restart').forEach(btn => {
                 btn.style.pointerEvents = 'auto';
                 btn.style.cursor = 'pointer';
@@ -4717,6 +4724,7 @@ function init() {
             "Sushi": "Sushi",
             "VŠECHNO": "ALL",
             "HROMADNÝ PRODEJ": "BULK SALE",
+            "ZÁKLADNÍ STATY": "BASIC STATS",
             "Odehraj 20 multiplayerových her": "Play 20 multiplayer games",
             "Boháč": "Rich Kid",
             "Měj u sebe 50 000 Dogecoinů najednou": "Have 50,000 Dogecoins at once",

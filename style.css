@@ -359,10 +359,10 @@ canvas {
 }
 
 .btn-sub {
-  font-size: 0.7rem !important;
-  font-weight: 500 !important;
-  padding: 0.7rem 0.4rem !important;
-  gap: 6px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  padding: 0.8rem 0.5rem !important;
+  gap: 8px !important;
   flex-direction: column !important;
 }
 
@@ -372,10 +372,10 @@ canvas {
 }
 
 .btn-mini {
-  font-size: 0.65rem !important;
-  font-weight: 500 !important;
-  padding: 0.7rem 0.4rem !important;
-  gap: 4px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  padding: 0.8rem 0.5rem !important;
+  gap: 6px !important;
   flex-direction: column !important;
 }
 
