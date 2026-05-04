@@ -294,7 +294,7 @@ const META = {
     currency: 0,
     lastDailyGift: 0,
     dailyStreak: 0,
-    upgrades: { hp: 0, speed: 0, luck: 0, regen: 0, armor: 0, hat: null },
+    upgrades: { hp: 0, speed: 0, luck: 0, regen: 0, armor: 0, hat: null, autoSelect: false },
     ships: { 1: true, 2: false, 3: false, 4: false, 5: false },
     selectedShip: 1,
     abilities: { 1: true, 2: false, 3: false, 4: false },
@@ -2481,7 +2481,7 @@ function showLevelUp() {
     }
 
     // Auto Random Select logika
-    if (META.autoRandomSelect) {
+    if (META.upgrades.autoSelect) {
         setTimeout(() => {
             if (modal.classList.contains('active')) {
                 const cards = container.querySelectorAll('.upgrade-card');
@@ -2854,8 +2854,8 @@ function togglePause(isAFK = false) {
         document.getElementById('stat-regen').innerText = p.regen + ' HP/s';
         document.getElementById('stat-lifesteal').innerText = Math.floor(p.lifestealChance * 100) + '%';
         
-        const checkAuto = document.getElementById('check-auto-random');
-        if (checkAuto) checkAuto.checked = META.autoRandomSelect || false;
+        const checkAuto = document.getElementById('chk-autoselect-pause');
+        if (checkAuto) checkAuto.checked = !!META.upgrades.autoSelect;
 
         // In multiplayer: disconnect socket immediately when paused/AFK
         // This stops the server from spawning enemies for this player
@@ -4843,7 +4843,7 @@ function init() {
                     if (res.meta) {
                         for (let key in res.meta) {
                             // Protect selected properties from being overwritten by older server data on refresh
-                            if ((key === 'selectedShip' || key === 'selectedAbility' || key === 'autoRandomSelect' || key === 'settings') && META[key] !== undefined) {
+                            if ((key === 'selectedShip' || key === 'selectedAbility' || key === 'settings') && META[key] !== undefined) {
                                 // Keep local version, but ensure we sync it up later
                                 continue;
                             }
@@ -5171,6 +5171,8 @@ function init() {
         updateMusicVolume();
         const chkAuto = document.getElementById('chk-autoselect');
         if (chkAuto) chkAuto.checked = !!META.upgrades.autoSelect;
+        const chkAutoPause = document.getElementById('chk-autoselect-pause');
+        if (chkAutoPause) chkAutoPause.checked = !!META.upgrades.autoSelect;
     };
 
     if (document.getElementById('btn-toggle-music-menu')) {
@@ -5197,6 +5199,16 @@ function init() {
         chkAuto.onchange = (e) => {
             META.upgrades.autoSelect = e.target.checked;
             saveMeta();
+            updateSettingUI(); // Sync pause menu checkbox if open
+        };
+    }
+
+    const chkAutoPause = document.getElementById('chk-autoselect-pause');
+    if (chkAutoPause) {
+        chkAutoPause.onchange = (e) => {
+            META.upgrades.autoSelect = e.target.checked;
+            saveMeta();
+            updateSettingUI(); // Sync main settings checkbox if open
         };
     }
     updateSettingUI();
@@ -5287,15 +5299,7 @@ function init() {
     const btnCloseFeedback = document.getElementById('btn-close-feedback');
     if (btnCloseFeedback) btnCloseFeedback.onclick = () => document.getElementById('feedback-modal').classList.remove('active');
 
-    // Auto-random select toggle
-    const checkAutoRandom = document.getElementById('check-auto-random');
-    if (checkAutoRandom) {
-        checkAutoRandom.checked = META.autoRandomSelect || false;
-        checkAutoRandom.onchange = (e) => {
-            META.autoRandomSelect = e.target.checked;
-            saveMeta();
-        };
-    }
+    // Auto-random select toggle handled in chkAutoPause listener above
 
     const btnSendFeedback = document.getElementById('btn-send-feedback');
     if (btnSendFeedback) btnSendFeedback.onclick = () => {
