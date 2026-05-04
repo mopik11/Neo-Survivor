@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.339
+ * NEO SURVIVOR - Core Game Logic - v1.340
  */
 
 window.addEventListener('beforeunload', () => {
@@ -418,7 +418,8 @@ const ACHIEVEMENTS = [
     { id: 'asteroid_destroyer', name: 'Ničitel Asteroidů', desc: 'Znič celkem 500 meteoritů', icon: '🌋', reward: 1000 },
     { id: 'first_win', name: 'Přeživší', desc: 'Přežij alespoň 10 minut v jedné hře', icon: '⏱️', reward: 200 },
     { id: 'survivor', name: 'Veterán Přežití', desc: 'Přežij alespoň 20 minut v jedné hře', icon: '🔥', reward: 500 },
-    { id: 'immortal', name: 'Nesmrtelný', desc: 'Přežij alespoň 30 minut v jedné hře', icon: '♾️', reward: 1000 }
+    { id: 'immortal', name: 'Nesmrtelný', desc: 'Přežij alespoň 30 minut v jedné hře', icon: '♾️', reward: 1000 },
+    { id: 'first_battle', name: 'První Bitva', desc: 'Odehraj svoji úplně první bitvu', icon: '⚔️', reward: 50 }
 ];
 
 const formatNumber = (num) => {
@@ -2387,6 +2388,11 @@ function updateUI() {
 
 function showLevelUp() {
     GAME.entities.enemies = GAME.entities.enemies.filter(e => e.isBoss);
+    // Také vyčistit meteority a projektily nepřátel pro větší bezpečnost
+    GAME.entities.meteorites = [];
+    if (GAME.entities.projectiles) {
+        GAME.entities.projectiles = GAME.entities.projectiles.filter(p => p.ownerId !== 'enemy' && p.ownerId !== 'remote_enemy');
+    }
     const modal = document.getElementById('levelup-modal');
     const container = document.getElementById('upgrade-options');
     container.innerHTML = '';
@@ -2660,6 +2666,7 @@ function checkAchievements() {
             case 'first_win': if (GAME.timer !== undefined && GAME.timer >= 600) unlocked = true; break;
             case 'survivor': if (GAME.timer !== undefined && GAME.timer >= 1200) unlocked = true; break;
             case 'immortal': if (GAME.timer !== undefined && GAME.timer >= 1800) unlocked = true; break;
+            case 'first_battle': if ((META.stats.totalGames || 0) >= 1) unlocked = true; break;
         }
 
         if (unlocked) {
@@ -3961,7 +3968,15 @@ function initSocket() {
             }
 
             const currentEnemies = new Map(GAME.entities.enemies.map(e => [e.id, e]));
-            GAME.entities.enemies = data.enemies.map(he => {
+            
+            let incomingEnemies = data.enemies || [];
+            // FILTER: If game is paused for a level-up, don't show normal enemies (keep bosses)
+            const levelUpModal = document.getElementById('levelup-modal');
+            if (GAME.paused && levelUpModal && levelUpModal.classList.contains('active')) {
+                incomingEnemies = incomingEnemies.filter(he => he.isBoss);
+            }
+
+            GAME.entities.enemies = incomingEnemies.map(he => {
                 let e = currentEnemies.get(he.id);
                 if (!e) {
                     e = he.isBoss ? new Boss(he.x, he.y, 1, he.id) : new Enemy(he.x, he.y, 1, he.id, he.type);
@@ -4347,6 +4362,8 @@ function init() {
             "Hráč:": "Player:",
             "Nej. Level:": "Max Level:",
             "Aktivních hráčů online:": "Active players online:",
+            "První Bitva": "First Battle",
+            "Odehraj svoji úplně první bitvu": "Play your very first battle",
             "HRA": "GAME",
             "SOLO": "SOLO",
             "MULTIPLAYER": "MULTIPLAYER",
