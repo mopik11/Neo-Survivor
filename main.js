@@ -1271,7 +1271,7 @@ class Meteorite {
         this.hp = this.maxHp;
         this.isMeteorite = true;
         this.angle = Math.random() * Math.PI * 2;
-        this.rotSpeed = (Math.random() - 0.5) * 0.02;
+        this.rotSpeed = 0; // Zastaveno točení pro lepší hit detection a stabilitu
         
         // Fixování vrcholů pro přesný hitbox a stabilní vzhled
         this.sides = 8;
@@ -5972,14 +5972,7 @@ function update(dt) {
                 let hp = CONFIG.ENEMY_BASE_HEALTH * mod;
                 let type = 1;
 
-                // Spawnování meteoritů s 1000 HP a kolizí
-                if (!GAME.entities.meteorites) GAME.entities.meteorites = [];
-                if (Math.random() < 0.1 && GAME.entities.meteorites.length < 15) {
-                    const ma = Math.random() * Math.PI * 2;
-                    const mx = pivot.x + Math.cos(ma) * (CONFIG.SPAWN_RADIUS + 200);
-                    const my = pivot.y + Math.sin(ma) * (CONFIG.SPAWN_RADIUS + 200);
-                    GAME.entities.meteorites.push(new Meteorite(mx, my));
-                }
+
                 let speedMod = 1;
 
                 const rnd = Math.random();
@@ -6013,6 +6006,22 @@ function update(dt) {
 
 
         }
+    }
+
+    // Spawnování meteoritů i v Multiplayeru
+    if (GAME.active && (now - (GAME.lastMeteorSpawn || 0) > 2000)) {
+        const alive = getAllAlivePlayers();
+        if (alive.length > 0) {
+            const pivot = alive[Math.floor(Math.random() * alive.length)];
+            if (!GAME.entities.meteorites) GAME.entities.meteorites = [];
+            if (Math.random() < 0.2 && GAME.entities.meteorites.length < 15) {
+                const ma = Math.random() * Math.PI * 2;
+                const mx = pivot.x + Math.cos(ma) * (CONFIG.SPAWN_RADIUS + 200);
+                const my = pivot.y + Math.sin(ma) * (CONFIG.SPAWN_RADIUS + 200);
+                GAME.entities.meteorites.push(new Meteorite(mx, my));
+            }
+        }
+        GAME.lastMeteorSpawn = now;
     }
 
     const p = GAME.entities.player;
@@ -6226,18 +6235,18 @@ function update(dt) {
                         }
                     }
                 });
+            }
 
-                // Kolize projektilů s meteority
-                if (GAME.entities.meteorites) {
-                    GAME.entities.meteorites.forEach(m => {
-                        if (dist(proj.x, proj.y, m.x, m.y) < proj.radius + m.radius) {
-                            m.hp -= proj.damage;
-                            if (proj.type !== 'wall') proj.life = 0;
-                            if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
-                            GAME.entities.floatingTexts.push(new FloatingText(m.x, m.y, Math.floor(proj.damage).toString(), "#94a3b8"));
-                        }
-                    });
-                }
+            // Kolize projektilů s meteority (Vně nepřítele!)
+            if (!proj.isEnemy && GAME.entities.meteorites) {
+                GAME.entities.meteorites.forEach(m => {
+                    if (dist(proj.x, proj.y, m.x, m.y) < proj.radius + m.radius) {
+                        m.hp -= proj.damage;
+                        if (proj.type !== 'wall') proj.life = 0;
+                        if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                        GAME.entities.floatingTexts.push(new FloatingText(m.x, m.y, Math.floor(proj.damage).toString(), "#94a3b8"));
+                    }
+                });
             }
         }
     }
