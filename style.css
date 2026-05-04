@@ -767,22 +767,26 @@ canvas {
     position: relative !important;
     top: 0 !important;
     right: 0 !important;
-    margin: 0 auto 30px auto !important;
-    width: 55px !important;
-    height: 55px !important;
-    font-size: 1.6rem !important;
+    margin: 15px auto 45px auto !important;
+    width: 65px !important;
+    height: 65px !important;
+    font-size: 2rem !important;
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
   }
 
   #daily-timer {
-    font-size: 0.9rem !important;
-    bottom: -25px !important;
-    background: rgba(0,0,0,0.85);
-    padding: 4px 12px;
-    border-radius: 12px;
+    font-size: 0.8rem !important;
+    bottom: -35px !important;
+    background: rgba(20, 20, 30, 0.95);
+    padding: 3px 12px;
+    border-radius: 20px;
     backdrop-filter: blur(8px);
-    border: 1px solid rgba(251, 191, 36, 0.4);
+    border: 1px solid rgba(251, 191, 36, 0.5);
     color: #fbbf24;
-    font-weight: 800;
+    font-weight: 900;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.6);
   }
 }
 

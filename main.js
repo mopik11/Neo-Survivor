@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.338
+ * NEO SURVIVOR - Core Game Logic - v1.339
  */
 
 window.addEventListener('beforeunload', () => {
@@ -467,7 +467,14 @@ const loadMeta = () => {
         if (!META.inventory) META.inventory = [];
         if (!META.achievements) META.achievements = {};
         if (!META.claimedAchievements) META.claimedAchievements = {};
-        if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 };
+        if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0, totalKills: 0, totalMeteoritesDestroyed: 0, totalNukes: 0, totalMagnets: 0, totalGemsCollected: 0 };
+        else {
+            // Fill missing stat fields
+            const defaults = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0, totalKills: 0, totalMeteoritesDestroyed: 0, totalNukes: 0, totalMagnets: 0, totalGemsCollected: 0 };
+            for(let key in defaults) {
+                if (META.stats[key] === undefined) META.stats[key] = defaults[key];
+            }
+        }
         if (!META.settings) META.settings = { musicMenu: true, musicGame: true, sfx: true };
         if (META.upgrades && META.upgrades.hat === undefined) META.upgrades.hat = null;
         if (META.upgrades && META.upgrades.autoSelect === undefined) META.upgrades.autoSelect = false;
@@ -4241,9 +4248,6 @@ function handleAuth(isLogin) {
                 // Safer merge to protect nested properties like META.upgrades.hat
                 if (res.meta) {
                     for (let key in res.meta) {
-                        // Special case for persistence fields: only overwrite if server has a value
-                        if ((key === 'selectedShip' || key === 'selectedAbility') && !res.meta[key]) continue;
-                        
                         if (typeof res.meta[key] === 'object' && res.meta[key] !== null && !Array.isArray(res.meta[key])) {
                             META[key] = { ...META[key], ...res.meta[key] };
                         } else {
@@ -4261,6 +4265,8 @@ function handleAuth(isLogin) {
                 document.getElementById('display-doge').innerText = META.currency || 0;
                 
                 if (META.selectedLanguage) window.setLanguage(META.selectedLanguage);
+                if (window.updateSettingUI) window.updateSettingUI();
+                updateMusicVolume();
 
                 document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
                 document.getElementById('menu-modal').classList.add('active');
@@ -4945,20 +4951,10 @@ function init() {
                     // Safer merge to protect nested properties
                     if (res.meta) {
                         for (let key in res.meta) {
-                            // Protect selected properties from being overwritten by older server data on refresh
-                            if ((key === 'selectedShip' || key === 'selectedAbility' || key === 'settings') && META[key] !== undefined) {
-                                // Keep local version, but ensure we sync it up later
-                                continue;
-                            }
-                            
                             if (typeof res.meta[key] === 'object' && res.meta[key] !== null && !Array.isArray(res.meta[key])) {
                                 if (!META[key]) META[key] = {};
                                 // Nested merge
                                 for (let subKey in res.meta[key]) {
-                                    // Protect autoSelect and other specific upgrade settings
-                                    if (key === 'upgrades' && subKey === 'autoSelect' && META.upgrades.autoSelect !== undefined) {
-                                        continue;
-                                    }
                                     META[key][subKey] = res.meta[key][subKey];
                                 }
                             } else {
@@ -4972,6 +4968,8 @@ function init() {
                     }
                     
                     if (META.selectedLanguage) window.setLanguage(META.selectedLanguage);
+                    if (window.updateSettingUI) window.updateSettingUI();
+                    updateMusicVolume();
                     saveMetaLocalOnly();
                     document.getElementById('display-max-level').innerText = META.maxLevel || 1;
                     updateCurrencyUI();
@@ -5262,7 +5260,7 @@ function init() {
     const btnCloseSettings = document.getElementById('btn-close-settings');
     if (btnCloseSettings) btnCloseSettings.onclick = () => document.getElementById('settings-modal').classList.remove('active');
     
-    const updateSettingUI = () => {
+    window.updateSettingUI = () => {
         const btnMM = document.getElementById('btn-toggle-music-menu');
         const btnMG = document.getElementById('btn-toggle-music-game');
         const btnSFX = document.getElementById('btn-toggle-sfx');
@@ -5275,6 +5273,7 @@ function init() {
         const chkAutoPause = document.getElementById('chk-autoselect-pause');
         if (chkAutoPause) chkAutoPause.checked = !!META.upgrades.autoSelect;
     };
+    const updateSettingUI = window.updateSettingUI;
 
     if (document.getElementById('btn-toggle-music-menu')) {
         document.getElementById('btn-toggle-music-menu').onclick = () => {
