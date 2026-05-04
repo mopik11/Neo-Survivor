@@ -2461,14 +2461,30 @@ function showLevelUp() {
     if (btnRandom) {
         btnRandom.onclick = (e) => {
             e.stopPropagation();
+            if (btnRandom.classList.contains('processing')) return;
             const cards = container.querySelectorAll('.upgrade-card');
             if (cards.length > 0) {
+                btnRandom.classList.add('processing');
                 if (!META.stats.totalRandomPicks) META.stats.totalRandomPicks = 0;
                 META.stats.totalRandomPicks++;
                 checkAchievements();
                 
                 const randomIdx = Math.floor(Math.random() * cards.length);
-                applyUpgrade(selected[randomIdx].id);
+                const randomCard = cards[randomIdx];
+
+                // Přidat highlight efekt
+                randomCard.classList.add('selected');
+                randomCard.style.transform = 'scale(1.05)';
+                randomCard.style.zIndex = '10';
+                randomCard.style.boxShadow = '0 0 30px rgba(99, 102, 241, 0.8)';
+
+                // Počkat a kliknout
+                setTimeout(() => {
+                    btnRandom.classList.remove('processing');
+                    if (modal.classList.contains('active')) {
+                        applyUpgrade(selected[randomIdx].id);
+                    }
+                }, 1000);
             }
         };
     }
@@ -3515,6 +3531,8 @@ function startCrateAnimation(winner, crateType = 'basic') {
         const totalCost = crateCost * (GAME.lastCrateBatchSize || 1);
         if (META.currency < totalCost) {
             window.showCustomAlert(window.T("Nemáš dost Dogecoinu!"));
+            modal.remove();
+            showMetaMenu();
             return;
         }
         playSound('upgrade');
@@ -4757,7 +4775,14 @@ function init() {
             "Milionář": "Milionaire",
             "Získej celkem 100 000 Dogecoinů": "Collect 100,000 Dogecoins total",
             "Zasloužilý Otevírač": "Crate Opener",
-            "Otevři celkem 50 beden": "Open 50 crates total"
+            "Otevři celkem 50 beden": "Open 50 crates total",
+            "KONEC HRY": "GAME OVER",
+            "LEVEL:": "LEVEL:",
+            "ZABITÍ:": "KILLS:",
+            "MINCE:": "COINS:",
+            "ČAS:": "TIME:",
+            "ZKUSIT ZNOVU": "TRY AGAIN",
+            "MENU": "MENU"
         }
     };
 
