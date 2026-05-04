@@ -4578,6 +4578,7 @@ function init() {
             "PRODAT": "SELL",
             "Opravdu chceš prodat všechna neaktivní emoji?": "Do you really want to sell all inactive emojis?",
             "AUTOMATIZACE:": "AUTOMATION:",
+            "Auto-výběr vylepšení": "Auto-select upgrades",
             "Celková hodnota:": "Total Value:",
             "CELKOVÁ HODNOTA:": "TOTAL VALUE:",
             "PRODAT VŠE": "SELL ALL",
@@ -5090,6 +5091,8 @@ function init() {
         if (btnMG) btnMG.style.background = META.settings.musicGame ? 'rgba(255,255,255,0.1)' : '#ef4444';
         if (btnSFX) btnSFX.style.background = META.settings.sfx ? 'rgba(255,255,255,0.1)' : '#ef4444';
         updateMusicVolume();
+        const chkAuto = document.getElementById('chk-autoselect');
+        if (chkAuto) chkAuto.checked = !!META.upgrades.autoSelect;
     };
 
     if (document.getElementById('btn-toggle-music-menu')) {
@@ -5108,6 +5111,14 @@ function init() {
         document.getElementById('btn-toggle-sfx').onclick = () => {
             META.settings.sfx = !META.settings.sfx;
             saveMeta(); updateSettingUI();
+        };
+    }
+
+    const chkAuto = document.getElementById('chk-autoselect');
+    if (chkAuto) {
+        chkAuto.onchange = (e) => {
+            META.upgrades.autoSelect = e.target.checked;
+            saveMeta();
         };
     }
     updateSettingUI();
