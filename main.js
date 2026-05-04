@@ -122,17 +122,7 @@ function showConfetti(count = 100) {
     container.style.inset = '0';
     container.style.pointerEvents = 'none';
     container.style.zIndex = '9999999';
-    container.innerHTML = html;
     document.body.appendChild(container);
-
-    if (META.upgrades.autoSelect) {
-        setTimeout(() => {
-            const btns = container.querySelectorAll('.btn-upgrade');
-            if (btns.length > 0) {
-                btns[Math.floor(Math.random() * btns.length)].click();
-            }
-        }, 800);
-    }
 
     const particles = [];
     const colors = ['#38bdf8', '#fbbf24', '#f43f5e', '#10b981', '#a855f7', '#f97316'];
@@ -2626,9 +2616,9 @@ function checkAchievements() {
             case 'healer': if ((META.stats.totalHealAuraAmount || 0) >= 5000) unlocked = true; break;
             case 'gem_collector': if ((META.stats.totalGemsCollected || 0) >= 50000) unlocked = true; break;
             
-            case 'speed_demon': if (GAME.upgrades.speed >= 10) unlocked = true; break;
-            case 'tank': if (GAME.upgrades.hp >= 10) unlocked = true; break;
-            case 'glass_cannon': if (GAME.upgrades.damage >= 10 && GAME.upgrades.hp === 0) unlocked = true; break;
+            case 'speed_demon': if (GAME.upgrades && (GAME.upgrades.speed || 0) >= 10) unlocked = true; break;
+            case 'tank': if (GAME.upgrades && (GAME.upgrades.hp || 0) >= 10) unlocked = true; break;
+            case 'glass_cannon': if (GAME.upgrades && (GAME.upgrades.damage || 0) >= 10 && (GAME.upgrades.hp || 0) === 0) unlocked = true; break;
             
             case 'multiplayer_fan': if ((META.stats.totalMultiplayerGames || 0) >= 20) unlocked = true; break;
             case 'rich_kid': if (META.currency >= 50000) unlocked = true; break;
@@ -3337,16 +3327,16 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 </div>
             </div>
 
-            <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; visibility: hidden; pointer-events: auto; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
+            <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; visibility: hidden; pointer-events: none; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
                 <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;">${window.T('ZÍSKÁNO:')} ${GAME.lastCrateBatchSize - (GAME.crateQueue ? GAME.crateQueue.length : 0)} / ${GAME.lastCrateBatchSize || 1}</p>
                 <h2 id="crate-winner-name" style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 5px; text-shadow: 0 0 20px rgba(255,255,255,0.2);">${window.T(winner.name)}</h2>
                 <div id="crate-winner-rarity" style="font-size: 1.1rem; font-weight: 800; color: ${getRarityColor(winner.rarity)}; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 30px;">${winner.rarity.toUpperCase()}</div>
                 
                 <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;" disabled>${(GAME.crateQueue && GAME.crateQueue.length > 0) ? window.T('DALŠÍ') : window.T('PŘIDAT DO SBÍRKY')}</button>
-                    <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;" disabled>${window.T('PRODAT')} (+${winner.price})</button>
-                    ${(GAME.crateQueue.length === 0 && GAME.lastCrateBatchSize > 1) ? `<button id="btn-crate-sell-all" class="btn-restart" style="min-width: 150px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem;" disabled>${window.T('PRODAT CELOU VÁRKU')}</button>` : ''}
-                    <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${(!GAME.crateQueue || GAME.crateQueue.length === 0) ? 'block' : 'none'};" disabled>${window.T('ZATOČIT ZNOVU')}</button>
+                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${(GAME.crateQueue && GAME.crateQueue.length > 0) ? window.T('DALŠÍ') : window.T('PŘIDAT DO SBÍRKY')}</button>
+                    <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">${window.T('PRODAT')} (+${winner.price})</button>
+                    ${(GAME.crateQueue.length === 0 && GAME.lastCrateBatchSize > 1) ? `<button id="btn-crate-sell-all" class="btn-restart" style="min-width: 150px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem;">${window.T('HROMADNÝ PRODEJ')}</button>` : ''}
+                    <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${(!GAME.crateQueue || GAME.crateQueue.length === 0) ? 'block' : 'none'};">${window.T('ZATOČIT ZNOVU')}</button>
                 </div>
             </div>
         </div>
@@ -3398,9 +3388,11 @@ function startCrateAnimation(winner, crateType = 'basic') {
             resultInfo.style.visibility = 'visible';
             resultInfo.style.pointerEvents = 'auto';
             resultInfo.style.transform = 'translateY(0)';
-            // Enable buttons
-            modal.querySelectorAll('.btn-restart').forEach(btn => {
-                btn.disabled = false;
+            
+            // Force pointer-events on buttons too
+            resultInfo.querySelectorAll('.btn-restart').forEach(btn => {
+                btn.style.pointerEvents = 'auto';
+                btn.style.cursor = 'pointer';
             });
         }
         const skipBtn = document.getElementById('btn-skip-crate');
@@ -3504,7 +3496,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
             });
             META.currency += total;
             saveMeta();
-            showCurrencyNotification(total, `VŠE PRODÁNO!`);
+            showCurrencyNotification(total, window.T('HROMADNÝ PRODEJ'));
             modal.remove();
             showMetaMenu();
         };
@@ -4724,6 +4716,7 @@ function init() {
             "Taco": "Taco",
             "Sushi": "Sushi",
             "VŠECHNO": "ALL",
+            "HROMADNÝ PRODEJ": "BULK SALE",
             "Odehraj 20 multiplayerových her": "Play 20 multiplayer games",
             "Boháč": "Rich Kid",
             "Měj u sebe 50 000 Dogecoinů najednou": "Have 50,000 Dogecoins at once",
