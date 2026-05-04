@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.337
+ * NEO SURVIVOR - Core Game Logic - v1.338
  */
 
 window.addEventListener('beforeunload', () => {
@@ -3099,9 +3099,10 @@ function showMetaMenu() {
             <h3>${window.T(type.name)}</h3>
             <div style="font-size: 0.7rem; color: #fbbf24; font-weight: 800; margin-bottom: 5px;">${formatNumber(type.cost)} DOGE / ks</div>
             <div class="crate-multipliers" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; position: absolute; bottom: 10px; left: 10px; right: 10px;">
-                ${[1, 2, 5, 10].map(count => `
-                    <button class="btn-bulk" data-count="${count}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 10px 0; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; transition: all 0.2s;">${count}x</button>
-                `).join('')}
+                ${[1, 2, 5, 10].map(count => {
+                    const canAfford = META.currency >= type.cost * count;
+                    return `<button class="btn-bulk" data-count="${count}" style="background: ${canAfford ? 'rgba(255,255,255,0.05)' : 'rgba(239, 68, 68, 0.05)'}; border: 1px solid ${canAfford ? 'rgba(255,255,255,0.15)' : 'rgba(239, 68, 68, 0.2)'}; color: ${canAfford ? '#fff' : '#ef4444'}; padding: 10px 0; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: ${canAfford ? 'pointer' : 'not-allowed'}; transition: all 0.2s; opacity: ${canAfford ? 1 : 0.5};">${count}x</button>`;
+                }).join('')}
             </div>
         `;
 
@@ -3433,6 +3434,14 @@ function startCrateAnimation(winner, crateType = 'basic') {
         if (btnAgain) {
             if (!canAffordAgain) {
                 btnAgain.style.display = 'none';
+                // If user is broke, redirect the main collect button to menu instead of showing spin again
+                const collectBtn = document.getElementById('btn-crate-collect');
+                if (collectBtn) {
+                    collectBtn.innerText = window.T('MÁLO DOGE - ZAVŘÍT');
+                    collectBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+                    collectBtn.style.color = '#ef4444';
+                    collectBtn.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+                }
             } else {
                 btnAgain.style.display = 'block';
             }
@@ -4806,7 +4815,8 @@ function init() {
             "m": "m",
             "s": "s",
             "verze:": "version:",
-            "Zatím nemáš žádná emoji. Otevři bednu!": "No emojis yet. Open a crate!"
+            "Zatím nemáš žádná emoji. Otevři bednu!": "No emojis yet. Open a crate!",
+            "MÁLO DOGE - ZAVŘÍT": "OUT OF DOGE - CLOSE"
         }
     };
 

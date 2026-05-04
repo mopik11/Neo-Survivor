@@ -774,12 +774,15 @@ canvas {
   }
 
   #daily-timer {
-    font-size: 0.8rem !important;
-    bottom: -22px !important;
-    background: rgba(0,0,0,0.6);
-    padding: 2px 8px;
-    border-radius: 10px;
-    backdrop-filter: blur(4px);
+    font-size: 0.9rem !important;
+    bottom: -25px !important;
+    background: rgba(0,0,0,0.85);
+    padding: 4px 12px;
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    color: #fbbf24;
+    font-weight: 800;
   }
 }
 
