@@ -628,6 +628,8 @@ io.on('connection', (socket) => {
                 room.nextLevelXp = Math.floor(room.nextLevelXp * 1.25);
                 room.paused = true;
                 room.readyCount = 0;
+                // CLEAR ENEMIES (except bosses) on level up for multiplayer
+                room.enemies = room.enemies.filter(e => e.isBoss);
                 io.to(r).emit('teamLevelUp', { level: room.level });
             }
         }
