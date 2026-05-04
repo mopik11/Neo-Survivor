@@ -915,19 +915,27 @@ class Fire {
     }
     update() {
         this.life -= 1 / 60;
-        if (this.isLocal && GAME.entities && GAME.entities.enemies) {
-            GAME.entities.enemies.forEach(e => {
+        const enemies = GAME.entities.enemies || [];
+        const meteorites = GAME.entities.meteorites || [];
+        const allTargets = [...enemies, ...meteorites];
+
+        if (this.isLocal && GAME.entities && allTargets.length > 0) {
+            allTargets.forEach(e => {
                 if (e && e.hp > 0 && !e.possessed && dist(this.x, this.y, e.x, e.y) < this.radius + e.radius) {
                     const dmg = this.damage * (1 / 60);
                     let finalDmg = dmg;
                     if (e.type === 8) finalDmg *= 0.5; // Shielder reduction
                     e.hp -= finalDmg;
-                    if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: finalDmg });
+                    if (NET.isMultiplayer && !e.isMeteorite) NET.socket.emit('enemyHit', { id: e.id, damage: finalDmg });
 
                     if (e.hp <= 0) {
                         AudioEngine.play('hit');
-                        if (!NET.isMultiplayer && GAME.entities.gems) GAME.entities.gems.push(new Gem(e.x, e.y));
-                        GAME.kills++;
+                        if (e.isMeteorite) {
+                            // Meteority nemají handleEnemyDeath
+                        } else {
+                            if (!NET.isMultiplayer && GAME.entities.gems) GAME.entities.gems.push(new Gem(e.x, e.y));
+                            GAME.kills++;
+                        }
                         updateUI();
                     }
                 }
@@ -976,12 +984,15 @@ class FriendlyMinion {
         this.life -= 1 / 60;
         if (this.life <= 0) this.hp = 0;
 
-        const enemies = GAME.entities.enemies;
-        if (enemies && enemies.length > 0) {
+        const enemies = GAME.entities.enemies || [];
+        const meteorites = GAME.entities.meteorites || [];
+        const allTargets = [...enemies, ...meteorites];
+
+        if (allTargets.length > 0) {
             let target = null;
             let minDist = Infinity;
-            for (let i = 0; i < enemies.length; i++) {
-                const e = enemies[i];
+            for (let i = 0; i < allTargets.length; i++) {
+                const e = allTargets[i];
                 if (!e || e.hp <= 0 || e.possessed) continue;
                 const d = dist(this.x, this.y, e.x, e.y);
                 if (d < minDist) {
@@ -1188,20 +1199,28 @@ class Orbiter {
         ctx.beginPath(); ctx.arc(x - cam.x, y - cam.y, this.size, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
 
-        if (this.owner.isLocal && GAME.entities && GAME.entities.enemies) {
-            GAME.entities.enemies.forEach(e => {
+        if (this.owner.isLocal && GAME.entities) {
+            const enemies = GAME.entities.enemies || [];
+            const meteorites = GAME.entities.meteorites || [];
+            const allTargets = [...enemies, ...meteorites];
+
+            allTargets.forEach(e => {
                 if (e && e.hp > 0 && !e.possessed && dist(x, y, e.x, e.y) < this.size + e.radius) {
                     const dmg = this.owner.damage * 0.3 * 3;
                     let finalDmg = dmg;
                     if (e.type === 8) finalDmg *= 0.5; // Shielder reduction
                     e.hp -= finalDmg;
-                    if (NET.isMultiplayer) {
+                    if (NET.isMultiplayer && !e.isMeteorite) {
                         NET.socket.emit('enemyHit', { id: e.id, damage: finalDmg });
                     }
                     if (e.hp <= 0) {
                         AudioEngine.play('hit');
-                        if (!NET.isMultiplayer && GAME.entities.gems) GAME.entities.gems.push(new Gem(e.x, e.y));
-                        GAME.kills++;
+                        if (e.isMeteorite) {
+                            // Meteority nemají handleEnemyDeath
+                        } else {
+                            if (!NET.isMultiplayer && GAME.entities.gems) GAME.entities.gems.push(new Gem(e.x, e.y));
+                            GAME.kills++;
+                        }
                         updateUI();
                     }
                 }
@@ -1842,10 +1861,13 @@ class Player {
             const now = Date.now();
             if (now - this.lastFired > (this.fireRate / 2)) {
                 this.laserTargets = [];
-                const enemies = GAME.entities.enemies;
-                if (enemies && enemies.length > 0) {
+                const enemies = GAME.entities.enemies || [];
+                const meteorites = GAME.entities.meteorites || [];
+                const allTargets = [...enemies, ...meteorites];
+                
+                if (allTargets.length > 0) {
                     const range = 400 + this.laserRangeBonus;
-                    const inRange = enemies.filter(e => e && e.hp > 0 && !e.possessed && dist(this.x, this.y, e.x, e.y) < range);
+                    const inRange = allTargets.filter(t => t && t.hp > 0 && !t.possessed && dist(this.x, this.y, t.x, t.y) < range);
                     inRange.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y));
 
                     const primaryTargets = inRange.slice(0, this.projectileCount);
@@ -1857,7 +1879,7 @@ class Player {
                         let jumpsLeft = this.pierceCount - 1;
 
                         while (jumpsLeft > 0) {
-                            const nextTargets = enemies.filter(e => e && e.hp > 0 && !hitSet.has(e.id) && dist(current.x, current.y, e.x, e.y) < 300);
+                            const nextTargets = allTargets.filter(t => t && t.hp > 0 && !hitSet.has(t.id) && dist(current.x, current.y, t.x, t.y) < 300);
                             if (nextTargets.length === 0) break;
                             nextTargets.sort((a, b) => dist(current.x, current.y, a.x, a.y) - dist(current.x, current.y, b.x, b.y));
                             const next = nextTargets[0];
