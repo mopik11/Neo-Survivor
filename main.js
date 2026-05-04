@@ -1173,25 +1173,7 @@ class Tombstone {
     }
 }
 
-class Obstacle {
-    constructor(x, y, radius) {
-        this.x = x; this.y = y; this.radius = radius;
-    }
-    draw(ctx, cam) {
-        ctx.fillStyle = '#334155';
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        for (let i = 0; i < 8; i++) {
-            const a = (i / 8) * Math.PI * 2;
-            const r = this.radius * (0.8 + Math.sin(this.x * this.y + i) * 0.2);
-            if (i === 0) ctx.moveTo(this.x - cam.x + Math.cos(a) * r, this.y - cam.y + Math.sin(a) * r);
-            else ctx.lineTo(this.x - cam.x + Math.cos(a) * r, this.y - cam.y + Math.sin(a) * r);
-        }
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
-    }
-}
+
 
 class Orbiter {
     constructor(owner, index, total) {
@@ -1282,14 +1264,21 @@ class Bait {
 }
 
 class Meteorite {
-    constructor(x, y, hp = 500) {
-        this.x = x; this.y = y; this.radius = 35 + Math.random() * 25;
+    constructor(x, y) {
+        this.x = x; this.y = y; this.radius = 60;
         this.id = Math.random().toString(36).substr(2, 9);
-        this.maxHp = hp * (1 + (this.radius - 35) / 10);
+        this.maxHp = 1000;
         this.hp = this.maxHp;
         this.isMeteorite = true;
         this.angle = Math.random() * Math.PI * 2;
         this.rotSpeed = (Math.random() - 0.5) * 0.02;
+        
+        // Fixování vrcholů pro přesný hitbox a stabilní vzhled
+        this.sides = 8;
+        this.vertices = [];
+        for (let i = 0; i < this.sides; i++) {
+            this.vertices.push(0.9 + Math.random() * 0.2);
+        }
     }
     update() {
         this.angle += this.rotSpeed;
@@ -1302,10 +1291,9 @@ class Meteorite {
         ctx.strokeStyle = '#1e293b';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        const sides = 8;
-        for (let i = 0; i < sides; i++) {
-            const a = (i / sides) * Math.PI * 2;
-            const r = this.radius * (0.9 + Math.random() * 0.1);
+        for (let i = 0; i < this.sides; i++) {
+            const a = (i / this.sides) * Math.PI * 2;
+            const r = this.radius * this.vertices[i];
             if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
             else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
         }
@@ -1940,12 +1928,12 @@ class Player {
             let nextX = this.x + Math.cos(angle) * this.speed * GAME.speedFactor;
             let nextY = this.y + Math.sin(angle) * this.speed * GAME.speedFactor;
 
-            if (GAME.entities.obstacles) {
-                GAME.entities.obstacles.forEach(obs => {
-                    if (dist(nextX, nextY, obs.x, obs.y) < this.radius + obs.radius) {
-                        const pushAngle = Math.atan2(nextY - obs.y, nextX - obs.x);
-                        nextX = obs.x + Math.cos(pushAngle) * (this.radius + obs.radius);
-                        nextY = obs.y + Math.sin(pushAngle) * (this.radius + obs.radius);
+            if (GAME.entities.meteorites) {
+                GAME.entities.meteorites.forEach(m => {
+                    if (dist(nextX, nextY, m.x, m.y) < this.radius + m.radius) {
+                        const pushAngle = Math.atan2(nextY - m.y, nextX - m.x);
+                        nextX = m.x + Math.cos(pushAngle) * (this.radius + m.radius);
+                        nextY = m.y + Math.sin(pushAngle) * (this.radius + m.radius);
                     }
                 });
             }
@@ -3809,9 +3797,7 @@ function initSocket() {
                 GAME.entities.tombstones = data.tombstones.map(t => new Tombstone(t.x, t.y, t.id, t.playerId, t.reviveProgress));
             } else { GAME.entities.tombstones = []; }
 
-            if (data.obstacles) {
-                GAME.entities.obstacles = data.obstacles.map(o => new Obstacle(o.x, o.y, o.radius));
-            } else { GAME.entities.obstacles = []; }
+            GAME.entities.obstacles = [];
 
             const newOthers = {};
             for (let pId in data.players) {
@@ -5986,13 +5972,13 @@ function update(dt) {
                 let hp = CONFIG.ENEMY_BASE_HEALTH * mod;
                 let type = 1;
 
-                // Spawnování meteoritů
+                // Spawnování JEDNOHO meteoritu s 1000 HP
                 if (!GAME.entities.meteorites) GAME.entities.meteorites = [];
-                if (Math.random() < 0.1 && GAME.entities.meteorites.length < 15) {
+                if (Math.random() < 0.05 && GAME.entities.meteorites.length < 1) {
                     const ma = Math.random() * Math.PI * 2;
                     const mx = pivot.x + Math.cos(ma) * (CONFIG.SPAWN_RADIUS + 200);
                     const my = pivot.y + Math.sin(ma) * (CONFIG.SPAWN_RADIUS + 200);
-                    GAME.entities.meteorites.push(new Meteorite(mx, my, 800 * mod));
+                    GAME.entities.meteorites.push(new Meteorite(mx, my));
                 }
                 let speedMod = 1;
 
@@ -6025,19 +6011,7 @@ function update(dt) {
             }
             GAME.lastSpawnTime = now;
 
-            // Náhodné generování meteorů (překážek) v singleplayeru
-            if (!GAME.entities.obstacles) GAME.entities.obstacles = [];
-            if (Math.random() < 0.1 && GAME.entities.obstacles.length < 30) {
-                const alive = getAllAlivePlayers();
-                if (alive.length > 0) {
-                    const pivot = alive[Math.floor(Math.random() * alive.length)];
-                    GAME.entities.obstacles.push(new Obstacle(
-                        pivot.x + (Math.random() - 0.5) * 2000,
-                        pivot.y + (Math.random() - 0.5) * 2000,
-                        40 + Math.random() * 60
-                    ));
-                }
-            }
+
         }
     }
 
@@ -6157,18 +6131,7 @@ function update(dt) {
             if (!proj) continue;
             proj.update();
 
-            if (GAME.entities.obstacles) {
-                let hitObstacle = false;
-                GAME.entities.obstacles.forEach(obs => {
-                    if (dist(proj.x, proj.y, obs.x, obs.y) < proj.radius + obs.radius) {
-                        hitObstacle = true;
-                    }
-                });
-                if (hitObstacle && proj.type !== 'wall') {
-                    GAME.entities.projectiles.splice(pIndex, 1);
-                    continue;
-                }
-            }
+
 
             if (proj.life <= 0) {
                 GAME.entities.projectiles.splice(pIndex, 1);
@@ -6359,7 +6322,7 @@ function render() {
         if (GAME.active && GAME.entities) {
             if (GAME.entities.fire) GAME.entities.fire.forEach(f => { if (f) f.draw(ctx, { x: camX, y: camY }); });
             if (GAME.entities.meteorites) GAME.entities.meteorites.forEach(m => { if (m) m.draw(ctx, { x: camX, y: camY }); });
-            if (GAME.entities.obstacles) GAME.entities.obstacles.forEach(o => { if (o) o.draw(ctx, { x: camX, y: camY }); });
+
             if (GAME.entities.baits) GAME.entities.baits.forEach(b => { if (b) b.draw(ctx, { x: camX, y: camY }); });
             if (GAME.entities.tombstones) GAME.entities.tombstones.forEach(t => { if (t) t.draw(ctx, { x: camX, y: camY }); });
             if (GAME.entities.gems) GAME.entities.gems.forEach(g => { if (g) g.draw(ctx, { x: camX, y: camY }); });
