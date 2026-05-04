@@ -359,23 +359,29 @@ canvas {
 }
 
 .btn-sub {
-  font-size: 0.75rem !important;
-  font-weight: 600 !important;
-  padding: 0.8rem 0.5rem !important;
-  gap: 8px !important;
+  font-size: 0.7rem !important;
+  font-weight: 500 !important;
+  padding: 0.7rem 0.4rem !important;
+  gap: 6px !important;
   flex-direction: column !important;
 }
 
 .btn-sub span {
-  font-size: 1.2rem !important;
+  font-size: 1.1rem !important;
   margin-bottom: 2px;
 }
 
 .btn-mini {
-  font-size: 0.7rem !important;
-  padding: 0.8rem 0.5rem !important;
-  gap: 5px !important;
+  font-size: 0.65rem !important;
+  font-weight: 500 !important;
+  padding: 0.7rem 0.4rem !important;
+  gap: 4px !important;
   flex-direction: column !important;
+}
+
+.btn-mini span {
+  font-size: 1rem !important;
+  margin-bottom: 2px;
 }
 
 .btn-quit {
@@ -678,8 +684,8 @@ canvas {
     border-radius: 15px !important;
   }
   .btn-main { font-size: 1.1rem !important; padding: 1.2rem 0.5rem !important; }
-  .btn-sub { font-size: 0.9rem !important; padding: 0.8rem 0.2rem !important; }
-  .btn-mini { font-size: 0.8rem !important; padding: 0.6rem 0.2rem !important; }
+  .btn-sub { font-size: 0.75rem !important; padding: 0.7rem 0.2rem !important; font-weight: 500 !important; }
+  .btn-mini { font-size: 0.7rem !important; padding: 0.6rem 0.2rem !important; font-weight: 500 !important; }
   .btn-mini span { font-size: 1.2rem !important; margin-bottom: 2px !important; }
   .menu-group-title { font-size: 0.75rem !important; margin-top: 10px; }
   .tutorial-card h3 { font-size: 0.9rem !important; }

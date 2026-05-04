@@ -2474,8 +2474,9 @@ function showLevelUp() {
                 META.stats.totalRandomPicks++;
                 checkAchievements();
                 
-                const randomCard = cards[Math.floor(Math.random() * cards.length)];
-                randomCard.click();
+                const randomIdx = Math.floor(Math.random() * cards.length);
+                applyUpgrade(selected[randomIdx].id);
+                modal.classList.remove('active');
             }
         };
     }
@@ -2490,17 +2491,20 @@ function showLevelUp() {
                     META.stats.totalRandomPicks++;
                     checkAchievements();
                     
-                    const randomCard = cards[Math.floor(Math.random() * cards.length)];
+                    const randomIdx = Math.floor(Math.random() * cards.length);
+                    const randomCard = cards[randomIdx];
                     
                     // Přidat highlight efekt
                     randomCard.classList.add('selected');
                     randomCard.style.transform = 'scale(1.05)';
                     randomCard.style.zIndex = '10';
+                    randomCard.style.boxShadow = '0 0 30px rgba(99, 102, 241, 0.8)';
 
                     // Počkat a kliknout
                     setTimeout(() => {
                         if (modal.classList.contains('active')) {
-                            randomCard.click();
+                            applyUpgrade(selected[randomIdx].id);
+                            modal.classList.remove('active');
                         }
                     }, 1000);
                 }
@@ -3333,16 +3337,16 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 </div>
             </div>
 
-            <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; visibility: hidden; pointer-events: none; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
+            <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; visibility: hidden; pointer-events: auto; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%;">
                 <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;">${window.T('ZÍSKÁNO:')} ${GAME.lastCrateBatchSize - (GAME.crateQueue ? GAME.crateQueue.length : 0)} / ${GAME.lastCrateBatchSize || 1}</p>
                 <h2 id="crate-winner-name" style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 5px; text-shadow: 0 0 20px rgba(255,255,255,0.2);">${window.T(winner.name)}</h2>
                 <div id="crate-winner-rarity" style="font-size: 1.1rem; font-weight: 800; color: ${getRarityColor(winner.rarity)}; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 30px;">${winner.rarity.toUpperCase()}</div>
                 
                 <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${(GAME.crateQueue && GAME.crateQueue.length > 0) ? window.T('DALŠÍ') : window.T('PŘIDAT DO SBÍRKY')}</button>
-                    <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">${window.T('PRODAT')} (+${winner.price})</button>
-                    ${(GAME.crateQueue.length === 0 && GAME.lastCrateBatchSize > 1) ? `<button id="btn-crate-sell-all" class="btn-restart" style="min-width: 150px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem;">${window.T('PRODAT CELOU VÁRKU')}</button>` : ''}
-                    <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${(!GAME.crateQueue || GAME.crateQueue.length === 0) ? 'block' : 'none'};">${window.T('ZATOČIT ZNOVU')}</button>
+                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;" disabled>${(GAME.crateQueue && GAME.crateQueue.length > 0) ? window.T('DALŠÍ') : window.T('PŘIDAT DO SBÍRKY')}</button>
+                    <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;" disabled>${window.T('PRODAT')} (+${winner.price})</button>
+                    ${(GAME.crateQueue.length === 0 && GAME.lastCrateBatchSize > 1) ? `<button id="btn-crate-sell-all" class="btn-restart" style="min-width: 150px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem;" disabled>${window.T('PRODAT CELOU VÁRKU')}</button>` : ''}
+                    <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: ${(!GAME.crateQueue || GAME.crateQueue.length === 0) ? 'block' : 'none'};" disabled>${window.T('ZATOČIT ZNOVU')}</button>
                 </div>
             </div>
         </div>
@@ -3394,6 +3398,10 @@ function startCrateAnimation(winner, crateType = 'basic') {
             resultInfo.style.visibility = 'visible';
             resultInfo.style.pointerEvents = 'auto';
             resultInfo.style.transform = 'translateY(0)';
+            // Enable buttons
+            modal.querySelectorAll('.btn-restart').forEach(btn => {
+                btn.disabled = false;
+            });
         }
         const skipBtn = document.getElementById('btn-skip-crate');
         if (skipBtn) skipBtn.style.display = 'none';
@@ -3469,7 +3477,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
             else META.inventory.splice(invIdx, 1);
         }
         saveMeta();
-        showCurrencyNotification(winner.price, `PRODÁNO: ${winner.name}`);
+        showCurrencyNotification(winner.price, `${window.T('PRODÁNO:')} ${window.T(winner.name)}`);
         if (GAME.crateQueue && GAME.crateQueue.length > 0) {
             const nextWinner = GAME.crateQueue.shift();
             modal.remove();
@@ -4653,51 +4661,69 @@ function init() {
             "ROZUMÍM": "OK",
             "ANO": "YES",
             "NE": "NO",
-            "Vrah": "Murderer",
-            "Zabij celkem 1 000 nepřátel": "Kill 1,000 enemies total",
-            "Genocida": "Genocide",
-            "Zabij celkem 10 000 nepřátel": "Kill 10,000 enemies total",
-            "Bůh Smrti": "God of Death",
-            "Zabij celkem 100 000 nepřátel": "Kill 100,000 enemies total",
-            "Lovec Hlav": "Headhunter",
-            "Poraz celkem 50 bossů": "Defeat 50 bosses total",
-            "Noční Můra Bossů": "Boss's Nightmare",
-            "Poraz celkem 100 bossů": "Defeat 100 bosses total",
-            "Elitní Pilot": "Elite Pilot",
-            "Dosáhni levelu 75 v jedné hře": "Reach level 75 in one game",
-            "Legendární Pilot": "Legendary Pilot",
-            "Dosáhni levelu 100 v jedné hře": "Reach level 100 in one game",
-            "Průzkumník Fanoušek": "Explorer Fan",
-            "Odehraj 50 her za Průzkumníka": "Play 50 games as Explorer",
-            "Laser Fanoušek": "Laser Fan",
-            "Odehraj 50 her za Laserovou Loď": "Play 50 games as Laser Ship",
-            "Obránce Fanoušek": "Defender Fan",
-            "Odehraj 50 her za Obránce": "Play 50 games as Defender",
-            "Brokovnice Fanoušek": "Shotgun Fan",
-            "Odehraj 50 her za Brokovnici": "Play 50 games as Shotgun",
-            "Nekromant Fanoušek": "Necromancer Fan",
-            "Odehraj 50 her za Nekromancera": "Play 50 games as Necromancer",
-            "Atombombarďák": "Nuker",
-            "Použij celkem 50 atomovek": "Use 50 nukes total",
-            "Magnetický Mistr": "Magnet Master",
-            "Použij celkem 100 magnetů": "Use 100 magnets total",
-            "Zdravotník": "Medic",
-            "Použij celkem 100 lékárniček": "Use 100 medkits total",
-            "Mistr Času": "Time Master",
-            "Použij zastavení času 50x": "Use time stop 50x",
-            "Loutkař": "Puppet Master",
-            "Použij posednutí 50x": "Use possession 50x",
-            "Léčitel": "Healer",
-            "Vyléč celkem 5000 HP aurou": "Heal 5,000 HP with aura",
-            "Sběratel Gemů": "Gem Collector",
-            "Posbírej celkem 50 000 gemů": "Collect 50,000 gems total",
-            "Rychlostní Démon": "Speed Demon",
-            "Vylepši Rychlost na maximum v jedné hře": "Max out Speed in one game",
-            "Tank": "Tank",
-            "Vylepši HP na maximum v jedné hře": "Max out HP in one game",
-            "Skleněné Dělo": "Glass Cannon",
-            "Maxuj Damage bez vylepšení HP": "Max out Damage without HP upgrades",
-            "Pařmen": "Gamer",
+            "ZVUKY A HUDBA:": "SOUNDS & MUSIC:",
+            "AUTOMATIZACE:": "AUTOMATION:",
+            "Auto-výběr vylepšení": "Auto-select upgrades",
+            "Opravdu chceš prodat všechna neaktivní emoji?": "Do you really want to sell all inactive emojis?",
+            "🚀 ZÁKLADNÍ STATY": "🚀 BASE STATS",
+            "❤️ Extra HP": "❤️ Extra HP",
+            "Počáteční HP +10": "Starting HP +10",
+            "👟 Rychlost": "👟 Speed",
+            "Pohyb +2%": "Movement +2%",
+            "🍀 Štěstí": "🍀 Luck",
+            "XP násobič +0.05": "XP multiplier +0.05",
+            "💊 Regenerace": "💊 Regeneration",
+            "HP/s +0.1": "HP/s +0.1",
+            "🛡️ Štít": "🛡️ Shield",
+            "Redukce poškození +2%": "Damage reduction +2%",
+            "Dron:": "Drone:",
+            "Kostka:": "Cube:",
+            "Kamikadze:": "Kamikaze:",
+            "Sebevrah:": "Suicide:",
+            "Štítonoš:": "Shielder:",
+            "Goblin:": "Goblin:",
+            "Support:": "Support:",
+            "Skokan:": "Jumper:",
+            "Boss:": "Boss:",
+            "☢️ Nuke:": "☢️ Nuke:",
+            "🧲 Magnet:": "🧲 Magnet:",
+            "➕ Lékárna:": "➕ Medkit:",
+            "Lifesteal + Rychlost:": "Lifesteal + Speed:",
+            "Dogecoiny:": "Dogecoins:",
+            "🎰 ŠANCE NA EMOJI": "🎰 EMOJI ODDS",
+            "RARITA": "RARITY",
+            "OBYČ.": "COMM.",
+            "PREM.": "PREM.",
+            "LEGEN.": "LEGEN.",
+            "📦 LOOTBOXY A BEDNY": "📦 LOOTBOXES & CRATES",
+            "Získávání:": "Obtaining:",
+            "Otevírání:": "Opening:",
+            "Prodej:": "Selling:",
+            "💎 SBÍRKA EMOJI": "💎 EMOJI COLLECTION",
+            "Vzácná emoji můžeš prodat za Dogecoiny:": "You can sell rare emojis for Dogecoins:",
+            "💎 EXTRÉMNÍ NÁLEZ!": "💎 EXTREME FIND!",
+            "Diamant (💎) má hodnotu 20 000 Doge a šanci 0.001% (padá z JAKÉKOLIV bedny!)": "Diamond (💎) is worth 20,000 Doge and has a 0.001% chance (drops from ANY crate!)",
+            "Nemáš dost Dogecoinu!": "Not enough Dogecoins!",
+            "PRODÁNO:": "SOLD:",
+            "PRODEJ:": "SALE:",
+            "Velryba": "Whale",
+            "Chobotnice": "Octopus",
+            "Želva": "Turtle",
+            "Liška": "Fox",
+            "Medvěd": "Bear",
+            "Panda": "Panda",
+            "Koala": "Koala",
+            "Tygr": "Tiger",
+            "Lev": "Lion",
+            "Žába": "Frog",
+            "Opice": "Monkey",
+            "Tučňák": "Penguin",
+            "Duch": "Ghost",
+            "Pivo": "Beer",
+            "Káva": "Coffee",
+            "Taco": "Taco",
+            "Sushi": "Sushi",
+            "VŠECHNO": "ALL",
             "Odehraj 20 multiplayerových her": "Play 20 multiplayer games",
             "Boháč": "Rich Kid",
             "Měj u sebe 50 000 Dogecoinů najednou": "Have 50,000 Dogecoins at once",
@@ -4864,23 +4890,20 @@ function init() {
                             }
                             
                             if (typeof res.meta[key] === 'object' && res.meta[key] !== null && !Array.isArray(res.meta[key])) {
-                                // Special protection for hat selection within upgrades
-                                let localHat = undefined;
-                                if (key === 'upgrades' && META.upgrades && META.upgrades.hat !== undefined) {
-                                    localHat = META.upgrades.hat;
-                                }
-                                
-                                META[key] = { ...META[key], ...res.meta[key] };
-                                
-                                if (localHat !== undefined) {
-                                    META.upgrades.hat = localHat;
+                                if (!META[key]) META[key] = {};
+                                // Nested merge
+                                for (let subKey in res.meta[key]) {
+                                    // Protect autoSelect and other specific upgrade settings
+                                    if (key === 'upgrades' && subKey === 'autoSelect' && META.upgrades.autoSelect !== undefined) {
+                                        continue;
+                                    }
+                                    META[key][subKey] = res.meta[key][subKey];
                                 }
                             } else {
                                 META[key] = res.meta[key];
                             }
                         }
                     }
-                    
                     // Immediately sync our (potentially newer) local settings up to the server
                     if (NET.socket && NET.socket.connected) {
                         NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META });
