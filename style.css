@@ -359,10 +359,16 @@ canvas {
 }
 
 .btn-sub {
-  font-size: 0.85rem !important;
-  padding: 1rem !important;
-  gap: 10px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  padding: 0.8rem 0.5rem !important;
+  gap: 8px !important;
   flex-direction: column !important;
+}
+
+.btn-sub span {
+  font-size: 1.2rem !important;
+  margin-bottom: 2px;
 }
 
 .btn-mini {

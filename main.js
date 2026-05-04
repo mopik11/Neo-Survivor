@@ -2792,7 +2792,7 @@ window.claimAchievement = function(id) {
     showAchievementsMenu(); // Refresh
     
     AudioEngine.play('coin');
-    window.showCustomAlert(window.T("Odměna vybrána!") + " +" + ach.reward + " DOGE");
+    showCurrencyNotification(ach.reward, "Odměna vybrána!");
 };
 
 
@@ -3388,7 +3388,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
             const offset = -(35 * itemWidth + itemSize / 2);
             carousel.style.transform = `translateX(${offset}px)`;
         }
-        const resultInfo = document.getElementById('crate-result-info');
+        const resultInfo = modal.querySelector('#crate-result-info');
         if (resultInfo) {
             resultInfo.style.opacity = '1';
             resultInfo.style.visibility = 'visible';
@@ -4628,6 +4628,19 @@ function init() {
             "PARÁDA!": "AWESOME!", "SKVĚLÉ!": "GREAT!", "ÚSPĚCH!": "SUCCESS!", "ZÍSKAL JSI!": "YOU GOT!", "VÝBORNĚ!": "EXCELLENT!", "VÝNOS Z BITVY": "BATTLE INCOME",
             "Odměna vybrána!": "Reward claimed!",
             "Zatím žádné záznamy. Buď první!": "No entries yet. Be the first!",
+            "DALŠÍ": "NEXT",
+            "PŘIDAT DO SBÍRKY": "COLLECT",
+            "ZATOČIT ZNOVU": "SPIN AGAIN",
+            "PŘESKOČIT (SKIP)": "SKIP",
+            "ZÍSKÁNO:": "COLLECTED:",
+            "VESMÍRNÉ BEDNY": "SPACE CRATES",
+            "OBYČEJNÁ BEDNA": "COMMON CRATE",
+            "PRÉMIOVÁ BEDNA": "PREMIUM CRATE",
+            "LEGENDÁRNÍ BEDNA": "LEGENDARY CRATE",
+            "PRODAT CELOU VÁRKU": "SELL ALL",
+            "PRODAT CELOU VÁRKU (+... DOGE)": "SELL ALL (+... DOGE)",
+            "Široký": "Wide", "Skrblík": "Cheapskate", "Lovec Bossů": "Boss Slayer", "Vesmírný Veterán": "Space Veteran", "Sběratel": "Collector", "Let's go gambling": "Let's go gambling", "Cookie clicker": "Cookie clicker", "Milionář": "Millionaire", "Zasloužilý Otevírač": "Crate Opener", "Vrah": "Murderer", "Genocida": "Genocide", "Bůh Smrti": "God of Death", "Lovec Hlav": "Boss Hunter", "Noční Můra Bossů": "Boss Nightmare", "Elitní Pilot": "Elite Pilot", "Legendární Pilot": "Legendary Pilot", "Průzkumník Fanoušek": "Explorer Fan", "Laser Fanoušek": "Laser Fan", "Obránce Fanoušek": "Defender Fan", "Brokovnice Fanoušek": "Shotgun Fan", "Nekromant Fanoušek": "Necro Fan", "Atombombarďák": "Nuke Happy", "Magnetický Mistr": "Magnet Master", "Zdravotník": "Medic", "Mistr Času": "Time Master", "Loutkař": "Puppet Master", "Léčitel": "Healer", "Sběratel Gemů": "Gem Collector", "Rychlostní Démon": "Speed Demon", "Tank": "Tank", "Skleněné Dělo": "Glass Cannon", "Pařmen": "Multiplayer Fan", "Boháč": "Rich Kid", "Šťastná Hvězda": "Lucky Star", "Těžař Asteroidů": "Asteroid Miner", "Ničitel Asteroidů": "Asteroid Destroyer", "Přeživší": "Survivor", "Veterán Přežití": "Survival Veteran", "Nesmrtelný": "Immortal",
+            "Získej 5x upgrade na šířku zdi v jedné hře": "Get 5x wall width upgrades in one game", "Získej celkem 5000 Dogecoinů": "Collect 5,000 Dogecoins total", "Poraz celkem 10 bossů": "Defeat 10 bosses total", "Dosáhni levelu 50 v jedné hře": "Reach level 50 in one game", "Odemkni všechny 3 základní lodě": "Unlock all 3 base ships", "Zmáčkni 100x tlačítko pro náhodný výběr": "Press random select button 100 times", "Odehraj celkem 24 hodin": "Play for 24 hours total", "Získej celkem 100 000 Dogecoinů": "Collect 100,000 Dogecoins total", "Otevři celkem 50 beden": "Open 50 crates total", "Zabij celkem 1 000 nepřátel": "Kill 1,000 enemies total", "Zabij celkem 10 000 nepřátel": "Kill 10,000 enemies total", "Zabij celkem 100 000 nepřátel": "Kill 100,000 enemies total", "Poraz celkem 50 bossů": "Defeat 50 bosses total", "Poraz celkem 100 bossů": "Defeat 100 bosses total", "Dosáhni levelu 75 v jedné hře": "Reach level 75 in one game", "Dosáhni levelu 100 v jedné hře": "Reach level 100 in one game", "Odehraj 50 her za Průzkumníka": "Play 50 games as Explorer", "Odehraj 50 her za Laserovou Loď": "Play 50 games as Laser Ship", "Odehraj 50 her za Obránce": "Play 50 games as Defender", "Odehraj 50 her za Brokovnici": "Play 50 games as Shotgun", "Odehraj 50 her za Nekromancera": "Play 50 games as Necromancer", "Použij celkem 50 atomovek": "Use 50 nukes total", "Použij celkem 100 magnetů": "Use 100 magnets total", "Použij celkem 100 lékárniček": "Use 100 medkits total", "Použij zastavení času 50x": "Use time stop 50 times", "Použij posednutí 50x": "Use possession 50 times", "Vyléč celkem 5000 HP aurou": "Heal 5,000 HP total with aura", "Posbírej celkem 50 000 gemů": "Collect 50,000 gems total", "Vylepši Rychlost na maximum v jedné hře": "Max Speed in one game", "Vylepši HP na maximum v jedné hře": "Max HP in one game", "Maxuj Damage bez vylepšení HP": "Max Damage without HP upgrades", "Odehraj 20 multiplayerových her": "Play 20 multiplayer games", "Měj u sebe 50 000 Dogecoinů najednou": "Have 50,000 Dogecoins at once", "Získej Diamant (Ultra Rare) z bedny": "Get Diamond (Ultra Rare) from crate", "Znič celkem 100 meteoritů": "Destroy 100 asteroids total", "Znič celkem 500 meteoritů": "Destroy 500 asteroids total", "Přežij alespoň 10 minut v jedné hře": "Survive 10 minutes in one game", "Přežij alespoň 20 minut v jedné hře": "Survive 20 minutes in one game", "Přežij alespoň 30 minut v jedné hře": "Survive 30 minutes in one game",
             "Žádné aktivní servery": "No active servers",
             "Postup obnoven! Zpět ve hře.": "Progress restored! Back in the game.",
             "v bitvě": "in battle",
@@ -4818,7 +4831,7 @@ function init() {
     const langEs = document.getElementById('btn-lang-es');
     if (langEs) langEs.onclick = () => window.setLanguage('es');
     
-    window.setLanguage(localStorage.getItem('neoSurvivor_lang') || 'en');
+    window.setLanguage(localStorage.getItem('neoSurvivor_lang') || 'cs');
 
 
     loadMeta();
