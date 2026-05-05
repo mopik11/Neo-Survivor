@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.350
+ * NEO SURVIVOR - Core Game Logic - v1.351
  */
 
 window.addEventListener('beforeunload', () => {
@@ -1124,7 +1124,7 @@ class Projectile {
         this.vy = Math.sin(angle) * speed;
         this.damage = damage;
         this.radius = stats.size || 6;
-        this.life = stats.life || 200;
+        this.life = (stats.life !== undefined) ? stats.life : 200;
         this.pierce = stats.pierce || 1;
         this.bounce = stats.bounce || 0;
         this.isCrit = stats.isCrit || false;
@@ -1403,9 +1403,9 @@ class Boss {
             minionSpeed *= 0.35;
         }
 
-        // Škálování Bosse: 3x větší, 10x HP, 2x rychlejší, 3x damage
+        // Škálování Bosse: 3x větší, 20x HP, 2x rychlejší, 3x damage
         this.radius = minionRadius * 3;
-        this.maxHp = minionHp * 10;
+        this.maxHp = minionHp * 20;
         this.hp = this.maxHp;
         this.speed = minionSpeed * 2;
         this.damage = minionDamage * 3;
@@ -1530,19 +1530,64 @@ class Boss {
         const colors = { 1: '#ef4444', 2: '#f43f5e', 3: '#f97316', 4: '#eab308', 5: '#0ea5e9', 6: '#94a3b8', 7: '#10b981' };
         const color = colors[this.type] || '#ef4444';
 
-        ctx.shadowBlur = 50; ctx.shadowColor = color; ctx.fillStyle = color;
-        ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
-        ctx.rotate(Date.now() / 1000);
-        ctx.beginPath();
-        const sides = 5 + this.type;
-        for (let i = 0; i < sides; i++) {
-            const a = (i / sides) * Math.PI * 2;
-            const r = this.radius * (0.8 + Math.sin(Date.now() / 500 + i) * 0.2);
-            if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r); else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        ctx.save();
+        ctx.translate(this.x - cam.x, this.y - cam.y);
+        
+        // Vzhled podle typu příslušníka (Scaled 3x)
+        if (this.type === 1) { // Dron
+            const players = getAllAlivePlayers();
+            const target = players.length > 0 ? players.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0] : { x: 0, y: 0 };
+            const angle = Math.atan2(target.y - this.y, target.x - this.x);
+            ctx.rotate(angle);
+            ctx.shadowBlur = 50; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.beginPath(); ctx.moveTo(54, 0); ctx.lineTo(-36, 36); ctx.lineTo(-36, -36); ctx.closePath(); ctx.fill();
+        } else if (this.type === 2) { // Kostka
+            ctx.rotate(Date.now() / 1000);
+            ctx.shadowBlur = 50; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.fillRect(-45, -45, 90, 90);
+        } else if (this.type === 3) { // Kamikadze
+            const flash = Math.sin(Date.now() / 100) > 0 ? '#ef4444' : '#f97316';
+            ctx.rotate(Date.now() / 200);
+            ctx.shadowBlur = 60; ctx.shadowColor = flash; ctx.fillStyle = flash;
+            ctx.beginPath(); ctx.moveTo(0, -60); ctx.lineTo(45, 0); ctx.lineTo(0, 60); ctx.lineTo(-45, 0); ctx.closePath(); ctx.fill();
+        } else if (this.type === 4) { // Goblin
+            ctx.rotate(-Date.now() / 500);
+            ctx.shadowBlur = 50; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const a = (i / 5) * Math.PI * 2;
+                ctx.lineTo(Math.cos(a) * 45, Math.sin(a) * 45);
+                const a2 = ((i + 0.5) / 5) * Math.PI * 2;
+                ctx.lineTo(Math.cos(a2) * 21, Math.sin(a2) * 21);
+            }
+            ctx.closePath(); ctx.fill();
+        } else if (this.type === 5) { // Support
+            const pulse = (Math.sin(Date.now() / 300) + 1) * 0.5;
+            ctx.globalAlpha = 0.1 + pulse * 0.1;
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(0, 0, 750, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = 1.0;
+            ctx.shadowBlur = 60; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(0, 0, 54, 0, Math.PI * 2); ctx.fill();
+        } else if (this.type === 6) { // Štítonoš (Enemy Type 8 logic)
+            const players = getAllAlivePlayers();
+            const target = players.length > 0 ? players.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0] : { x: 0, y: 0 };
+            const angle = Math.atan2(target.y - this.y, target.x - this.x);
+            ctx.rotate(angle);
+            ctx.shadowBlur = 50; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(0, 0, 45, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 12;
+            ctx.beginPath(); ctx.arc(0, 0, 66, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+        } else if (this.type === 7) { // Skokan (Enemy Type 6 logic)
+            if (this.jumpState === 'JUMPING') {
+                const s = 1 + Math.sin(Date.now() / 50) * 0.2;
+                ctx.scale(s, s);
+            }
+            ctx.shadowBlur = 50; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(0, -60); ctx.lineTo(45, 30); ctx.lineTo(-45, 30); ctx.closePath(); ctx.fill();
         }
-        ctx.closePath(); ctx.fill();
 
-        // HP Bar
         ctx.restore();
         const barW = 120; const barH = 12;
         ctx.fillStyle = 'rgba(0,0,0,0.8)';
@@ -2181,9 +2226,9 @@ class Player {
 
         if (this.shipType === 5) { // NEKROMANCER
             if (!GAME.entities.minions) GAME.entities.minions = [];
-            const spawnCount = 1 + (this.projectileCount || 0);
+            const spawnCount = (this.projectileCount || 1) * 2;
             for (let i = 0; i < spawnCount; i++) {
-                if (GAME.entities.minions.length < 10 + (this.projectileCount || 0) * 3) {
+                if (GAME.entities.minions.length < 20 + (this.projectileCount || 0) * 10) {
                     const minion = new FriendlyMinion(this.x, this.y, this.damage * 0.5, this);
                     GAME.entities.minions.push(minion);
                 }
@@ -2434,7 +2479,8 @@ function spawnEnemy() {
     const bossAlreadySpawned = GAME.lastBossLevelSpawned === pivot.level;
     
     if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
-        enemy = new Boss(x, y, mod);
+        const bossType = ((pivot.level / 10 - 1) % 7) + 1;
+        enemy = new Boss(x, y, mod, undefined, bossType);
         showBossWarning();
         GAME.lastBossLevelSpawned = pivot.level;
     } else {
@@ -3018,6 +3064,12 @@ function togglePause(isAFK = false) {
         GAME.lastSpawnTime = Date.now();
         META.isAFK = false;
         GAME.lastActivity = Date.now();
+
+        // Auto-rejoin room if it was a multiplayer session
+        if (META.lastSession && META.lastSession.roomId) {
+            console.log('[RESUME] Attempting auto-rejoin to room:', META.lastSession.roomId);
+            window.joinCloudServer(META.lastSession.roomId);
+        }
     }
 }
 
@@ -4159,6 +4211,15 @@ function initSocket() {
             if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
         });
 
+        NET.socket.on('shoot', (data) => {
+            if (data.playerId === myPlayerId) return;
+            const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, {
+                ownerId: data.playerId, speed: data.speed, size: data.size, pierce: data.pierce,
+                bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life
+            });
+            if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
+        });
+
         NET.socket.on('gemCollected', (data) => {
             if (GAME.entities.gems) {
                 GAME.entities.gems = GAME.entities.gems.filter(g => g.id !== data.gemId);
@@ -4281,7 +4342,9 @@ function syncShot(proj) {
         tx: proj.x + Math.cos(angle) * 100,
         ty: proj.y + Math.sin(angle) * 100,
         dmg: proj.damage, speed: speed, size: proj.radius, pierce: proj.pierce,
-        bounce: proj.bounce, isCrit: proj.isCrit, type: proj.type, life: proj.life
+        bounce: proj.bounce, isCrit: proj.isCrit, type: proj.type, 
+        life: (proj.life === Infinity) ? 999999 : proj.life,
+        playerId: myPlayerId
     });
 }
 
