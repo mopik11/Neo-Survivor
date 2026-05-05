@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.353
+ * NEO SURVIVOR - Core Game Logic - v1.355
  */
 
 window.addEventListener('beforeunload', () => {
@@ -2574,9 +2574,10 @@ function showBossWarning(name = "", soon = false) {
         const prefix = soon ? window.T("POZOR!") + " " : "";
         const suffix = soon ? " " + window.T("SE BLÍŽÍ!") : " " + window.T("PŘICHÁZÍ") + "!";
         el.innerText = `${prefix}${window.T('BOSS')} ${window.T(name)}${suffix}`;
-        el.style.display = 'block';
+        el.classList.add('active');
+        playSound('bossWarning');
+        setTimeout(() => el.classList.remove('active'), 5000);
     }
-    setTimeout(() => { if (el) el.style.display = 'none'; }, 5000);
 }
 
 function updateUI() {
@@ -2706,6 +2707,7 @@ function showLevelUp(isBossReward = false) {
         container.appendChild(card);
     });
     modal.classList.add('active');
+    GAME.isBossRewardActive = isBossReward; // Mark if this is a boss reward to delay notification later
 
     const btnRandom = document.getElementById('btn-random-upgrade');
     if (btnRandom) {
@@ -2830,6 +2832,15 @@ function applyUpgrade(id, record = true) {
     } catch (e) { console.error("Upgrade error:", e); }
 
     document.getElementById('levelup-modal').classList.remove('active');
+
+    // Crate reward notification delay (requested 5s after choosing upgrade)
+    if (GAME.isBossRewardActive) {
+        console.log("[GAME] Boss reward selected, scheduling crate notification in 5s...");
+        setTimeout(() => {
+            showCrateNotification("OBYČEJNÁ BEDNA", "📦");
+        }, 5000);
+        GAME.isBossRewardActive = false;
+    }
 
     if (NET.isMultiplayer) {
         const waitModal = document.getElementById('waiting-modal');
@@ -3018,7 +3029,7 @@ function showCurrencyNotification(amount, source = "") {
         <div style="background: rgba(15, 23, 42, 0.9); border: 2px solid #fbbf24; padding: 20px 40px; border-radius: 20px; box-shadow: 0 0 50px rgba(251, 191, 36, 0.4); backdrop-filter: blur(10px);">
             <div style="color: #fbbf24; font-weight: 900; font-size: 1.5rem; letter-spacing: 2px; margin-bottom: 5px;">${title}</div>
             <div style="color: #fff; font-size: 2rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <script type="module" src="./main.js?v=1.353"></script>an> +${amount} DOGE
+                <span style="font-size: 1.5rem;">🪙</span> +${amount} DOGE
             </div>
             ${source ? `<div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px; text-transform: uppercase;">${translatedSource}</div>` : ''}
         </div>
@@ -4412,13 +4423,15 @@ function initSocket() {
             showBossWarning(bossNames[data.type] || 'Boss', data.soon);
         });
 
-        NET.socket.on('bossDefeated', () => {
+        NET.socket.on('bossDefeated', (data) => {
+            console.log("[NET] Boss defeated event received!", data);
             if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
             META.unopenedCrates.basic++;
             saveMeta();
-            showCrateNotification("OBYČEJNÁ BEDNA", "📦");
+            // showCrateNotification moved to applyUpgrade with 5s delay
             GAME.paused = true;
             showLevelUp(true);
+            checkAchievements();
         });
 
         NET.socket.on('playerRevived', (data) => {
@@ -4826,7 +4839,7 @@ function init() {
             "PREM.": "PREM.",
             "LEGEN.": "LEGEN.",
             "Skvělá kombinace pro nesmrtelnost.": "Great combo for immortality.",
-            "Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!": "Spawns every minute. Always try to dodge sideways!",
+            "Objevuje se každých 10 levelů. Vždy se mu snaž uhýbat do stran!": "Spawns every 10 levels. Always try to dodge sideways!",
             "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 kills = 1 Doge. Buy permanent upgrades with them!",
             "ROZUMÍM, CHCI DO BOJE!": "UNDERSTOOD, LET'S FIGHT!",
             "Napiš mi, co bys chtěl vylepšit nebo nahlásit chybu.": "Tell me what to improve or report a bug.",
@@ -5073,7 +5086,7 @@ function init() {
             "PRODAT CELOU VÁRKU": "SELL ALL",
             "PRODAT CELOU VÁRKU (+... DOGE)": "SELL ALL (+... DOGE)",
             "Široký": "Wide", "Skrblík": "Cheapskate", "Lovec Bossů": "Boss Slayer", "Vesmírný Veterán": "Space Veteran", "Sběratel": "Collector", "Let's go gambling": "Let's go gambling", "Cookie clicker": "Cookie clicker", "Milionář": "Millionaire", "Zasloužilý Otevírač": "Crate Opener", "Vrah": "Murderer", "Genocida": "Genocide", "Bůh Smrti": "God of Death", "Lovec Hlav": "Boss Hunter", "Noční Můra Bossů": "Boss Nightmare", "Elitní Pilot": "Elite Pilot", "Legendární Pilot": "Legendary Pilot", "Průzkumník Fanoušek": "Explorer Fan", "Laser Fanoušek": "Laser Fan", "Obránce Fanoušek": "Defender Fan", "Brokovnice Fanoušek": "Shotgun Fan", "Nekromant Fanoušek": "Necro Fan", "Atombombarďák": "Nuke Happy", "Magnetický Mistr": "Magnet Master", "Zdravotník": "Medic", "Mistr Času": "Time Master", "Loutkař": "Puppet Master", "Léčitel": "Healer", "Sběratel Gemů": "Gem Collector", "Rychlostní Démon": "Speed Demon", "Tank": "Tank", "Skleněné Dělo": "Glass Cannon", "Pařmen": "Multiplayer Fan", "Boháč": "Rich Kid", "Šťastná Hvězda": "Lucky Star", "Těžař Asteroidů": "Asteroid Miner", "Ničitel Asteroidů": "Asteroid Destroyer", "Přeživší": "Survivor", "Veterán Přežití": "Survival Veteran", "Nesmrtelný": "Immortal",
-            "Získej 5x upgrade na šířku zdi v jedné hře": "Get 5x wall width upgrades in one game", "Získej celkem 5000 Dogecoinů": "Collect 5,000 Dogecoins total", "Poraz celkem 10 bossů": "Defeat 10 bosses total", "Dosáhni levelu 50 v jedné hře": "Reach level 50 in one game", "Odemkni všechny 3 základní lodě": "Unlock all 3 base ships", "Zmáčkni 100x tlačítko pro náhodný výběr": "Press random select button 100 times", "Odehraj celkem 24 hodin": "Play for 24 hours total", "Získej celkem 100 000 Dogecoinů": "Collect 100,000 Dogecoins total", "Otevři celkem 50 beden": "Open 50 crates total", "Zabij celkem 1 000 nepřátel": "Kill 1,000 enemies total", "Zabij celkem 10 000 nepřátel": "Kill 10,000 enemies total", "Zabij celkem 100 000 nepřátel": "Kill 100,000 enemies total", "Poraz celkem 50 bossů": "Defeat 50 bosses total", "Poraz celkem 100 bossů": "Defeat 100 bosses total", "Dosáhni levelu 75 v jedné hře": "Reach level 75 in one game", "Dosáhni levelu 100 v jedné hře": "Reach level 100 in one game", "Odehraj 50 her za Průzkumníka": "Play 50 games as Explorer", "Odehraj 50 her za Laserovou Loď": "Play 50 games as Laser Ship", "Odehraj 50 her za Obránce": "Play 50 games as Defender", "Odehraj 50 her za Brokovnici": "Play 50 games as Shotgun", "Odehraj 50 her za Nekromancera": "Play 50 games as Necromancer", "Použij celkem 50 atomovek": "Use 50 nukes total", "Použij celkem 100 magnetů": "Use 100 magnets total", "Použij celkem 100 lékárniček": "Use 100 medkits total", "Použij zastavení času 50x": "Use time stop 50 times", "Použij posednutí 50x": "Use possession 50 times", "Vyléč celkem 5000 HP aurou": "Heal 5,000 HP total with aura", "Posbírej celkem 50 000 gemů": "Collect 50,000 gems total", "Vylepši Rychlost na maximum v jedné hře": "Max Speed in one game", "Vylepši HP na maximum v jedné hře": "Max HP in one game", "Maxuj Damage bez vylepšení HP": "Max Damage without HP upgrades", "Odehraj 20 multiplayerových her": "Play 20 multiplayer games", "Měj u sebe 50 000 Dogecoinů najednou": "Have 50,000 Dogecoins at once", "Získej Diamant (Ultra Rare) z bedny": "Get Diamond (Ultra Rare) from crate", "Znič celkem 100 meteoritů": "Destroy 100 asteroids total", "Znič celkem 500 meteoritů": "Destroy 500 asteroids total", "Přežij alespoň 10 minut v jedné hře": "Survive 10 minutes in one game", "Přežij alespoň 20 minut v jedné hře": "Survive 20 minutes in one game", "Přežij alespoň 30 minut v jedné hře": "Survive 30 minutes in one game",
+            "Získej 5x upgrade na šířku zdi v jedné hře": "Get 5x wall width upgrades in one game", "Získej celkem 5000 Dogecoinů": "Collect 5,000 Dogecoins total", "Poraz celkem 10 bossů": "Defeat 10 bosses total", "Dosáhni levelu 50 v jedné hře": "Reach level 50 in one game", "Odemkni všechny 3 základní lodě": "Unlock all 3 base ships", "Zmáčkni 100x tlačítko pro náhodný výběr": "Press random select button 100 times", "Odehraj celkem 24 hodin": "Play for 24 hours total", "Získej celkem 100 000 Dogecoinů": "Collect 100,000 Dogecoins total", "Otevři celkem 50 beden": "Open 50 crates total", "Zabij celkem 1 000 nepřátel": "Kill 1,000 enemies total", "Zabij celkem 10 000 nepřátel": "Kill 10,000 enemies total", "Zabij celkem 100 000 nepřátel": "Kill 100,000 enemies total", "Poraz celkem 50 bossů": "Defeat 50 bosses total", "Poraz celkem 100 bossů": "Defeat 100 bosses total", "Dosáhni levelu 75 v jedné hře": "Reach level 75 in one game", "Dosáhni levelu 100 v jedné hře": "Reach level 100 in one game", "Odehraj 50 her za Průzkumníka": "Play 50 games as Explorer", "Odehraj 50 her za Laserovou Loď": "Play 50 games as Laser Ship", "Odehraj 50 her za Obránce": "Play 50 games as Defender", "Odehraj 50 her za Brokovnici": "Play 50 games as Shotgun", "Odehraj 50 her za Nekromancera": "Play 50 games as Necromancer", "Použij celkem 50 atomovek": "Use 50 nukes total", "Použij celkem 100 magnetů": "Use 100 magnets total", "Použij celkem 100 lékárniček": "Use 100 medkits total", "Použij zastavení času 50x": "Use time stop 50 times", "Použij posednutí 50x": "Use possession 50 times", "Vyléč celkem 5000 HP aurou": "Heal 5,000 HP total with aura", "Posbírej celkem 50 000 gemů": "Collect 50,000 gems total", "Vylepši Rychlost na maximum v jedné hře": "Max Speed in one game", "Vylepši HP na maximum v jedné hře": "Max HP in one game", "Maxuj Damage bez vylepšení HP": "Max Damage without HP upgrades", "Odehraj 20 multiplayerových her": "Play 20 multiplayer games", "Měj u sebe 50 000 Dogecoinů najednou": "Have 50,000 Dogecoins at once", "Získej Diamant (Ultra Rare) z bedny": "Get Diamond (Ultra Rare) from crate", "Znič celkem 100 meteoritů": "Destroy 100 meteorites total", "Znič celkem 500 meteoritů": "Destroy 500 meteorites total", "Přežij alespoň 10 minut v jedné hře": "Survive 10 minutes in one game", "Přežij alespoň 20 minut v jedné hře": "Survive 20 minutes in one game", "Přežij alespoň 30 minut v jedné hře": "Survive 30 minutes in one game",
             "Žádné aktivní servery": "No active servers",
             "Postup obnoven! Zpět ve hře.": "Progress restored! Back in the game.",
             "v bitvě": "in battle",
@@ -5918,7 +5931,7 @@ function handleEnemyDeath(enemy) {
                 if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
                 META.unopenedCrates.basic++;
                 saveMeta();
-                showCrateNotification("OBYČEJNÁ BEDNA", "📦");
+                // showCrateNotification moved to applyUpgrade with 5s delay
                 showLevelUp(true);
                 checkAchievements();
             }
