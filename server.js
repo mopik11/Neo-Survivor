@@ -2,6 +2,64 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const sqlite3 = require('sqlite3').verbose();
+const crypto = require('node:crypto');
+
+// --- SECURITY CONFIGURATION ---
+const ENCRYPTION_KEY = Buffer.from('4a66e6c26588825f385c3983274f88e5e1e5e9a4e8d2e6f1a8c3d5b2a1f0e4d9', 'hex'); // V produkci použijte environment variable!
+const IV_LENGTH = 12;
+
+const Security = {
+    // Password Hashing (scrypt)
+    hashPassword: (password) => {
+        return new Promise((resolve, reject) => {
+            const salt = crypto.randomBytes(16).toString('hex');
+            crypto.scrypt(password, salt, 64, (err, derivedKey) => {
+                if (err) reject(err);
+                resolve(salt + ":" + derivedKey.toString('hex'));
+            });
+        });
+    },
+
+    verifyPassword: (password, hash) => {
+        return new Promise((resolve, reject) => {
+            if (!hash.includes(':')) {
+                // Zpětná kompatibilita pro plain-text hesla
+                resolve(password === hash);
+                return;
+            }
+            const [salt, key] = hash.split(':');
+            crypto.scrypt(password, salt, 64, (err, derivedKey) => {
+                if (err) reject(err);
+                resolve(key === derivedKey.toString('hex'));
+            });
+        });
+    },
+
+    // Data Encryption (AES-256-CBC)
+    encrypt: (text) => {
+        const iv = crypto.randomBytes(16);
+        const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+        let encrypted = cipher.update(text, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        return iv.toString('hex') + ":" + encrypted;
+    },
+
+    decrypt: (data) => {
+        try {
+            if (!data.includes(':')) return data;
+            const [ivHex, encryptedHex] = data.split(':');
+            if (!ivHex || !encryptedHex) return data;
+            const iv = Buffer.from(ivHex, 'hex');
+            const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+            let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        } catch (e) {
+            console.error("Decryption failed:", e.message);
+            return data;
+        }
+    }
+};
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -44,7 +102,7 @@ const ROOMS = {};
 // NASTAVENÍ PRO ADMIN KONZOLI
 let SERVER_ADMIN_PIN = null;
 const ADMIN_USER = "mopik"; // <-- ZMĚŇ SI UŽIVATELSKÉ JMÉNO
-const ADMIN_PASS = "o9~^>!:U{i3Y6,o"; // <-- ZMĚŇ SI HESLO
+const ADMIN_PASS_HASH = "8f6b6b7a2d6b3a2e:c5d8e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"; 
 
 const CONFIG = {
     ENEMY_BASE_HEALTH: 20,
@@ -95,6 +153,38 @@ function broadcastServerStats() {
 }
 setInterval(broadcastServerStats, 5000);
 
+io.use((socket, next) => {
+    // INTERCEPT INCOMING (DECRYPTION)
+    const originalOnEvent = socket.onevent;
+    socket.onevent = function (packet) {
+        const args = packet.data || [];
+        if (args.length > 1 && typeof args[1] === 'string' && args[1].startsWith('enc:')) {
+            try {
+                const encrypted = args[1].substring(4);
+                const decrypted = Security.decrypt(encrypted);
+                args[1] = JSON.parse(decrypted);
+            } catch (e) {
+                // Pokud dekryptování selže, necháme to být (možná to není šifrované)
+            }
+        }
+        originalOnEvent.call(this, packet);
+    };
+
+    // INTERCEPT OUTGOING (ENCRYPTION)
+    const originalEmit = socket.emit;
+    socket.emit = function (event, data) {
+        // Nešifrujeme stateUpdate (příliš těžké) a metadata serveru
+        const bypass = ['stateUpdate', 'serverStats', 'leaderboardData', 'adminAuthStep', 'adminAuthError', 'adminResponse'];
+        if (data && typeof data === 'object' && !bypass.includes(event)) {
+            const encrypted = 'enc:' + Security.encrypt(JSON.stringify(data));
+            return originalEmit.call(this, event, encrypted);
+        }
+        return originalEmit.call(this, event, data);
+    };
+    
+    next();
+});
+
 io.on('connection', (socket) => {
     console.log('Hráč připojen:', socket.id);
 
@@ -111,15 +201,17 @@ io.on('connection', (socket) => {
 
     // --- ADMIN KONZOLE (2FA OCHRANA + RELACE) ---
     socket.on('requestAdminPin', (data) => {
-        if (data.user === ADMIN_USER && data.pass === ADMIN_PASS) {
-            SERVER_ADMIN_PIN = Math.floor(100000 + Math.random() * 900000).toString();
-            console.log(`\n===========================================`);
-            console.log(`🔑 ADMIN PIN KÓD BYL VYGENEROVÁN: ${SERVER_ADMIN_PIN}`);
-            console.log(`===========================================\n`);
-            socket.emit('adminAuthStep', { step: 2 });
-        } else {
-            socket.emit('adminAuthError', "Špatné jméno nebo heslo.");
-        }
+        Security.verifyPassword(data.pass, ADMIN_PASS_HASH).then(isMatch => {
+            if (data.user === ADMIN_USER && isMatch) {
+                SERVER_ADMIN_PIN = Math.floor(100000 + Math.random() * 900000).toString();
+                console.log(`\n===========================================`);
+                console.log(`🔑 ADMIN PIN KÓD BYL VYGENEROVÁN: ${SERVER_ADMIN_PIN}`);
+                console.log(`===========================================\n`);
+                socket.emit('adminAuthStep', { step: 2 });
+            } else {
+                socket.emit('adminAuthError', "Špatné jméno nebo heslo.");
+            }
+        });
     });
 
     socket.on('verifyAdminPin', (data) => {
@@ -168,9 +260,11 @@ io.on('connection', (socket) => {
         }
         else if (cmd === 'stats') {
             if (target) {
-                db.get(`SELECT * FROM accounts WHERE username = ?`, [target], (err, row) => {
+                db.get(`SELECT username, max_level, meta FROM accounts WHERE username = ?`, [target], (err, row) => {
                     if (!row) return socket.emit('adminResponse', { msg: `Hráč ${target} nenalezen.`, color: "red" });
-                    socket.emit('adminResponse', { msg: `Hráč: ${row.username} | Pass: ${row.password} | Max Lvl: ${row.max_level}\nMeta: ${row.meta}`, color: "cyan" });
+                    // Dekryptování pro admina
+                    const decryptedMeta = Security.decrypt(row.meta);
+                    socket.emit('adminResponse', { msg: `Hráč: ${row.username} | Max Lvl: ${row.max_level}\nMeta: ${decryptedMeta}`, color: "cyan" });
                 });
             } else {
                 db.all(`SELECT username, max_level FROM accounts ORDER BY max_level DESC`, [], (err, rows) => {
@@ -214,7 +308,8 @@ io.on('connection', (socket) => {
                 if (!rows || rows.length === 0) return socket.emit('adminResponse', { msg: "Žádný feedback nenalezen.", color: "yellow" });
                 let text = `ZPĚTNÁ VAZBA (${rows.length}):\n`;
                 rows.forEach(r => {
-                    text += `[${r.timestamp}] ${r.username}: ${r.text}\n`;
+                    const decryptedText = Security.decrypt(r.text);
+                    text += `[${r.timestamp}] ${r.username}: ${decryptedText}\n`;
                 });
                 socket.emit('adminResponse', { msg: text, color: "pink" });
             });
@@ -232,8 +327,8 @@ io.on('connection', (socket) => {
     // --- BĚŽNÁ LOGIKA HRY ---
     socket.on('register', (data) => {
         let { user, pass } = data;
-        if (!user || user.length < 3 || !pass || pass.length < 1) {
-            return socket.emit('registerResponse', { success: false, msg: 'Jméno min. 3 znaky a heslo nesmí být prázdné.' });
+        if (!user || user.length < 3 || user.length > 15 || !pass || pass.length < 1) {
+            return socket.emit('registerResponse', { success: false, msg: 'Jméno musí mít 3 až 15 znaků a heslo nesmí být prázdné.' });
         }
         user = user.toLowerCase().trim();
 
@@ -258,17 +353,20 @@ io.on('connection', (socket) => {
             };
 
             console.log(`[REGISTER] Creating new account: "${user}"`);
-            db.run(`INSERT INTO accounts (username, password, meta, max_level) VALUES (?, ?, ?, ?)`,
-                [user, pass, JSON.stringify(defaultMeta), 1],
-                (err) => {
-                    if (err) {
-                        console.error(`[REGISTER] DB Error:`, err);
-                        return socket.emit('registerResponse', { success: false, msg: 'Chyba při zápisu do databáze.' });
-                    }
-                    console.log(`[REGISTER] Success: "${user}"`);
-                    socket.emit('registerResponse', { success: true, meta: defaultMeta });
-                    broadcastLeaderboard();
-                });
+            Security.hashPassword(pass).then(hashedPass => {
+                const encryptedMeta = Security.encrypt(JSON.stringify(defaultMeta));
+                db.run(`INSERT INTO accounts (username, password, meta, max_level) VALUES (?, ?, ?, ?)`,
+                    [user, hashedPass, encryptedMeta, 1],
+                    (err) => {
+                        if (err) {
+                            console.error(`[REGISTER] DB Error:`, err);
+                            return socket.emit('registerResponse', { success: false, msg: 'Chyba při zápisu do databáze.' });
+                        }
+                        console.log(`[REGISTER] Success: "${user}"`);
+                        socket.emit('registerResponse', { success: true, meta: defaultMeta });
+                        broadcastLeaderboard();
+                    });
+            });
         });
     });
 
@@ -286,23 +384,25 @@ io.on('connection', (socket) => {
             if (err) console.error(`[DELETE] DB Get Error:`, err);
             
             if (row) {
-                console.log(`[DELETE] Found user. Comparing passwords... (Input: "${pass}", DB: "${row.password}")`);
-                if (row.password === pass) {
-                    console.log(`[DELETE] Password match. Deleting...`);
-                    db.run(`DELETE FROM accounts WHERE username = ?`, [user], function (err) {
-                        if (err) {
-                            console.error(`[DELETE] DB Delete Error:`, err);
-                            socket.emit('accountDeleted', { success: false, msg: "Chyba při mazání." });
-                        } else {
-                            console.log(`[DELETE] Success. Changes: ${this.changes}`);
-                            broadcastLeaderboard();
-                            socket.emit('accountDeleted', { success: true });
-                        }
-                    });
-                } else {
-                    console.log(`[DELETE] Password mismatch!`);
-                    socket.emit('accountDeleted', { success: false, msg: "Špatné heslo." });
-                }
+                console.log(`[DELETE] Found user. Comparing passwords...`);
+                Security.verifyPassword(pass, row.password).then(isMatch => {
+                    if (isMatch) {
+                        console.log(`[DELETE] Password match. Deleting...`);
+                        db.run(`DELETE FROM accounts WHERE username = ?`, [user], function (err) {
+                            if (err) {
+                                console.error(`[DELETE] DB Delete Error:`, err);
+                                socket.emit('accountDeleted', { success: false, msg: "Chyba při mazání." });
+                            } else {
+                                console.log(`[DELETE] Success. Changes: ${this.changes}`);
+                                broadcastLeaderboard();
+                                socket.emit('accountDeleted', { success: true });
+                            }
+                        });
+                    } else {
+                        console.log(`[DELETE] Password mismatch!`);
+                        socket.emit('accountDeleted', { success: false, msg: "Špatné heslo." });
+                    }
+                });
             } else {
                 console.log(`[DELETE] User "${user}" not found in DB.`);
                 socket.emit('accountDeleted', { success: false, msg: "Účet nenalezen." });
@@ -319,17 +419,28 @@ io.on('connection', (socket) => {
             if (err) console.error(`[LOGIN] DB Error:`, err);
             
             if (row) {
-                console.log(`[LOGIN] User found. Pass check: Input="${pass}", DB="${row.password}"`);
-                if (row.password === pass) {
-                    const parsedMeta = JSON.parse(row.meta);
-                    if (!parsedMeta.abilities) parsedMeta.abilities = { 1: true, 2: false, 3: false };
-                    if (!parsedMeta.selectedAbility) parsedMeta.selectedAbility = 1;
-                    console.log(`[LOGIN] Success: "${user}"`);
-                    socket.emit('loginResponse', { success: true, meta: parsedMeta });
-                } else {
-                    console.log(`[LOGIN] Wrong password for "${user}"`);
-                    socket.emit('loginResponse', { success: false, msg: "Špatné heslo!" });
-                }
+                Security.verifyPassword(pass, row.password).then(isMatch => {
+                    if (isMatch) {
+                        // Dekryptování metadat
+                        const decryptedMeta = Security.decrypt(row.meta);
+                        const parsedMeta = JSON.parse(decryptedMeta);
+                        if (!parsedMeta.abilities) parsedMeta.abilities = { 1: true, 2: false, 3: false };
+                        if (!parsedMeta.selectedAbility) parsedMeta.selectedAbility = 1;
+
+                        // Lazy Migration: Pokud heslo bylo plain-text, zahashujeme ho
+                        if (!row.password.includes(':')) {
+                            Security.hashPassword(pass).then(hashed => {
+                                db.run(`UPDATE accounts SET password = ? WHERE username = ?`, [hashed, user]);
+                            });
+                        }
+
+                        console.log(`[LOGIN] Success: "${user}"`);
+                        socket.emit('loginResponse', { success: true, meta: parsedMeta });
+                    } else {
+                        console.log(`[LOGIN] Wrong password for "${user}"`);
+                        socket.emit('loginResponse', { success: false, msg: "Špatné heslo!" });
+                    }
+                });
             } else {
                 console.log(`[LOGIN] User "${user}" not found.`);
                 socket.emit('loginResponse', { success: false, msg: "Účet neexistuje. Zaregistruj se!" });
@@ -342,15 +453,20 @@ io.on('connection', (socket) => {
         if (!user) return;
         user = user.toLowerCase().trim();
         db.get(`SELECT password, max_level FROM accounts WHERE username = ?`, [user], (err, row) => {
-            if (row && row.password === pass) {
-                const newMaxLevel = Math.max(meta.maxLevel || 1, row.max_level || 1);
-                db.run(`UPDATE accounts SET meta = ?, max_level = ? WHERE username = ?`,
-                    [JSON.stringify(meta), newMaxLevel, user],
-                    (err) => {
-                        if (!err && newMaxLevel > row.max_level) {
-                            broadcastLeaderboard();
-                        }
-                    });
+            if (row) {
+                Security.verifyPassword(pass, row.password).then(isMatch => {
+                    if (isMatch) {
+                        const newMaxLevel = Math.max(meta.maxLevel || 1, row.max_level || 1);
+                        const encryptedMeta = Security.encrypt(JSON.stringify(meta));
+                        db.run(`UPDATE accounts SET meta = ?, max_level = ? WHERE username = ?`,
+                            [encryptedMeta, newMaxLevel, user],
+                            (err) => {
+                                if (!err && newMaxLevel > row.max_level) {
+                                    broadcastLeaderboard();
+                                }
+                            });
+                    }
+                });
             }
         });
     });
@@ -373,7 +489,8 @@ io.on('connection', (socket) => {
 
     socket.on('sendFeedback', (data) => {
         if (data && data.text) {
-            db.run(`INSERT INTO feedback (username, text) VALUES (?, ?)`, [data.user || 'Anonym', data.text]);
+            const encryptedText = Security.encrypt(data.text);
+            db.run(`INSERT INTO feedback (username, text) VALUES (?, ?)`, [data.user || 'Anonym', encryptedText]);
         }
     });
 

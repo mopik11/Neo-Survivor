@@ -2,6 +2,58 @@
  * NEO SURVIVOR - Core Game Logic - v1.361
  */
 
+// --- SECURITY LAYER ---
+const SECURITY_KEY_HEX = '4a66e6c26588825f385c3983274f88e5e1e5e9a4e8d2e6f1a8c3d5b2a1f0e4d9';
+const Security = {
+    encrypt: (text) => {
+        const iv = CryptoJS.lib.WordArray.random(16);
+        const key = CryptoJS.enc.Hex.parse(SECURITY_KEY_HEX);
+        const encrypted = CryptoJS.AES.encrypt(text, key, { iv: iv });
+        return iv.toString() + ":" + encrypted.ciphertext.toString();
+    },
+    decrypt: (data) => {
+        try {
+            if (typeof data !== 'string' || !data.includes(':')) return data;
+            const [ivHex, encryptedHex] = data.split(':');
+            const iv = CryptoJS.enc.Hex.parse(ivHex);
+            const key = CryptoJS.enc.Hex.parse(SECURITY_KEY_HEX);
+            const decrypted = CryptoJS.AES.decrypt(
+                { ciphertext: CryptoJS.enc.Hex.parse(encryptedHex) },
+                key,
+                { iv: iv }
+            );
+            return decrypted.toString(CryptoJS.enc.Utf8);
+        } catch (e) {
+            return data;
+        }
+    },
+    wrapSocket: (socket) => {
+        const originalEmit = socket.emit;
+        const originalOn = socket.on;
+
+        socket.emit = function (event, data) {
+            const bypass = ['initPlayer', 'requestLeaderboard', 'requestServerList', 'requestRooms', 'requestAdminPin', 'verifyAdminPin'];
+            if (data && typeof data === 'object' && !bypass.includes(event)) {
+                const encrypted = 'enc:' + Security.encrypt(JSON.stringify(data));
+                return originalEmit.call(this, event, encrypted);
+            }
+            return originalEmit.call(this, event, data);
+        };
+
+        socket.on = function (event, callback) {
+            return originalOn.call(this, event, function (data) {
+                if (typeof data === 'string' && data.startsWith('enc:')) {
+                    try {
+                        const decrypted = Security.decrypt(data.substring(4));
+                        data = JSON.parse(decrypted);
+                    } catch (e) { }
+                }
+                callback(data);
+            });
+        };
+    }
+};
+
 window.addEventListener('beforeunload', () => {
     localStorage.removeItem('game_session_active');
 });
@@ -4157,6 +4209,7 @@ function initSocket() {
 
     try {
         NET.socket = io(SERVER_URL);
+        Security.wrapSocket(NET.socket);
 
         NET.socket.on('connect', () => {
             console.warn("CLOUD: Připojeno k hernímu serveru!");

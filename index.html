@@ -6,6 +6,7 @@
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
     <link rel="stylesheet" href="style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   </head>
   <body>
     <div id="app">
@@ -60,7 +61,7 @@
           <p class="subtitle" style="font-size: 0.9rem;">PŘIHLÁŠENÍ NEBO REGISTRACE</p>
           
           <div style="width: 100%; margin-bottom: 15px;">
-              <input type="text" id="input-login-name" placeholder="Jméno (min 3 znaky)..." maxlength="12" class="login-input">
+              <input type="text" id="input-login-name" placeholder="Jméno (3-15 znaků)..." maxlength="15" class="login-input">
           </div>
           <div style="width: 100%; margin-bottom: 20px;">
               <input type="password" id="input-login-pass" placeholder="Heslo..." class="login-input">
