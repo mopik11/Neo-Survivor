@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.360
+ * NEO SURVIVOR - Core Game Logic - v1.361
  */
 
 window.addEventListener('beforeunload', () => {
@@ -26,11 +26,11 @@ window.showCustomAlert = function (msg) {
 
 // --- AUDIO SYSTEM ---
 const SOUND_URLS = {
-    menuOpen: 'https://cdn.pixabay.com/audio/2022/03/10/audio_55940027f3.mp3',
-    upgrade: 'https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3',
-    crateSpin: 'https://cdn.pixabay.com/audio/2022/03/15/audio_7314546419.mp3',
-    crateWin: 'https://cdn.pixabay.com/audio/2021/08/04/audio_bb3d15478a.mp3',
-    coin: 'https://cdn.pixabay.com/audio/2021/08/04/audio_340243e86c.mp3'
+    menuOpen: 'https://raw.githubusercontent.com/rse/soundfx/master/soundfx.d/click3.mp3',
+    upgrade: 'https://raw.githubusercontent.com/rse/soundfx/master/soundfx.d/bling2.mp3',
+    crateSpin: 'https://raw.githubusercontent.com/rse/soundfx/master/soundfx.d/click1.mp3',
+    crateWin: 'https://raw.githubusercontent.com/rse/soundfx/master/soundfx.d/fanfare1.mp3',
+    coin: 'https://raw.githubusercontent.com/rse/soundfx/master/soundfx.d/bling1.mp3'
 };
 
 const SOUND_BUFFERS = {};
