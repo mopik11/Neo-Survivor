@@ -214,13 +214,17 @@ io.on('connection', (socket) => {
     });
 
     socket.on('verifyAdminPin', (data) => {
-        if (data.user === ADMIN_USER && data.pass === ADMIN_PASS && data.pin === SERVER_ADMIN_PIN) {
-            socket.isAdmin = true;
-            SERVER_ADMIN_PIN = null;
-            socket.emit('adminAuthStep', { step: 3 });
-        } else {
-            socket.emit('adminAuthError', "Špatný nebo expirovaný PIN kód.");
-        }
+        Security.verifyPassword(data.pass, ADMIN_PASS_HASH).then(isMatch => {
+            if (data.user === ADMIN_USER && isMatch && data.pin === SERVER_ADMIN_PIN) {
+                socket.isAdmin = true;
+                SERVER_ADMIN_PIN = null;
+                socket.emit('adminAuthStep', { step: 3 });
+            } else {
+                socket.emit('adminAuthError', "Špatný nebo expirovaný PIN kód.");
+            }
+        }).catch(err => {
+            socket.emit('adminAuthError', "Chyba serveru při ověřování PINu.");
+        });
     });
 
     socket.on('adminCommand', (data) => {
