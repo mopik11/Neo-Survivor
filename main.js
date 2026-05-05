@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.344
+ * NEO SURVIVOR - Core Game Logic - v1.350
  */
 
 window.addEventListener('beforeunload', () => {
@@ -493,6 +493,7 @@ const GAME = {
     startTime: 0,
     coinsCollected: 0,
     lastBossTime: 0,
+    lastBossMinute: 0,
     lastSpawnTime: 0,
     frozenUntil: 0,
     speedFactor: 1.0,
@@ -1385,69 +1386,148 @@ class Meteorite {
 
 class Boss {
     constructor(x, y, level = 1, id = Math.random().toString(36).substr(2, 9), type = null) {
-        this.x = x; this.y = y; this.radius = 50; this.id = id;
-        this.type = type || Math.floor(Math.random() * 5) + 1; // 1-5 varianty
-        this.maxHp = CONFIG.ENEMY_BASE_HEALTH * 30 * level; this.hp = this.maxHp;
-        this.speed = CONFIG.ENEMY_BASE_SPEED * 0.7; this.isBoss = true;
+        this.x = x; this.y = y; this.id = id;
+        this.type = type || Math.floor(Math.random() * 7) + 1; // 1-7 varianty
+        
+        // Základní statistiky mimozemšťana (pro škálování)
+        let minionHp = CONFIG.ENEMY_BASE_HEALTH * level;
+        let minionSpeed = CONFIG.ENEMY_BASE_SPEED + (level * 0.15);
+        let minionDamage = 0.5;
+        let minionRadius = 18;
+
+        // Úpravy podle typu (podle Enemy class)
+        if (this.type === 2) { // Kostka (Hunter)
+            minionHp *= 0.5; minionSpeed *= 0.5;
+        }
+        if (this.type === 5 || this.type === 6) { // Support / Štítonoš
+            minionSpeed *= 0.35;
+        }
+
+        // Škálování Bosse: 3x větší, 10x HP, 2x rychlejší, 3x damage
+        this.radius = minionRadius * 3;
+        this.maxHp = minionHp * 10;
+        this.hp = this.maxHp;
+        this.speed = minionSpeed * 2;
+        this.damage = minionDamage * 3;
+        
+        this.isBoss = true;
         this.knockback = { x: 0, y: 0 };
         this.lastAction = Date.now();
+        this.lastMinionCheck = Date.now();
+        this.lastHpDrain = Date.now();
+
+        // Pro Skokana (Boss 7)
+        if (this.type === 7) {
+            this.jumpState = 'WALKING';
+            this.jumpProgress = 0;
+            this.lastJump = Date.now();
+        }
     }
+
     update() {
-        if (NET.isMultiplayer) {
-            if (this.targetX !== undefined && this.targetY !== undefined) {
-                this.x += (this.targetX - this.x) * 0.3;
-                this.y += (this.targetY - this.y) * 0.3;
-            }
+        if (NET.isMultiplayer && !NET.isHost && !this.targetX) return; 
+        if (NET.isMultiplayer && !NET.isHost) {
+            this.x += (this.targetX - this.x) * 0.3;
+            this.y += (this.targetY - this.y) * 0.3;
             return;
         }
 
         const targets = getAllTargets();
         if (targets.length === 0) return;
         const target = targets.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0];
-        const angle = Math.atan2(target.y - this.y, target.x - this.x);
+        let angle = Math.atan2(target.y - this.y, target.x - this.x);
 
+        // a) 1% šance každou vteřinu na spawn 10 poskoků
+        if (Date.now() - this.lastMinionCheck > 1000) {
+            this.lastMinionCheck = Date.now();
+            if (Math.random() < 0.01) {
+                const minionTypeMap = { 1:1, 2:2, 3:3, 4:4, 5:5, 6:8, 7:6 };
+                const mType = minionTypeMap[this.type] || 1;
+                for (let i = 0; i < 10; i++) {
+                    GAME.entities.enemies.push(new Enemy(this.x + (Math.random()-0.5)*100, this.y + (Math.random()-0.5)*100, Math.floor(GAME.time/120)+1, Math.random().toString(36).substr(2,9), mType));
+                }
+            }
+        }
+
+        let moveAngle = angle;
         let speedScale = 1.0;
         const players = getAllAlivePlayers();
         players.forEach(p => { if (p.aura && dist(this.x, this.y, p.x, p.y) < (p.auraRange || 150)) speedScale *= 0.5; });
 
-        this.x += Math.cos(angle) * this.speed * speedScale * GAME.speedFactor + this.knockback.x;
-        this.y += Math.sin(angle) * this.speed * speedScale * GAME.speedFactor + this.knockback.y;
-        this.knockback.x *= 0.9; this.knockback.y *= 0.9;
-
-        // Boss útoky podle typu a obtížnosti
-        const attackInterval = Math.max(1000, 4000 - (GAME.time / 60) * 200);
-        if (Date.now() - this.lastAction > attackInterval) {
-            if (this.type === 1) { // Crusher Boss - rychlý nájezd + minioni
-                this.speed *= 3;
-                setTimeout(() => this.speed = CONFIG.ENEMY_BASE_SPEED * 0.7, 1000);
-                for(let i=0; i<3; i++) GAME.entities.enemies.push(new Enemy(this.x + (Math.random()-0.5)*40, this.y + (Math.random()-0.5)*40, 1, Math.random().toString(36).substr(2,9), 7));
-            } else if (this.type === 2) { // Hunter Boss - dávka střel + střelci
-                for (let i = 0; i < 12; i++) {
-                    const a = angle - 0.8 + i * 0.15;
-                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a) * 100, this.y + Math.sin(a) * 100, 15 + (GAME.time / 60) * 2, { isEnemy: true, color: '#f43f5e', speed: 9 }));
+        // Unikátní chování podle typu
+        if (this.type === 1) { // Dron - jen nahání
+            // Výchozí pohyb
+        } else if (this.type === 2) { // Kostka - střílí 16 směrů každou vteřinu
+            if (Date.now() - this.lastAction > 1000) {
+                for (let i = 0; i < 16; i++) {
+                    const a = (i / 16) * Math.PI * 2;
+                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a)*100, this.y + Math.sin(a)*100, this.damage * 5, { isEnemy: true, color: '#f43f5e', speed: 8 }));
                 }
-                for(let i=0; i<2; i++) GAME.entities.enemies.push(new Enemy(this.x + (Math.random()-0.5)*40, this.y + (Math.random()-0.5)*40, 1, Math.random().toString(36).substr(2,9), 2));
-            } else if (this.type === 3) { // Spawner Boss - vlna minionů
-                for (let i = 0; i < 6; i++) {
-                    GAME.entities.enemies.push(new Enemy(this.x + Math.random() * 40 - 20, this.y + Math.random() * 40 - 20, 1 + Math.floor(GAME.time / 120), Math.random().toString(36).substr(2, 9), 3));
-                }
-            } else if (this.type === 4) { // Pulse Boss - kruhová vlna + zloději
-                for (let i = 0; i < 24; i++) {
-                    const a = (i / 24) * Math.PI * 2;
-                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a) * 100, this.y + Math.sin(a) * 100, 20, { isEnemy: true, color: '#fbbf24', speed: 6, size: 12 }));
-                }
-                for(let i=0; i<3; i++) GAME.entities.enemies.push(new Enemy(this.x + (Math.random()-0.5)*40, this.y + (Math.random()-0.5)*40, 1, Math.random().toString(36).substr(2,9), 4));
-            } else if (this.type === 5) { // Sniper Boss - přesná střela + štítonoši
-                GAME.entities.projectiles.push(new Projectile(this.x, this.y, target.x, target.y, 40, { isEnemy: true, color: '#0ea5e9', speed: 15, size: 15 }));
-                for(let i=0; i<2; i++) GAME.entities.enemies.push(new Enemy(this.x + (Math.random()-0.5)*40, this.y + (Math.random()-0.5)*40, 1, Math.random().toString(36).substr(2,9), 8));
+                this.lastAction = Date.now();
             }
-            this.lastAction = Date.now();
+        } else if (this.type === 3) { // Kamikadze - vybuchuje každou vteřinu
+            if (Date.now() - this.lastAction > 1000) {
+                players.forEach(p => {
+                    if (dist(this.x, this.y, p.x, p.y) < 200) p.hp -= this.damage * 10;
+                });
+                createExplosion(this.x, this.y, '#f97316', 150);
+                this.lastAction = Date.now();
+            }
+        } else if (this.type === 4) { // Goblin - vysává XP a hráče
+            GAME.entities.gems.forEach(g => {
+                if (dist(this.x, this.y, g.x, g.y) < 600) {
+                    const a = Math.atan2(this.y - g.y, this.x - g.x);
+                    g.x += Math.cos(a) * 5; g.y += Math.sin(a) * 5;
+                    if (dist(this.x, this.y, g.x, g.y) < this.radius) g.collected = true; // Boss "žere" gemy
+                }
+            });
+            players.forEach(p => {
+                const d = dist(this.x, this.y, p.x, p.y);
+                const pullA = Math.atan2(this.y - p.y, this.x - p.x);
+                const force = 1.5; 
+                p.x += Math.cos(pullA) * force; p.y += Math.sin(pullA) * force;
+            });
+        } else if (this.type === 5) { // Support - utíká a saje 2 HP/s
+            moveAngle = angle + Math.PI; // Utíká pryč
+            if (Date.now() - this.lastHpDrain > 1000) {
+                players.forEach(p => { p.hp -= 2; });
+                this.lastHpDrain = Date.now();
+            }
+        } else if (this.type === 6) { // Štítonoš - dává rezistenci (logika je v takeDamage)
+            // Jen se hýbe
+        } else if (this.type === 7) { // Skokan - skáče a nechává meteority
+            if (this.jumpState === 'WALKING') {
+                if (Date.now() - this.lastJump > 3000) {
+                    this.jumpState = 'JUMPING';
+                    this.jumpProgress = 0;
+                    this.jumpStart = { x: this.x, y: this.y };
+                    this.jumpTarget = { x: target.x, y: target.y };
+                }
+            } else {
+                this.jumpProgress += 0.02 * GAME.speedFactor;
+                this.x = this.jumpStart.x + (this.jumpTarget.x - this.jumpStart.x) * this.jumpProgress;
+                this.y = this.jumpStart.y + (this.jumpTarget.y - this.jumpStart.y) * this.jumpProgress - Math.sin(this.jumpProgress * Math.PI) * 200;
+                
+                if (this.jumpProgress >= 1) {
+                    this.jumpState = 'WALKING';
+                    this.lastJump = Date.now();
+                    // Zanechá meteorit
+                    if (GAME.entities.meteorites) {
+                        GAME.entities.meteorites.push(new Meteorite(this.x, this.y, 100, Math.random().toString(36).substr(2,9)));
+                    }
+                }
+                return; // Během skoku se nehýbe standardně
+            }
         }
+
+        this.x += Math.cos(moveAngle) * this.speed * speedScale * GAME.speedFactor + this.knockback.x;
+        this.y += Math.sin(moveAngle) * this.speed * speedScale * GAME.speedFactor + this.knockback.y;
+        this.knockback.x *= 0.9; this.knockback.y *= 0.9;
     }
 
     draw(ctx, cam) {
         const ratio = this.hp / this.maxHp;
-        const colors = { 1: '#ef4444', 2: '#f43f5e', 3: '#f97316', 4: '#eab308', 5: '#0ea5e9' };
+        const colors = { 1: '#ef4444', 2: '#f43f5e', 3: '#f97316', 4: '#eab308', 5: '#0ea5e9', 6: '#94a3b8', 7: '#10b981' };
         const color = colors[this.type] || '#ef4444';
 
         ctx.shadowBlur = 50; ctx.shadowColor = color; ctx.fillStyle = color;
@@ -2330,19 +2410,30 @@ class Player {
 }
 
 function spawnEnemy() {
+    if (NET.isMultiplayer && !NET.isHost) return;
+    const now = Date.now();
     const alive = getAllAlivePlayers();
     if (alive.length === 0) return;
-    const a = Math.random() * Math.PI * 2;
+
+    // b) Dokud bude boss žít, spawn mimozemšťanů se zmenší o 50%
+    const hasBoss = GAME.entities.enemies && GAME.entities.enemies.some(e => e.isBoss);
+    let interval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60));
+    if (hasBoss) interval *= 2; 
+
+    if (now - (GAME.lastSpawnTime || 0) < interval) return;
+    GAME.lastSpawnTime = now;
+
     const pivot = alive[Math.floor(Math.random() * alive.length)];
+    const a = Math.random() * Math.PI * 2;
     const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
     const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
     const mod = Math.floor(GAME.time / 60) + 1;
 
     let enemy;
-    const isBossLevel = pivot.level > 0 && pivot.level % CONFIG.BOSS_LEVEL_INTERVAL === 0;
+    const isBossLevel = pivot.level > 0 && pivot.level % 10 === 0;
     const bossAlreadySpawned = GAME.lastBossLevelSpawned === pivot.level;
     
-    if (isBossLevel && !bossAlreadySpawned) {
+    if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
         enemy = new Boss(x, y, mod);
         showBossWarning();
         GAME.lastBossLevelSpawned = pivot.level;
@@ -3766,7 +3857,9 @@ function startGame() {
 
 function resetGame() {
     GAME.active = false;
-    GAME.time = 0; GAME.kills = 0; GAME.lastBossTime = 0; GAME.lastBossLevelSpawned = 0;
+    GAME.time = 0;
+    GAME.lastBossMinute = 0;
+    GAME.kills = 0; GAME.lastBossTime = 0; GAME.lastBossLevelSpawned = 0;
     GAME.wallWidthUpgrades = 0;
     GAME.coinsCollected = 0;
     GAME.lastSpawnTime = Date.now();
@@ -4465,7 +4558,7 @@ function init() {
             "Zlatá hvězdička, je neuvěřitelně rychlý!": "Golden star, incredibly fast!",
             "Léčí a posiluje ostatní ufony v okolí.": "Heals and buffs other aliens nearby.",
             "Vyznačí si cíl a bleskově tam doskočí.": "Marks a target and leaps there lightning fast.",
-            "Obří mnohostěn s velkým HP. Každou minutu.": "Giant polygon with huge HP. Every minute.",
+            "Obří mnohostěn s velkým HP. Každých 10 levelů.": "Giant polygon with huge HP. Every 10 levels.",
             "Opravdu chceš smazat všechen svůj postup, odhlásit se a vymazat lokální data?": "Do you really want to delete all progress, logout, and clear local data?",
             "Opravdu se chceš odhlásit?": "Do you really want to log out?",
             "NE": "NO",
@@ -4676,14 +4769,14 @@ function init() {
             "Zlatá hvězdička, je neuvěřitelně rychlý!": "Golden star, incredibly fast!",
             "Léčí a posiluje ostatní ufony v okolí.": "Heals and buffs other aliens nearby.",
             "Vyznačí si cíl a bleskově tam doskočí.": "Marks a target and leaps there lightning fast.",
-            "Obří mnohostěn s velkým HP. Každou minutu.": "Giant polygon with huge HP. Every minute.",
+            "Obří mnohostěn s velkým HP. Každých 10 levelů.": "Giant polygon with huge HP. Every 10 levels.",
             "🛡️ ELITNÍ NEPŘÁTELÉ": "🛡️ ELITE ENEMIES",
             "Přední štít pohlcuje 50% poškození.": "Front shield absorbs 50% of damage.",
             "Zpomaluje hráče mrazivou aurou.": "Slows down players with a frost aura.",
             "Extrémně rychlý, vybuchuje hned!": "Extremely fast, explodes instantly!",
             "Skáče přímo na tvou pozici.": "Leaps directly to your position.",
             "👹 BOSS ARÉNA": "👹 BOSS ARENA",
-            "Bossové se objevují každou minutu a mají unikátní schopnosti:": "Bosses appear every minute and have unique abilities:",
+            "Bossové se objevují každých 10 levelů a mají unikátní schopnosti:": "Bosses appear every 10 levels and have unique abilities:",
             "Obří HP, speciální útoky a vyvolávání vlastních poskoků.": "Huge HP, special attacks, and summoning their own minions.",
             "Z každého bosse vypadne vzácná Vesmírná bedna!": "Every boss drops a rare Space Crate!",
             "💎 VZÁCNÉ NÁLEZY": "💎 RARE FINDS",
@@ -4703,7 +4796,7 @@ function init() {
             "Opraví poškozený trup lodi.": "Repairs damaged ship hull.",
             "💡 POKROČILÉ TIPY": "💡 ADVANCED TIPS",
             "Skvělá kombinace pro nesmrtelnost.": "Great combo for immortality.",
-            "Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!": "Spawns every minute. Always try to dodge sideways!",
+            "Objevuje se každých 10 levelů. Vždy se mu snaž uhýbat do stran!": "Spawns every 10 levels. Always try to dodge sideways!",
             "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 kills = 1 Doge. Buy permanent upgrades with them!",
             "VESMÍRNÉ BEDNY": "SPACE CRATES",
             "📦 OBYČEJNÁ": "📦 COMMON",
@@ -5656,55 +5749,7 @@ function update(dt) {
 
     if (!NET.isMultiplayer) {
         GAME.time += 1 / 60;
-
-        const currentInterval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60));
-        if (now - GAME.lastSpawnTime > currentInterval) {
-            const alive = getAllAlivePlayers();
-            if (alive.length > 0) {
-                const pivot = alive[Math.floor(Math.random() * alive.length)];
-                const a = Math.random() * Math.PI * 2;
-                const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
-                const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
-                const mod = Math.floor(GAME.time / 60) + 1;
-
-                let enemy;
-                let hp = CONFIG.ENEMY_BASE_HEALTH * mod;
-                let type = 1;
-
-
-                let speedMod = 1;
-
-                const rnd = Math.random();
-                if (GAME.entities.player.level >= 3 && rnd < 0.1) {
-                    type = 2; hp *= 0.5;
-                } else if (GAME.entities.player.level >= 4 && rnd < 0.2) {
-                    type = 3; hp *= 0.5; speedMod = 1.8;
-                } else if (GAME.entities.player.level >= 5 && rnd < 0.25) {
-                    type = 4; hp *= 1.5; speedMod = 2.2;
-                } else if (GAME.entities.player.level >= 8 && rnd < 0.27) {
-                    type = 5; hp *= 3; speedMod = 0.5;
-                } else if (GAME.entities.player.level >= 10 && rnd < 0.35) {
-                    type = 6; hp *= 1.2; speedMod = 1.0;
-                }
-
-                const hasBoss = GAME.entities.enemies.some(e => e.isBoss);
-                const isBossLevel = GAME.entities.player.level > 0 && GAME.entities.player.level % CONFIG.BOSS_LEVEL_INTERVAL === 0;
-                const bossAlreadySpawned = GAME.lastBossLevelSpawned === GAME.entities.player.level;
-
-                if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
-                    enemy = new Boss(x, y, mod);
-                    showBossWarning();
-                    GAME.lastBossLevelSpawned = GAME.entities.player.level;
-                } else {
-                    enemy = new Enemy(x, y, mod * speedMod, Math.random().toString(36).substr(2, 9), type);
-                    enemy.maxHp = hp; enemy.hp = hp;
-                }
-                if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
-            }
-            GAME.lastSpawnTime = now;
-
-
-        }
+        spawnEnemy();
     }
 
     // Spawnování meteoritů i v Multiplayeru
@@ -5793,7 +5838,7 @@ function update(dt) {
                             if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: 99999 });
                         } else {
                             if (t.hp !== undefined) {
-                                let dmg = (e.isBoss ? 2 : 0.5) * (t.shield || 1);
+                                let dmg = (e.damage || (e.isBoss ? 2 : 0.5)) * (t.shield || 1);
                                 if (t.isLocal) {
                                     const armorRed = (META.upgrades.armor || 0) * 0.02;
                                     dmg *= (1 - armorRed);
@@ -5916,7 +5961,11 @@ function update(dt) {
 
                     if (!proj.hitEnemies.has(enemy) && d < hitDist && !enemy.possessed) {
                         let damage = proj.damage;
-                        if (enemy.type === 8) damage *= 0.5; // Shield reduction
+                        // Damage Resistance pro Štítonoše Bosse (Type 6)
+            let boss6Alive = GAME.entities.enemies.some(b => b.isBoss && b.type === 6);
+            if (boss6Alive && !enemy.isBoss) damage *= 0.5;
+
+            if (enemy.type === 8) damage *= 0.5; // Shield reduction
                         enemy.hp -= damage;
                         proj.hitEnemies.add(enemy);
 
