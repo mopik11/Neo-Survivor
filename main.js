@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.350
+ * NEO SURVIVOR - Core Game Logic - v1.351
  */
 
 window.addEventListener('beforeunload', () => {
@@ -2515,6 +2515,9 @@ function spawnEnemy() {
     const alive = getAllAlivePlayers();
     if (alive.length === 0) return;
 
+    const pivot = alive[Math.floor(Math.random() * alive.length)];
+    if (!pivot) return;
+
     // b) Dokud bude boss žít, spawn mimozemšťanů se zmenší o 50%
     const hasBoss = GAME.entities.enemies && GAME.entities.enemies.some(e => e.isBoss);
     let interval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60));
@@ -2532,7 +2535,6 @@ function spawnEnemy() {
     if (now - (GAME.lastSpawnTime || 0) < interval) return;
     GAME.lastSpawnTime = now;
 
-    const pivot = alive[Math.floor(Math.random() * alive.length)];
     const a = Math.random() * Math.PI * 2;
     const x = pivot.x + Math.cos(a) * CONFIG.SPAWN_RADIUS;
     const y = pivot.y + Math.sin(a) * CONFIG.SPAWN_RADIUS;
@@ -3321,10 +3323,10 @@ function showMetaMenu() {
 
 
     // 1.5 VAŠE ZÍSKANÉ BEDNY (ODMĚNY)
+    if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
     let hasRewards = false;
-    if (META.unopenedCrates) {
-        for (let k in META.unopenedCrates) if (META.unopenedCrates[k] > 0) hasRewards = true;
-    }
+    for (let k in META.unopenedCrates) if (META.unopenedCrates[k] > 0) hasRewards = true;
+
     if (hasRewards) {
         const rewardSection = document.createElement('div');
         rewardSection.innerHTML = `<h2 style="color: #10b981; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(16,185,129,0.2); padding-bottom: 5px;">🎁 ${window.T('ZÍSKANÉ BEDNY')}</h2>`;
@@ -4391,6 +4393,7 @@ function initSocket() {
             if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
             META.unopenedCrates.basic++;
             saveMeta();
+            GAME.paused = true;
             showLevelUp(true);
         });
 

@@ -561,6 +561,10 @@ io.on('connection', (socket) => {
                             if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
                             for (let i = 0; i < 10; i++) ROOMS[r].gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x + (Math.random() - 0.5) * 150, y: enemy.y + (Math.random() - 0.5) * 150 });
                             
+                            // Pause for rewards
+                            ROOMS[r].paused = true;
+                            ROOMS[r].readyCount = 0;
+
                             // Emit bossDefeated for rewards (crate + special upgrade)
                             io.to(r).emit('bossDefeated', { id: enemy.id });
                         }
