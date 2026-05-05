@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.357
+ * NEO SURVIVOR - Core Game Logic - v1.360
  */
 
 window.addEventListener('beforeunload', () => {
@@ -26,10 +26,10 @@ window.showCustomAlert = function (msg) {
 
 // --- AUDIO SYSTEM ---
 const SOUND_URLS = {
-    menuOpen: 'https://cdn.pixabay.com/audio/2022/03/15/audio_c8c8a7395a.mp3',
+    menuOpen: 'https://cdn.pixabay.com/audio/2022/03/10/audio_55940027f3.mp3',
     upgrade: 'https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3',
-    crateSpin: 'https://assets.mixkit.co/sfx/preview/mixkit-quick-mechanical-click-2510.mp3',
-    crateWin: 'https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3',
+    crateSpin: 'https://cdn.pixabay.com/audio/2022/03/15/audio_7314546419.mp3',
+    crateWin: 'https://cdn.pixabay.com/audio/2021/08/04/audio_bb3d15478a.mp3',
     coin: 'https://cdn.pixabay.com/audio/2021/08/04/audio_340243e86c.mp3'
 };
 
@@ -5257,9 +5257,9 @@ function init() {
                 if (node.hasAttribute('data-i18n')) {
                     const key = node.getAttribute('data-i18n');
                     if (lang === 'cs') {
-                        node.innerText = key;
+                        if (node.children.length === 0) node.innerText = key;
                     } else if (dict[key]) {
-                        node.innerText = dict[key];
+                        if (node.children.length === 0) node.innerText = dict[key];
                     }
                 }
                 if (node.hasAttribute('data-i18n-placeholder')) {
