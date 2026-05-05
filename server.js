@@ -743,7 +743,7 @@ setInterval(() => {
                     speedMod = 2; // 2x Speed for Boss
                     room.lastBossLevelSpawned = room.level;
                     room.nextBossType = null;
-                    io.to(r).emit('bossWarning', { type: type, soon: false });
+                    io.to(roomId).emit('bossWarning', { type: type, soon: false });
                 }
 
                 room.enemies.push({
