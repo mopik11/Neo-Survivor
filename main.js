@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.347
+ * NEO SURVIVOR - Core Game Logic - v1.348
  */
 
 window.addEventListener('beforeunload', () => {
@@ -1297,18 +1297,7 @@ function getAllAlivePlayers() {
 
 function getAllTargets() {
     const list = getAllAlivePlayers();
-    if (GAME.entities.baits) {
-        GAME.entities.baits.forEach(b => b.update());
-    }
-
-    if (GAME.entities.minions) {
-        for (let i = GAME.entities.minions.length - 1; i >= 0; i--) {
-            const m = GAME.entities.minions[i];
-            m.update();
-            if (m.hp <= 0) GAME.entities.minions.splice(i, 1);
-        }
-    }
-
+    
     if (GAME.entities && GAME.entities.baits) {
         GAME.entities.baits.forEach(b => {
             if (b && b.hp > 0) list.push({ x: b.x, y: b.y, radius: b.radius, isBait: true, obj: b });
@@ -1317,6 +1306,11 @@ function getAllTargets() {
     if (!NET.isMultiplayer && GAME.entities.enemies) {
         GAME.entities.enemies.filter(e => e.possessed).forEach(e => {
             if (e.hp > 0) list.push({ x: e.x, y: e.y, radius: e.radius, isBait: false, possessed: true, obj: e });
+        });
+    }
+    if (GAME.entities.minions) {
+        GAME.entities.minions.forEach(m => {
+            if (m && m.hp > 0) list.push({ x: m.x, y: m.y, radius: m.radius, isBait: false, obj: m });
         });
     }
     return list;
@@ -1446,9 +1440,19 @@ class Boss {
             return;
         }
 
-        const targets = getAllTargets();
+        const allPossibleTargets = getAllTargets();
+        const targets = allPossibleTargets.filter(t => !t.isBait);
         if (targets.length === 0) return;
-        const target = targets.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0];
+        
+        let target = targets[0];
+        let minDist = dist(this.x, this.y, target.x, target.y);
+        for (let i = 1; i < targets.length; i++) {
+            const d = dist(this.x, this.y, targets[i].x, targets[i].y);
+            if (d < minDist) {
+                minDist = d;
+                target = targets[i];
+            }
+        }
         let angle = Math.atan2(target.y - this.y, target.x - this.x);
 
         // a) 1% šance každou vteřinu na spawn 10 poskoků
@@ -1488,13 +1492,16 @@ class Boss {
                 this.lastAction = Date.now();
             }
         } else if (this.type === 4) { // Goblin - vysává XP a hráče
-            GAME.entities.gems.forEach(g => {
+            for (let i = GAME.entities.gems.length - 1; i >= 0; i--) {
+                const g = GAME.entities.gems[i];
                 if (dist(this.x, this.y, g.x, g.y) < 600) {
                     const a = Math.atan2(this.y - g.y, this.x - g.x);
                     g.x += Math.cos(a) * 5; g.y += Math.sin(a) * 5;
-                    if (dist(this.x, this.y, g.x, g.y) < this.radius) g.collected = true; // Boss "žere" gemy
+                    if (dist(this.x, this.y, g.x, g.y) < this.radius) {
+                        GAME.entities.gems.splice(i, 1); // Boss "sežere" gem
+                    }
                 }
-            });
+            }
             players.forEach(p => {
                 const d = dist(this.x, this.y, p.x, p.y);
                 const pullA = Math.atan2(this.y - p.y, this.x - p.x);
@@ -1550,7 +1557,15 @@ class Boss {
         // Vzhled podle typu příslušníka (Scaled 3x)
         if (this.type === 1) { // Dron
             const players = getAllAlivePlayers();
-            const target = players.length > 0 ? players.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0] : { x: 0, y: 0 };
+            let target = { x: 0, y: 0 };
+            if (players.length > 0) {
+                target = players[0];
+                let mDist = dist(this.x, this.y, target.x, target.y);
+                for (let i = 1; i < players.length; i++) {
+                    const d = dist(this.x, this.y, players[i].x, players[i].y);
+                    if (d < mDist) { mDist = d; target = players[i]; }
+                }
+            }
             const angle = Math.atan2(target.y - this.y, target.x - this.x);
             ctx.rotate(angle);
             ctx.shadowBlur = 50; ctx.shadowColor = color; ctx.fillStyle = color;
@@ -1585,7 +1600,15 @@ class Boss {
             ctx.beginPath(); ctx.arc(0, 0, 54, 0, Math.PI * 2); ctx.fill();
         } else if (this.type === 6) { // Štítonoš (Enemy Type 8 logic)
             const players = getAllAlivePlayers();
-            const target = players.length > 0 ? players.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0] : { x: 0, y: 0 };
+            let target = { x: 0, y: 0 };
+            if (players.length > 0) {
+                target = players[0];
+                let mDist = dist(this.x, this.y, target.x, target.y);
+                for (let i = 1; i < players.length; i++) {
+                    const d = dist(this.x, this.y, players[i].x, players[i].y);
+                    if (d < mDist) { mDist = d; target = players[i]; }
+                }
+            }
             const targetAngle = Math.atan2(target.y - this.y, target.x - this.x);
             this.rotation = lerpAngle(this.rotation || 0, targetAngle, 0.03);
             ctx.rotate(this.rotation);
@@ -1675,10 +1698,24 @@ class Enemy {
 
         const targets = getAllTargets();
         if (targets.length === 0) return;
+        
+        let target = targets[0];
+        let minDist = dist(this.x, this.y, target.x, target.y);
+        // Prioritizace baitů
         const baits = targets.filter(t => t.isBait);
-        const target = baits.length > 0
-            ? baits.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0]
-            : targets.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0];
+        if (baits.length > 0) {
+            target = baits[0];
+            minDist = dist(this.x, this.y, target.x, target.y);
+            for (let i = 1; i < baits.length; i++) {
+                const d = dist(this.x, this.y, baits[i].x, baits[i].y);
+                if (d < minDist) { minDist = d; target = baits[i]; }
+            }
+        } else {
+            for (let i = 1; i < targets.length; i++) {
+                const d = dist(this.x, this.y, targets[i].x, targets[i].y);
+                if (d < minDist) { minDist = d; target = targets[i]; }
+            }
+        }
         const angle = Math.atan2(target.y - this.y, target.x - this.x);
         let speedScale = 1.0;
         const players = getAllAlivePlayers();
@@ -5913,14 +5950,14 @@ function update(dt) {
             if (isNaN(e.x) || isNaN(e.y)) { e.x = 0; e.y = 0; }
             targets.forEach(t => {
                 if (dist(t.x, t.y, e.x, e.y) < t.radius + e.radius && !t.possessed && !e.possessed) {
-                    if (t.isBait) {
+                    if (t.isBait && !e.isBoss) {
                         if (NET.isMultiplayer) {
                             NET.socket.emit('baitHit', { id: t.obj.id, damage: (e.isBoss ? 5 : 1) * GAME.speedFactor });
                         } else {
                             t.obj.hp -= (e.isBoss ? 5 : 1) * GAME.speedFactor;
                         }
                     } else {
-                        if (t.kaktus) {
+                        if (t.kaktus && !e.isBoss) {
                             e.hp = 0; e.dead = true;
                             if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: 99999 });
                         } else {
@@ -5950,6 +5987,16 @@ function update(dt) {
 
         if (!NET.isMultiplayer) {
             GAME.entities.enemies = GAME.entities.enemies.filter(e => e && e.hp > 0 && !e.dead);
+        }
+    }
+
+    if (GAME.entities.minions) {
+        for (let i = GAME.entities.minions.length - 1; i >= 0; i--) {
+            const m = GAME.entities.minions[i];
+            if (m) {
+                m.update();
+                if (m.hp <= 0) GAME.entities.minions.splice(i, 1);
+            }
         }
     }
 
