@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.341
+ * NEO SURVIVOR - Core Game Logic - v1.344
  */
 
 window.addEventListener('beforeunload', () => {
@@ -375,7 +375,7 @@ const EMOJIS = [
     { id: 'hat_wizard', name: '🧙 Mág', icon: '🧙', rarity: 'legendary', price: 1200, isHat: true, type: 'wizard' },
     { id: 'hat_ninja', name: '🥷 Ninja', icon: '🥷', rarity: 'legendary', price: 1500, isHat: true, type: 'ninja' },
     // EXTRÉMNÍ LEGENDÁRKA
-    { id: 'ultra_rare', name: '💎 Diamant', icon: '💎', rarity: 'legendary', price: 20000, chance: 0.001 }
+    { id: 'ultra_rare', name: '💎 Diamant', icon: '💎', rarity: 'legendary', price: 20000, chance: 1 }
 ];
 
 const ACHIEVEMENTS = [
@@ -1417,25 +1417,29 @@ class Boss {
         // Boss útoky podle typu a obtížnosti
         const attackInterval = Math.max(1000, 4000 - (GAME.time / 60) * 200);
         if (Date.now() - this.lastAction > attackInterval) {
-            if (this.type === 1) { // Crusher Boss - rychlý nájezd
+            if (this.type === 1) { // Crusher Boss - rychlý nájezd + minioni
                 this.speed *= 3;
                 setTimeout(() => this.speed = CONFIG.ENEMY_BASE_SPEED * 0.7, 1000);
-            } else if (this.type === 2) { // Hunter Boss - dávka střel
+                for(let i=0; i<3; i++) GAME.entities.enemies.push(new Enemy(this.x + (Math.random()-0.5)*40, this.y + (Math.random()-0.5)*40, 1, Math.random().toString(36).substr(2,9), 7));
+            } else if (this.type === 2) { // Hunter Boss - dávka střel + střelci
                 for (let i = 0; i < 12; i++) {
                     const a = angle - 0.8 + i * 0.15;
                     GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a) * 100, this.y + Math.sin(a) * 100, 15 + (GAME.time / 60) * 2, { isEnemy: true, color: '#f43f5e', speed: 9 }));
                 }
+                for(let i=0; i<2; i++) GAME.entities.enemies.push(new Enemy(this.x + (Math.random()-0.5)*40, this.y + (Math.random()-0.5)*40, 1, Math.random().toString(36).substr(2,9), 2));
             } else if (this.type === 3) { // Spawner Boss - vlna minionů
-                for (let i = 0; i < 5; i++) {
-                    GAME.entities.enemies.push(new Enemy(this.x + Math.random() * 40 - 20, this.y + Math.random() * 40 - 20, 1 + Math.floor(GAME.time / 120), Math.random().toString(36).substr(2, 9), Math.floor(Math.random() * 3) + 1));
+                for (let i = 0; i < 6; i++) {
+                    GAME.entities.enemies.push(new Enemy(this.x + Math.random() * 40 - 20, this.y + Math.random() * 40 - 20, 1 + Math.floor(GAME.time / 120), Math.random().toString(36).substr(2, 9), 3));
                 }
-            } else if (this.type === 4) { // Pulse Boss - kruhová vlna
+            } else if (this.type === 4) { // Pulse Boss - kruhová vlna + zloději
                 for (let i = 0; i < 24; i++) {
                     const a = (i / 24) * Math.PI * 2;
                     GAME.entities.projectiles.push(new Projectile(this.x, this.y, this.x + Math.cos(a) * 100, this.y + Math.sin(a) * 100, 20, { isEnemy: true, color: '#fbbf24', speed: 6, size: 12 }));
                 }
-            } else if (this.type === 5) { // Sniper Boss - přesná střela
+                for(let i=0; i<3; i++) GAME.entities.enemies.push(new Enemy(this.x + (Math.random()-0.5)*40, this.y + (Math.random()-0.5)*40, 1, Math.random().toString(36).substr(2,9), 4));
+            } else if (this.type === 5) { // Sniper Boss - přesná střela + štítonoši
                 GAME.entities.projectiles.push(new Projectile(this.x, this.y, target.x, target.y, 40, { isEnemy: true, color: '#0ea5e9', speed: 15, size: 15 }));
+                for(let i=0; i<2; i++) GAME.entities.enemies.push(new Enemy(this.x + (Math.random()-0.5)*40, this.y + (Math.random()-0.5)*40, 1, Math.random().toString(36).substr(2,9), 8));
             }
             this.lastAction = Date.now();
         }
@@ -1480,6 +1484,9 @@ class Enemy {
             this.speed *= 0.5;
             this.lastShot = Date.now();
             this.shotInterval = 5000;
+        }
+        if (this.type === 5 || this.type === 8) { // Support / Shield Bearer
+            this.speed *= 0.35;
         }
 
         this.hp = this.maxHp;
@@ -2342,7 +2349,9 @@ function spawnEnemy() {
     } else {
         let type = 1;
         if (pivot.level >= 3 && Math.random() < 0.15) type = 2;
-        if (pivot.level >= 5 && Math.random() < 0.1) type = 3;
+        if (pivot.level >= 4 && Math.random() < 0.10) type = 4; // Thief
+        if (pivot.level >= 5 && Math.random() < 0.12) type = 3;
+        if (pivot.level >= 6 && Math.random() < 0.08) type = 5; // Support
         if (pivot.level >= 8 && Math.random() < 0.08) type = 6;
         if (pivot.level >= 10 && Math.random() < 0.12) type = 7; // Sebevrah
         if (pivot.level >= 12 && Math.random() < 0.1) type = 8; // Štítonoš
@@ -2568,14 +2577,14 @@ function applyUpgrade(id, record = true) {
             case 'crit_dmg': p.critMultiplier += 1; break;
             case 'luck': GAME.upgradeOptionsCount += 1; break;
             case 'orbit': p.orbitals += 1; break;
-            case 'knockback': p.knockbackForce *= 1.5; break;
+            case 'knockback': p.knockbackForce *= 2.0; break;
             case 'xpboost': p.xpMultiplier += 0.2; break;
             case 'lifesteal': p.lifestealChance += 0.10; break;
             case 'aura': 
                 p.aura = true; 
                 p.auraLevel = (p.auraLevel || 0) + 1;
-                p.auraRange = 150 + p.auraLevel * 40; 
-                p.auraPower = Math.max(0.1, 0.5 * Math.pow(0.7, p.auraLevel - 1)); 
+                p.auraRange = 150 * Math.pow(2, p.auraLevel - 1); 
+                p.auraPower = Math.max(0.05, 0.5 * Math.pow(0.5, p.auraLevel - 1)); 
                 break;
             case 'bounce': p.bounces += 1; break;
             case 'fire': 
@@ -2969,7 +2978,7 @@ function showShipsMenu() {
 
     const shipsGrid = document.getElementById('ships-grid');
     const ships = [
-        { id: 1, name: 'Základní Loď', desc: 'Spolehlivý standardní model', cost: 0, icon: '🚀' },
+        { id: 1, name: 'Průzkumník', desc: 'Spolehlivý standardní model', cost: 0, icon: '🚀' },
         { id: 2, name: 'Laserová Loď', desc: 'Automatický paprsek, nestřílí', cost: 500, icon: '🩸' },
         { id: 3, name: 'Drtivá Zeď', desc: 'Průrazná vlna bez základní palby.', cost: 1000, icon: '🌊' },
         { id: 4, name: 'Brokovnice', desc: 'Střílí 3-5 střel najednou.', cost: 1500, icon: '💥' },
@@ -3338,12 +3347,11 @@ function startCrateAnimation(winner, crateType = 'basic') {
 
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 800px; width: 95vw; background: ${crateData.bg}; border: 2px solid ${crateData.color}44; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 0 50px ${crateData.glow};">
-            <button id="btn-skip-crate" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px 20px; border-radius: 12px; cursor: pointer; font-weight: 800; z-index: 10;">${window.T('PŘESKOČIT (SKIP)')}</button>
+            <button id="btn-skip-crate" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px 20px; border-radius: 12px; cursor: pointer; font-weight: 800; z-index: 10;">${window.T('PŘESKOČIT')}</button>
             <div style="display:flex; align-items:center; gap:10px; margin-bottom: 1.2rem; opacity: 0.8; flex-wrap: wrap; justify-content: center; width: 100%; padding: 0 40px;">
                 <span style="font-size: 1.2rem;">${crateData.icon}</span>
                 <h2 class="crate-anim-title" style="color: ${crateData.color}; font-size: 0.85rem; margin:0; letter-spacing: 2px; text-transform: uppercase; text-align: center;">${window.T(crateData.name)}</h2>
             </div>
-            
             <div style="position: relative; width: 100%; height: ${itemSize + 30}px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);">
                 <!-- Pointer/Marker -->
                 <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #fbbf24; z-index: 100; pointer-events: none;">
@@ -4044,6 +4052,7 @@ function initSocket() {
                 newOthers[pId].kills = data.players[pId].kills || 0;
                 newOthers[pId].hp = data.players[pId].hp || 0;
                 newOthers[pId].maxHp = data.players[pId].maxHp || 100;
+                newOthers[pId].remoteMinions = data.players[pId].minions || [];
             }
             NET.others = newOthers;
             GAME.time = data.time;
@@ -4165,7 +4174,8 @@ function syncPlayer() {
         shipType: GAME.entities.player.shipType,
         laserTargetsIds: safeLaserTargets,
         name: savedUser,
-        kills: GAME.kills || 0
+        kills: GAME.kills || 0,
+        minions: (GAME.entities.minions || []).map(m => ({ x: m.x, y: m.y, id: m.id }))
     });
 }
 
@@ -4649,6 +4659,7 @@ function init() {
             "Tip: Zaměř se nejdřív na poškození (Damage) a pak na dosah (Magnet)!": "Tip: Focus on damage first, then magnet range!",
             "🚀 FLOTILA LODÍ": "🚀 SHIP FLEET",
             "🚀 Průzkumník:": "🚀 Explorer:",
+            "Průzkumník": "Explorer",
             "Základní vyvážená loď.": "Basic balanced ship.",
             "⚡ Laserový křižník:": "⚡ Laser Cruiser:",
             "Střílí zničující lasery na více cílů.": "Shoots devastating lasers at multiple targets.",
@@ -4666,6 +4677,23 @@ function init() {
             "Léčí a posiluje ostatní ufony v okolí.": "Heals and buffs other aliens nearby.",
             "Vyznačí si cíl a bleskově tam doskočí.": "Marks a target and leaps there lightning fast.",
             "Obří mnohostěn s velkým HP. Každou minutu.": "Giant polygon with huge HP. Every minute.",
+            "🛡️ ELITNÍ NEPŘÁTELÉ": "🛡️ ELITE ENEMIES",
+            "Přední štít pohlcuje 50% poškození.": "Front shield absorbs 50% of damage.",
+            "Zpomaluje hráče mrazivou aurou.": "Slows down players with a frost aura.",
+            "Extrémně rychlý, vybuchuje hned!": "Extremely fast, explodes instantly!",
+            "Skáče přímo na tvou pozici.": "Leaps directly to your position.",
+            "👹 BOSS ARÉNA": "👹 BOSS ARENA",
+            "Bossové se objevují každou minutu a mají unikátní schopnosti:": "Bosses appear every minute and have unique abilities:",
+            "Obří HP, speciální útoky a vyvolávání vlastních poskoků.": "Huge HP, special attacks, and summoning their own minions.",
+            "Z každého bosse vypadne vzácná Vesmírná bedna!": "Every boss drops a rare Space Crate!",
+            "💎 VZÁCNÉ NÁLEZY": "💎 RARE FINDS",
+            "Extrémně vzácný nález (šance 1%).": "Extremely rare find (1% chance).",
+            "Diamant lze prodat za 20,000 Dogecoinů!": "Diamond can be sold for 20,000 Dogecoins!",
+            "Sbírej unikátní emoji čepice pro vizuální prestiž.": "Collect unique emoji hats for visual prestige.",
+            "💡 PRO TIPY": "💡 PRO TIPS",
+            "Kupuj trvalá vylepšení v menu 'VYLEPŠENÍ'.": "Buy permanent upgrades in the 'UPGRADES' menu.",
+            "Spolupracujte! Sdílené levely znamenají víc síly.": "Collaborate! Shared levels mean more power.",
+            "Aura + Zpětný odhoz (Knockback) tvoří neprostupnou zeď.": "Aura + Knockback creates an impenetrable wall.",
             "🎁 TAKTICKÁ VÝBAVA": "🎁 TACTICAL GEAR",
             "☢️ Nuke:": "☢️ Nuke:",
             "Vymaže vše na obrazovce.": "Wipes everything on screen.",
@@ -5900,6 +5928,13 @@ function update(dt) {
                         if (NET.isMultiplayer) {
                             NET.socket.emit('enemyHit', { id: enemy.id, damage: proj.damage });
                         }
+
+                        // APPLY KNOCKBACK
+                        const kbForce = GAME.entities.player.knockbackForce || 6;
+                        const kbAngle = Math.atan2(enemy.y - proj.y, enemy.x - proj.x);
+                        enemy.knockback.x = Math.cos(kbAngle) * kbForce;
+                        enemy.knockback.y = Math.sin(kbAngle) * kbForce;
+
                         if (proj.bounce > 0) {
                             const validTargets = enemies.filter(e => e !== enemy && !proj.hitEnemies.has(e));
                             if (validTargets.length > 0) {
@@ -6065,6 +6100,24 @@ function render() {
             }
 
             if (GAME.entities.minions) GAME.entities.minions.forEach(m => { if (m) m.draw(ctx, { x: camX, y: camY }); });
+            
+            // Draw remote minions
+            for (const id in NET.others) {
+                const op = NET.others[id];
+                if (op && op.remoteMinions) {
+                    op.remoteMinions.forEach(m => {
+                        ctx.save();
+                        ctx.shadowBlur = 15; ctx.shadowColor = '#f43f5e'; ctx.fillStyle = '#fb7185';
+                        ctx.beginPath();
+                        ctx.moveTo(m.x - camX, m.y - camY - 12);
+                        ctx.lineTo(m.x - camX + 10, m.y - camY + 8);
+                        ctx.lineTo(m.x - camX - 10, m.y - camY + 8);
+                        ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+                        ctx.restore();
+                    });
+                }
+            }
+            
             if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
 
             if (GAME.entities.floatingTexts) {
@@ -6164,17 +6217,34 @@ function render() {
         };
 
         if (GAME.entities.gems) GAME.entities.gems.forEach(g => { if (g) drawDot(g.x, g.y, '#34d399', 1); });
-        if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => { if (e) drawDot(e.x, e.y, e.isBoss ? '#ef4444' : (e.type === 2 ? '#a855f7' : '#f59e0b'), e.isBoss ? 4 : 2); });
+        if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => { 
+            if (e) {
+                let color = '#f59e0b'; // Default orange
+                if (e.isBoss) color = '#ef4444';
+                else if (e.type === 2) color = '#a855f7'; // Hunter purple
+                else if (e.type === 3) color = '#f43f5e'; // Kamikadze pinkish-red
+                else if (e.type === 4) color = '#fbbf24'; // Thief gold
+                else if (e.type === 5) color = '#38bdf8'; // Support cyan
+                else if (e.type === 8) color = '#94a3b8'; // Shielder gray
+                drawDot(e.x, e.y, color, e.isBoss ? 4 : 2); 
+            }
+        });
         if (GAME.entities.minions) GAME.entities.minions.forEach(m => { if (m) drawDot(m.x, m.y, '#818cf8', 2); });
         for (const id in NET.others) {
             const op = NET.others[id];
-            if (op && !op.dead) drawDot(op.x, op.y, '#3b82f6', 3);
+            if (op && !op.dead) {
+                drawDot(op.x, op.y, '#3b82f6', 3);
+                // Also draw their minions on minimap
+                if (op.remoteMinions) {
+                    op.remoteMinions.forEach(m => drawDot(m.x, m.y, '#f43f5e', 1));
+                }
+            }
         }
         drawDot(pCx, pCy, '#10b981', 3);
 
         ctx.restore();
 
-        if (NET.isMultiplayer) {
+        if (NET.isMultiplayer || (GAME.paused && META.lastSession && META.lastSession.roomId)) {
             let pMe = GAME.entities.player;
             let playersList = [{ 
                 name: (localStorage.getItem('neoSurvivor_user') || "Já"), 
