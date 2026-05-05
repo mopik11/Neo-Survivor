@@ -3,7 +3,12 @@ const http = require('http');
 const { Server } = require('socket.io');
 const sqlite3 = require('sqlite3').verbose();
 const crypto = require('node:crypto');
-const config = require('./server_config');
+let config = {};
+try {
+    config = require('./server_config');
+} catch (e) {
+    // Soubor neexistuje (běžné v produkci/Alwaysdata), budeme se spoléhat na Environment Variables
+}
 
 // --- SECURITY CONFIGURATION ---
 // Prioritně používáme Environment Variables (pro Alwaysdata/Heroku/Vercel)
