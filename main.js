@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.348
+ * NEO SURVIVOR - Core Game Logic - v1.349
  */
 
 window.addEventListener('beforeunload', () => {
@@ -469,6 +469,7 @@ const loadMeta = () => {
         if (!META.achievements) META.achievements = {};
         if (!META.claimedAchievements) META.claimedAchievements = {};
         if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0, totalKills: 0, totalMeteoritesDestroyed: 0, totalNukes: 0, totalMagnets: 0, totalGemsCollected: 0 };
+        if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
         else {
             // Fill missing stat fields
             const defaults = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0, totalKills: 0, totalMeteoritesDestroyed: 0, totalNukes: 0, totalMagnets: 0, totalGemsCollected: 0 };
@@ -2534,8 +2535,11 @@ function spawnEnemy() {
     
     if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
         const bossType = Math.floor(Math.random() * 7) + 1;
+        const bossNames = { 1: 'Dron', 2: 'Kostka', 3: 'Kamikadze', 4: 'Goblin', 5: 'Support', 6: 'Štítonoš', 7: 'Skokan' };
         enemy = new Boss(x, y, mod, undefined, bossType);
-        showBossWarning();
+        const bName = bossNames[bossType] || 'Boss';
+        GAME.entities.enemies.push(enemy);
+        showBossWarning(bName);
         GAME.lastBossLevelSpawned = pivot.level;
     } else {
         let type = 1;
@@ -2552,8 +2556,12 @@ function spawnEnemy() {
     if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
 }
 
-function showBossWarning() {
-    const el = document.getElementById('boss-warning'); if (el) el.style.display = 'block';
+function showBossWarning(name = "") {
+    const el = document.getElementById('boss-warning'); 
+    if (el) {
+        el.innerText = `${window.T('BOSS')} ${window.T(name)} ${window.T('PŘICHÁZÍ')}!`;
+        el.style.display = 'block';
+    }
     setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
 }
 
@@ -2586,7 +2594,7 @@ function updateUI() {
     }
 }
 
-function showLevelUp() {
+function showLevelUp(isBossReward = false) {
     GAME.entities.enemies = GAME.entities.enemies.filter(e => e.isBoss);
     // Také vyčistit meteority a projektily nepřátel pro větší bezpečnost
     GAME.entities.meteorites = [];
@@ -2594,6 +2602,12 @@ function showLevelUp() {
         GAME.entities.projectiles = GAME.entities.projectiles.filter(p => p.ownerId !== 'enemy' && p.ownerId !== 'remote_enemy');
     }
     const modal = document.getElementById('levelup-modal');
+    const title = modal.querySelector('h2');
+    if (title) {
+        title.innerText = isBossReward ? window.T("ODMĚNA ZA BOSSE!") : window.T("LEVEL UP!");
+        title.style.color = isBossReward ? "#fbbf24" : "var(--xp-color)";
+        title.style.textShadow = isBossReward ? "0 0 30px #fbbf24" : "0 0 30px var(--xp-color)";
+    }
     const container = document.getElementById('upgrade-options');
     container.innerHTML = '';
 
@@ -2624,7 +2638,7 @@ function showLevelUp() {
     };
 
     while (selected.length < count && usedIds.size < CONFIG.UPGRADES.length) {
-        const rand = Math.random() * 100;
+        const rand = Math.random() * (isBossReward ? 60 : 100);
         let rarity = 'common';
         if (rand < 5) rarity = 'legendary';
         else if (rand < 15) rarity = 'epic';
@@ -3293,6 +3307,47 @@ function showMetaMenu() {
         upgradesGrid.appendChild(card);
     });
 
+
+    // 1.5 VAŠE ZÍSKANÉ BEDNY (ODMĚNY)
+    let hasRewards = false;
+    if (META.unopenedCrates) {
+        for (let k in META.unopenedCrates) if (META.unopenedCrates[k] > 0) hasRewards = true;
+    }
+    if (hasRewards) {
+        const rewardSection = document.createElement('div');
+        rewardSection.innerHTML = `<h2 style="color: #10b981; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(16,185,129,0.2); padding-bottom: 5px;">🎁 ${window.T('ZÍSKANÉ BEDNY')}</h2>`;
+        const rewardGrid = document.createElement('div');
+        rewardGrid.className = 'menu-actions-grid';
+        rewardSection.appendChild(rewardGrid);
+
+        const rewardTypes = [
+            { id: 'basic', name: window.T('📦 OBYČEJNÁ'), color: 'rgba(148, 163, 184, 0.1)', border: '#94a3b8' },
+            { id: 'premium', name: window.T('💎 PRÉMIOVÁ'), color: 'rgba(99, 102, 241, 0.1)', border: '#6366f1' },
+            { id: 'legendary', name: window.T('👑 LEGENDÁRNÍ'), color: 'rgba(251, 191, 36, 0.1)', border: '#fbbf24' }
+        ];
+
+        rewardTypes.forEach(type => {
+            const count = META.unopenedCrates[type.id] || 0;
+            if (count > 0) {
+                const card = document.createElement('div');
+                card.className = 'upgrade-card';
+                card.style.background = type.color;
+                card.style.borderColor = type.border;
+                card.innerHTML = `
+                    <h3>${type.name}</h3>
+                    <div style="font-size: 1.2rem; color: #fff; font-weight: 800; margin-bottom: 10px;">${count}x</div>
+                    <button class="btn-restart" style="background: ${type.border}; color: #000; font-size: 0.8rem; padding: 10px; border: none; width: 100%;">${window.T('OTEVŘÍT')}</button>
+                `;
+                card.querySelector('button').onclick = () => {
+                    META.unopenedCrates[type.id]--;
+                    saveMeta();
+                    openCrate(type.id, 1);
+                };
+                rewardGrid.appendChild(card);
+            }
+        });
+        container.appendChild(rewardSection);
+    }
 
     // 3. VESMÍRNÉ BEDNY (CRATES)
     const cratesSection = document.createElement('div');
@@ -4656,6 +4711,12 @@ function init() {
             "Přitáhne všechny gemy z dálky.": "Pulls all gems from afar.",
             "Opraví poškozený trup lodi.": "Repairs damaged ship hull.",
             "💡 POKROČILÉ TIPY": "💡 ADVANCED TIPS",
+            "ODMĚNA ZA BOSSE!": "BOSS REWARD!",
+            "ZÍSKANÉ BEDNY": "EARNED CRATES",
+            "OTEVŘÍT": "OPEN",
+            "PŘICHÁZÍ": "IS COMING",
+            "BOSS": "BOSS",
+            "Dron": "Drone", "Kostka": "Cube", "Kamikadze": "Kamikaze", "Goblin": "Goblin", "Support": "Support", "Štítonoš": "Shielder", "Skokan": "Jumper",
             "Skvělá kombinace pro nesmrtelnost.": "Great combo for immortality.",
             "Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!": "Spawns every minute. Always dodge sideways!",
             "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 kills = 1 Doge. 10 kills = 1 Doge. Buy permanent upgrades with them!",
@@ -5801,6 +5862,10 @@ function handleEnemyDeath(enemy) {
                 
                 if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0 };
                 META.stats.totalBossKills++;
+                if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
+                META.unopenedCrates.basic++;
+                saveMeta();
+                showLevelUp(true);
                 checkAchievements();
             }
             const gem = new Gem(enemy.x, enemy.y);
