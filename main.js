@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.358
+ * NEO SURVIVOR - Core Game Logic - v1.357
  */
 
 window.addEventListener('beforeunload', () => {
@@ -3776,22 +3776,18 @@ function startCrateAnimation(winner, crateType = 'basic') {
         
         const btnAgain = document.getElementById('btn-crate-again');
         if (btnAgain) {
-            if (!canAffordAgain) {
-                btnAgain.style.display = 'none';
-                // If user is broke, redirect the main collect button to menu instead of showing spin again
-                const collectBtn = document.getElementById('btn-crate-collect');
-                if (collectBtn) {
-                    collectBtn.innerText = window.T('MÁLO DOGE - ZAVŘÍT');
-                    collectBtn.style.background = 'rgba(239, 68, 68, 0.2)';
-                    collectBtn.style.color = '#ef4444';
-                    collectBtn.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-                }
+            const hasSpareCrates = META.unopenedCrates && META.unopenedCrates[GAME.lastCrateType] > 0;
+            if (hasSpareCrates) {
+                btnAgain.style.display = 'block';
+                btnAgain.innerText = window.T('ZATOČIT ZNOVU') + ' (BEDNA)';
+                btnAgain.style.background = 'rgba(16, 185, 129, 0.2)';
+                btnAgain.style.color = '#10b981';
+                btnAgain.style.borderColor = 'rgba(16, 185, 129, 0.3)';
             } else {
-                // Show "Spin Again" ONLY if we are at the end of the current batch
-                const isLastInBatch = GAME.crateQueue && GAME.crateQueue.length === 0;
-                btnAgain.style.display = isLastInBatch ? 'block' : 'none';
+                btnAgain.style.display = 'none';
             }
         }
+
 
         if (winner.id === 'ultra_rare') {
             showConfetti(2000);
@@ -3900,19 +3896,17 @@ function startCrateAnimation(winner, crateType = 'basic') {
     const btnCrateAgain = modal.querySelector('#btn-crate-again');
     if (btnCrateAgain) btnCrateAgain.onclick = () => {
         clearCrateTimeouts();
-        const crateCost = { 'basic': 150, 'premium': 1000, 'legendary': 5000 }[GAME.lastCrateType];
-        const totalCost = crateCost * (GAME.lastCrateBatchSize || 1);
-        if (META.currency < totalCost) {
-            window.showCustomAlert(window.T("Nemáš dost Dogecoinu!"));
+        if (META.unopenedCrates && META.unopenedCrates[GAME.lastCrateType] > 0) {
+            META.unopenedCrates[GAME.lastCrateType]--;
+            playSound('upgrade');
+            saveMeta();
+            modal.remove();
+            openCrate(GAME.lastCrateType, 1);
+        } else {
+            window.showCustomAlert(window.T("Nemáš další bedny!"));
             modal.remove();
             showMetaMenu();
-            return;
         }
-        playSound('upgrade');
-        META.currency -= totalCost;
-        saveMeta();
-        modal.remove();
-        openCrate(GAME.lastCrateType, GAME.lastCrateBatchSize);
     };
 }
 

@@ -171,6 +171,15 @@ canvas {
   text-align: center;
   width: 100%;
 }
+.boss-warning.active {
+  display: block !important;
+  animation: warningPulse 1s ease-in-out infinite;
+}
+@keyframes warningPulse {
+  0% { transform: translate(-50%, 0) scale(1); }
+  50% { transform: translate(-50%, 0) scale(1.1); text-shadow: 0 0 50px rgba(239, 68, 68, 1); }
+  100% { transform: translate(-50%, 0) scale(1); }
+}
 
 .modal {
   position: fixed;
