@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.352
+ * NEO SURVIVOR - Core Game Logic - v1.353
  */
 
 window.addEventListener('beforeunload', () => {
@@ -207,7 +207,7 @@ const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
     ENEMY_BASE_HEALTH: 20,
-    ENEMY_BASE_SPEED: 3.8, // Reduced from 4.5 for solo to match 60Hz vs 50Hz server pace
+    ENEMY_BASE_SPEED: 3.2, // Reduced further from 3.8 for solo to match 60Hz vs 50Hz server pace and user feedback
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
     SPAWN_RADIUS: 700,
@@ -2618,7 +2618,7 @@ function showLevelUp(isBossReward = false) {
     const modal = document.getElementById('levelup-modal');
     const title = modal.querySelector('h2');
     if (title) {
-        title.innerText = isBossReward ? window.T("ODMĚNA ZA BOSSE!") : window.T("LEVEL UP!");
+        title.innerText = isBossReward ? window.T("ODMĚNA Z BOSSE!") : window.T("LEVEL UP!");
         title.style.color = isBossReward ? "#fbbf24" : "var(--xp-color)";
         title.style.textShadow = isBossReward ? "0 0 30px #fbbf24" : "0 0 30px var(--xp-color)";
     }
@@ -2964,6 +2964,41 @@ function showAchievementUnlocked(name) {
     setTimeout(() => notification.remove(), 5000);
 }
 
+function showCrateNotification(name, icon) {
+    const notification = document.createElement('div');
+    notification.className = 'achievement-notification';
+    notification.style.display = 'flex';
+    notification.style.alignItems = 'center';
+    notification.style.gap = '15px';
+    notification.style.background = 'rgba(15, 23, 42, 0.95)';
+    notification.style.border = '2px solid #10b981';
+    notification.style.padding = '15px 25px';
+    notification.style.borderRadius = '16px';
+    notification.style.position = 'fixed';
+    notification.style.bottom = '30px';
+    notification.style.left = '50%';
+    notification.style.transform = 'translateX(-50%)';
+    notification.style.zIndex = '1000000';
+    notification.style.boxShadow = '0 10px 40px rgba(16, 185, 129, 0.3)';
+    notification.style.animation = 'achievementPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+    notification.innerHTML = `
+        <div style="font-size: 2.2rem;">${icon}</div>
+        <div>
+            <div style="font-size: 0.7rem; color: #10b981; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">${window.T('NOVÁ ODMĚNA!')}</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: #fff;">+1 ${window.T(name)}</div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.style.transition = 'all 0.5s ease-in';
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, 50px)';
+        setTimeout(() => notification.remove(), 500);
+    }, 4000);
+}
+
 function showCurrencyNotification(amount, source = "") {
     const titles = ["PARÁDA!", "SKVĚLÉ!", "ÚSPĚCH!", "ZÍSKAL JSI!", "VÝBORNĚ!"];
     const title = window.T(titles[Math.floor(Math.random() * titles.length)]);
@@ -2983,7 +3018,7 @@ function showCurrencyNotification(amount, source = "") {
         <div style="background: rgba(15, 23, 42, 0.9); border: 2px solid #fbbf24; padding: 20px 40px; border-radius: 20px; box-shadow: 0 0 50px rgba(251, 191, 36, 0.4); backdrop-filter: blur(10px);">
             <div style="color: #fbbf24; font-weight: 900; font-size: 1.5rem; letter-spacing: 2px; margin-bottom: 5px;">${title}</div>
             <div style="color: #fff; font-size: 2rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <span style="font-size: 1.5rem;">🪙</span> +${amount} DOGE
+                <script type="module" src="./main.js?v=1.353"></script>an> +${amount} DOGE
             </div>
             ${source ? `<div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px; text-transform: uppercase;">${translatedSource}</div>` : ''}
         </div>
@@ -3298,36 +3333,7 @@ function showMetaMenu() {
     container.style.flexDirection = 'column';
     container.style.gap = '30px';
 
-    // 1. ZÁKLADNÍ VYLEPŠENÍ
-    const upgradesSection = document.createElement('div');
-    upgradesSection.innerHTML = `<h2 style="color: #6366f1; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(99,102,241,0.2); padding-bottom: 5px;">🚀 ${window.T('ZÁKLADNÍ STATY')}</h2>`;
-    const upgradesGrid = document.createElement('div');
-    upgradesGrid.className = 'menu-actions-grid';
-    upgradesSection.appendChild(upgradesGrid);
-
-    const stats = [
-        { id: 'hp', name: '❤️ Extra HP', desc: 'Počáteční HP +10', cost: 10, val: META.upgrades.hp },
-        { id: 'speed', name: '👟 Rychlost', desc: 'Pohyb +2%', cost: 15, val: META.upgrades.speed },
-        { id: 'luck', name: '🍀 Štěstí', desc: 'XP násobič +0.05', cost: 25, val: META.upgrades.luck },
-        { id: 'regen', name: '💊 Regenerace', desc: 'HP/s +0.1', cost: 40, val: META.upgrades.regen || 0 },
-        { id: 'armor', name: '🛡️ Štít', desc: 'Redukce poškození +2%', cost: 50, val: META.upgrades.armor || 0 }
-    ];
-
-    stats.forEach(item => {
-        const card = document.createElement('div'); card.className = 'upgrade-card';
-        const cost = Math.floor(item.cost * (1 + (item.val || 0) * 0.5));
-        card.innerHTML = `<h3>${window.T(item.name)}</h3><p>${window.T(item.desc)}</p><span class="cost">${formatNumber(cost)} DOGE</span>`;
-        card.onclick = () => {
-            if (META.currency < cost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
-            playSound('upgrade');
-            META.upgrades[item.id] = (META.upgrades[item.id] || 0) + 1;
-            META.currency -= cost; saveMeta(); showMetaMenu();
-        };
-        upgradesGrid.appendChild(card);
-    });
-
-
-    // 1.5 VAŠE ZÍSKANÉ BEDNY (ODMĚNY)
+    // 1. VAŠE ZÍSKANÉ BEDNY (ODMĚNY)
     if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
     let hasRewards = false;
     for (let k in META.unopenedCrates) if (META.unopenedCrates[k] > 0) hasRewards = true;
@@ -3368,6 +3374,35 @@ function showMetaMenu() {
         container.appendChild(rewardSection);
     }
 
+    // 2. ZÁKLADNÍ VYLEPŠENÍ
+    const upgradesSection = document.createElement('div');
+    upgradesSection.innerHTML = `<h2 style="color: #6366f1; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(99,102,241,0.2); padding-bottom: 5px;">🚀 ${window.T('ZÁKLADNÍ STATY')}</h2>`;
+    const upgradesGrid = document.createElement('div');
+    upgradesGrid.className = 'menu-actions-grid';
+    upgradesSection.appendChild(upgradesGrid);
+
+    const stats = [
+        { id: 'hp', name: '❤️ Extra HP', desc: 'Počáteční HP +10', cost: 10, val: META.upgrades.hp },
+        { id: 'speed', name: '👟 Rychlost', desc: 'Pohyb +2%', cost: 15, val: META.upgrades.speed },
+        { id: 'luck', name: '🍀 Štěstí', desc: 'XP násobič +0.05', cost: 25, val: META.upgrades.luck },
+        { id: 'regen', name: '💊 Regenerace', desc: 'HP/s +0.1', cost: 40, val: META.upgrades.regen || 0 },
+        { id: 'armor', name: '🛡️ Štít', desc: 'Redukce poškození +2%', cost: 50, val: META.upgrades.armor || 0 }
+    ];
+
+    stats.forEach(item => {
+        const card = document.createElement('div'); card.className = 'upgrade-card';
+        const cost = Math.floor(item.cost * (1 + (item.val || 0) * 0.5));
+        card.innerHTML = `<h3>${window.T(item.name)}</h3><p>${window.T(item.desc)}</p><span class="cost">${formatNumber(cost)} DOGE</span>`;
+        card.onclick = () => {
+            if (META.currency < cost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
+            playSound('upgrade');
+            META.upgrades[item.id] = (META.upgrades[item.id] || 0) + 1;
+            META.currency -= cost; saveMeta(); showMetaMenu();
+        };
+        upgradesGrid.appendChild(card);
+    });
+    container.appendChild(upgradesSection);
+
     // 3. VESMÍRNÉ BEDNY (CRATES)
     const cratesSection = document.createElement('div');
     cratesSection.innerHTML = `<h2 style="color: #fbbf24; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(251,191,36,0.2); padding-bottom: 5px;">📦 ${window.T('VESMÍRNÉ BEDNY')}</h2>`;
@@ -3388,7 +3423,7 @@ function showMetaMenu() {
         card.style.borderColor = type.border;
         card.style.position = 'relative';
         card.style.zIndex = '5';
-        card.style.paddingBottom = '60px'; // Space for buttons
+        card.style.paddingBottom = '60px'; 
 
         card.innerHTML = `
             <h3>${window.T(type.name)}</h3>
@@ -3407,25 +3442,18 @@ function showMetaMenu() {
                 e.stopPropagation();
                 const count = parseInt(btn.getAttribute('data-count'));
                 const totalCost = type.cost * count;
-                
-                if (META.currency < totalCost) { 
-                    window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); 
-                    return; 
-                }
-                
-                playSound('upgrade'); // Click sound
+                if (META.currency < totalCost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
+                playSound('upgrade'); 
                 META.currency -= totalCost;
                 saveMeta();
                 openCrate(type.id, count);
             };
-            btn.onmouseenter = () => btn.style.background = 'rgba(255,255,255,0.15)';
-            btn.onmouseleave = () => btn.style.background = 'rgba(255,255,255,0.05)';
         });
-        
         cratesGrid.appendChild(card);
     });
+    container.appendChild(cratesSection);
 
-    // 2. SBÍRKA EMOJI & ČEPIC
+    // 4. SBÍRKA EMOJI & ČEPIC
     const collectionSection = document.createElement('div');
     collectionSection.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(16,185,129,0.2); margin-bottom: 15px; padding-bottom: 5px;">
@@ -3452,22 +3480,18 @@ function showMetaMenu() {
             card.className = 'upgrade-card';
             card.style.minHeight = 'auto';
             card.style.padding = '12px';
-            
             const isEquipped = META.upgrades.hat === emoji.id;
             if (isEquipped) card.style.borderColor = '#fbbf24';
-
             card.innerHTML = `
                 <div style="font-size: 1.8rem;">${emoji.icon}</div>
                 <div style="font-size: 0.75rem; font-weight: bold; margin-top:5px; color: #f8fafc;">${window.T(emoji.name)}</div>
                 <div style="font-size: 0.65rem; color: #94a3b8">x${inv.count}</div>
                 <div style="font-size: 0.6rem; color: ${getRarityColor(emoji.rarity)}; font-weight: bold; margin-bottom: 5px;">${emoji.rarity.toUpperCase()}</div>
-                
                 <div style="display:flex; flex-direction:column; gap:5px;">
                     <button class="btn-equip" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: ${isEquipped ? '#fbbf24' : 'rgba(255,255,255,0.1)'}; color: ${isEquipped ? '#000' : '#fff'}; border: none; cursor:pointer;">${isEquipped ? window.T('SUNDAT') : window.T('NASADIT')}</button>
                     <button class="btn-sell" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); cursor:pointer;">${window.T('PRODAT')} (${formatNumber(emoji.price)})</button>
                 </div>
             `;
-            
             const btnEquip = card.querySelector('.btn-equip');
             if (btnEquip) {
                 btnEquip.onclick = (e) => {
@@ -3478,7 +3502,6 @@ function showMetaMenu() {
                     showMetaMenu();
                 };
             }
-            
             card.querySelector('.btn-sell').onclick = (e) => {
                 e.stopPropagation();
                 sellEmoji(inv.id);
@@ -3486,18 +3509,13 @@ function showMetaMenu() {
             collectionGrid.appendChild(card);
         });
     }
-
-    container.appendChild(upgradesSection);
-    container.appendChild(cratesSection);
     container.appendChild(collectionSection);
 
-    // Register Sell All listener AFTER appending to DOM
     if (META.inventory && META.inventory.length > 0) {
         const btnSellAll = document.getElementById('btn-sell-all');
         if (btnSellAll) {
             btnSellAll.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault(); e.stopPropagation();
                 window.showCustomConfirm(window.T("Opravdu chceš prodat všechna neaktivní emoji?"), () => sellAllEmojis());
             };
         }
@@ -4398,6 +4416,7 @@ function initSocket() {
             if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
             META.unopenedCrates.basic++;
             saveMeta();
+            showCrateNotification("OBYČEJNÁ BEDNA", "📦");
             GAME.paused = true;
             showLevelUp(true);
         });
@@ -4743,9 +4762,9 @@ function init() {
             "Přitáhne všechny gemy z dálky.": "Pulls all gems from afar.",
             "Opraví poškozený trup lodi.": "Repairs damaged ship hull.",
             "💡 POKROČILÉ TIPY": "💡 ADVANCED TIPS",
-            "ODMĚNA ZA BOSSE!": "BOSS REWARD!",
-            "ZÍSKANÉ BEDNY": "EARNED CRATES",
-            "OTEVŘÍT": "OPEN",
+            "ODMĚNA Z BOSSE!": "BOSS REWARD!",
+            "NOVÁ ODMĚNA!": "NEW REWARD!",
+            "OBYČEJNÁ BEDNA": "BASIC CRATE",
             "PŘICHÁZÍ": "IS COMING",
             "BOSS": "BOSS",
             "POZOR!": "WARNING!",
@@ -5899,6 +5918,7 @@ function handleEnemyDeath(enemy) {
                 if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
                 META.unopenedCrates.basic++;
                 saveMeta();
+                showCrateNotification("OBYČEJNÁ BEDNA", "📦");
                 showLevelUp(true);
                 checkAchievements();
             }
