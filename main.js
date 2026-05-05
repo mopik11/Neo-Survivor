@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.356
+ * NEO SURVIVOR - Core Game Logic - v1.358
  */
 
 window.addEventListener('beforeunload', () => {
@@ -26,11 +26,11 @@ window.showCustomAlert = function (msg) {
 
 // --- AUDIO SYSTEM ---
 const SOUND_URLS = {
-    menuOpen: 'https://assets.mixkit.co/sfx/preview/mixkit-modern-technology-select-3124.mp3',
-    upgrade: 'https://assets.mixkit.co/sfx/preview/mixkit-button-click-interface-1002.mp3',
+    menuOpen: 'https://cdn.pixabay.com/audio/2022/03/15/audio_c8c8a7395a.mp3',
+    upgrade: 'https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3',
     crateSpin: 'https://assets.mixkit.co/sfx/preview/mixkit-quick-mechanical-click-2510.mp3',
     crateWin: 'https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3',
-    coin: 'https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-changing-tab-206.mp3'
+    coin: 'https://cdn.pixabay.com/audio/2021/08/04/audio_340243e86c.mp3'
 };
 
 const SOUND_BUFFERS = {};
@@ -1489,7 +1489,13 @@ class Boss {
                 players.forEach(p => {
                     if (dist(this.x, this.y, p.x, p.y) < 200) p.hp -= this.damage * 10;
                 });
-                createExplosion(this.x, this.y, '#f97316', 150);
+                if (GAME.entities.fire) {
+                    for (let i = 0; i < 20; i++) {
+                        const a = Math.random() * Math.PI * 2;
+                        const d = Math.random() * 150;
+                        GAME.entities.fire.push(new Fire(this.x + Math.cos(a) * d, this.y + Math.sin(a) * d, 0, false));
+                    }
+                }
                 this.lastAction = Date.now();
             }
         } else if (this.type === 4) { // Goblin - vysává XP a hráče
@@ -2610,6 +2616,13 @@ function updateUI() {
 }
 
 function showLevelUp(isBossReward = false) {
+    if (!isBossReward && document.querySelector('.modal.active')) {
+        if (!GAME.levelUpQueue) GAME.levelUpQueue = 0;
+        GAME.levelUpQueue++;
+        console.log("[GAME] Level-up queued. Queue size:", GAME.levelUpQueue);
+        return;
+    }
+
     GAME.entities.enemies = GAME.entities.enemies.filter(e => e.isBoss);
     // Také vyčistit meteority a projektily nepřátel pro větší bezpečnost
     GAME.entities.meteorites = [];
@@ -2840,6 +2853,14 @@ function applyUpgrade(id, record = true) {
             showCrateNotification("OBYČEJNÁ BEDNA", "📦");
         }, 5000);
         GAME.isBossRewardActive = false;
+    }
+
+    // Check level-up queue
+    if (GAME.levelUpQueue > 0) {
+        GAME.levelUpQueue--;
+        console.log("[GAME] Showing queued level-up. Remaining:", GAME.levelUpQueue);
+        setTimeout(() => showLevelUp(false), 300);
+        return; // Keep game paused
     }
 
     if (NET.isMultiplayer) {
