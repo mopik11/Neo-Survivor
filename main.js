@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.349
+ * NEO SURVIVOR - Core Game Logic - v1.350
  */
 
 window.addEventListener('beforeunload', () => {
@@ -2520,6 +2520,15 @@ function spawnEnemy() {
     let interval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60));
     if (hasBoss) interval *= 2; 
 
+    // Early Boss Warning logic (1 level before)
+    if (!NET.isMultiplayer && pivot.level > 0 && pivot.level % 5 === 4 && GAME.lastWarnedLevel !== pivot.level) {
+        const bossNames = { 1: 'Dron', 2: 'Kostka', 3: 'Kamikadze', 4: 'Goblin', 5: 'Support', 6: 'Štítonoš', 7: 'Skokan' };
+        // We pre-pick the next boss type to warn the player
+        if (!GAME.nextBossType) GAME.nextBossType = Math.floor(Math.random() * 7) + 1;
+        showBossWarning(bossNames[GAME.nextBossType], true);
+        GAME.lastWarnedLevel = pivot.level;
+    }
+
     if (now - (GAME.lastSpawnTime || 0) < interval) return;
     GAME.lastSpawnTime = now;
 
@@ -2534,13 +2543,14 @@ function spawnEnemy() {
     const bossAlreadySpawned = GAME.lastBossLevelSpawned === pivot.level;
     
     if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
-        const bossType = Math.floor(Math.random() * 7) + 1;
+        const bossType = GAME.nextBossType || Math.floor(Math.random() * 7) + 1;
         const bossNames = { 1: 'Dron', 2: 'Kostka', 3: 'Kamikadze', 4: 'Goblin', 5: 'Support', 6: 'Štítonoš', 7: 'Skokan' };
         enemy = new Boss(x, y, mod, undefined, bossType);
         const bName = bossNames[bossType] || 'Boss';
         GAME.entities.enemies.push(enemy);
         showBossWarning(bName);
         GAME.lastBossLevelSpawned = pivot.level;
+        GAME.nextBossType = null; // Reset for next cycle
     } else {
         let type = 1;
         if (pivot.level >= 3 && Math.random() < 0.15) type = 2;
@@ -2556,13 +2566,15 @@ function spawnEnemy() {
     if (GAME.entities.enemies) GAME.entities.enemies.push(enemy);
 }
 
-function showBossWarning(name = "") {
+function showBossWarning(name = "", soon = false) {
     const el = document.getElementById('boss-warning'); 
     if (el) {
-        el.innerText = `${window.T('BOSS')} ${window.T(name)} ${window.T('PŘICHÁZÍ')}!`;
+        const prefix = soon ? window.T("POZOR!") + " " : "";
+        const suffix = soon ? " " + window.T("SE BLÍŽÍ!") : " " + window.T("PŘICHÁZÍ") + "!";
+        el.innerText = `${prefix}${window.T('BOSS')} ${window.T(name)}${suffix}`;
         el.style.display = 'block';
     }
-    setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
+    setTimeout(() => { if (el) el.style.display = 'none'; }, 5000);
 }
 
 function updateUI() {
@@ -4370,6 +4382,18 @@ function initSocket() {
             gameOver();
         });
 
+        NET.socket.on('bossWarning', (data) => {
+            const bossNames = { 1: 'Dron', 2: 'Kostka', 3: 'Kamikadze', 4: 'Goblin', 5: 'Support', 6: 'Štítonoš', 7: 'Skokan' };
+            showBossWarning(bossNames[data.type] || 'Boss', data.soon);
+        });
+
+        NET.socket.on('bossDefeated', () => {
+            if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
+            META.unopenedCrates.basic++;
+            saveMeta();
+            showLevelUp(true);
+        });
+
         NET.socket.on('playerRevived', (data) => {
             if (data.playerId === myPlayerId && GAME.entities.player) {
                 GAME.entities.player.dead = false;
@@ -4716,6 +4740,8 @@ function init() {
             "OTEVŘÍT": "OPEN",
             "PŘICHÁZÍ": "IS COMING",
             "BOSS": "BOSS",
+            "POZOR!": "WARNING!",
+            "SE BLÍŽÍ!": "IS APPROACHING!",
             "Dron": "Drone", "Kostka": "Cube", "Kamikadze": "Kamikaze", "Goblin": "Goblin", "Support": "Support", "Štítonoš": "Shielder", "Skokan": "Jumper",
             "Skvělá kombinace pro nesmrtelnost.": "Great combo for immortality.",
             "Objevuje se každou minutu. Vždy se mu snaž uhýbat do stran!": "Spawns every minute. Always dodge sideways!",

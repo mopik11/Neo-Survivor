@@ -560,6 +560,9 @@ io.on('connection', (socket) => {
                         if (enemy.isBoss) {
                             if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
                             for (let i = 0; i < 10; i++) ROOMS[r].gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x + (Math.random() - 0.5) * 150, y: enemy.y + (Math.random() - 0.5) * 150 });
+                            
+                            // Emit bossDefeated for rewards (crate + special upgrade)
+                            io.to(r).emit('bossDefeated', { id: enemy.id });
                         }
                         ROOMS[r].gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x, y: enemy.y, isNuke, isMagnet });
                     }
@@ -631,6 +634,13 @@ io.on('connection', (socket) => {
                 // CLEAR ENEMIES (except bosses) on level up for multiplayer
                 room.enemies = room.enemies.filter(e => e.isBoss);
                 io.to(r).emit('teamLevelUp', { level: room.level });
+
+                // Early Boss Warning for next boss (Level 4, 9, 14...)
+                if (room.level % CONFIG.BOSS_LEVEL_INTERVAL === CONFIG.BOSS_LEVEL_INTERVAL - 1) {
+                    const nextBossType = Math.floor(Math.random() * 7) + 1;
+                    room.nextBossType = nextBossType; // Store it for spawning
+                    io.to(r).emit('bossWarning', { type: nextBossType, soon: true });
+                }
             }
         }
     });
@@ -725,9 +735,11 @@ setInterval(() => {
                 if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
                     isBoss = true;
                     hp = (CONFIG.ENEMY_BASE_HEALTH * mod) * 50; // 50x HP
-                    type = Math.floor(Math.random() * 7) + 1;
+                    type = room.nextBossType || Math.floor(Math.random() * 7) + 1;
                     speedMod = 2; // 2x Speed for Boss
                     room.lastBossLevelSpawned = room.level;
+                    room.nextBossType = null;
+                    io.to(r).emit('bossWarning', { type: type, soon: false });
                 }
 
                 room.enemies.push({
