@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.351
+ * NEO SURVIVOR - Core Game Logic - v1.347
  */
 
 window.addEventListener('beforeunload', () => {
@@ -1119,12 +1119,13 @@ class Projectile {
     constructor(x, y, targetX, targetY, damage, stats = {}) {
         this.x = x; this.y = y;
         const angle = Math.atan2(targetY - y, targetX - x);
-        const speed = stats.speed || CONFIG.PROJECTILE_SPEED;
+        const speed = (stats.speed !== undefined) ? stats.speed : CONFIG.PROJECTILE_SPEED;
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
         this.damage = damage;
         this.radius = stats.size || 6;
         this.life = (stats.life !== undefined) ? stats.life : 200;
+        if (this.life > 900000) this.life = Infinity;
         this.pierce = stats.pierce || 1;
         this.bounce = stats.bounce || 0;
         this.isCrit = stats.isCrit || false;
@@ -1140,7 +1141,7 @@ class Projectile {
     update() {
         this.x += this.vx * GAME.speedFactor;
         this.y += this.vy * GAME.speedFactor;
-        this.life--;
+        if (this.life !== Infinity) this.life--;
     }
     draw(ctx, cam) {
         ctx.shadowBlur = 15;
@@ -1149,9 +1150,21 @@ class Projectile {
             ctx.fillStyle = this.color || '#ff00ff';
             ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
         } else {
-            ctx.shadowColor = this.isCrit ? '#fbbf24' : (this.ownerId === 'local' ? '#6366f1' : '#f43f5e');
-            ctx.fillStyle = this.isCrit ? '#fbbf24' : '#f8fafc';
-            ctx.strokeStyle = ctx.fillStyle;
+            const isShell = this.type === 'shell' || this.life === Infinity;
+            if (isShell) {
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = '#eab308';
+                ctx.fillStyle = '#eab308';
+                ctx.save();
+                ctx.translate(this.x - cam.x, this.y - cam.y);
+                ctx.rotate(0.5);
+                ctx.fillRect(-2, -5, 4, 10);
+                ctx.restore();
+            } else {
+                ctx.shadowColor = this.isCrit ? '#fbbf24' : (this.ownerId === 'local' ? '#6366f1' : '#f43f5e');
+                ctx.fillStyle = this.isCrit ? '#fbbf24' : '#f8fafc';
+                ctx.strokeStyle = ctx.fillStyle;
+            }
 
             if (this.type === 'laser') {
                 ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.radius, 0, Math.PI * 2); ctx.fill();
@@ -1388,6 +1401,7 @@ class Boss {
     constructor(x, y, level = 1, id = Math.random().toString(36).substr(2, 9), type = null) {
         this.x = x; this.y = y; this.id = id;
         this.type = type || Math.floor(Math.random() * 7) + 1; // 1-7 varianty
+        this.rotation = Math.random() * Math.PI * 2;
         
         // Základní statistiky mimozemšťana (pro škálování)
         let minionHp = CONFIG.ENEMY_BASE_HEALTH * level;
@@ -1403,9 +1417,9 @@ class Boss {
             minionSpeed *= 0.35;
         }
 
-        // Škálování Bosse: 3x větší, 20x HP, 2x rychlejší, 3x damage
+        // Škálování Bosse: 3x větší, 50x HP, 2x rychlejší, 3x damage
         this.radius = minionRadius * 3;
-        this.maxHp = minionHp * 20;
+        this.maxHp = minionHp * 50;
         this.hp = this.maxHp;
         this.speed = minionSpeed * 2;
         this.damage = minionDamage * 3;
@@ -1572,8 +1586,9 @@ class Boss {
         } else if (this.type === 6) { // Štítonoš (Enemy Type 8 logic)
             const players = getAllAlivePlayers();
             const target = players.length > 0 ? players.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0] : { x: 0, y: 0 };
-            const angle = Math.atan2(target.y - this.y, target.x - this.x);
-            ctx.rotate(angle);
+            const targetAngle = Math.atan2(target.y - this.y, target.x - this.x);
+            this.rotation = lerpAngle(this.rotation || 0, targetAngle, 0.03);
+            ctx.rotate(this.rotation);
             ctx.shadowBlur = 50; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.beginPath(); ctx.arc(0, 0, 45, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = '#fff'; ctx.lineWidth = 12;
@@ -1601,6 +1616,7 @@ class Boss {
 class Enemy {
     constructor(x, y, level = 1, id = Math.random().toString(36).substr(2, 9), type = 1) {
         this.x = x; this.y = y; this.radius = 18; this.id = id; this.type = type;
+        this.rotation = Math.random() * Math.PI * 2;
         this.maxHp = CONFIG.ENEMY_BASE_HEALTH * level;
         this.speed = CONFIG.ENEMY_BASE_SPEED + (level * 0.15);
 
@@ -1893,8 +1909,9 @@ class Enemy {
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
             const players = getAllAlivePlayers();
             const target = players.length > 0 ? players.sort((a, b) => dist(this.x, this.y, a.x, a.y) - dist(this.x, this.y, b.x, b.y))[0] : { x: 0, y: 0 };
-            const angle = Math.atan2(target.y - this.y, target.x - this.x);
-            ctx.rotate(angle);
+            const targetAngle = Math.atan2(target.y - this.y, target.x - this.x);
+            this.rotation = lerpAngle(this.rotation || 0, targetAngle, 0.03);
+            ctx.rotate(this.rotation);
             ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
             ctx.beginPath(); ctx.arc(0, 0, 22, -Math.PI / 2, Math.PI / 2); ctx.stroke();
@@ -2301,7 +2318,7 @@ class Player {
                         pierce: 0,
                         bounce: 0,
                         isCrit: false,
-                        type: 'default',
+                        type: 'shell',
                         life: Infinity,
                         speed: 0
                     });
@@ -2475,11 +2492,11 @@ function spawnEnemy() {
     const mod = Math.floor(GAME.time / 60) + 1;
 
     let enemy;
-    const isBossLevel = pivot.level > 0 && pivot.level % 10 === 0;
+    const isBossLevel = pivot.level > 0 && pivot.level % 5 === 0;
     const bossAlreadySpawned = GAME.lastBossLevelSpawned === pivot.level;
     
     if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
-        const bossType = ((pivot.level / 10 - 1) % 7) + 1;
+        const bossType = Math.floor(Math.random() * 7) + 1;
         enemy = new Boss(x, y, mod, undefined, bossType);
         showBossWarning();
         GAME.lastBossLevelSpawned = pivot.level;
@@ -4135,7 +4152,7 @@ function initSocket() {
             GAME.entities.enemies = incomingEnemies.map(he => {
                 let e = currentEnemies.get(he.id);
                 if (!e) {
-                    e = he.isBoss ? new Boss(he.x, he.y, 1, he.id) : new Enemy(he.x, he.y, 1, he.id, he.type);
+                    e = he.isBoss ? new Boss(he.x, he.y, 1, he.id, he.type) : new Enemy(he.x, he.y, 1, he.id, he.type);
                     e.x = he.x; e.y = he.y;
                 }
                 e.targetX = he.x; e.targetY = he.y;
@@ -5790,6 +5807,13 @@ function loop(time) {
     requestAnimationFrame(loop);
 }
 
+function lerpAngle(a, b, t) {
+    let d = b - a;
+    while (d < -Math.PI) d += Math.PI * 2;
+    while (d > Math.PI) d -= Math.PI * 2;
+    return a + d * t;
+}
+
 function update(dt) {
     const now = Date.now();
     
@@ -6038,7 +6062,7 @@ function update(dt) {
                         }
 
                         if (NET.isMultiplayer) {
-                            NET.socket.emit('enemyHit', { id: enemy.id, damage: proj.damage });
+                            NET.socket.emit('enemyHit', { id: enemy.id, damage: damage });
                         }
 
                         // APPLY KNOCKBACK

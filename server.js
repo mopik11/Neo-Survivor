@@ -51,7 +51,7 @@ const CONFIG = {
     ENEMY_BASE_SPEED: 4.5,
     SPAWN_INTERVAL: 800,
     BOSS_INTERVAL: 60,
-    BOSS_LEVEL_INTERVAL: 10
+    BOSS_LEVEL_INTERVAL: 5
 };
 
 function dist(x1, y1, x2, y2) {
@@ -710,26 +710,13 @@ setInterval(() => {
                 let speedMod = 1;
 
                 const rnd = Math.random();
-                if (room.level >= 3 && rnd < 0.1) {
-                    type = 2; // Střelec
-                    hp *= 0.5;
-                } else if (room.level >= 4 && rnd < 0.2) {
-                    type = 3; // Kamikadze
-                    hp *= 0.5;
-                    speedMod = 1.8;
-                } else if (room.level >= 5 && rnd < 0.25) {
-                    type = 4; // Zloděj
-                    hp *= 1.5;
-                    speedMod = 2.2;
-                } else if (room.level >= 8 && rnd < 0.27) {
-                    type = 5; // Support
-                    hp *= 3;
-                    speedMod = 0.5;
-                } else if (room.level >= 10 && rnd < 0.35) {
-                    type = 6; // Skokan
-                    hp *= 1.2;
-                    speedMod = 1.0;
-                }
+                if (room.level >= 3 && rnd < 0.15) type = 2; // Střelec
+                else if (room.level >= 4 && rnd < 0.10) type = 4; // Zloděj
+                else if (room.level >= 5 && rnd < 0.12) type = 3; // Kamikadze
+                else if (room.level >= 6 && rnd < 0.08) type = 5; // Support
+                else if (room.level >= 8 && rnd < 0.08) type = 6; // Skokan
+                else if (room.level >= 10 && rnd < 0.12) type = 7; // Sebevrah
+                else if (room.level >= 12 && rnd < 0.1) type = 8; // Štítonoš
 
                 const hasBoss = room.enemies.some(e => e.isBoss);
                 const isBossLevel = room.level > 0 && room.level % CONFIG.BOSS_LEVEL_INTERVAL === 0;
@@ -737,9 +724,9 @@ setInterval(() => {
 
                 if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
                     isBoss = true;
-                    hp = CONFIG.ENEMY_BASE_HEALTH * 30 * mod;
-                    type = 1;
-                    speedMod = 1;
+                    hp = (CONFIG.ENEMY_BASE_HEALTH * mod) * 50; // 50x HP
+                    type = Math.floor(Math.random() * 7) + 1;
+                    speedMod = 2; // 2x Speed for Boss
                     room.lastBossLevelSpawned = room.level;
                 }
 
@@ -843,10 +830,16 @@ setInterval(() => {
 
                     const angle = Math.atan2(target.y - enemy.y, target.x - enemy.x);
                     let speedMult = 1;
-                    if (enemy.isBoss) speedMult = 0.8;
+                    if (enemy.isBoss) speedMult = 1.0; // Původní speedMod z push už je započítán
                     if (enemy.type === 2) speedMult = 0.5;
                     if (enemy.type === 5) speedMult = 0.4;
                     if (enemy.type === 3 && enemy.exploding) speedMult = 0; // Kamikadze stojí před výbuchem
+                    if (enemy.type === 6) {
+                        if (enemy.jumpState === 'PREPARING' || enemy.jumpState === 'JUMPING') speedMult = 0;
+                        else speedMult = 0.7; // Skokan walking speed
+                    }
+                    if (enemy.type === 7) speedMult = 1.6; // Sebevrah
+                    if (enemy.type === 8) speedMult = 0.7; // Štítonoš
 
                     const enemyMod = enemy.mod || 1;
                     const speed = (CONFIG.ENEMY_BASE_SPEED + (enemyMod * 0.15)) * speedMult;
@@ -937,6 +930,13 @@ setInterval(() => {
                                 enemy.jumpState = 'WALKING';
                                 playersArr.forEach(p => { if (dist(enemy.x, enemy.y, p.x, p.y) < 50) p.hp -= 15; });
                             }
+                        }
+                    }
+                    
+                    if (enemy.type === 7 && !enemy.dead) { // SEBEVRAH
+                        if (dist(enemy.x, enemy.y, target.x, target.y) < 55) {
+                            enemy.hp = 0;
+                            playersArr.forEach(p => { if (dist(enemy.x, enemy.y, p.x, p.y) < 60) p.hp -= 35; });
                         }
                     }
 
