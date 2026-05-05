@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.351
+ * NEO SURVIVOR - Core Game Logic - v1.352
  */
 
 window.addEventListener('beforeunload', () => {
@@ -207,7 +207,7 @@ const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
     ENEMY_BASE_HEALTH: 20,
-    ENEMY_BASE_SPEED: 2.5,
+    ENEMY_BASE_SPEED: 3.8, // Reduced from 4.5 for solo to match 60Hz vs 50Hz server pace
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
     SPAWN_RADIUS: 700,
@@ -2663,6 +2663,7 @@ function showLevelUp(isBossReward = false) {
             if (GAME.entities.player.shipType === 4 && (u.id === 'pierce' || u.id === 'bounce')) {
                 return 'rare';
             }
+            if (isBossReward && rarity === 'common') return 'uncommon';
             return u.rarity;
         };
 
@@ -2673,7 +2674,11 @@ function showLevelUp(isBossReward = false) {
             selected.push(pick);
             usedIds.add(pick.id);
         } else {
-            const remaining = CONFIG.UPGRADES.filter(u => isUpgradeValid(u) && !usedIds.has(u.id));
+            const remaining = CONFIG.UPGRADES.filter(u => {
+                if (!isUpgradeValid(u) || usedIds.has(u.id)) return false;
+                if (isBossReward && u.rarity === 'common') return false; // Strictly no common for boss
+                return true;
+            });
             if (remaining.length === 0) break;
             const pick = remaining[Math.floor(Math.random() * remaining.length)];
             selected.push(pick);
