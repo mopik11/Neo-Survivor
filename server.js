@@ -24,6 +24,14 @@ const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || (function() {
 
 const IV_LENGTH = 12;
 
+// --- GLOBAL ERROR HANDLING ---
+process.on('uncaughtException', (err) => {
+    console.error('!!! UNCAUGHT EXCEPTION !!!', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('!!! UNHANDLED REJECTION !!!', reason);
+});
+
 const Security = {
     // Password Hashing (scrypt)
     hashPassword: (password) => {
@@ -80,7 +88,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: ["https://mopik11.github.io", "http://localhost:3000", "http://127.0.0.1:3000"],
+        origin: "*",
         methods: ["GET", "POST"]
     }
 });
@@ -187,6 +195,7 @@ io.on('connection', (socket) => {
 
     // --- ADMIN KONZOLE (2FA OCHRANA + RELACE) ---
     socket.on('requestAdminPin', (data) => {
+        console.log(`[ADMIN] Login attempt for user: ${data.user}`);
         Security.verifyPassword(data.pass, ADMIN_PASS_HASH).then(isMatch => {
             if (data.user === ADMIN_USER && isMatch) {
                 SERVER_ADMIN_PIN = Math.floor(100000 + Math.random() * 900000).toString();
@@ -195,8 +204,12 @@ io.on('connection', (socket) => {
                 console.log(`===========================================\n`);
                 socket.emit('adminAuthStep', { step: 2 });
             } else {
+                console.warn(`[ADMIN] Login failed for ${data.user} - Invalid credentials`);
                 socket.emit('adminAuthError', "Špatné jméno nebo heslo.");
             }
+        }).catch(err => {
+            console.error(`[ADMIN] Critical error during verification:`, err);
+            socket.emit('adminAuthError', "Chyba serveru při ověřování.");
         });
     });
 
@@ -407,25 +420,33 @@ io.on('connection', (socket) => {
             if (row) {
                 Security.verifyPassword(pass, row.password).then(isMatch => {
                     if (isMatch) {
-                        // Dekryptování metadat
-                        const decryptedMeta = Security.decrypt(row.meta);
-                        const parsedMeta = JSON.parse(decryptedMeta);
-                        if (!parsedMeta.abilities) parsedMeta.abilities = { 1: true, 2: false, 3: false };
-                        if (!parsedMeta.selectedAbility) parsedMeta.selectedAbility = 1;
+                        try {
+                            // Dekryptování metadat
+                            const decryptedMeta = Security.decrypt(row.meta);
+                            const parsedMeta = JSON.parse(decryptedMeta);
+                            if (!parsedMeta.abilities) parsedMeta.abilities = { 1: true, 2: false, 3: false };
+                            if (!parsedMeta.selectedAbility) parsedMeta.selectedAbility = 1;
 
-                        // Lazy Migration: Pokud heslo bylo plain-text, zahashujeme ho
-                        if (!row.password.includes(':')) {
-                            Security.hashPassword(pass).then(hashed => {
-                                db.run(`UPDATE accounts SET password = ? WHERE username = ?`, [hashed, user]);
-                            });
+                            // Lazy Migration: Pokud heslo bylo plain-text, zahashujeme ho
+                            if (!row.password.includes(':')) {
+                                Security.hashPassword(pass).then(hashed => {
+                                    db.run(`UPDATE accounts SET password = ? WHERE username = ?`, [hashed, user]);
+                                }).catch(e => console.error("[LOGIN] Migration error:", e));
+                            }
+
+                            console.log(`[LOGIN] Success: "${user}"`);
+                            socket.emit('loginResponse', { success: true, meta: parsedMeta });
+                        } catch (e) {
+                            console.error(`[LOGIN] Meta parse error for "${user}":`, e.message);
+                            socket.emit('loginResponse', { success: false, msg: "Chyba při načítání dat účtu." });
                         }
-
-                        console.log(`[LOGIN] Success: "${user}"`);
-                        socket.emit('loginResponse', { success: true, meta: parsedMeta });
                     } else {
                         console.log(`[LOGIN] Wrong password for "${user}"`);
                         socket.emit('loginResponse', { success: false, msg: "Špatné heslo!" });
                     }
+                }).catch(err => {
+                    console.error(`[LOGIN] Verification error for "${user}":`, err);
+                    socket.emit('loginResponse', { success: false, msg: "Chyba při ověřování hesla." });
                 });
             } else {
                 console.log(`[LOGIN] User "${user}" not found.`);
