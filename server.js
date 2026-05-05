@@ -3,9 +3,20 @@ const http = require('http');
 const { Server } = require('socket.io');
 const sqlite3 = require('sqlite3').verbose();
 const crypto = require('node:crypto');
+const config = require('./server_config');
 
 // --- SECURITY CONFIGURATION ---
-const ENCRYPTION_KEY = Buffer.from('4a66e6c26588825f385c3983274f88e5e1e5e9a4e8d2e6f1a8c3d5b2a1f0e4d9', 'hex'); // V produkci použijte environment variable!
+// Prioritně používáme Environment Variables (pro Alwaysdata/Heroku/Vercel)
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY 
+    ? Buffer.from(process.env.ENCRYPTION_KEY, 'hex') 
+    : (function() {
+        try { return config.ENCRYPTION_KEY; } catch(e) { return null; }
+    })();
+
+const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || (function() {
+    try { return config.ADMIN_PASS_HASH; } catch(e) { return "8f6b6b7a2d6b3a2e:c5d8e7f8...dummy"; }
+})();
+
 const IV_LENGTH = 12;
 
 const Security = {
@@ -102,7 +113,6 @@ const ROOMS = {};
 // NASTAVENÍ PRO ADMIN KONZOLI
 let SERVER_ADMIN_PIN = null;
 const ADMIN_USER = "mopik"; // <-- ZMĚŇ SI UŽIVATELSKÉ JMÉNO
-const ADMIN_PASS_HASH = "8f6b6b7a2d6b3a2e:c5d8e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"; 
 
 const CONFIG = {
     ENEMY_BASE_HEALTH: 20,
@@ -152,38 +162,6 @@ function broadcastServerStats() {
     });
 }
 setInterval(broadcastServerStats, 5000);
-
-io.use((socket, next) => {
-    // INTERCEPT INCOMING (DECRYPTION)
-    const originalOnEvent = socket.onevent;
-    socket.onevent = function (packet) {
-        const args = packet.data || [];
-        if (args.length > 1 && typeof args[1] === 'string' && args[1].startsWith('enc:')) {
-            try {
-                const encrypted = args[1].substring(4);
-                const decrypted = Security.decrypt(encrypted);
-                args[1] = JSON.parse(decrypted);
-            } catch (e) {
-                // Pokud dekryptování selže, necháme to být (možná to není šifrované)
-            }
-        }
-        originalOnEvent.call(this, packet);
-    };
-
-    // INTERCEPT OUTGOING (ENCRYPTION)
-    const originalEmit = socket.emit;
-    socket.emit = function (event, data) {
-        // Nešifrujeme stateUpdate (příliš těžké) a metadata serveru
-        const bypass = ['stateUpdate', 'serverStats', 'leaderboardData', 'adminAuthStep', 'adminAuthError', 'adminResponse'];
-        if (data && typeof data === 'object' && !bypass.includes(event)) {
-            const encrypted = 'enc:' + Security.encrypt(JSON.stringify(data));
-            return originalEmit.call(this, event, encrypted);
-        }
-        return originalEmit.call(this, event, data);
-    };
-    
-    next();
-});
 
 io.on('connection', (socket) => {
     console.log('Hráč připojen:', socket.id);
