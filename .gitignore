@@ -26,3 +26,4 @@ dist-ssr
 # Secrets
 server_config.js
 .env
+get_my_hash.js

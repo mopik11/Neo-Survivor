@@ -16,11 +16,11 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY
     ? Buffer.from(process.env.ENCRYPTION_KEY, 'hex') 
     : (function() {
         try { return config.ENCRYPTION_KEY; } catch(e) { return null; }
-    })();
+    })() || Buffer.from('7f8e9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f', 'hex');
 
 const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || (function() {
-    try { return config.ADMIN_PASS_HASH; } catch(e) { return "8f6b6b7a2d6b3a2e:c5d8e7f8...dummy"; }
-})();
+    try { return config.ADMIN_PASS_HASH; } catch(e) { return null; }
+})() || "8a7b6c5d4e3f2a1b:c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2";
 
 const IV_LENGTH = 12;
 
@@ -79,7 +79,10 @@ const Security = {
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: "*" }
+    cors: {
+        origin: ["https://mopik11.github.io", "http://localhost:3000", "http://127.0.0.1:3000"],
+        methods: ["GET", "POST"]
+    }
 });
 
 // TENTO ENDPOINT UDRŽÍ SERVER NAŽIVU PŘES CRON-JOB.ORG
