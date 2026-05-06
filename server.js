@@ -179,24 +179,22 @@ function broadcastServerStats() {
 }
 setInterval(broadcastServerStats, 5000);
 
-const HARD_CAP_CURRENCY = 1000000;
-const HARD_CAP_LEVEL = 500;
+const MAX_SYNC_GAIN_CURRENCY = 100000;
+const MAX_SYNC_GAIN_LEVEL = 50;
 
 function sanitizeMeta(meta) {
     if (!meta) return { currency: 0, maxLevel: 1, stats: { totalDogecoins: 0 } };
     
-    // Enforce hard caps
-    if (meta.currency > HARD_CAP_CURRENCY) meta.currency = HARD_CAP_CURRENCY;
-    if (meta.maxLevel > HARD_CAP_LEVEL) meta.maxLevel = HARD_CAP_LEVEL;
+    // Check for obvious data corruption
+    if (typeof meta.currency !== 'number' || isNaN(meta.currency)) meta.currency = 0;
+    if (typeof meta.maxLevel !== 'number' || isNaN(meta.maxLevel)) meta.maxLevel = 1;
     
-    // Sanitize stats if they exist
-    if (meta.stats) {
-        if (meta.stats.earnedDogecoins > HARD_CAP_CURRENCY) meta.stats.earnedDogecoins = HARD_CAP_CURRENCY;
-        if (meta.stats.totalDogecoins > HARD_CAP_CURRENCY) meta.stats.totalDogecoins = HARD_CAP_CURRENCY;
-    }
+    if (meta.currency < 0) meta.currency = 0;
+    if (meta.maxLevel < 1) meta.maxLevel = 1;
     
     return meta;
 }
+
 
 // ANTI-CHEAT: Cleanup database on startup (reset exploited values)
 function cleanupDatabase() {
@@ -212,13 +210,10 @@ function cleanupDatabase() {
                 let needsUpdate = false;
                 if (JSON.stringify(sanitized) !== decrypted) needsUpdate = true;
                 
-                const validatedLevel = Math.min(HARD_CAP_LEVEL, row.max_level);
-                if (validatedLevel !== row.max_level) needsUpdate = true;
-
                 if (needsUpdate) {
                     const encrypted = Security.encrypt(JSON.stringify(sanitized));
-                    db.run(`UPDATE accounts SET meta = ?, max_level = ? WHERE username = ?`, [encrypted, validatedLevel, row.username]);
-                    console.log(`[SECURITY] Sanitized account: ${row.username}`);
+                    db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, row.username]);
+                    console.log(`[SECURITY] Sanitized account data: ${row.username}`);
                 }
             } catch (e) {
                 // Skip if decryption fails (might be plain json or old account)
@@ -557,24 +552,17 @@ io.on('connection', (socket) => {
                             try { oldMeta = JSON.parse(row.meta); } catch(e2) { oldMeta = {}; }
                         }
 
-                        // ANTI-CHEAT: Sanity checks for progress
-                        const MAX_SESSION_CURRENCY_GAIN = 100000;
-                        const MAX_SESSION_LEVEL_GAIN = 50;
-
-                        // Sanitize provided meta first
-                        meta = sanitizeMeta(meta);
-
                         let validatedCurrency = meta.currency || 0;
                         let oldCurrency = oldMeta.currency || 0;
                         
-                        if (validatedCurrency > oldCurrency + MAX_SESSION_CURRENCY_GAIN) {
-                            validatedCurrency = oldCurrency + MAX_SESSION_CURRENCY_GAIN;
+                        if (validatedCurrency > oldCurrency + MAX_SYNC_GAIN_CURRENCY) {
+                            validatedCurrency = oldCurrency + MAX_SYNC_GAIN_CURRENCY;
                         }
                         meta.currency = validatedCurrency;
 
                         let newMaxLevel = Math.max(meta.maxLevel || 1, row.max_level || 1);
-                        if (newMaxLevel > (row.max_level || 1) + MAX_SESSION_LEVEL_GAIN) {
-                            newMaxLevel = (row.max_level || 1) + MAX_SESSION_LEVEL_GAIN;
+                        if (newMaxLevel > (row.max_level || 1) + MAX_SYNC_GAIN_LEVEL) {
+                            newMaxLevel = (row.max_level || 1) + MAX_SYNC_GAIN_LEVEL;
                         }
                         meta.maxLevel = newMaxLevel;
 

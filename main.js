@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.375
+ * NEO SURVIVOR - Core Game Logic - v1.376
  */
 
 window.addEventListener('beforeunload', () => {
@@ -899,7 +899,13 @@ class MenuAnimation {
     animate() {
         if (!this.canvas) return;
         const menu = document.getElementById('menu-modal');
-        if (menu && !menu.classList.contains('active')) {
+        const login = document.getElementById('login-modal');
+        
+        // Animovat pokud je vidět menu NEBO login (pozadí je sdílené)
+        const isVisible = (menu && menu.classList.contains('active')) || 
+                          (login && login.classList.contains('active'));
+
+        if (!isVisible) {
             requestAnimationFrame(() => this.animate());
             return;
         }
@@ -3224,8 +3230,7 @@ function togglePause(isAFK = false) {
     }
 
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
-    
-    // Neo Survivor v1.375
+
 
     // Reset AFK timer and spawn timer when unpausing
     if (!GAME.paused) {
@@ -4820,12 +4825,12 @@ function init() {
             "Napiš mi, co bys chtěl vylepšit nebo nahlásit chybu.": "Tell me what to improve or report a bug.",
             "ODESLAT": "SUBMIT",
             "🚀 FLOTILA LODÍ": "🚀 SHIP FLEET",
-            "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ALIEN ATLAS",
             "Základní vyvážená loď.": "Basic balanced ship.",
             "Střílí zničující lasery na více cílů.": "Shoots devastating lasers at multiple targets.",
             "Základní útok tvoří rotující bariéru.": "Basic attack forms a rotating barrier.",
             "Střílí salvu nábojů zblízka.": "Fires a shotgun blast at close range.",
             "Vyvolává armádu pomocníků z mrtvých.": "Summons an army of helpers from the dead.",
+            "👾 ATLAS MIMOZEMŠŤANŮ": "👾 ALIEN ATLAS",
             "Základní červený nepřítel, útočí ve vlnách.": "Basic red enemy, attacks in waves.",
             "Zvláštní fialový/modrý tvar, pohybuje se jinak.": "Special purple/blue shape, moves differently.",
             "Rychle se přiblíží a vybuchne, když zasáhne cíl.": "Quickly approaches and explodes on impact.",
@@ -4877,7 +4882,7 @@ function init() {
             "DENNÍ DÁREK": "DAILY REWARD",
             "Další dárek za ": "Next reward in ",
             "💎 SBÍRKA EMOJI": "💎 EMOJI COLLECTION",
-            "Vzácná emoji můžeš prodat za Dogecoiny:": "Rare emojis can be sold for Dogecoins:",
+            "Vzácná emoji můžeš prodat za Dogecoiny:": "Rare emojis can be sold for Dogecoiny:",
             "💎 EXTRÉMNÍ NÁLEZ!": "💎 EXTREME FIND!",
             "Diamant (💎) má hodnotu 20 000 Doge a šanci 0.001% (padá z JAKÉKOLIV bedny!)": "The Diamond (💎) is worth 20 000 Doge with a 0.001% chance (drops from ANY crate!)",
             "Chyba: Nejseš připojen k serveru.": "Error: Not connected to server.",
@@ -5073,9 +5078,9 @@ function init() {
             "Objevuje se každých 10 levelů. Vždy se mu snaž uhýbat do stran!": "Spawns every 10 levels. Always try to dodge sideways!",
             "Za 10 killů máš 1 Doge. Kupuj za ně trvalá vylepšení!": "10 kills = 1 Doge. Buy permanent upgrades with them!",
             "VESMÍRNÉ BEDNY": "SPACE CRATES",
-            "📦 OBYČEJNÁ": "📦 COMMON",
-            "💎 PRÉMIOVÁ": "💎 PREMIUM",
-            "👑 LEGENDÁRNÍ": "👑 LEGENDARY",
+            "OBYČEJNÁ": "COMMON",
+            "PRÉMIOVÁ": "PREMIUM",
+            "LEGENDÁRNÍ": "LEGENDARY",
             "SUNDAT": "UNEQUIP",
             "NASADIT": "EQUIP",
             "PRODAT": "SELL",
@@ -5168,7 +5173,7 @@ function init() {
             "Otevírání:": "Opening:",
             "Prodej:": "Selling:",
             "💎 SBÍRKA EMOJI": "💎 EMOJI COLLECTION",
-            "Vzácná emoji můžeš prodat za Dogecoiny:": "You can sell rare emojis for Dogecoins:",
+            "Vzácná emoji můžeš prodat za Dogecoiny:": "You can sell rare emojis for Dogecoiny:",
             "💎 EXTRÉMNÍ NÁLEZ!": "💎 EXTREME FIND!",
             "Diamant (💎) má hodnotu 20 000 Doge a šanci 0.001% (padá z JAKÉKOLIV bedny!)": "Diamond (💎) is worth 20,000 Doge and has a 0.001% chance (drops from ANY crate!)",
             "Nemáš dost Dogecoinu!": "Not enough Dogecoins!",
