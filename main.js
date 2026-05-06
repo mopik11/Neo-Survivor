@@ -2531,6 +2531,7 @@ class Player {
         this.nextLevelXp = Math.floor(this.nextLevelXp * 1.25);
         AudioEngine.play('lvlup');
         GAME.paused = true;
+        META.lastMoveTime = Date.now(); // Reset AFK timer to give more time for selection
         showLevelUp();
     }
     applyUpgrade(u, record = true) {
@@ -5967,6 +5968,9 @@ function handleEnemyDeath(enemy) {
     enemy.dead = true;
     AudioEngine.play('hit');
 
+    // Reset AFK timer on Level-Up / Kill
+    META.lastMoveTime = Date.now();
+
     if (!NET.isMultiplayer && GAME.entities.gems) {
         // --- NEW ECONOMY (v1.385): 1 KILL = 1 DOGE | 1 BOSS = 500 DOGE ---
         if (!META.currency) META.currency = 0;
@@ -6057,8 +6061,9 @@ function update(dt) {
         }
         META.lastMoveTime = now;
         META.isAFK = false;
-    } else if (GAME.active && !GAME.paused && (now - (META.lastMoveTime || now) > 10000)) {
-        // AFK after 10s – show AFK screen (togglePause also saves session + disconnects MP socket)
+    } else if (GAME.active && !GAME.paused && !document.querySelector('.modal.active') && (now - (META.lastMoveTime || now) > 10000)) {
+        // AFK after 10s - show AFK screen (togglePause also saves session + disconnects MP socket)
+        // Only trigger if NO modal is currently active (e.g. Level Up)
         META.isAFK = true;
         togglePause(true);
     }

@@ -114,9 +114,6 @@ const db = new sqlite3.Database('./neo_survivor.db', (err) => {
             
             // Migrace (v1.385): Přidání sloupce last_level_up pokud chybí
             db.run(`ALTER TABLE accounts ADD COLUMN last_level_up INTEGER DEFAULT 0`, (err) => {});
-
-            // Jednorázová manuální čistka nahlášených hackerů
-            db.run("DELETE FROM accounts WHERE username = 'asdfasdfasdf' OR username = 'sdfsdfsdf'");
             db.run(`DELETE FROM accounts WHERE username IS NULL OR username = '' OR password IS NULL OR password = ''`);
             db.run(`UPDATE accounts SET username = LOWER(username)`);
 
