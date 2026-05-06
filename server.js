@@ -88,7 +88,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "https://mopik11.github.io/Neo-Survivor",
+        origin: "https://mopik11.github.io",
         methods: ["GET", "POST"]
     }
 });
