@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.371
+ * NEO SURVIVOR - Core Game Logic - v1.372
  */
 
 window.addEventListener('beforeunload', () => {
@@ -508,6 +508,7 @@ const GAME = {
     upgradeOptionsCount: 3,
     loopStarted: false,
     chatActive: false,
+    lastSyncTime: 0,
     entities: {
         player: null,
         enemies: [],
@@ -6018,6 +6019,12 @@ function update(dt) {
         // AFK after 10s – show AFK screen (togglePause also saves session + disconnects MP socket)
         META.isAFK = true;
         togglePause(true);
+    }
+
+    // Periodic progress sync (Anti-Cheat compliance)
+    if (GAME.active && !GAME.paused && now - (GAME.lastSyncTime || 0) > 15000) {
+        GAME.lastSyncTime = now;
+        saveMeta();
     }
 
     if (GAME.paused || !GAME.entities || !GAME.entities.player) {

@@ -527,7 +527,7 @@ io.on('connection', (socket) => {
                         }
 
                         // ANTI-CHEAT: Sanity checks for progress
-                        const MAX_SESSION_CURRENCY_GAIN = 50000;
+                        const MAX_SESSION_CURRENCY_GAIN = 100000;
                         const MAX_SESSION_LEVEL_GAIN = 50;
 
                         // Sanitize provided meta first
