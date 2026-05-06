@@ -216,42 +216,7 @@ function sanitizeMeta(meta) {
 }
 
 
-// ANTI-CHEAT: Cleanup database on startup (reset exploited values)
-function cleanupDatabase() {
-    console.log("[SECURITY] Starting database cleanup...");
-    db.all(`SELECT username, meta, max_level FROM accounts`, [], (err, rows) => {
-        if (err) return console.error("[SECURITY] Cleanup error:", err);
-        rows.forEach(row => {
-            try {
-                const decrypted = Security.decrypt(row.meta);
-                const meta = JSON.parse(decrypted);
-                const sanitized = sanitizeMeta(meta);
-                
-                let needsUpdate = false;
-                if (JSON.stringify(sanitized) !== decrypted) needsUpdate = true;
-                
-                if (needsUpdate) {
-                    const encrypted = Security.encrypt(JSON.stringify(sanitized));
-                    db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, row.username]);
-                    console.log(`[SECURITY] Sanitized account data: ${row.username}`);
-                }
-            } catch (e) {
-                // FALLBACK: Pokud dešifrování selže, zkusíme to jako prostý JSON (pro staré účty)
-                try {
-                    const meta = JSON.parse(row.meta);
-                    const sanitized = sanitizeMeta(meta);
-                    const encrypted = Security.encrypt(JSON.stringify(sanitized));
-                    db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, row.username]);
-                    console.log(`[SECURITY] Converted old account to encrypted: ${row.username}`);
-                } catch (e2) {
-                    console.error(`[SECURITY] Fatal metadata error for ${row.username}:`, e2.message);
-                }
-            }
-        });
-        console.log("[SECURITY] Database cleanup finished.");
-    });
-}
-cleanupDatabase();
+
 
 io.on('connection', (socket) => {
     console.log('Hráč připojen:', socket.id);
@@ -587,36 +552,16 @@ io.on('connection', (socket) => {
                             try { oldMeta = JSON.parse(row.meta); } catch(e2) { oldMeta = {}; }
                         }
 
-                        // --- SECURITY & PERSISTENCE (v1.385) ---
-                        // 1. Level is server-authoritative (ignore client-side level in sync)
-                        const currentMax = row.max_level || 1;
-                        meta.maxLevel = currentMax;
+                        // --- SMART MERGE (v1.385.2) ---
+                        const merged = { ...oldMeta, ...meta };
+                        merged.maxLevel = Math.max(oldMeta.maxLevel || 1, row.max_level || 1, meta.maxLevel || 1);
 
-                        // 2. Currency Merge: Keep the higher amount (Prevents loss of multiplayer rewards)
-                        const oldCurrency = oldMeta.currency || 0;
-                        const newCurrency = meta.currency || 0;
-                        meta.currency = Math.max(oldCurrency, newCurrency);
-
-                        // 3. Inventory/Crates Protection: Merge unopened crates
-                        if (oldMeta.unopenedCrates) {
-                            if (!meta.unopenedCrates) meta.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
-                            meta.unopenedCrates.basic = Math.max(meta.unopenedCrates.basic || 0, oldMeta.unopenedCrates.basic || 0);
-                            meta.unopenedCrates.premium = Math.max(meta.unopenedCrates.premium || 0, oldMeta.unopenedCrates.premium || 0);
-                            meta.unopenedCrates.legendary = Math.max(meta.unopenedCrates.legendary || 0, oldMeta.unopenedCrates.legendary || 0);
-                        }
-
-                        // 4. Stats Protection
-                        if (oldMeta.stats && meta.stats) {
-                            meta.stats.totalDogecoins = Math.max(meta.stats.totalDogecoins || 0, oldMeta.stats.totalDogecoins || 0);
-                            meta.stats.totalBossKills = Math.max(meta.stats.totalBossKills || 0, oldMeta.stats.totalBossKills || 0);
-                        }
-
-                        const encryptedMeta = Security.encrypt(JSON.stringify(meta));
+                        const encryptedMeta = Security.encrypt(JSON.stringify(merged));
                         db.run(`UPDATE accounts SET meta = ? WHERE username = ?`,
                             [encryptedMeta, user],
                             (err) => {
                                 // Sync success - Return the FULL merged meta to the client
-                                socket.emit('syncSuccess', { meta: meta });
+                                socket.emit('syncSuccess', { meta: merged });
                             });
                     }
                 });
@@ -648,7 +593,7 @@ io.on('connection', (socket) => {
                 const levelsGained = reportedLevel - currentMax;
                 const minTimeRequired = levelsGained * 10000; // 10s per level minimum
                 
-                if (now - lastTime < minTimeRequired && !socket.isAdmin) {
+                if (now - lastTime < minTimeRequired) {
                     console.warn(`[ANTI-CHEAT] ${user} too fast level up: ${currentMax} -> ${reportedLevel} in ${now - lastTime}ms. Rejected.`);
                     return;
                 }
@@ -741,7 +686,11 @@ io.on('connection', (socket) => {
         const r = socket.roomId;
         const p = socket.playerId;
         if (r && ROOMS[r] && ROOMS[r].players[p]) {
-            Object.assign(ROOMS[r].players[p], data);
+            // ANTI-CHEAT: Prevent Prototype Pollution and Admin Spoofing
+            for (let key in data) {
+                if (key === '__proto__' || key === 'constructor' || key === 'isAdmin') continue;
+                ROOMS[r].players[p][key] = data[key];
+            }
 
             if (data.dead && !ROOMS[r].isGameOver) {
                 // Hráč umřel -> Vytvořit náhrobek

@@ -307,6 +307,7 @@ const META = {
     achievements: {},
     stats: { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 },
     inventory: [],
+    unopenedCrates: { basic: 0, premium: 0, legendary: 0 },
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null
@@ -4163,6 +4164,7 @@ window.softResetToMenu = () => {
 
     switchMusic('menu');
     resetGame();
+    saveMeta();
 };
 
 document.addEventListener('click', (e) => {
@@ -6030,8 +6032,8 @@ function handleEnemyDeath(enemy) {
             GAME.dogeGained += 1;
             META.stats.totalDogecoins += 1;
 
-            // Throttled save in solo mode (every 20 kills)
-            if (GAME.kills % 20 === 0) saveMeta();
+            // Throttled save in solo mode (every 10 kills)
+            if (GAME.kills % 10 === 0) saveMeta();
         }
 
         if (enemy.type === 4) { // Zloděj drop

@@ -217,15 +217,15 @@ canvas {
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 1;
+  z-index: 20;
   pointer-events: none;
 }
 
 
 
 .modal-content {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
-  backdrop-filter: blur(20px);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+  backdrop-filter: none;
   padding: 2rem;
   border-radius: 40px;
   border: 1px solid rgba(255, 255, 255, 0.15);
