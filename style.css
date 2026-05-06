@@ -193,16 +193,17 @@ canvas {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(2, 6, 23, 0.5); /* Ztmavené pozadí pro hloubku */
-  backdrop-filter: blur(8px); /* Jemný blur pro premium vzhled */
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(2, 6, 23, 0.4);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   display: flex;
+
   justify-content: center;
   align-items: center;
   z-index: var(--modal-z);
   opacity: 0;
   visibility: hidden;
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s ease;
   padding: 1rem;
 }
 
@@ -224,37 +225,32 @@ canvas {
 
 
 .modal-content {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 28px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 
-              0 0 40px rgba(99, 102, 241, 0.1);
-  width: 95vw;
-  max-width: 850px;
-  position: relative;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+  backdrop-filter: none;
+  padding: 2rem;
+  border-radius: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.9), 
+              0 0 40px rgba(99, 102, 241, 0.2);
+  max-width: 650px;
+  width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
   text-align: center;
-  padding: 2.5rem;
-  transform: translateY(30px) scale(0.95);
-  opacity: 0;
-  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.5) transparent;
+  transform: scale(0.9) translateY(20px);
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  z-index: 2;
 }
 
 .modal.active .modal-content {
-  transform: translateY(0) scale(1);
-  opacity: 1;
-}
-
-.btn-restart {
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.btn-restart:hover {
-  transform: scale(1.05) translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3), 0 0 15px var(--accent-glow);
-}
-
-.btn-restart:active {
-  transform: scale(0.98);
+  transform: scale(1) translateY(0);
 }
 
 /* Premium X Close Button */
@@ -336,23 +332,23 @@ canvas {
 .logo {
   font-size: 5rem;
   font-weight: 900;
+  letter-spacing: -4px;
+  color: white;
   margin-bottom: 0.5rem;
-  letter-spacing: -2px;
-  background: linear-gradient(to bottom, #fff 30%, #94a3b8 100%);
+  line-height: 1;
+  animation: logoPulse 4s ease-in-out infinite;
+  background: linear-gradient(to bottom, #fff 0%, #94a3b8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.5));
-  animation: logoFloat 6s ease-in-out infinite;
-}
-
-@keyframes logoFloat {
-  0%, 100% { transform: translateY(0) rotate(0deg); filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.4)); }
-  50% { transform: translateY(-15px) rotate(1deg); filter: drop-shadow(0 15px 30px rgba(99, 102, 241, 0.6)); }
+  filter: drop-shadow(0 0 20px rgba(255,255,255,0.1));
 }
 
 .logo span {
   color: var(--accent-color);
-  -webkit-text-fill-color: var(--accent-color);
+  text-shadow: 0 0 40px var(--accent-glow);
+  background: linear-gradient(to bottom, #6366f1 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .subtitle {
@@ -1289,42 +1285,20 @@ canvas {
 }
 
 #chat-input {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: white;
-  font-family: inherit;
-  font-size: 0.85rem;
-  outline: none;
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: white;
+    font-family: inherit;
+    font-size: 0.85rem;
+    outline: none;
 }
 
 #chat-input:focus {
-  border-color: var(--accent-color);
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.login-input {
-  width: 100%;
-  padding: 1.2rem;
-  background: rgba(0, 0, 0, 0.3);
-  border: 2px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  color: white;
-  font-family: 'Outfit', sans-serif;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 2px;
-  transition: all 0.3s ease;
-  outline: none;
-}
-
-.login-input:focus {
-  background: rgba(0, 0, 0, 0.5);
-  border-color: var(--accent-color);
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
-  transform: translateY(-2px);
+    border-color: var(--accent-color);
+    background: rgba(255,255,255,0.1);
 }
 
 #gameover-stats p {
