@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.376
+ * NEO SURVIVOR - Core Game Logic - v1.377
  */
 
 window.addEventListener('beforeunload', () => {
@@ -898,19 +898,24 @@ class MenuAnimation {
     }
     animate() {
         if (!this.canvas) return;
-        const menu = document.getElementById('menu-modal');
-        const login = document.getElementById('login-modal');
         
-        // Animovat pokud je vidět menu NEBO login (pozadí je sdílené)
-        const isVisible = (menu && menu.classList.contains('active')) || 
-                          (login && login.classList.contains('active'));
-
-        if (!isVisible) {
+        // Vykreslovat pokud není aktivní hra
+        if (GAME.active) {
             requestAnimationFrame(() => this.animate());
             return;
         }
 
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // Pozadí (Gradient) - v1.377
+        const grad = this.ctx.createRadialGradient(
+            this.canvas.width/2, this.canvas.height/2, 0,
+            this.canvas.width/2, this.canvas.height/2, Math.max(this.canvas.width, this.canvas.height)
+        );
+        grad.addColorStop(0, '#1e1b4b');
+        grad.addColorStop(0.5, '#0a0a2e');
+        grad.addColorStop(1, '#020617');
+        this.ctx.fillStyle = grad;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
 
         // Stars
         this.ctx.fillStyle = 'rgba(255,255,255,0.6)';
@@ -4451,6 +4456,16 @@ function initSocket() {
             const waitModal = document.getElementById('waiting-modal');
             if (waitModal) waitModal.classList.remove('active');
             gameOver();
+        });
+
+        NET.socket.on('serverStats', (data) => {
+            const el = document.getElementById('active-players-count');
+            if (el) {
+                // Zobrazujeme oba údaje pro lepší přehled (v1.377)
+                const online = data.online || 0;
+                const inBattle = data.inBattle || 0;
+                el.innerHTML = `${online} <span style="font-size:0.65rem; opacity:0.6; margin-left:5px;">(${inBattle} ${window.T("v bitvě")})</span>`;
+            }
         });
 
         NET.socket.on('bossWarning', (data) => {

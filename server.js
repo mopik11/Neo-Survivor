@@ -154,7 +154,6 @@ function broadcastServerStats() {
     let playersInRooms = 0;
     for (const id in ROOMS) {
         if (ROOMS[id] && ROOMS[id].players) {
-            // Počítáme pouze ty, kteří nejsou odpojeni
             for (const pid in ROOMS[id].players) {
                 if (!ROOMS[id].players[pid].disconnected) {
                     playersInRooms++;
@@ -162,19 +161,10 @@ function broadcastServerStats() {
             }
         }
     }
-
-    // Spočítáme unikátní hráče podle jejich persistentního ID
-    const uniquePlayers = new Set();
-    io.sockets.sockets.forEach(s => {
-        if (s.playerId) uniquePlayers.add(s.playerId);
-    });
-
-    // Pokud Set prázdný (nikdo ještě neposlal initPlayer), použijeme hrubý odhad socketů
-    const displayCount = uniquePlayers.size > 0 ? uniquePlayers.size : io.engine.clientsCount;
-
+    const totalOnline = io.sockets.sockets.size;
     io.emit('serverStats', {
-        activePlayers: displayCount,
-        playingNow: playersInRooms
+        online: totalOnline,
+        inBattle: playersInRooms
     });
 }
 setInterval(broadcastServerStats, 5000);
@@ -216,7 +206,16 @@ function cleanupDatabase() {
                     console.log(`[SECURITY] Sanitized account data: ${row.username}`);
                 }
             } catch (e) {
-                // Skip if decryption fails (might be plain json or old account)
+                // FALLBACK: Pokud dešifrování selže, zkusíme to jako prostý JSON (pro staré účty)
+                try {
+                    const meta = JSON.parse(row.meta);
+                    const sanitized = sanitizeMeta(meta);
+                    const encrypted = Security.encrypt(JSON.stringify(sanitized));
+                    db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, row.username]);
+                    console.log(`[SECURITY] Converted old account to encrypted: ${row.username}`);
+                } catch (e2) {
+                    console.error(`[SECURITY] Fatal metadata error for ${row.username}:`, e2.message);
+                }
             }
         });
         console.log("[SECURITY] Database cleanup finished.");
@@ -555,13 +554,16 @@ io.on('connection', (socket) => {
                         let validatedCurrency = meta.currency || 0;
                         let oldCurrency = oldMeta.currency || 0;
                         
-                        if (validatedCurrency > oldCurrency + MAX_SYNC_GAIN_CURRENCY) {
+                        // ANTI-CHEAT bypass pro adminy (nebo pokud je bypass explicitně povolen přes server kód)
+                        const bypass = data.bypassCaps === true;
+
+                        if (!bypass && validatedCurrency > oldCurrency + MAX_SYNC_GAIN_CURRENCY) {
                             validatedCurrency = oldCurrency + MAX_SYNC_GAIN_CURRENCY;
                         }
                         meta.currency = validatedCurrency;
 
                         let newMaxLevel = Math.max(meta.maxLevel || 1, row.max_level || 1);
-                        if (newMaxLevel > (row.max_level || 1) + MAX_SYNC_GAIN_LEVEL) {
+                        if (!bypass && newMaxLevel > (row.max_level || 1) + MAX_SYNC_GAIN_LEVEL) {
                             newMaxLevel = (row.max_level || 1) + MAX_SYNC_GAIN_LEVEL;
                         }
                         meta.maxLevel = newMaxLevel;
@@ -1170,7 +1172,7 @@ setInterval(() => {
                         }
                     }
 
-                    if (enemy.type === 6) { // SKOKAN (Server logic)
+                    if (enemy.type === 6) { // SKOKAN (Server logic - v1.377)
                         if (!enemy.jumpState) enemy.jumpState = 'WALKING';
 
                         if (enemy.jumpState === 'WALKING') {

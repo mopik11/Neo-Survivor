@@ -22,7 +22,7 @@
 
 body {
   font-family: 'Outfit', sans-serif;
-  background: radial-gradient(circle at center, #1e1b4b 0%, #020617 100%);
+  background-color: #020617;
   color: var(--text-main);
   overflow: hidden;
   width: 100vw;
@@ -31,16 +31,18 @@ body {
 }
 
 
+
 #app {
   position: relative;
   width: 100vw;
   height: 100vh;
-  background: transparent;
+  background: transparent !important;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 2;
 }
+
 
 
 canvas {
