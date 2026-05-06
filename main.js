@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.384
+ * NEO SURVIVOR - Core Game Logic - v1.385
  */
 
 window.addEventListener('beforeunload', () => {
@@ -4497,6 +4497,13 @@ function initSocket() {
         });
 
 
+        NET.socket.on('currencyUpdated', (data) => {
+            if (data && data.amount !== undefined) {
+                META.currency = data.amount;
+                updateUI();
+            }
+        });
+
         NET.socket.on('explosion', (data) => {
             // Nuke or Kamikadze explosion
             if (GAME.entities.fire) {
@@ -5963,6 +5970,28 @@ function handleEnemyDeath(enemy) {
     AudioEngine.play('hit');
 
     if (!NET.isMultiplayer && GAME.entities.gems) {
+        // --- NEW ECONOMY (v1.385): 1 KILL = 1 DOGE | 1 BOSS = 500 DOGE ---
+        if (!META.currency) META.currency = 0;
+        if (!META.stats) META.stats = { totalDogecoins: 0, totalBossKills: 0 };
+        
+        if (enemy.isBoss) {
+            META.currency += 500;
+            META.stats.totalDogecoins += 500;
+            META.stats.totalBossKills++;
+            
+            if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
+            for (let i = 0; i < 10; i++) GAME.entities.gems.push(new Gem(enemy.x + (Math.random() - 0.5) * 150, enemy.y + (Math.random() - 0.5) * 150));
+            
+            if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
+            META.unopenedCrates.basic++;
+            saveMeta();
+            showLevelUp(true);
+            checkAchievements();
+        } else {
+            META.currency += 1;
+            META.stats.totalDogecoins += 1;
+        }
+
         if (enemy.type === 4) { // Zloděj drop
             const drops = (enemy.stolenGems || 0) + 5;
             for (let i = 0; i < drops; i++) {
@@ -5970,19 +5999,6 @@ function handleEnemyDeath(enemy) {
             }
         } else {
             let isNuke = false, isMagnet = false;
-            if (enemy.isBoss) {
-                if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
-                for (let i = 0; i < 10; i++) GAME.entities.gems.push(new Gem(enemy.x + (Math.random() - 0.5) * 150, enemy.y + (Math.random() - 0.5) * 150));
-                
-                if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0 };
-                META.stats.totalBossKills++;
-                if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
-                META.unopenedCrates.basic++;
-                saveMeta();
-                // showCrateNotification moved to applyUpgrade with 5s delay
-                showLevelUp(true);
-                checkAchievements();
-            }
             const gem = new Gem(enemy.x, enemy.y);
             gem.isNuke = isNuke; gem.isMagnet = isMagnet;
             GAME.entities.gems.push(gem);

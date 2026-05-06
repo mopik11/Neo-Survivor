@@ -169,8 +169,35 @@ function broadcastServerStats() {
 }
 setInterval(broadcastServerStats, 5000);
 
-const MAX_SYNC_GAIN_CURRENCY = 100000;
-const MAX_SYNC_GAIN_LEVEL = 50;
+// --- ECONOMY CONFIG (v1.385) ---
+const REWARD_NORMAL_KILL = 1;
+const REWARD_BOSS_KILL = 500;
+
+function rewardPlayer(socket, amount) {
+    const user = socket.authenticatedUser;
+    if (!user) return;
+    
+    db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+        if (!err && row) {
+            let meta;
+            try {
+                meta = JSON.parse(Security.decrypt(row.meta));
+            } catch(e) { 
+                try { meta = JSON.parse(row.meta); } catch(e2) { meta = {}; }
+            }
+            
+            meta.currency = (meta.currency || 0) + amount;
+            if (!meta.stats) meta.stats = { totalDogecoins: 0 };
+            meta.stats.totalDogecoins = (meta.stats.totalDogecoins || 0) + amount;
+            
+            const encrypted = Security.encrypt(JSON.stringify(meta));
+            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user]);
+            
+            // Inform client to update UI
+            socket.emit('currencyUpdated', { amount: meta.currency });
+        }
+    });
+}
 
 function sanitizeMeta(meta) {
     if (!meta) return { currency: 0, maxLevel: 1, stats: { totalDogecoins: 0 } };
@@ -804,6 +831,7 @@ io.on('connection', (socket) => {
                     } else {
                         let isNuke = false, isMagnet = false;
                         if (enemy.isBoss) {
+                            rewardPlayer(socket, REWARD_BOSS_KILL);
                             if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
                             for (let i = 0; i < 10; i++) ROOMS[r].gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x + (Math.random() - 0.5) * 150, y: enemy.y + (Math.random() - 0.5) * 150 });
                             
@@ -813,6 +841,8 @@ io.on('connection', (socket) => {
 
                             // Emit bossDefeated for rewards (crate + special upgrade)
                             io.to(r).emit('bossDefeated', { id: enemy.id });
+                        } else {
+                            rewardPlayer(socket, REWARD_NORMAL_KILL);
                         }
                         ROOMS[r].gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x, y: enemy.y, isNuke, isMagnet });
                     }
@@ -1176,7 +1206,7 @@ setInterval(() => {
                         }
                     }
 
-                    if (enemy.type === 6) { // SKOKAN (Server logic - v1.377)
+                    if (enemy.type === 6) { // SKOKAN (Server logic - v1.385)
                         if (!enemy.jumpState) enemy.jumpState = 'WALKING';
 
                         if (enemy.jumpState === 'WALKING') {
