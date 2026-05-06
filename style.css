@@ -62,6 +62,7 @@ canvas {
   pointer-events: none;
   z-index: 5000;
   padding: 1.5rem;
+  display: none;
 }
 
 .top-bar {
