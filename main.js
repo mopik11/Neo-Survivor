@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.382
+ * NEO SURVIVOR - Core Game Logic - v1.384
  */
 
 window.addEventListener('beforeunload', () => {
@@ -281,7 +281,8 @@ const NET = {
     roomId: null,
     isMultiplayer: false,
     others: {},
-    serverPollingInterval: null
+    serverPollingInterval: null,
+    sessionToken: null
 };
 
 let myPlayerId = localStorage.getItem('neoSurvivor_pid');
@@ -457,8 +458,8 @@ const saveMeta = () => {
     const savedPass = localStorage.getItem('neoSurvivor_pass');
 
     if (savedUser && savedPass && NET.socket && NET.socket.connected) {
-        NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META });
-        NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel });
+        NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META, token: NET.sessionToken });
+        NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel, token: NET.sessionToken });
     }
 };
 
@@ -4199,7 +4200,7 @@ function initSocket() {
 
             const savedUser = localStorage.getItem('neoSurvivor_user');
             if (savedUser) {
-                NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel });
+                NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel, token: NET.sessionToken });
             }
 
             NET.socket.emit('requestLeaderboard');
@@ -4432,7 +4433,7 @@ function initSocket() {
                 META.maxLevel = GAME.entities.player.level;
                 saveMetaLocalOnly();
                 if (NET.socket && NET.socket.connected && META.playerName) {
-                    NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel });
+                    NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel, token: NET.sessionToken });
                 }
             }
             AudioEngine.play('lvlup');
@@ -4647,6 +4648,7 @@ function handleAuth(isLogin) {
             
             if (res.success) {
                 console.log(`[AUTH] ${eventName} success!`);
+                if (res.token) NET.sessionToken = res.token;
                 META.playerName = nameVal.toLowerCase().trim();
                 
                 // Safer merge to protect nested properties like META.upgrades.hat
@@ -5378,6 +5380,7 @@ function init() {
             NET.socket.emit('login', { user: savedUser, pass: savedPass });
             NET.socket.once('loginResponse', (res) => {
                 if (res.success) {
+                    if (res.token) NET.sessionToken = res.token;
                     META.playerName = savedUser;
                     
                     // Safer merge to protect nested properties

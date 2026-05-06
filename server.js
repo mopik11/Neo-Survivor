@@ -433,7 +433,9 @@ io.on('connection', (socket) => {
                             return socket.emit('registerResponse', { success: false, msg: 'Chyba při zápisu do databáze.' });
                         }
                         console.log(`[REGISTER] Success: "${user}"`);
-                        socket.emit('registerResponse', { success: true, meta: defaultMeta });
+                        socket.authenticatedUser = user;
+                        socket.sessionToken = crypto.randomBytes(16).toString('hex');
+                        socket.emit('registerResponse', { success: true, meta: defaultMeta, token: socket.sessionToken });
                         broadcastLeaderboard();
                     });
             });
@@ -513,7 +515,7 @@ io.on('connection', (socket) => {
                             }
 
                             console.log(`[LOGIN] Success: "${user}"`);
-                            socket.emit('loginResponse', { success: true, meta: parsedMeta });
+                            socket.authenticatedUser = user; socket.sessionToken = crypto.randomBytes(16).toString('hex'); socket.emit('loginResponse', { success: true, meta: parsedMeta, token: socket.sessionToken });
                         } catch (e) {
                             console.error(`[LOGIN] Meta parse error for "${user}":`, e.message);
                             socket.emit('loginResponse', { success: false, msg: "Chyba při načítání dat účtu." });
@@ -534,11 +536,15 @@ io.on('connection', (socket) => {
     });
 
     socket.on('syncAccount', (data) => {
-        let { user, pass, meta } = data;
-        if (!user) return;
-        user = user.toLowerCase().trim();
-        db.get(`SELECT password, max_level FROM accounts WHERE username = ?`, [user], (err, row) => {
+        // SECURITY: Use socket-bound identity and session token (Anti-Console Exploit)
+        const user = socket.authenticatedUser;
+        if (!user || data.token !== socket.sessionToken) {
+            return socket.emit('syncError', "Nutné přihlášení nebo neplatný session token.");
+        }
+
+        db.get(`SELECT password, max_level, meta FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (row) {
+                // Verify by pass just in case, but socket identity is primary
                 Security.verifyPassword(pass, row.password).then(isMatch => {
                     if (isMatch) {
                         let oldMeta;
@@ -555,15 +561,7 @@ io.on('connection', (socket) => {
                         // ANTI-CHEAT bypass pro adminy (nebo pokud je bypass explicitně povolen přes server kód)
                         const bypass = data.bypassCaps === true;
 
-                        if (!bypass && validatedCurrency > oldCurrency + MAX_SYNC_GAIN_CURRENCY) {
-                            validatedCurrency = oldCurrency + MAX_SYNC_GAIN_CURRENCY;
-                        }
-                        meta.currency = validatedCurrency;
-
-                        let newMaxLevel = Math.max(meta.maxLevel || 1, row.max_level || 1);
-                        if (!bypass && newMaxLevel > (row.max_level || 1) + MAX_SYNC_GAIN_LEVEL) {
-                            newMaxLevel = (row.max_level || 1) + MAX_SYNC_GAIN_LEVEL;
-                        }
+                        const newMaxLevel = Math.max(meta.maxLevel || 1, row.max_level || 1);
                         meta.maxLevel = newMaxLevel;
 
                         const encryptedMeta = Security.encrypt(JSON.stringify(meta));
@@ -586,18 +584,21 @@ io.on('connection', (socket) => {
     });
 
     socket.on('submitScore', (data) => {
-        if (data && data.name && data.level) {
-            db.get(`SELECT max_level FROM accounts WHERE username = ?`, [data.name], (err, row) => {
-                // Uncapped progression (v1.379+)
-                let validatedLevel = data.level;
-                
-                if (row && validatedLevel > row.max_level) {
-                    db.run(`UPDATE accounts SET max_level = ? WHERE username = ?`, [validatedLevel, data.name], () => {
-                        broadcastLeaderboard();
-                    });
-                }
-            });
+        const user = socket.authenticatedUser;
+        if (!user || !data || !data.level || data.token !== socket.sessionToken) {
+            return; // Silently ignore invalid or unauthenticated score submissions
         }
+
+        db.get(`SELECT max_level FROM accounts WHERE username = ?`, [user], (err, row) => {
+            // Uncapped progression (v1.379+)
+            let validatedLevel = data.level;
+            
+            if (row && validatedLevel > row.max_level) {
+                db.run(`UPDATE accounts SET max_level = ? WHERE username = ?`, [validatedLevel, user], () => {
+                    broadcastLeaderboard();
+                });
+            }
+        });
     });
 
     socket.on('sendFeedback', (data) => {
@@ -880,6 +881,15 @@ io.on('connection', (socket) => {
                 room.nextLevelXp = Math.floor(room.nextLevelXp * 1.25);
                 room.paused = true;
                 room.readyCount = 0;
+
+                // --- SERVER-AUTHORITATIVE LEADERBOARD UPDATE ---
+                Object.values(room.players).forEach(p => {
+                    if (p.name) {
+                        db.run(`UPDATE accounts SET max_level = ? WHERE username = ? AND max_level < ?`, [room.level, p.name.toLowerCase(), room.level], (err) => {
+                            if (!err) broadcastLeaderboard();
+                        });
+                    }
+                });
                 // CLEAR ENEMIES (except bosses) on level up for multiplayer
                 room.enemies = room.enemies.filter(e => e.isBoss);
                 io.to(r).emit('teamLevelUp', { level: room.level });
