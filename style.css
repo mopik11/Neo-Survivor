@@ -225,9 +225,10 @@ canvas {
 .modal-content {
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
   backdrop-filter: blur(20px);
-  padding: 3rem;
-  border-radius: 48px;
+  padding: 2rem;
+  border-radius: 40px;
   border: 1px solid rgba(255, 255, 255, 0.15);
+
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -398,11 +399,11 @@ canvas {
 }
 
 .btn-restart:hover {
-  transform: translateY(-5px) scale(1.02);
   background: var(--secondary-color);
-  box-shadow: 0 15px 40px -10px rgba(139, 92, 246, 0.6);
-  cursor: pointer;
+  box-shadow: 0 8px 25px -5px rgba(139, 92, 246, 0.4);
+  filter: brightness(1.1);
 }
+
 
 .btn-restart:active {
   transform: translateY(0) scale(0.98);
@@ -793,17 +794,18 @@ canvas {
 
   .btn-restart {
     width: 100% !important;
-    padding: 1rem 0.5rem !important;
-    font-size: 1rem !important;
+    padding: 0.8rem 0.5rem !important;
+    font-size: 0.9rem !important;
     white-space: normal !important;
     line-height: 1.2 !important;
     text-align: center;
     display: flex;
-    flex-direction: column;
+    flex-direction: row; /* Zpět na horizontální pokud je to možné */
     align-items: center;
     justify-content: center;
-    border-radius: 15px !important;
+    border-radius: 12px !important;
   }
+
   .btn-main { font-size: 1.1rem !important; padding: 1.2rem 0.5rem !important; }
   .btn-sub { font-size: 0.75rem !important; padding: 0.7rem 0.2rem !important; font-weight: 500 !important; }
   .btn-mini { font-size: 0.7rem !important; padding: 0.6rem 0.2rem !important; font-weight: 500 !important; }

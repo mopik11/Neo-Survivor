@@ -1436,12 +1436,13 @@ class Boss {
             minionSpeed *= 0.35;
         }
 
-        // Škálování Bosse: 3x větší, 50x HP, 2x rychlejší, 3x damage
+        // Škálování Bosse: 3x větší, 50x HP (Solo 35x), 2x rychlejší (Solo 1.3x), 3x damage
         this.radius = minionRadius * 3;
-        this.maxHp = minionHp * 50;
+        this.maxHp = minionHp * (NET.isMultiplayer ? 50 : 35);
         this.hp = this.maxHp;
-        this.speed = minionSpeed * 2;
-        this.damage = minionDamage * 3;
+        this.speed = minionSpeed * (NET.isMultiplayer ? 2 : 1.3);
+        this.damage = minionDamage * (NET.isMultiplayer ? 3 : 2);
+
         
         this.isBoss = true;
         this.knockback = { x: 0, y: 0 };
