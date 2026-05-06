@@ -88,7 +88,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*",
+        origin: "https://mopik11.github.io/Neo-Survivor",
         methods: ["GET", "POST"]
     }
 });
@@ -131,7 +131,7 @@ const ROOMS = {};
 
 // NASTAVENÍ PRO ADMIN KONZOLI
 let SERVER_ADMIN_PIN = null;
-const ADMIN_USER = "mopik"; // <-- ZMĚŇ SI UŽIVATELSKÉ JMÉNO
+const ADMIN_USER = "mopik";
 
 const CONFIG = {
     ENEMY_BASE_HEALTH: 20,
