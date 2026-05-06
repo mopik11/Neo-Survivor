@@ -108,9 +108,15 @@ const db = new sqlite3.Database('./neo_survivor.db', (err) => {
                 username TEXT PRIMARY KEY,
                 password TEXT,
                 meta TEXT,
-                max_level INTEGER
+                max_level INTEGER,
+                last_level_up INTEGER
             )`);
-            // Jednorázová očista databáze od neplatných záznamů a převod na lowercase
+            
+            // Migrace (v1.385): Přidání sloupce last_level_up pokud chybí
+            db.run(`ALTER TABLE accounts ADD COLUMN last_level_up INTEGER DEFAULT 0`, (err) => {});
+
+            // Jednorázová manuální čistka nahlášených hackerů
+            db.run("DELETE FROM accounts WHERE username = 'asdfasdfasdf' OR username = 'sdfsdfsdf'");
             db.run(`DELETE FROM accounts WHERE username IS NULL OR username = '' OR password IS NULL OR password = ''`);
             db.run(`UPDATE accounts SET username = LOWER(username)`);
 
@@ -569,9 +575,11 @@ io.on('connection', (socket) => {
             return socket.emit('syncError', "Nutné přihlášení nebo neplatný session token.");
         }
 
+        const { meta, pass } = data;
+        if (!meta) return;
+
         db.get(`SELECT password, max_level, meta FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (row) {
-                // Verify by pass just in case, but socket identity is primary
                 Security.verifyPassword(pass, row.password).then(isMatch => {
                     if (isMatch) {
                         let oldMeta;
@@ -582,23 +590,17 @@ io.on('connection', (socket) => {
                             try { oldMeta = JSON.parse(row.meta); } catch(e2) { oldMeta = {}; }
                         }
 
-                        let validatedCurrency = meta.currency || 0;
-                        let oldCurrency = oldMeta.currency || 0;
-                        
-                        // ANTI-CHEAT bypass pro adminy (nebo pokud je bypass explicitně povolen přes server kód)
-                        const bypass = data.bypassCaps === true;
-
-                        const newMaxLevel = Math.max(meta.maxLevel || 1, row.max_level || 1);
+                        // --- SECURITY (v1.385): IGNORE CLIENT-SIDE LEVEL IN SYNC ---
+                        // Only the server (Multiplayer) or validated submitScore (Solo) can update max_level.
+                        // This prevents someone from just editing META.maxLevel in console and syncing.
+                        const newMaxLevel = currentMax; 
                         meta.maxLevel = newMaxLevel;
 
                         const encryptedMeta = Security.encrypt(JSON.stringify(meta));
-
-                        db.run(`UPDATE accounts SET meta = ?, max_level = ? WHERE username = ?`,
-                            [encryptedMeta, newMaxLevel, user],
+                        db.run(`UPDATE accounts SET meta = ? WHERE username = ?`,
+                            [encryptedMeta, user],
                             (err) => {
-                                if (!err && newMaxLevel > row.max_level) {
-                                    broadcastLeaderboard();
-                                }
+                                // No broadcastLeaderboard here, as level didn't change
                             });
                     }
                 });
@@ -616,12 +618,26 @@ io.on('connection', (socket) => {
             return; // Silently ignore invalid or unauthenticated score submissions
         }
 
-        db.get(`SELECT max_level FROM accounts WHERE username = ?`, [user], (err, row) => {
-            // Uncapped progression (v1.379+)
-            let validatedLevel = data.level;
+        db.get(`SELECT max_level, last_level_up FROM accounts WHERE username = ?`, [user], (err, row) => {
+            if (!row) return;
+
+            const currentMax = row.max_level || 1;
+            const reportedLevel = parseInt(data.level);
             
-            if (row && validatedLevel > row.max_level) {
-                db.run(`UPDATE accounts SET max_level = ? WHERE username = ?`, [validatedLevel, user], () => {
+            if (reportedLevel > currentMax) {
+                // --- PROOF OF PLAY VALIDATION (v1.385) ---
+                // It takes at least 15 seconds of real gameplay to gain a level after level 5
+                const now = Date.now();
+                const lastTime = row.last_level_up || 0;
+                const levelsGained = reportedLevel - currentMax;
+                const minTimeRequired = levelsGained * 10000; // 10s per level minimum
+                
+                if (now - lastTime < minTimeRequired && !socket.isAdmin) {
+                    console.warn(`[ANTI-CHEAT] ${user} too fast level up: ${currentMax} -> ${reportedLevel} in ${now - lastTime}ms. Rejected.`);
+                    return;
+                }
+
+                db.run(`UPDATE accounts SET max_level = ?, last_level_up = ? WHERE username = ?`, [reportedLevel, now, user], () => {
                     broadcastLeaderboard();
                 });
             }

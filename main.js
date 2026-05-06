@@ -506,6 +506,7 @@ const GAME = {
     time: 0,
     startTime: 0,
     coinsCollected: 0,
+    dogeGained: 0,
     lastBossTime: 0,
     lastBossMinute: 0,
     lastSpawnTime: 0,
@@ -3156,17 +3157,12 @@ window.claimAchievement = function(id) {
 
 function gameOver() {
     GAME.active = false;
-    const killsIncome = Math.floor(GAME.kills / 10);
-    addCurrency(killsIncome);
-    addCurrency(GAME.coinsCollected || 0);
     
-    const totalGained = killsIncome + (GAME.coinsCollected || 0);
-    if (totalGained > 0) {
-        showCurrencyNotification(totalGained, "VÝNOS Z BITVY");
+    if (GAME.dogeGained > 0) {
+        showCurrencyNotification(GAME.dogeGained, "VÝNOS Z BITVY");
     }
     
     if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 };
-    META.stats.totalDogecoins += killsIncome + (GAME.coinsCollected || 0);
     META.stats.totalGames++;
     META.stats.totalPlayTime = (META.stats.totalPlayTime || 0) + GAME.time;
     
@@ -3180,7 +3176,7 @@ function gameOver() {
 
     if (statsLevel) statsLevel.innerText = GAME.entities.player.level;
     if (statsKills) statsKills.innerText = GAME.kills;
-    if (statsCoins) statsCoins.innerText = (GAME.coinsCollected || 0) + killsIncome;
+    if (statsCoins) statsCoins.innerText = GAME.dogeGained;
     
     const playTime = Math.floor((Date.now() - (GAME.startTime || Date.now())) / 1000);
     const mins = Math.floor(playTime / 60);
@@ -4499,6 +4495,8 @@ function initSocket() {
 
         NET.socket.on('currencyUpdated', (data) => {
             if (data && data.amount !== undefined) {
+                const diff = data.amount - META.currency;
+                if (diff > 0) GAME.dogeGained += diff;
                 META.currency = data.amount;
                 updateUI();
             }
@@ -5976,6 +5974,7 @@ function handleEnemyDeath(enemy) {
         
         if (enemy.isBoss) {
             META.currency += 500;
+            GAME.dogeGained += 500;
             META.stats.totalDogecoins += 500;
             META.stats.totalBossKills++;
             
@@ -5989,6 +5988,7 @@ function handleEnemyDeath(enemy) {
             checkAchievements();
         } else {
             META.currency += 1;
+            GAME.dogeGained += 1;
             META.stats.totalDogecoins += 1;
         }
 
