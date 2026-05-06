@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.385
+ * NEO SURVIVOR - Core Game Logic - v1.396
  */
 
 window.addEventListener('beforeunload', () => {
@@ -6013,7 +6013,7 @@ function handleEnemyDeath(enemy) {
     META.lastMoveTime = Date.now();
 
     if (!NET.isMultiplayer && GAME.entities.gems) {
-        // --- NEW ECONOMY (v1.385): 1 KILL = 1 DOGE | 1 BOSS = 500 DOGE ---
+        // --- NEW ECONOMY (v1.396): 1 KILL = 1 DOGE | 1 BOSS = 500 DOGE ---
         if (!META.currency) META.currency = 0;
         if (!META.stats) META.stats = { totalDogecoins: 0, totalBossKills: 0 };
         
