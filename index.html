@@ -55,30 +55,43 @@
       </div>
 
       <div id="login-modal" class="modal active">
-        <div class="modal-content" style="max-width: 450px;">
-          <h1 class="logo" style="font-size: 3rem;">VÍTEJ!</h1>
-          <p class="subtitle" style="font-size: 0.9rem;">PŘIHLÁŠENÍ NEBO REGISTRACE</p>
+        <div class="modal-content" style="max-width: 480px; padding: 4rem 3rem;">
+          <div style="animation: floating 6s ease-in-out infinite;">
+            <h1 class="logo" style="font-size: 3.5rem; margin-bottom: 0.2rem;">NEO<span>SURVIVOR</span></h1>
+            <p class="subtitle" style="font-size: 0.8rem; letter-spacing: 5px; margin-bottom: 3.5rem;">AUTHENTICATION REQUIRED</p>
+          </div>
           
-          <div style="width: 100%; margin-bottom: 15px;">
-              <input type="text" id="input-login-name" placeholder="Jméno (3-15 znaků)..." maxlength="15" class="login-input">
+          <div style="width: 100%; display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px;">
+              <div class="input-wrapper" style="position: relative; width: 100%;">
+                <input type="text" id="input-login-name" placeholder="PŘEZDÍVKA" maxlength="15" class="login-input" style="text-align: center;">
+              </div>
+              <div class="input-wrapper" style="position: relative; width: 100%;">
+                <input type="password" id="input-login-pass" placeholder="HESLO" maxlength="15" class="login-input" style="text-align: center;">
+              </div>
           </div>
-          <div style="width: 100%; margin-bottom: 20px;">
-              <input type="password" id="input-login-pass" placeholder="Heslo..." maxlength="15" class="login-input">
+
+          <div class="join-group" style="margin-bottom: 15px; width: 100%; gap: 15px;">
+              <button id="btn-login" class="btn-restart btn-join" style="flex: 1.5; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border: none;">PŘIHLÁSIT</button>
+              <button id="btn-register" class="btn-restart btn-join" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); box-shadow: none;">REGISTROVAT</button>
           </div>
-          <div class="join-group" style="margin-bottom: 10px; width: 100%;">
-              <button id="btn-login" class="btn-restart btn-join" style="flex: 1;">PŘIHLÁSIT</button>
-              <button id="btn-register" class="btn-restart btn-join" style="flex: 1; background: #8b5cf6;">REGISTROVAT</button>
+          
+          <p id="login-error" style="color: #f87171; font-size: 0.85rem; font-weight: 600; height: 15px; margin-top: 5px; text-shadow: 0 0 10px rgba(239, 68, 68, 0.2);"></p>
+          <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
+
+          <div style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
+            NEO SURVIVOR v1.369
           </div>
-          <p id="login-error" style="color: #ef4444; font-size: 0.85rem; font-weight: bold; height: 15px; margin-top: 10px;"></p>
-          <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 10px auto;"></div>
         </div>
       </div>
 
       <div id="menu-modal" class="modal">
         <canvas id="menu-anim-canvas"></canvas>
         <div class="modal-content">
-          <h1 class="logo">NEO<span>SURVIVOR</span></h1>
-          <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
+          <div class="modal-body">
+            <div style="animation: floating 6s ease-in-out infinite;">
+              <h1 class="logo">NEO<span>SURVIVOR</span></h1>
+              <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
+            </div>
 
           <!-- Daily Gift Floating Button -->
           <button id="btn-daily-gift" style="display:none; position: absolute; top: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); cursor: pointer; justify-content: center; align-items: center; font-size: 1.8rem; z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
@@ -124,269 +137,289 @@
           </div>
 
           <div style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-            © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.362
+            © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.369
           </div>
-
         </div>
       </div>
 
       <div id="leaderboard-modal" class="modal">
         <div class="modal-content" style="max-width: 500px;">
-          <h2 style="font-size: 2.5rem; margin-bottom: 1rem; color: #fbbf24; text-shadow: 0 0 20px rgba(245, 158, 11, 0.4);" data-i18n="SÍŇ SLÁVY">SÍŇ SLÁVY</h2>
-          <div id="leaderboard-list" style="width: 100%; max-height: 40vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;">
-              <div style="text-align: center; color: gray; padding: 20px;">Načítání ze serveru...</div>
+          <button class="btn-close-x" onclick="closeModal()">×</button>
+          <div class="modal-body">
+            <h2 style="font-size: 2.5rem; margin-bottom: 1rem; color: #fbbf24; text-shadow: 0 0 20px rgba(245, 158, 11, 0.4);" data-i18n="SÍŇ SLÁVY">SÍŇ SLÁVY</h2>
+            <div id="leaderboard-list" style="width: 100%; max-height: 40vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;">
+                <div style="text-align: center; color: gray; padding: 20px;">Načítání ze serveru...</div>
+            </div>
+            <button class="btn-restart" id="btn-close-leaderboard" style="margin-top:2rem" data-i18n="ZAVŘÍT">ZAVŘÍT</button>
           </div>
-          <button class="btn-restart" id="btn-close-leaderboard" style="margin-top:2rem" data-i18n="ZAVŘÍT">ZAVŘÍT</button>
         </div>
       </div>
 
       <div id="achievements-modal" class="modal">
         <div class="modal-content" style="max-width: 600px;">
-          <h2 style="font-size: 2.5rem; margin-bottom: 1rem; color: #fbbf24; text-shadow: 0 0 20px rgba(245, 158, 11, 0.4);">🌟 <span data-i18n="VESMÍRNÉ ÚSPĚCHY">VESMÍRNÉ ÚSPĚCHY</span></h2>
-          <div id="achievements-list" style="width: 100%; max-height: 55vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 5px;">
-              <!-- Dynamically populated -->
+          <button class="btn-close-x" onclick="closeModal()">×</button>
+          <div class="modal-body">
+            <h2 style="font-size: 2.5rem; margin-bottom: 1rem; color: #fbbf24; text-shadow: 0 0 20px rgba(245, 158, 11, 0.4);">🌟 <span data-i18n="VESMÍRNÉ ÚSPĚCHY">VESMÍRNÉ ÚSPĚCHY</span></h2>
+            <div id="achievements-list" style="width: 100%; display: flex; flex-direction: column; gap: 12px; padding-right: 5px;">
+                <!-- Dynamically populated -->
+            </div>
           </div>
-          <button class="btn-restart" id="btn-close-achievements" style="margin-top:2rem">ZAVŘÍT</button>
         </div>
       </div>
 
       <div id="settings-modal" class="modal">
         <div class="modal-content" style="max-width: 450px;">
+          <button class="btn-close-x" onclick="closeModal()">×</button>
           <h2 style="font-size: 2.5rem; margin-bottom: 1.5rem;" data-i18n="NASTAVENÍ">NASTAVENÍ</h2>
+          <div class="modal-body">
+            <div style="width: 100%; margin-bottom: 20px;">
+                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 10px;" data-i18n="JAZYK / LANGUAGE:">JAZYK / LANGUAGE:</p>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-lang-cs" class="btn-restart" style="flex: 1; padding: 0.5rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); font-weight: 800;">CZ</button>
+                    <button id="btn-lang-en" class="btn-restart" style="flex: 1; padding: 0.5rem; background: rgba(255,255,255,0.05); border: none;">EN</button>
+                </div>
+            </div>
 
-          <div style="width: 100%; margin-bottom: 20px;">
-              <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 10px;" data-i18n="JAZYK / LANGUAGE:">JAZYK / LANGUAGE:</p>
-              <div style="display: flex; gap: 10px;">
-                  <button id="btn-lang-cs" class="btn-restart" style="flex: 1; padding: 0.5rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); font-weight: 800;">CZ</button>
-                  <button id="btn-lang-en" class="btn-restart" style="flex: 1; padding: 0.5rem; background: rgba(255,255,255,0.05); border: none;">EN</button>
-              </div>
+            <div style="width: 100%; margin-bottom: 20px;">
+                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 10px;" data-i18n="ZVUKY A HUDBA:">ZVUKY A HUDBA:</p>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                    <button id="btn-toggle-music-menu" class="btn-restart" style="padding: 0.8rem; background: rgba(255,255,255,0.1); border: none; flex-direction: column; gap: 5px;">
+                      <span style="font-size: 1.2rem;">🏠</span>
+                      <span style="font-size: 0.6rem; font-weight: 800;" data-i18n="MENU">MENU</span>
+                    </button>
+                    <button id="btn-toggle-music-game" class="btn-restart" style="padding: 0.8rem; background: rgba(255,255,255,0.1); border: none; flex-direction: column; gap: 5px;">
+                      <span style="font-size: 1.2rem;">🎮</span>
+                      <span style="font-size: 0.6rem; font-weight: 800;" data-i18n="HRA">HRA</span>
+                    </button>
+                    <button id="btn-toggle-sfx" class="btn-restart" style="padding: 0.8rem; background: rgba(255,255,255,0.1); border: none; flex-direction: column; gap: 5px;">
+                      <span style="font-size: 1.2rem;">🔊</span>
+                      <span style="font-size: 0.6rem; font-weight: 800;" data-i18n="SFX">SFX</span>
+                    </button>
+                </div>
+            </div>
+
+            <div style="width: 100%; margin-bottom: 20px;">
+                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 10px;" data-i18n="AUTOMATIZACE:">AUTOMATIZACE:</p>
+                 <div class="setting-item" style="background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.05);">
+                     <span style="font-weight: 800; font-size: 0.9rem;" data-i18n="Auto-výběr vylepšení">Auto-výběr vylepšení</span>
+                     <input type="checkbox" id="chk-autoselect" style="width: 20px; height: 20px; cursor: pointer; accent-color: #fbbf24;">
+                 </div>
+            </div>
+
+            <div style="width: 100%; padding-top: 10px;">
+                <p style="color: #ef4444; font-size: 0.8rem; margin-bottom: 10px;" data-i18n="NEBEZPEČNÁ ZÓNA:">NEBEZPEČNÁ ZÓNA:</p>
+                <button id="btn-reset-progress" class="btn-restart" style="width: 100%; background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #fca5a5; white-space: normal; font-size: 1rem; padding: 0.8rem 1rem;" data-i18n="ODHLÁSIT SE A SMAZAT POSTUP">ODHLÁSIT SE A SMAZAT POSTUP</button>
+            </div>
+
+            <button class="btn-restart" id="btn-close-settings" style="margin-top:2rem; width: 100%; background: rgba(255,255,255,0.05); border: none;" data-i18n="ZAVŘÍT">ZAVŘÍT</button>
           </div>
-
-          <div style="width: 100%; margin-bottom: 20px;">
-              <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 10px;" data-i18n="ZVUKY A HUDBA:">ZVUKY A HUDBA:</p>
-              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                  <button id="btn-toggle-music-menu" class="btn-restart" style="padding: 0.8rem; background: rgba(255,255,255,0.1); border: none; flex-direction: column; gap: 5px;">
-                    <span style="font-size: 1.2rem;">🏠</span>
-                    <span style="font-size: 0.6rem; font-weight: 800;" data-i18n="MENU">MENU</span>
-                  </button>
-                  <button id="btn-toggle-music-game" class="btn-restart" style="padding: 0.8rem; background: rgba(255,255,255,0.1); border: none; flex-direction: column; gap: 5px;">
-                    <span style="font-size: 1.2rem;">🎮</span>
-                    <span style="font-size: 0.6rem; font-weight: 800;" data-i18n="HRA">HRA</span>
-                  </button>
-                  <button id="btn-toggle-sfx" class="btn-restart" style="padding: 0.8rem; background: rgba(255,255,255,0.1); border: none; flex-direction: column; gap: 5px;">
-                    <span style="font-size: 1.2rem;">🔊</span>
-                    <span style="font-size: 0.6rem; font-weight: 800;" data-i18n="SFX">SFX</span>
-                  </button>
-              </div>
-          </div>
-
-          <div style="width: 100%; margin-bottom: 20px;">
-              <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 10px;" data-i18n="AUTOMATIZACE:">AUTOMATIZACE:</p>
-               <div class="setting-item" style="background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.05);">
-                   <span style="font-weight: 800; font-size: 0.9rem;" data-i18n="Auto-výběr vylepšení">Auto-výběr vylepšení</span>
-                   <input type="checkbox" id="chk-autoselect" style="width: 20px; height: 20px; cursor: pointer; accent-color: #fbbf24;">
-               </div>
-          </div>
-
-          <div style="width: 100%; padding-top: 10px;">
-              <p style="color: #ef4444; font-size: 0.8rem; margin-bottom: 10px;" data-i18n="NEBEZPEČNÁ ZÓNA:">NEBEZPEČNÁ ZÓNA:</p>
-              <button id="btn-reset-progress" class="btn-restart" style="width: 100%; background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #fca5a5; white-space: normal; font-size: 1rem; padding: 0.8rem 1rem;" data-i18n="ODHLÁSIT SE A SMAZAT POSTUP">ODHLÁSIT SE A SMAZAT POSTUP</button>
-          </div>
-
-          <button class="btn-restart" id="btn-close-settings" style="margin-top:2rem; width: 100%; background: rgba(255,255,255,0.05); border: none;" data-i18n="ZAVŘÍT">ZAVŘÍT</button>
         </div>
       </div>
 
       <div id="ships-modal" class="modal">
         <div class="modal-content" style="max-width: 800px;">
-          <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">TVÁ VÝBAVA</h2>
-          <div class="stat-chip" style="margin-bottom:20px; display:inline-flex;">DOGECOIN: <span id="ships-currency">0</span></div>
-          <div id="ships-options" style="width: 100%; display: flex; flex-direction: column;"></div>
-          <button class="btn-restart" id="btn-close-ships" style="margin-top:2.5rem">ZAVŘÍT</button>
+          <button class="btn-close-x" onclick="closeModal()">×</button>
+          <div class="modal-body">
+            <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">TVÁ VÝBAVA</h2>
+            <div class="stat-chip" style="margin-bottom:20px; display:inline-flex;">DOGECOIN: <span id="ships-currency">0</span></div>
+            <div id="ships-options" style="width: 100%; display: flex; flex-direction: column;"></div>
+          </div>
         </div>
       </div>
 
       <div id="multiplayer-modal" class="modal">
         <div class="modal-content" style="max-width: 500px; position: relative;">
-          <h2 style="font-size: 2.2rem; margin-bottom: 1.5rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SÍŤOVÁ HRA</h2>
-          
-          <div style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
-            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                  <h3 style="margin: 0; font-size: 0.9rem; opacity: 0.7; letter-spacing: 1px;">DOSTUPNÉ SERVERY</h3>
-                  <button onclick="requestServerList()" class="btn-restart" style="padding: 5px 10px; font-size: 0.7rem; background: rgba(255,255,255,0.1); border:none;">OBNOVIT</button>
+          <button class="btn-close-x" onclick="closeModal()">×</button>
+          <div class="modal-body">
+            <h2 style="font-size: 2.2rem; margin-bottom: 1.5rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SÍŤOVÁ HRA</h2>
+            
+            <div style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
+              <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                    <h3 style="margin: 0; font-size: 0.9rem; opacity: 0.7; letter-spacing: 1px;">DOSTUPNÉ SERVERY</h3>
+                    <button onclick="requestServerList()" class="btn-restart" style="padding: 5px 10px; font-size: 0.7rem; background: rgba(255,255,255,0.1); border:none;">OBNOVIT</button>
+                </div>
+                <div id="server-list-container" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
+                    <div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">Hledám servery...</div>
+                </div>
               </div>
-              <div id="server-list-container" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
-                  <div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">Hledám servery...</div>
+              
+              <div style="color: rgba(255,255,255,0.3); font-size: 0.8rem; letter-spacing: 2px;">— NEBO KÓD —</div>
+              
+              <div class="join-group">
+                  <input type="text" id="input-join-id" placeholder="ZADEJ KÓD...">
+                  <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart btn-join">PŘIPOJIT</button>
               </div>
+              
+              <button onclick="showHostModal()" class="btn-restart" style="width: 100%; background: #a855f7; margin-top: 10px;">ZALOŽIT NOVOU MÍSTNOST</button>
             </div>
-            
-            <div style="color: rgba(255,255,255,0.3); font-size: 0.8rem; letter-spacing: 2px;">— NEBO KÓD —</div>
-            
-            <div class="join-group">
-                <input type="text" id="input-join-id" placeholder="ZADEJ KÓD...">
-                <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart btn-join">PŘIPOJIT</button>
-            </div>
-            
-            <button onclick="showHostModal()" class="btn-restart" style="width: 100%; background: #a855f7; margin-top: 10px;">ZALOŽIT NOVOU MÍSTNOST</button>
           </div>
-          <button class="btn-restart" id="btn-close-mp" style="margin-top:2.5rem; background: rgba(255, 255, 255, 0.05); font-size: 0.9rem; border: none; opacity: 0.5; box-shadow:none;">ZPĚT DO MENU</button>
         </div>
       </div>
 
       <div id="host-modal" class="modal">
         <div class="modal-content" style="max-width: 450px;">
-          <h2 style="font-size: 2.2rem; margin-bottom: 0.5rem; background: linear-gradient(to right, #10b981, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">MÍSTNOST ZALOŽENA</h2>
-          <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem;">Pošli tento kód spoluhráčům:</p>
+          <button class="btn-close-x" onclick="closeModal()">×</button>
+          <div class="modal-body">
+            <h2 style="font-size: 2.2rem; margin-bottom: 0.5rem; background: linear-gradient(to right, #10b981, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">MÍSTNOST ZALOŽENA</h2>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem;">Pošli tento kód spoluhráčům:</p>
 
-          <div style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; border: 1px solid rgba(16, 185, 129, 0.3); margin-bottom: 20px; width: 100%;">
-              <div id="host-code-display">XXXXXX</div>
-              <div id="qr-code-container" style="display: flex; justify-content: center; margin-bottom: 15px;">
-                  <img id="qr-code-img" src="" alt="QR Code" style="border-radius: 10px; border: 2px solid rgba(255,255,255,0.2); width: 120px; height: 120px; display: none;">
-              </div>
-              <button id="btn-copy-code" class="btn-restart" style="width: 100%; padding: 12px; font-size: 0.9rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">📋 KOPÍROVAT KÓD</button>
-          </div>
+            <div style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; border: 1px solid rgba(16, 185, 129, 0.3); margin-bottom: 20px; width: 100%;">
+                <div id="host-code-display">XXXXXX</div>
+                <div id="qr-code-container" style="display: flex; justify-content: center; margin-bottom: 15px;">
+                    <img id="qr-code-img" src="" alt="QR Code" style="border-radius: 10px; border: 2px solid rgba(255,255,255,0.2); width: 120px; height: 120px; display: none;">
+                </div>
+                <button id="btn-copy-code" class="btn-restart" style="width: 100%; padding: 12px; font-size: 0.9rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">📋 KOPÍROVAT KÓD</button>
+            </div>
 
-          <div class="menu-actions" style="width: 100%;">
-              <button id="btn-start-hosted" class="btn-restart" style="width: 100%; background: #10b981;">🚀 VSTOUPIT DO HRY</button>
-              <button onclick="document.getElementById('host-modal').classList.remove('active'); document.getElementById('multiplayer-modal').classList.add('active');" class="btn-restart" style="width: 100%; background: rgba(255,255,255,0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZRUŠIT</button>
+            <div class="menu-actions" style="width: 100%;">
+                <button id="btn-start-hosted" class="btn-restart" style="width: 100%; background: #10b981;">🚀 VSTOUPIT DO HRY</button>
+                <button onclick="document.getElementById('host-modal').classList.remove('active'); document.getElementById('multiplayer-modal').classList.add('active');" class="btn-restart" style="width: 100%; background: rgba(255,255,255,0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZRUŠIT</button>
+            </div>
           </div>
         </div>
       </div>
 
       <div id="meta-modal" class="modal">
         <div class="modal-content">
-          <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">VYLEPŠENÍ</h2>
-          <div class="stat-chip" style="margin-bottom:20px; display:inline-flex;">DOGECOIN: <span id="meta-currency">0</span></div>
-          <div id="meta-options" class="upgrade-grid"></div>
-          <button class="btn-restart" id="btn-close-meta" style="margin-top:2.5rem">ZAVŘÍT</button>
+          <button class="btn-close-x" onclick="closeModal()">×</button>
+          <div class="modal-body">
+            <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">VYLEPŠENÍ</h2>
+            <div class="stat-chip" style="margin-bottom:20px; display:inline-flex;">DOGECOIN: <span id="meta-currency">0</span></div>
+            <div id="meta-options" class="upgrade-grid"></div>
+          </div>
         </div>
       </div>
 
       <div id="levelup-modal" class="modal">
         <div class="modal-content">
-          <h2 style="font-size: 3.5rem; color: var(--xp-color); text-shadow: 0 0 30px var(--xp-color);">LEVEL UP!</h2>
-          <div id="upgrade-options" class="upgrade-grid"></div>
-          <button class="btn-restart" id="btn-random-upgrade" style="margin-top: 2rem; background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4);">🎲 NÁHODNÝ VÝBĚR</button>
+          <div class="modal-body">
+            <h2 style="font-size: 3.5rem; color: var(--xp-color); text-shadow: 0 0 30px var(--xp-color);">LEVEL UP!</h2>
+            <div id="upgrade-options" class="upgrade-grid"></div>
+            <button class="btn-restart" id="btn-random-upgrade" style="margin-top: 2rem; background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4);">🎲 NÁHODNÝ VÝBĚR</button>
+          </div>
         </div>
       </div>
 
       <div id="tutorial-modal" class="modal">
         <div class="modal-content" style="max-width: 900px; padding: 2.5rem;">
-          <h2 style="font-size: 2.8rem; color: #38bdf8; margin-bottom: 0.5rem; letter-spacing: 3px; text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);" data-i18n="VESMÍRNÝ MANUÁL">VESMÍRNÝ MANUÁL</h2>
-          <p style="color: #94a3b8; margin-bottom: 2rem; font-size: 0.9rem;" data-i18n="Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.">Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.</p>
-          
-          <div style="text-align: left; width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; overflow-y: auto; max-height: 65vh; padding-right: 15px; padding-bottom: 20px;">
-            <div class="tutorial-card">
-              <h3 data-i18n="🕹️ ZÁKLADNÍ OVLÁDÁNÍ">🕹️ ZÁKLADNÍ OVLÁDÁNÍ</h3>
-              <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                <li><strong style="color:white">Pohyb:</strong> Klávesy <span style="color:#6366f1">WASD</span> nebo <span style="color:#6366f1">Joystick</span> na mobilu.</li>
-                <li><strong style="color:white">Schopnost:</strong> <span style="color:#6366f1">Levý klik</span> nebo <span style="color:#6366f1">Klepnutí</span> (pravá strana mobilu).</li>
-                <li><strong style="color:white">Pauza:</strong> Klávesa <span style="color:#6366f1">ESC</span> pro statistiky a pauzu.</li>
-              </ul>
-            </div>
-
-            <div class="tutorial-card">
-              <h3 data-i18n="🧬 VÝVOJ A LEVELY">🧬 VÝVOJ A LEVELY</h3>
-              <p data-i18n="Zabíjej nepřátele a sbírej XP Gemy. Každý nový level ti nabídne 3 náhodná vylepšení.">Zabíjej nepřátele a sbírej <strong style="color:#10b981">XP Gemy</strong>. Každý nový level ti nabídne 3 náhodná vylepšení.</p>
-            </div>
-
-            <div class="tutorial-card">
-              <h3 data-i18n="👾 ATLAS MIMOZEMŠŤANŮ">👾 ATLAS MIMOZEMŠŤANŮ</h3>
-              <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                <li><span style="color:#ef4444">▲</span> <strong style="color:white" data-i18n="Dron:">Dron:</strong> <span data-i18n="Základní útočník.">Základní útočník.</span></li>
-                <li><span style="color:#a855f7">■</span> <strong style="color:white" data-i18n="Střelec:">Střelec:</strong> <span data-i18n="Vypouští projektily.">Vypouští projektily.</span></li>
-                <li><span style="color:#eab308">★</span> <strong style="color:white" data-i18n="Zloděj:">Zloděj:</strong> <span data-i18n="Krade tvou kořist.">Krade tvou kořist.</span></li>
-                <li><span style="color:#f97316">◆</span> <strong style="color:white" data-i18n="Kamikadze:">Kamikadze:</strong> <span data-i18n="Při kontaktu vybuchuje.">Při kontaktu vybuchuje.</span></li>
-              </ul>
-            </div>
-
-            <div class="tutorial-card">
-              <h3 data-i18n="🛡️ ELITNÍ NEPŘÁTELÉ">🛡️ ELITNÍ NEPŘÁTELÉ</h3>
-              <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                <li><span style="color:#38bdf8">◓</span> <strong style="color:white" data-i18n="Štítonoš:">Štítonoš:</strong> <span data-i18n="Má odolný přední štít.">Má odolný přední štít.</span></li>
-                <li><span style="color:#0ea5e9">✚</span> <strong style="color:white" data-i18n="Support:">Support:</strong> <span data-i18n="Léčí a zpomaluje.">Léčí a zpomaluje.</span></li>
-                <li><span style="color:#f87171">▲</span> <strong style="color:white" data-i18n="Sebevrah:">Sebevrah:</strong> <span data-i18n="Rychlý a smrtící.">Rychlý a smrtící.</span></li>
-                <li><span style="color:#f43f5e">▼</span> <strong style="color:white" data-i18n="Skokan:">Skokan:</strong> <span data-i18n="Nepředvídatelné skoky.">Nepředvídatelné skoky.</span></li>
-              </ul>
-            </div>
-
-            <div class="tutorial-card">
-              <h3 data-i18n="👹 BOSS ARÉNA">👹 BOSS ARÉNA</h3>
-              <p style="font-size: 0.85rem; color: #94a3b8;" data-i18n="Každých 5 LEVELŮ se objeví NÁHODNÝ BOSS s unikátními schopnostmi:">Každých 5 LEVELŮ se objeví NÁHODNÝ BOSS s unikátními schopnostmi:</p>
-              <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">
-                <li><strong style="color:#ef4444" data-i18n="Vlastnosti:">Vlastnosti:</strong> <span data-i18n="3x větší, 50x HP, 2x rychlejší, 3x DMG.">3x větší, 50x HP, 2x rychlejší, 3x DMG.</span></li>
-                <li><strong style="color:#fbbf24" data-i18n="Odměna:">Odměna:</strong> <span data-i18n="Speciální UPGRADE (bez Common) + BEDNA zdarma!">Speciální UPGRADE (bez Common) + BEDNA zdarma!</span></li>
-                <li><strong style="color:#fbbf24" data-i18n="Možní bossové:">Možní bossové:</strong></li>
-                <ul style="list-style: none; padding-left: 10px; font-size: 0.75rem; color: #94a3b8;">
-                  <li><strong style="color:#ef4444">Dron</strong>, <strong style="color:#f43f5e">Kostka</strong>, <strong style="color:#f97316">Kamikadze</strong>, <strong style="color:#eab308">Goblin</strong></li>
-                  <li><strong style="color:#0ea5e9">Support</strong>, <strong style="color:#94a3b8">Štítonoš</strong>, <strong style="color:#10b981">Skokan</strong></li>
+          <button class="btn-close-x" onclick="closeModal()">×</button>
+          <div class="modal-body">
+            <h2 style="font-size: 2.8rem; color: #38bdf8; margin-bottom: 0.5rem; letter-spacing: 3px; text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);" data-i18n="VESMÍRNÝ MANUÁL">VESMÍRNÝ MANUÁL</h2>
+            <p style="color: #94a3b8; margin-bottom: 2rem; font-size: 0.9rem;" data-i18n="Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.">Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.</p>
+            
+            <div style="text-align: left; width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; overflow-y: auto; max-height: 65vh; padding-right: 15px; padding-bottom: 20px;">
+              <div class="tutorial-card">
+                <h3 data-i18n="🕹️ ZÁKLADNÍ OVLÁDÁNÍ">🕹️ ZÁKLADNÍ OVLÁDÁNÍ</h3>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
+                  <li><strong style="color:white">Pohyb:</strong> Klávesy <span style="color:#6366f1">WASD</span> nebo <span style="color:#6366f1">Joystick</span> na mobilu.</li>
+                  <li><strong style="color:white">Schopnost:</strong> <span style="color:#6366f1">Levý klik</span> nebo <span style="color:#6366f1">Klepnutí</span> (pravá strana mobilu).</li>
+                  <li><strong style="color:white">Pauza:</strong> Klávesa <span style="color:#6366f1">ESC</span> pro statistiky a pauzu.</li>
                 </ul>
-                <li><strong style="color:#38bdf8" data-i18n="Mechanika:">Mechanika:</strong> <span data-i18n="Dokud žije boss, spawn běžných vln je o 50% pomalejší.">Dokud žije boss, spawn běžných vln je o 50% pomalejší.</span></li>
-              </ul>
-            </div>
+              </div>
 
-            <div class="tutorial-card">
-              <h3 data-i18n="🎁 TAKTICKÁ VÝBAVA">🎁 TAKTICKÁ VÝBAVA</h3>
-              <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                <li><strong style="color:white" data-i18n="☢️ Nuke:">☢️ Nuke:</strong> <span data-i18n="Vymaže vše na obrazovce.">Vymaže vše na obrazovce.</span></li>
-                <li><strong style="color:white" data-i18n="🧲 Magnet:">🧲 Magnet:</strong> <span data-i18n="Přitáhne všechny gemy z dálky.">Přitáhne všechny gemy z dálky.</span></li>
-                <li><strong style="color:white" data-i18n="➕ Lékárna:">➕ Lékárna:</strong> <span data-i18n="Opraví poškozený trup lodi.">Opraví poškozený trup lodi.</span></li>
-              </ul>
-            </div>
+              <div class="tutorial-card">
+                <h3 data-i18n="🧬 VÝVOJ A LEVELY">🧬 VÝVOJ A LEVELY</h3>
+                <p data-i18n="Zabíjej nepřátele a sbírej XP Gemy. Každý nový level ti nabídne 3 náhodná vylepšení.">Zabíjej nepřátele a sbírej <strong style="color:#10b981">XP Gemy</strong>. Každý nový level ti nabídne 3 náhodná vylepšení.</p>
+              </div>
 
-            <div class="tutorial-card">
-              <h3 data-i18n="📦 LOOTBOXY A BEDNY">📦 LOOTBOXY A BEDNY</h3>
-              <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                <li><strong style="color:white" data-i18n="Získávání:">Získávání:</strong> <span data-i18n="Bedny padají z bossů nebo je lze koupit v menu.">Bedny padají z bossů nebo je lze koupit v menu.</span></li>
-                <li><strong style="color:white" data-i18n="Otevírání:">Otevírání:</strong> <span data-i18n="V menu 'VYLEPŠENÍ' klikni na bednu.">V menu "VYLEPŠENÍ" klikni na bednu.</span></li>
-              </ul>
-            </div>
+              <div class="tutorial-card">
+                <h3 data-i18n="👾 ATLAS MIMOZEMŠŤANŮ">👾 ATLAS MIMOZEMŠŤANŮ</h3>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
+                  <li><span style="color:#ef4444">▲</span> <strong style="color:white" data-i18n="Dron:">Dron:</strong> <span data-i18n="Základní útočník.">Základní útočník.</span></li>
+                  <li><span style="color:#a855f7">■</span> <strong style="color:white" data-i18n="Střelec:">Střelec:</strong> <span data-i18n="Vypouští projektily.">Vypouští projektily.</span></li>
+                  <li><span style="color:#eab308">★</span> <strong style="color:white" data-i18n="Zloděj:">Zloděj:</strong> <span data-i18n="Krade tvou kořist.">Krade tvou kořist.</span></li>
+                  <li><span style="color:#f97316">◆</span> <strong style="color:white" data-i18n="Kamikadze:">Kamikadze:</strong> <span data-i18n="Při kontaktu vybuchuje.">Při kontaktu vybuchuje.</span></li>
+                </ul>
+              </div>
 
-            <div class="tutorial-card">
-              <h3 data-i18n="💎 VZÁCNÉ NÁLEZY">💎 VZÁCNÉ NÁLEZY</h3>
-              <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;" data-i18n="Předměty z beden můžeš prodat za Dogecoiny:">Předměty z beden můžeš prodat za Dogecoiny:</p>
-              <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.8rem;">
-                <li><strong style="color:#94a3b8">Common:</strong> 10-25 Doge</li>
-                <li><strong style="color:#38bdf8">Uncommon:</strong> 30-70 Doge</li>
-                <li><strong style="color:#22c55e">Rare:</strong> 80-400 Doge</li>
-                <li><strong style="color:#a855f7">Epic:</strong> 250-800 Doge</li>
-                <li><strong style="color:#fbbf24">Legendary:</strong> 1000-6000 Doge</li>
-              </ul>
-              <div style="margin-top: 10px; padding: 10px; background: rgba(251, 191, 36, 0.1); border-radius: 10px; border: 1px solid rgba(251, 191, 36, 0.2);">
-                <p style="margin: 0; color: #fbbf24; font-weight: bold; font-size: 0.85rem;" data-i18n="💎 EXTRÉMNÍ NÁLEZ!">💎 EXTRÉMNÍ NÁLEZ!</p>
-                <p style="margin: 5px 0 0 0; font-size: 0.75rem;" data-i18n="Diamant (💎) má hodnotu 20 000 Doge a šanci 1% (padá z JAKÉKOLIV bedny!)">Diamant (💎) má hodnotu 20 000 Doge a šanci 1% (padá z JAKÉKOLIV bedny!)</p>
+              <div class="tutorial-card">
+                <h3 data-i18n="🛡️ ELITNÍ NEPŘÁTELÉ">🛡️ ELITNÍ NEPŘÁTELÉ</h3>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
+                  <li><span style="color:#38bdf8">◓</span> <strong style="color:white" data-i18n="Štítonoš:">Štítonoš:</strong> <span data-i18n="Má odolný přední štít.">Má odolný přední štít.</span></li>
+                  <li><span style="color:#0ea5e9">✚</span> <strong style="color:white" data-i18n="Support:">Support:</strong> <span data-i18n="Léčí a zpomaluje.">Léčí a zpomaluje.</span></li>
+                  <li><span style="color:#f87171">▲</span> <strong style="color:white" data-i18n="Sebevrah:">Sebevrah:</strong> <span data-i18n="Rychlý a smrtící.">Rychlý a smrtící.</span></li>
+                  <li><span style="color:#f43f5e">▼</span> <strong style="color:white" data-i18n="Skokan:">Skokan:</strong> <span data-i18n="Nepředvídatelné skoky.">Nepředvídatelné skoky.</span></li>
+                </ul>
+              </div>
+
+              <div class="tutorial-card">
+                <h3 data-i18n="👹 BOSS ARÉNA">👹 BOSS ARÉNA</h3>
+                <p style="font-size: 0.85rem; color: #94a3b8;" data-i18n="Každých 5 LEVELŮ se objeví NÁHODNÝ BOSS s unikátními schopnostmi:">Každých 5 LEVELŮ se objeví NÁHODNÝ BOSS s unikátními schopnostmi:</p>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">
+                  <li><strong style="color:#ef4444" data-i18n="Vlastnosti:">Vlastnosti:</strong> <span data-i18n="3x větší, 50x HP, 2x rychlejší, 3x DMG.">3x větší, 50x HP, 2x rychlejší, 3x DMG.</span></li>
+                  <li><strong style="color:#fbbf24" data-i18n="Odměna:">Odměna:</strong> <span data-i18n="Speciální UPGRADE (bez Common) + BEDNA zdarma!">Speciální UPGRADE (bez Common) + BEDNA zdarma!</span></li>
+                  <li><strong style="color:#fbbf24" data-i18n="Možní bossové:">Možní bossové:</strong></li>
+                  <ul style="list-style: none; padding-left: 10px; font-size: 0.75rem; color: #94a3b8;">
+                    <li><strong style="color:#ef4444">Dron</strong>, <strong style="color:#f43f5e">Kostka</strong>, <strong style="color:#f97316">Kamikadze</strong>, <strong style="color:#eab308">Goblin</strong></li>
+                    <li><strong style="color:#0ea5e9">Support</strong>, <strong style="color:#94a3b8">Štítonoš</strong>, <strong style="color:#10b981">Skokan</strong></li>
+                  </ul>
+                  <li><strong style="color:#38bdf8" data-i18n="Mechanika:">Mechanika:</strong> <span data-i18n="Dokud žije boss, spawn běžných vln je o 50% pomalejší.">Dokud žije boss, spawn běžných vln je o 50% pomalejší.</span></li>
+                </ul>
+              </div>
+
+              <div class="tutorial-card">
+                <h3 data-i18n="🎁 TAKTICKÁ VÝBAVA">🎁 TAKTICKÁ VÝBAVA</h3>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
+                  <li><strong style="color:white" data-i18n="☢️ Nuke:">☢️ Nuke:</strong> <span data-i18n="Vymaže vše na obrazovce.">Vymaže vše na obrazovce.</span></li>
+                  <li><strong style="color:white" data-i18n="🧲 Magnet:">🧲 Magnet:</strong> <span data-i18n="Přitáhne všechny gemy z dálky.">Přitáhne všechny gemy z dálky.</span></li>
+                  <li><strong style="color:white" data-i18n="➕ Lékárna:">➕ Lékárna:</strong> <span data-i18n="Opraví poškozený trup lodi.">Opraví poškozený trup lodi.</span></li>
+                </ul>
+              </div>
+
+              <div class="tutorial-card">
+                <h3 data-i18n="📦 LOOTBOXY A BEDNY">📦 LOOTBOXY A BEDNY</h3>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
+                  <li><strong style="color:white" data-i18n="Získávání:">Získávání:</strong> <span data-i18n="Bedny padají z bossů nebo je lze koupit v menu.">Bedny padají z bossů nebo je lze koupit v menu.</span></li>
+                  <li><strong style="color:white" data-i18n="Otevírání:">Otevírání:</strong> <span data-i18n="V menu 'VYLEPŠENÍ' klikni na bednu.">V menu "VYLEPŠENÍ" klikni na bednu.</span></li>
+                </ul>
+              </div>
+
+              <div class="tutorial-card">
+                <h3 data-i18n="💎 VZÁCNÉ NÁLEZY">💎 VZÁCNÉ NÁLEZY</h3>
+                <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;" data-i18n="Předměty z beden můžeš prodat za Dogecoiny:">Předměty z beden můžeš prodat za Dogecoiny:</p>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.8rem;">
+                  <li><strong style="color:#94a3b8">Common:</strong> 10-25 Doge</li>
+                  <li><strong style="color:#38bdf8">Uncommon:</strong> 30-70 Doge</li>
+                  <li><strong style="color:#22c55e">Rare:</strong> 80-400 Doge</li>
+                  <li><strong style="color:#a855f7">Epic:</strong> 250-800 Doge</li>
+                  <li><strong style="color:#fbbf24">Legendary:</strong> 1000-6000 Doge</li>
+                </ul>
+                <div style="margin-top: 10px; padding: 10px; background: rgba(251, 191, 36, 0.1); border-radius: 10px; border: 1px solid rgba(251, 191, 36, 0.2);">
+                  <p style="margin: 0; color: #fbbf24; font-weight: bold; font-size: 0.85rem;" data-i18n="💎 EXTRÉMNÍ NÁLEZ!">💎 EXTRÉMNÍ NÁLEZ!</p>
+                  <p style="margin: 5px 0 0 0; font-size: 0.75rem;" data-i18n="Diamant (💎) má hodnotu 20 000 Doge a šanci 1% (padá z JAKÉKOLIV bedny!)">Diamant (💎) má hodnotu 20 000 Doge a šanci 1% (padá z JAKÉKOLIV bedny!)</p>
+                </div>
+              </div>
+
+              <div class="tutorial-card" style="border: 1px solid rgba(251, 191, 36, 0.3); background: rgba(251, 191, 36, 0.05);">
+                <h3 style="color: #fbbf24;" data-i18n="💡 PRO TIPY">💡 PRO TIPY</h3>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
+                  <li>• <strong style="color:white" data-i18n="Doge je základ:">Doge je základ:</strong> <span data-i18n="Kupuj trvalá vylepšení v menu 'VYLEPŠENÍ'.">Kupuj trvalá vylepšení v menu "VYLEPŠENÍ".</span></li>
+                  <li>• <strong style="color:white" data-i18n="Multiplayer:">Multiplayer:</strong> <span data-i18n="Spolupracujte! Sdílené levely znamenají víc síly.">Spolupracujte! Sdílené levely znamenají víc síly.</span></li>
+                  <li>• <strong style="color:white" data-i18n="Synergie:">Synergie:</strong> <span data-i18n="Aura + Zpětný odhoz (Knockback) tvoří neprostupnou zeď.">Aura + Zpětný odhoz (Knockback) tvoří neprostupnou zeď.</span></li>
+                </ul>
               </div>
             </div>
-
-            <div class="tutorial-card" style="border: 1px solid rgba(251, 191, 36, 0.3); background: rgba(251, 191, 36, 0.05);">
-              <h3 style="color: #fbbf24;" data-i18n="💡 PRO TIPY">💡 PRO TIPY</h3>
-              <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                <li>• <strong style="color:white" data-i18n="Doge je základ:">Doge je základ:</strong> <span data-i18n="Kupuj trvalá vylepšení v menu 'VYLEPŠENÍ'.">Kupuj trvalá vylepšení v menu "VYLEPŠENÍ".</span></li>
-                <li>• <strong style="color:white" data-i18n="Multiplayer:">Multiplayer:</strong> <span data-i18n="Spolupracujte! Sdílené levely znamenají víc síly.">Spolupracujte! Sdílené levely znamenají víc síly.</span></li>
-                <li>• <strong style="color:white" data-i18n="Synergie:">Synergie:</strong> <span data-i18n="Aura + Zpětný odhoz (Knockback) tvoří neprostupnou zeď.">Aura + Zpětný odhoz (Knockback) tvoří neprostupnou zeď.</span></li>
-              </ul>
-            </div>
           </div>
-          <button class="btn-restart" id="btn-close-tutorial" style="margin-top:2.5rem; width: 100%; background: linear-gradient(to right, #38bdf8, #6366f1); border: none; font-size: 1.1rem;" data-i18n="ROZUMÍM, CHCI DO BOJE!">ROZUMÍM, CHCI DO BOJE!</button>
         </div>
       </div>
 
       <div id="feedback-modal" class="modal">
         <div class="modal-content" style="max-width: 500px;">
-          <h2 style="font-size: 2.5rem; color: #ec4899; margin-bottom: 1rem;" data-i18n="FEEDBACK">FEEDBACK</h2>
-          <p style="color: #94a3b8; margin-bottom: 1.5rem;" data-i18n="Napiš mi, co bys chtěl vylepšit nebo nahlásit chybu.">Napiš mi, co bys chtěl vylepšit nebo nahlásit chybu.</p>
-          
-          <textarea id="feedback-text" placeholder="Tvoje zpráva..." style="width: 100%; height: 150px; background: rgba(0,0,0,0.3); border: 2px solid rgba(236, 72, 153, 0.4); border-radius: 15px; color: white; padding: 15px; font-family: inherit; font-size: 1rem; resize: none; margin-bottom: 20px;"></textarea>
-          
-          <button class="btn-restart" id="btn-send-feedback" style="width: 100%; background: #ec4899;" data-i18n="ODESLAT ZPRÁVU">ODESLAT ZPRÁVU</button>
-          <button class="btn-restart" id="btn-close-feedback" style="margin-top:1rem; width: 100%; background: rgba(255,255,255,0.05); border: none;" data-i18n="ZAVŘÍT">ZAVŘÍT</button>
+          <button class="btn-close-x" onclick="closeModal()">×</button>
+          <div class="modal-body">
+            <h2 style="font-size: 2.5rem; color: #ec4899; margin-bottom: 1rem;" data-i18n="FEEDBACK">FEEDBACK</h2>
+            <p style="color: #94a3b8; margin-bottom: 1.5rem;" data-i18n="Napiš mi, co bys chtěl vylepšit nebo nahlásit chybu.">Napiš mi, co bys chtěl vylepšit nebo nahlásit chybu.</p>
+            
+            <textarea id="feedback-text" placeholder="Tvoje zpráva..." style="width: 100%; height: 150px; background: rgba(0,0,0,0.3); border: 2px solid rgba(236, 72, 153, 0.4); border-radius: 15px; color: white; padding: 15px; font-family: inherit; font-size: 1rem; resize: none; margin-bottom: 20px;"></textarea>
+            
+            <button class="btn-restart" id="btn-send-feedback" style="width: 100%; background: #ec4899;" data-i18n="ODESLAT ZPRÁVU">ODESLAT ZPRÁVU</button>
+          </div>
         </div>
       </div>
 
       <div id="waiting-modal" class="modal">
         <div class="modal-content" style="max-width: 400px;">
-          <h2 style="font-size: 2.2rem; color: var(--accent-color); margin-bottom: 1rem;" data-i18n="ČEKÁNÍ...">ČEKÁNÍ...</h2>
           <p style="color: #94a3b8; font-size: 1rem; margin-bottom: 20px;" data-i18n="Čekáme, až si ostatní hráči vyberou vylepšení.">Čekáme, až si ostatní hráči vyberou vylepšení.</p>
           <div class="loader"></div>
         </div>
@@ -394,10 +427,12 @@
 
       <div id="qr-join-modal" class="modal">
         <div class="modal-content" style="max-width: 400px;">
-          <h2 style="font-size: 2.2rem; color: #10b981; margin-bottom: 1rem;" data-i18n="MÍSTNOST">MÍSTNOST</h2>
-          <p id="qr-join-text" style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 25px;">Připojit se k místnosti ABCDEF?</p>
-          <button id="btn-qr-join-confirm" class="btn-restart" style="width:100%; background:#10b981; margin-bottom:10px;" data-i18n="PŘIPOJIT">PŘIPOJIT</button>
-          <button onclick="document.getElementById('qr-join-modal').classList.remove('active')" class="btn-restart" style="width:100%; background:rgba(255,255,255,0.05); border:none;" data-i18n="ZRUŠIT">ZRUŠIT</button>
+          <button class="btn-close-x" onclick="document.getElementById('qr-join-modal').classList.remove('active')">×</button>
+          <div class="modal-body">
+            <h2 style="font-size: 2.2rem; color: #10b981; margin-bottom: 1rem;" data-i18n="MÍSTNOST">MÍSTNOST</h2>
+            <p id="qr-join-text" style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 25px;">Připojit se k místnosti ABCDEF?</p>
+            <button id="btn-qr-join-confirm" class="btn-restart" style="width:100%; background:#10b981; margin-bottom:10px;" data-i18n="PŘIPOJIT">PŘIPOJIT</button>
+          </div>
         </div>
       </div>
 
@@ -474,6 +509,6 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script type="module" src="./main.js?v=1.362"></script>
+    <script type="module" src="./main.js?v=1.369"></script>
   </body>
 </html>

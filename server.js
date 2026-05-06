@@ -239,24 +239,47 @@ io.on('connection', (socket) => {
         if (cmd === 'give') {
             const amount = parseInt(args[2]);
             if (!target || isNaN(amount)) return socket.emit('adminResponse', { msg: "Použití: give <jméno> <počet>", color: "yellow" });
-            db.get(`SELECT meta FROM accounts WHERE username = ?`, [target], (err, row) => {
-                if (!row) return socket.emit('adminResponse', { msg: `Hráč ${target} nenalezen.`, color: "red" });
-                let meta = JSON.parse(row.meta);
+            const lowTarget = target.toLowerCase().trim();
+            db.get(`SELECT meta FROM accounts WHERE username = ?`, [lowTarget], (err, row) => {
+                if (!row) return socket.emit('adminResponse', { msg: `Hráč ${lowTarget} nenalezen.`, color: "red" });
+                
+                let meta;
+                try {
+                    const decrypted = Security.decrypt(row.meta);
+                    meta = JSON.parse(decrypted);
+                } catch (e) {
+                    // Záloha pro případ nezašifrovaných dat
+                    try { meta = JSON.parse(row.meta); } catch(e2) { meta = {}; }
+                }
+
                 meta.currency = (meta.currency || 0) + amount;
-                db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [JSON.stringify(meta), target], () => {
-                    socket.emit('adminResponse', { msg: `Úspěch: ${target} dostal ${amount} Doge. (Nyní má ${meta.currency})`, color: "lime" });
+                const encryptedMeta = Security.encrypt(JSON.stringify(meta));
+                
+                db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encryptedMeta, lowTarget], () => {
+                    socket.emit('adminResponse', { msg: `Úspěch: ${lowTarget} dostal ${amount} Doge. (Nyní má ${meta.currency})`, color: "lime" });
                 });
             });
         }
         else if (cmd === 'level') {
             const amount = parseInt(args[2]);
             if (!target || isNaN(amount)) return socket.emit('adminResponse', { msg: "Použití: level <jméno> <číslo_levelu>", color: "yellow" });
-            db.get(`SELECT meta FROM accounts WHERE username = ?`, [target], (err, row) => {
-                if (!row) return socket.emit('adminResponse', { msg: `Hráč ${target} nenalezen.`, color: "red" });
-                let meta = JSON.parse(row.meta);
+            const lowTarget = target.toLowerCase().trim();
+            db.get(`SELECT meta FROM accounts WHERE username = ?`, [lowTarget], (err, row) => {
+                if (!row) return socket.emit('adminResponse', { msg: `Hráč ${lowTarget} nenalezen.`, color: "red" });
+                
+                let meta;
+                try {
+                    const decrypted = Security.decrypt(row.meta);
+                    meta = JSON.parse(decrypted);
+                } catch (e) {
+                    try { meta = JSON.parse(row.meta); } catch(e2) { meta = {}; }
+                }
+
                 meta.maxLevel = amount;
-                db.run(`UPDATE accounts SET meta = ?, max_level = ? WHERE username = ?`, [JSON.stringify(meta), amount, target], () => {
-                    socket.emit('adminResponse', { msg: `Úspěch: Hráči ${target} byl nastaven Max Level ${amount}.`, color: "lime" });
+                const encryptedMeta = Security.encrypt(JSON.stringify(meta));
+                
+                db.run(`UPDATE accounts SET meta = ?, max_level = ? WHERE username = ?`, [encryptedMeta, amount, lowTarget], () => {
+                    socket.emit('adminResponse', { msg: `Úspěch: Hráči ${lowTarget} byl nastaven Max Level ${amount}.`, color: "lime" });
                     broadcastLeaderboard();
                 });
             });
