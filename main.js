@@ -881,12 +881,12 @@ class MenuAnimation {
                 speed: 0.1 + Math.random() * 0.3
             });
         }
-        for (let i = 0; i < 4; i++) {
-            this.spawnUFO();
+        for (let i = 0; i < 6; i++) {
+            this.spawnUFO(true); // Initial spawn inside
         }
     }
-    spawnUFO() {
-        const side = Math.random() > 0.5 ? -100 : this.canvas.width + 100;
+    spawnUFO(inside = false) {
+        const side = inside ? Math.random() * this.canvas.width : (Math.random() > 0.5 ? -100 : this.canvas.width + 100);
         this.ufos.push({
             x: side,
             y: Math.random() * this.canvas.height,
@@ -4438,6 +4438,40 @@ function initSocket() {
             showLevelUp();
         });
 
+        NET.socket.on('syncSuccess', (data) => {
+            if (data.meta) {
+                // Merge server-authoritative meta into local META
+                for (let key in data.meta) {
+                    if (typeof data.meta[key] === 'object' && data.meta[key] !== null && !Array.isArray(data.meta[key])) {
+                        META[key] = { ...META[key], ...data.meta[key] };
+                    } else {
+                        META[key] = data.meta[key];
+                    }
+                }
+                updateCurrencyUI();
+                if (window.showMetaMenu && document.getElementById('meta-modal').classList.contains('active')) {
+                    showMetaMenu();
+                }
+            }
+        });
+
+        NET.socket.on('syncSuccess', (data) => {
+            if (data.meta) {
+                // Merge server-authoritative meta into local META
+                for (let key in data.meta) {
+                    if (typeof data.meta[key] === 'object' && data.meta[key] !== null && !Array.isArray(data.meta[key])) {
+                        META[key] = { ...META[key], ...data.meta[key] };
+                    } else {
+                        META[key] = data.meta[key];
+                    }
+                }
+                updateCurrencyUI();
+                if (window.showMetaMenu && document.getElementById('meta-modal').classList.contains('active')) {
+                    showMetaMenu();
+                }
+            }
+        });
+
         NET.socket.on('resumeGame', () => {
             const waitModal = document.getElementById('waiting-modal');
             if (waitModal) waitModal.classList.remove('active');
@@ -4710,6 +4744,7 @@ function handleAuth(isLogin) {
 }
 
 function init() {
+    GAME.menuAnimation = new MenuAnimation();
     GAME.canvas = document.getElementById('game-canvas');
     GAME.ctx = GAME.canvas.getContext('2d');
     GAME.loopStarted = false;
@@ -5885,7 +5920,7 @@ function init() {
     }, { passive: true });
     GAME.canvas.addEventListener('touchend', () => { GAME.joystick.active = false; GAME.joystick.currentX = GAME.joystick.startX; GAME.joystick.currentY = GAME.joystick.startY; });
 
-    GAME.menuAnimation = new MenuAnimation();
+    // MenuAnimation now initialized at the end of main init()
 }
 
 function useUltimate(cx, cy) {
@@ -5994,6 +6029,9 @@ function handleEnemyDeath(enemy) {
             META.currency += 1;
             GAME.dogeGained += 1;
             META.stats.totalDogecoins += 1;
+
+            // Throttled save in solo mode (every 20 kills)
+            if (GAME.kills % 20 === 0) saveMeta();
         }
 
         if (enemy.type === 4) { // Zloděj drop

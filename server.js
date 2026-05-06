@@ -587,17 +587,36 @@ io.on('connection', (socket) => {
                             try { oldMeta = JSON.parse(row.meta); } catch(e2) { oldMeta = {}; }
                         }
 
-                        // --- SECURITY (v1.385): IGNORE CLIENT-SIDE LEVEL IN SYNC ---
-                        // Only the server (Multiplayer) or validated submitScore (Solo) can update max_level.
-                        // This prevents someone from just editing META.maxLevel in console and syncing.
-                        const newMaxLevel = currentMax; 
-                        meta.maxLevel = newMaxLevel;
+                        // --- SECURITY & PERSISTENCE (v1.385) ---
+                        // 1. Level is server-authoritative (ignore client-side level in sync)
+                        const currentMax = row.max_level || 1;
+                        meta.maxLevel = currentMax;
+
+                        // 2. Currency Merge: Keep the higher amount (Prevents loss of multiplayer rewards)
+                        const oldCurrency = oldMeta.currency || 0;
+                        const newCurrency = meta.currency || 0;
+                        meta.currency = Math.max(oldCurrency, newCurrency);
+
+                        // 3. Inventory/Crates Protection: Merge unopened crates
+                        if (oldMeta.unopenedCrates) {
+                            if (!meta.unopenedCrates) meta.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
+                            meta.unopenedCrates.basic = Math.max(meta.unopenedCrates.basic || 0, oldMeta.unopenedCrates.basic || 0);
+                            meta.unopenedCrates.premium = Math.max(meta.unopenedCrates.premium || 0, oldMeta.unopenedCrates.premium || 0);
+                            meta.unopenedCrates.legendary = Math.max(meta.unopenedCrates.legendary || 0, oldMeta.unopenedCrates.legendary || 0);
+                        }
+
+                        // 4. Stats Protection
+                        if (oldMeta.stats && meta.stats) {
+                            meta.stats.totalDogecoins = Math.max(meta.stats.totalDogecoins || 0, oldMeta.stats.totalDogecoins || 0);
+                            meta.stats.totalBossKills = Math.max(meta.stats.totalBossKills || 0, oldMeta.stats.totalBossKills || 0);
+                        }
 
                         const encryptedMeta = Security.encrypt(JSON.stringify(meta));
                         db.run(`UPDATE accounts SET meta = ? WHERE username = ?`,
                             [encryptedMeta, user],
                             (err) => {
-                                // No broadcastLeaderboard here, as level didn't change
+                                // Sync success - Return the FULL merged meta to the client
+                                socket.emit('syncSuccess', { meta: meta });
                             });
                     }
                 });
