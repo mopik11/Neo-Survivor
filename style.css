@@ -50,7 +50,7 @@ canvas {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 0;
+  z-index: 1;
 }
 
 #ui-layer {
@@ -218,7 +218,7 @@ canvas {
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 20;
+  z-index: 10;
   pointer-events: none;
 }
 
