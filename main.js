@@ -909,7 +909,7 @@ class MenuAnimation {
             return;
         }
 
-        // Pozadí (Gradient) - v1.377
+        // Pozadí (Gradient) - v1.392
         const grad = this.ctx.createRadialGradient(
             this.canvas.width/2, this.canvas.height/2, 0,
             this.canvas.width/2, this.canvas.height/2, Math.max(this.canvas.width, this.canvas.height)
