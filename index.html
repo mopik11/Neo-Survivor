@@ -7,7 +7,8 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body>
+  <body oncontextmenu="return false;">
+    <canvas id="menu-anim-canvas"></canvas>
     <div id="app">
       <div class="scanlines"></div>
       
@@ -79,19 +80,15 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.369
+            NEO SURVIVOR v1.370
           </div>
         </div>
       </div>
 
       <div id="menu-modal" class="modal">
-        <canvas id="menu-anim-canvas"></canvas>
         <div class="modal-content">
-          <div class="modal-body">
-            <div style="animation: floating 6s ease-in-out infinite;">
-              <h1 class="logo">NEO<span>SURVIVOR</span></h1>
-              <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
-            </div>
+          <h1 class="logo">NEO<span>SURVIVOR</span></h1>
+          <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
 
           <!-- Daily Gift Floating Button -->
           <button id="btn-daily-gift" style="display:none; position: absolute; top: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); cursor: pointer; justify-content: center; align-items: center; font-size: 1.8rem; z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
@@ -137,7 +134,7 @@
           </div>
 
           <div style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-            © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.369
+            © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.370
           </div>
         </div>
       </div>
@@ -509,6 +506,6 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script type="module" src="./main.js?v=1.369"></script>
+    <script type="module" src="./main.js?v=1.370"></script>
   </body>
 </html>

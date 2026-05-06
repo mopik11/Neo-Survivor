@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.369
+ * NEO SURVIVOR - Core Game Logic - v1.370
  */
 
 window.addEventListener('beforeunload', () => {
@@ -23,6 +23,11 @@ window.showCustomAlert = function (msg) {
         console.warn("Custom alert:", msg);
     }
 };
+
+window.closeModal = function() {
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+};
+
 
 // --- AUDIO SYSTEM ---
 const SOUND_URLS = {
