@@ -230,7 +230,7 @@ canvas {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 
               0 0 40px rgba(99, 102, 241, 0.1);
   width: 95vw;
-  max-width: 650px;
+  max-width: 850px;
   position: relative;
   text-align: center;
   padding: 2.5rem;
