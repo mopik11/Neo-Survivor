@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.373
+ * NEO SURVIVOR - Core Game Logic - v1.375
  */
 
 window.addEventListener('beforeunload', () => {
@@ -26,7 +26,13 @@ window.showCustomAlert = function (msg) {
 
 window.closeModal = function() {
     document.querySelectorAll('.modal:not(#menu-modal)').forEach(m => m.classList.remove('active'));
+    // Pokud nejsme ve hře a žádný jiný modál není aktivní (kromě login), vrátíme se do menu
+    if (!GAME.active && !document.getElementById('login-modal').classList.contains('active')) {
+        const menu = document.getElementById('menu-modal');
+        if (menu) menu.classList.add('active');
+    }
 };
+
 
 
 
@@ -817,7 +823,7 @@ const AudioEngine = {
                 const now = this.ctx.currentTime;
                 playSynth(now, bassNotes[step % 16], 0.03, 0.4, 'sawtooth');
                 if (step % 2 === 0) playSynth(now, 60, 0.08, 0.2, 'sine');
-                if (step % 4 === 2) playNoise(now, 0.02, 0.15);
+                playNoise(now, 0.02, 0.15);
                 if (step % 2 === 1) playNoise(now, 0.008, 0.05);
                 if (step % 16 >= 8 && Math.random() > 0.4) playSynth(now, melodyNotes[step % 16] * 2, 0.015, 0.3, 'triangle');
                 if (Math.random() > 0.95) playSynth(now, 1000 + Math.random() * 2000, 0.005, 1.0, 'sine');
@@ -3218,6 +3224,8 @@ function togglePause(isAFK = false) {
     }
 
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
+    
+    // Neo Survivor v1.375
 
     // Reset AFK timer and spawn timer when unpausing
     if (!GAME.paused) {
