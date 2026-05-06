@@ -179,6 +179,25 @@ function broadcastServerStats() {
 }
 setInterval(broadcastServerStats, 5000);
 
+const HARD_CAP_CURRENCY = 1000000;
+const HARD_CAP_LEVEL = 500;
+
+function sanitizeMeta(meta) {
+    if (!meta) return { currency: 0, maxLevel: 1, stats: { totalDogecoins: 0 } };
+    
+    // Enforce hard caps
+    if (meta.currency > HARD_CAP_CURRENCY) meta.currency = HARD_CAP_CURRENCY;
+    if (meta.maxLevel > HARD_CAP_LEVEL) meta.maxLevel = HARD_CAP_LEVEL;
+    
+    // Sanitize stats if they exist
+    if (meta.stats) {
+        if (meta.stats.earnedDogecoins > HARD_CAP_CURRENCY) meta.stats.earnedDogecoins = HARD_CAP_CURRENCY;
+        if (meta.stats.totalDogecoins > HARD_CAP_CURRENCY) meta.stats.totalDogecoins = HARD_CAP_CURRENCY;
+    }
+    
+    return meta;
+}
+
 io.on('connection', (socket) => {
     console.log('Hráč připojen:', socket.id);
 
@@ -451,10 +470,17 @@ io.on('connection', (socket) => {
                     if (isMatch) {
                         try {
                             // Dekryptování metadat
-                            const decryptedMeta = Security.decrypt(row.meta);
-                            const parsedMeta = JSON.parse(decryptedMeta);
-                            if (!parsedMeta.abilities) parsedMeta.abilities = { 1: true, 2: false, 3: false };
-                            if (!parsedMeta.selectedAbility) parsedMeta.selectedAbility = 1;
+                             // Sanitize Meta (Anti-Cheat Cleanup for existing exploited accounts)
+                             const parsedMeta = sanitizeMeta(JSON.parse(Security.decrypt(row.meta)));
+                             if (!parsedMeta.abilities) parsedMeta.abilities = { 1: true, 2: false, 3: false };
+                             if (!parsedMeta.selectedAbility) parsedMeta.selectedAbility = 1;
+
+                             // Update DB if metadata was sanitized
+                             const resanitizedMeta = JSON.stringify(parsedMeta);
+                             if (resanitizedMeta !== Security.decrypt(row.meta)) {
+                                 const encryptedMeta = Security.encrypt(resanitizedMeta);
+                                 db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encryptedMeta, user]);
+                             }
 
                             // Lazy Migration: Pokud heslo bylo plain-text, zahashujeme ho
                             if (!row.password.includes(':')) {
@@ -503,8 +529,9 @@ io.on('connection', (socket) => {
                         // ANTI-CHEAT: Sanity checks for progress
                         const MAX_SESSION_CURRENCY_GAIN = 50000;
                         const MAX_SESSION_LEVEL_GAIN = 50;
-                        const HARD_CAP_CURRENCY = 1000000;
-                        const HARD_CAP_LEVEL = 500;
+
+                        // Sanitize provided meta first
+                        meta = sanitizeMeta(meta);
 
                         let validatedCurrency = meta.currency || 0;
                         let oldCurrency = oldMeta.currency || 0;
@@ -512,17 +539,16 @@ io.on('connection', (socket) => {
                         if (validatedCurrency > oldCurrency + MAX_SESSION_CURRENCY_GAIN) {
                             validatedCurrency = oldCurrency + MAX_SESSION_CURRENCY_GAIN;
                         }
-                        validatedCurrency = Math.min(HARD_CAP_CURRENCY, validatedCurrency);
                         meta.currency = validatedCurrency;
 
                         let newMaxLevel = Math.max(meta.maxLevel || 1, row.max_level || 1);
                         if (newMaxLevel > (row.max_level || 1) + MAX_SESSION_LEVEL_GAIN) {
                             newMaxLevel = (row.max_level || 1) + MAX_SESSION_LEVEL_GAIN;
                         }
-                        newMaxLevel = Math.min(HARD_CAP_LEVEL, newMaxLevel);
                         meta.maxLevel = newMaxLevel;
 
                         const encryptedMeta = Security.encrypt(JSON.stringify(meta));
+
                         db.run(`UPDATE accounts SET meta = ?, max_level = ? WHERE username = ?`,
                             [encryptedMeta, newMaxLevel, user],
                             (err) => {
@@ -653,12 +679,27 @@ io.on('connection', (socket) => {
 
                 if (allDead) {
                     ROOMS[r].isGameOver = true;
+                    
+                    // Update player stats for multiplayer (Source of truth is server room level)
+                    const finalLevel = ROOMS[r].level;
+                    Object.values(ROOMS[r].players).forEach(p => {
+                        if (p.username) {
+                            db.get(`SELECT max_level FROM accounts WHERE username = ?`, [p.username], (err, row) => {
+                                if (row && finalLevel > row.max_level) {
+                                    const validatedLevel = Math.min(HARD_CAP_LEVEL, finalLevel);
+                                    db.run(`UPDATE accounts SET max_level = ? WHERE username = ?`, [validatedLevel, p.username]);
+                                }
+                            });
+                        }
+                    });
+
                     io.to(r).emit('teamGameOver');
 
                     ROOMS[r].level = 1;
                     ROOMS[r].xp = 0;
                     ROOMS[r].nextLevelXp = 100;
                     ROOMS[r].enemies = [];
+
                     ROOMS[r].gems = [];
                     ROOMS[r].baits = [];
                     ROOMS[r].tombstones = [];
