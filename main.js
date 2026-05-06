@@ -4079,6 +4079,7 @@ function startGame() {
     GAME.paused = false;
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     document.getElementById('ui-layer').style.display = 'block';
+    document.getElementById('menu-anim-canvas').style.display = 'none';
     GAME.startTime = Date.now();
     GAME.lastSpawnTime = Date.now();
     GAME.kills = 0;
@@ -4164,6 +4165,7 @@ window.softResetToMenu = () => {
     document.getElementById('menu-modal').classList.add('active');
 
     document.getElementById('ui-layer').style.display = 'none';
+    document.getElementById('menu-anim-canvas').style.display = 'block';
     switchMusic('menu');
     resetGame();
     saveMeta();
