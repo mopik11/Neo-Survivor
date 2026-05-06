@@ -198,6 +198,37 @@ function sanitizeMeta(meta) {
     return meta;
 }
 
+// ANTI-CHEAT: Cleanup database on startup (reset exploited values)
+function cleanupDatabase() {
+    console.log("[SECURITY] Starting database cleanup...");
+    db.all(`SELECT username, meta, max_level FROM accounts`, [], (err, rows) => {
+        if (err) return console.error("[SECURITY] Cleanup error:", err);
+        rows.forEach(row => {
+            try {
+                const decrypted = Security.decrypt(row.meta);
+                const meta = JSON.parse(decrypted);
+                const sanitized = sanitizeMeta(meta);
+                
+                let needsUpdate = false;
+                if (JSON.stringify(sanitized) !== decrypted) needsUpdate = true;
+                
+                const validatedLevel = Math.min(HARD_CAP_LEVEL, row.max_level);
+                if (validatedLevel !== row.max_level) needsUpdate = true;
+
+                if (needsUpdate) {
+                    const encrypted = Security.encrypt(JSON.stringify(sanitized));
+                    db.run(`UPDATE accounts SET meta = ?, max_level = ? WHERE username = ?`, [encrypted, validatedLevel, row.username]);
+                    console.log(`[SECURITY] Sanitized account: ${row.username}`);
+                }
+            } catch (e) {
+                // Skip if decryption fails (might be plain json or old account)
+            }
+        });
+        console.log("[SECURITY] Database cleanup finished.");
+    });
+}
+cleanupDatabase();
+
 io.on('connection', (socket) => {
     console.log('Hráč připojen:', socket.id);
 
