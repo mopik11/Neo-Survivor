@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.377
+ * NEO SURVIVOR - Core Game Logic - v1.380
  */
 
 window.addEventListener('beforeunload', () => {
@@ -3212,6 +3212,7 @@ function togglePause(isAFK = false) {
         const checkAuto = document.getElementById('chk-autoselect-pause');
         if (checkAuto) checkAuto.checked = !!META.upgrades.autoSelect;
 
+
         // In multiplayer: disconnect socket immediately when paused/AFK
         // This stops the server from spawning enemies for this player
         if (NET.isMultiplayer && NET.socket) {
@@ -3230,7 +3231,6 @@ function togglePause(isAFK = false) {
             NET.socket.disconnect();
             NET.socket = null;
             NET.isMultiplayer = false;
-            NET.roomId = null;
         }
     }
 
@@ -6408,17 +6408,7 @@ function render() {
             });
         }
 
-        ctx.strokeStyle = 'rgba(99, 102, 241, 0.15)'; ctx.lineWidth = 1; ctx.beginPath();
-        const hexRadius = 60, hexHeight = hexRadius * Math.sqrt(3);
-        const startCol = Math.floor(camX / (hexRadius * 1.5)) - 1, endCol = startCol + Math.ceil((GAME.canvas.width / GAME.zoom) / (hexRadius * 1.5)) + 2;
-        const startRow = Math.floor(camY / hexHeight) - 1, endRow = startRow + Math.ceil((GAME.canvas.height / GAME.zoom) / hexHeight) + 2;
-        for (let col = startCol; col <= endCol; col++) {
-            for (let row = startRow; row <= endRow; row++) {
-                const cx = col * hexRadius * 1.5 - camX, cy = (row * hexHeight + (Math.abs(col) % 2 === 0 ? 0 : hexHeight / 2)) - camY;
-                for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; const px = cx + Math.cos(a) * hexRadius, py = cy + Math.sin(a) * hexRadius; if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
-            }
-        }
-        ctx.stroke();
+
 
         if (GAME.active && GAME.entities) {
             if (GAME.entities.fire) GAME.entities.fire.forEach(f => { if (f) f.draw(ctx, { x: camX, y: camY }); });
