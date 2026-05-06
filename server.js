@@ -252,7 +252,8 @@ io.on('connection', (socket) => {
                     try { meta = JSON.parse(row.meta); } catch(e2) { meta = {}; }
                 }
 
-                meta.currency = (meta.currency || 0) + amount;
+                const MAX_CURRENCY = 1000000;
+                meta.currency = Math.min(MAX_CURRENCY, (meta.currency || 0) + amount);
                 const encryptedMeta = Security.encrypt(JSON.stringify(meta));
                 
                 db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encryptedMeta, lowTarget], () => {
@@ -275,7 +276,8 @@ io.on('connection', (socket) => {
                     try { meta = JSON.parse(row.meta); } catch(e2) { meta = {}; }
                 }
 
-                meta.maxLevel = amount;
+                const MAX_LEVEL = 500;
+                meta.maxLevel = Math.min(MAX_LEVEL, amount);
                 const encryptedMeta = Security.encrypt(JSON.stringify(meta));
                 
                 db.run(`UPDATE accounts SET meta = ?, max_level = ? WHERE username = ?`, [encryptedMeta, amount, lowTarget], () => {
@@ -490,7 +492,36 @@ io.on('connection', (socket) => {
             if (row) {
                 Security.verifyPassword(pass, row.password).then(isMatch => {
                     if (isMatch) {
-                        const newMaxLevel = Math.max(meta.maxLevel || 1, row.max_level || 1);
+                        let oldMeta;
+                        try {
+                            const decrypted = Security.decrypt(row.meta);
+                            oldMeta = JSON.parse(decrypted);
+                        } catch (e) {
+                            try { oldMeta = JSON.parse(row.meta); } catch(e2) { oldMeta = {}; }
+                        }
+
+                        // ANTI-CHEAT: Sanity checks for progress
+                        const MAX_SESSION_CURRENCY_GAIN = 50000;
+                        const MAX_SESSION_LEVEL_GAIN = 50;
+                        const HARD_CAP_CURRENCY = 1000000;
+                        const HARD_CAP_LEVEL = 500;
+
+                        let validatedCurrency = meta.currency || 0;
+                        let oldCurrency = oldMeta.currency || 0;
+                        
+                        if (validatedCurrency > oldCurrency + MAX_SESSION_CURRENCY_GAIN) {
+                            validatedCurrency = oldCurrency + MAX_SESSION_CURRENCY_GAIN;
+                        }
+                        validatedCurrency = Math.min(HARD_CAP_CURRENCY, validatedCurrency);
+                        meta.currency = validatedCurrency;
+
+                        let newMaxLevel = Math.max(meta.maxLevel || 1, row.max_level || 1);
+                        if (newMaxLevel > (row.max_level || 1) + MAX_SESSION_LEVEL_GAIN) {
+                            newMaxLevel = (row.max_level || 1) + MAX_SESSION_LEVEL_GAIN;
+                        }
+                        newMaxLevel = Math.min(HARD_CAP_LEVEL, newMaxLevel);
+                        meta.maxLevel = newMaxLevel;
+
                         const encryptedMeta = Security.encrypt(JSON.stringify(meta));
                         db.run(`UPDATE accounts SET meta = ?, max_level = ? WHERE username = ?`,
                             [encryptedMeta, newMaxLevel, user],
@@ -512,8 +543,15 @@ io.on('connection', (socket) => {
     socket.on('submitScore', (data) => {
         if (data && data.name && data.level) {
             db.get(`SELECT max_level FROM accounts WHERE username = ?`, [data.name], (err, row) => {
-                if (row && data.level > row.max_level) {
-                    db.run(`UPDATE accounts SET max_level = ? WHERE username = ?`, [data.level, data.name], () => {
+                const MAX_SESSION_LEVEL_GAIN = 50;
+                const HARD_CAP_LEVEL = 500;
+                let validatedLevel = Math.min(HARD_CAP_LEVEL, data.level);
+                
+                if (row && validatedLevel > row.max_level) {
+                    if (validatedLevel > row.max_level + MAX_SESSION_LEVEL_GAIN) {
+                        validatedLevel = row.max_level + MAX_SESSION_LEVEL_GAIN;
+                    }
+                    db.run(`UPDATE accounts SET max_level = ? WHERE username = ?`, [validatedLevel, data.name], () => {
                         broadcastLeaderboard();
                     });
                 }

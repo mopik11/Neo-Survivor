@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.370
+ * NEO SURVIVOR - Core Game Logic - v1.371
  */
 
 window.addEventListener('beforeunload', () => {
@@ -25,8 +25,9 @@ window.showCustomAlert = function (msg) {
 };
 
 window.closeModal = function() {
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.querySelectorAll('.modal:not(#menu-modal)').forEach(m => m.classList.remove('active'));
 };
+
 
 
 // --- AUDIO SYSTEM ---
@@ -924,8 +925,8 @@ class MenuAnimation {
             this.ctx.rotate(Math.sin(Date.now() / 1000) * 0.1 + u.rotation);
 
             // Draw UFO body
-            this.ctx.shadowBlur = 25;
-            this.ctx.shadowColor = u.color;
+            this.ctx.shadowBlur = 0;
+            this.ctx.shadowColor = 'transparent';
             this.ctx.fillStyle = u.color;
             this.ctx.beginPath();
             this.ctx.ellipse(0, 0, u.size, u.size * 0.35, 0, 0, Math.PI * 2);
@@ -1071,7 +1072,7 @@ class FriendlyMinion {
         if (this.isAlien) {
             // Nakreslíme "hodného" ufona (modrý)
             const color = '#6366f1';
-            ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
+            ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; ctx.fillStyle = color;
             ctx.save(); ctx.translate(this.x - cam.x, this.y - cam.y);
             
             if (this.alienType === 1) { // Dron
