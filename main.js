@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.380
+ * NEO SURVIVOR - Core Game Logic - v1.382
  */
 
 window.addEventListener('beforeunload', () => {
@@ -899,8 +899,9 @@ class MenuAnimation {
     animate() {
         if (!this.canvas) return;
         
-        // Vykreslovat pokud není aktivní hra
+        // Vykreslovat vždy na pozadí, pokud neběží hra v aktivním režimu
         if (GAME.active) {
+            // Ve hře kreslíme jen pozadí, pokud chceme, ale tady raději šetříme výkon
             requestAnimationFrame(() => this.animate());
             return;
         }
@@ -4494,13 +4495,6 @@ function initSocket() {
             }
         });
 
-        NET.socket.on('serverStats', (data) => {
-            const el = document.getElementById('active-players-count');
-            if (el) {
-                // Zobrazíme oba údaje pro lepší přehled
-                el.innerHTML = `${data.activePlayers} <span style="font-size:0.65rem; opacity:0.6; margin-left:5px;">(${data.playingNow} ${window.T("v bitvě")})</span>`;
-            }
-        });
 
         NET.socket.on('explosion', (data) => {
             // Nuke or Kamikadze explosion

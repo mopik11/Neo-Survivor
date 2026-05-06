@@ -296,8 +296,7 @@ io.on('connection', (socket) => {
                     try { meta = JSON.parse(row.meta); } catch(e2) { meta = {}; }
                 }
 
-                const MAX_CURRENCY = 1000000;
-                meta.currency = Math.min(MAX_CURRENCY, (meta.currency || 0) + amount);
+                meta.currency = (meta.currency || 0) + amount;
                 const encryptedMeta = Security.encrypt(JSON.stringify(meta));
                 
                 db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encryptedMeta, lowTarget], () => {
@@ -320,8 +319,7 @@ io.on('connection', (socket) => {
                     try { meta = JSON.parse(row.meta); } catch(e2) { meta = {}; }
                 }
 
-                const MAX_LEVEL = 500;
-                meta.maxLevel = Math.min(MAX_LEVEL, amount);
+                meta.maxLevel = amount;
                 const encryptedMeta = Security.encrypt(JSON.stringify(meta));
                 
                 db.run(`UPDATE accounts SET meta = ?, max_level = ? WHERE username = ?`, [encryptedMeta, amount, lowTarget], () => {
@@ -590,14 +588,10 @@ io.on('connection', (socket) => {
     socket.on('submitScore', (data) => {
         if (data && data.name && data.level) {
             db.get(`SELECT max_level FROM accounts WHERE username = ?`, [data.name], (err, row) => {
-                const MAX_SESSION_LEVEL_GAIN = 50;
-                const HARD_CAP_LEVEL = 500;
-                let validatedLevel = Math.min(HARD_CAP_LEVEL, data.level);
+                // Uncapped progression (v1.379+)
+                let validatedLevel = data.level;
                 
                 if (row && validatedLevel > row.max_level) {
-                    if (validatedLevel > row.max_level + MAX_SESSION_LEVEL_GAIN) {
-                        validatedLevel = row.max_level + MAX_SESSION_LEVEL_GAIN;
-                    }
                     db.run(`UPDATE accounts SET max_level = ? WHERE username = ?`, [validatedLevel, data.name], () => {
                         broadcastLeaderboard();
                     });
