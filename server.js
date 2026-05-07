@@ -471,7 +471,7 @@ io.on('connection', (socket) => {
             const encrypted = Security.encrypt(JSON.stringify(meta));
             db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
                 socket.emit('syncSuccess', { meta: meta });
-                socket.emit('crateResults', { results: results });
+                socket.emit('crateResults', { results: results, type: data.type });
             });
         });
     });
@@ -503,6 +503,72 @@ io.on('connection', (socket) => {
             db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
                 socket.emit('syncSuccess', { meta: meta });
             });
+        });
+    });
+
+    socket.on('purchase', (data) => {
+        const user = socket.authenticatedUser;
+        if (!user || data.token !== socket.sessionToken) return;
+
+        db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+            if (err || !row) return;
+            let meta;
+            try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
+            if (!meta) return;
+
+            let cost = 0;
+            let success = false;
+
+            if (data.type === 'ship') {
+                cost = (PRICES.ships && PRICES.ships[data.id]) || 0;
+                if (!meta.ships) meta.ships = { 1: true };
+                if (meta.currency >= cost && !meta.ships[data.id]) {
+                    meta.currency -= cost;
+                    meta.ships[data.id] = true;
+                    meta.selectedShip = data.id;
+                    success = true;
+                }
+            } else if (data.type === 'ability') {
+                cost = (PRICES.abilities && PRICES.abilities[data.id]) || 0;
+                if (!meta.abilities) meta.abilities = { 1: true };
+                if (meta.currency >= cost && !meta.abilities[data.id]) {
+                    meta.currency -= cost;
+                    meta.abilities[data.id] = true;
+                    meta.selectedAbility = data.id;
+                    success = true;
+                }
+            } else if (data.type === 'stat') {
+                const cfg = PRICES.stats && PRICES.stats[data.id];
+                if (!cfg) return;
+                if (!meta.upgrades) meta.upgrades = { hp:0, speed:0, luck:0, regen:0, armor:0 };
+                const currentVal = meta.upgrades[data.id] || 0;
+                cost = Math.floor(cfg.base * (1 + currentVal * cfg.step));
+                if (meta.currency >= cost) {
+                    meta.currency -= cost;
+                    meta.upgrades[data.id] = currentVal + 1;
+                    success = true;
+                }
+            } else if (data.type === 'crate') {
+                const baseCost = (PRICES.crates && PRICES.crates[data.id]) || 0;
+                const count = data.count || 1;
+                cost = baseCost * count;
+                if (meta.currency >= cost) {
+                    meta.currency -= cost;
+                    if (!meta.unopenedCrates) meta.unopenedCrates = { basic:0, premium:0, legendary:0 };
+                    meta.unopenedCrates[data.id] = (meta.unopenedCrates[data.id] || 0) + count;
+                    success = true;
+                }
+            }
+
+            if (success) {
+                const encrypted = Security.encrypt(JSON.stringify(meta));
+                db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+                    socket.emit('syncSuccess', { meta: meta });
+                    socket.emit('purchaseSuccess', { type: data.type, id: data.id });
+                });
+            } else {
+                socket.emit('purchaseError', "Nedostatek Dogecoinu nebo neplatná položka.");
+            }
         });
     });
 
@@ -785,14 +851,15 @@ io.on('connection', (socket) => {
                 level: 1,
                 xp: 0,
                 nextLevelXp: 100,
-                paused: false,
+                paused: data.isSolo ? false : true,
                 readyCount: 0,
                 isGameOver: false,
                 cleanupTimer: null,
                 frozenUntil: 0, // Logika pro zamrznutí času
                 tombstones: [],
                 obstacles: [],
-                lastBossLevelSpawned: 0
+                lastBossLevelSpawned: 0,
+                isSolo: data.isSolo || false
             };
         } else {
             if (ROOMS[roomId].cleanupTimer) {

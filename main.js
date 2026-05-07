@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.402
+ * NEO SURVIVOR - Core Game Logic - v1.405
  */
 
 window.addEventListener('beforeunload', () => {
@@ -999,7 +999,7 @@ class Fire {
                     let finalDmg = dmg;
                     if (e.type === 8) finalDmg *= 0.5; // Shielder reduction
                     e.hp -= finalDmg;
-                    if (NET.isMultiplayer && !e.isMeteorite) NET.socket.emit('enemyHit', { id: e.id, damage: finalDmg });
+                    if (!e.isMeteorite) NET.socket.emit('enemyHit', { id: e.id, damage: finalDmg });
 
                     if (e.hp <= 0) {
                         AudioEngine.play('hit');
@@ -1085,7 +1085,7 @@ class FriendlyMinion {
                     target.hp -= finalDmg;
                     if (target.hp <= 0) handleEnemyDeath(target);
                     this.hp -= 2 * GAME.speedFactor;
-                    if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: target.id, damage: finalDmg });
+                    NET.socket.emit('enemyHit', { id: target.id, damage: finalDmg });
                 }
             }
         }
@@ -4455,22 +4455,6 @@ function initSocket() {
             }
         });
 
-        NET.socket.on('syncSuccess', (data) => {
-            if (data.meta) {
-                // Merge server-authoritative meta into local META
-                for (let key in data.meta) {
-                    if (typeof data.meta[key] === 'object' && data.meta[key] !== null && !Array.isArray(data.meta[key])) {
-                        META[key] = { ...META[key], ...data.meta[key] };
-                    } else {
-                        META[key] = data.meta[key];
-                    }
-                }
-                updateCurrencyUI();
-                if (window.showMetaMenu && document.getElementById('meta-modal').classList.contains('active')) {
-                    showMetaMenu();
-                }
-            }
-        });
 
         NET.socket.on('resumeGame', () => {
             const waitModal = document.getElementById('waiting-modal');
@@ -5631,7 +5615,13 @@ function init() {
     if (btnStart) btnStart.onclick = () => {
         NET.isMultiplayer = false;
         tryFullscreen();
-        AudioEngine.init(); AudioEngine.stopMenuMusic(); AudioEngine.startMusic(); startGame();
+        AudioEngine.init(); AudioEngine.stopMenuMusic();
+        
+        // --- ZERO TRUST SOLO PLAY (v1.405.7) ---
+        // Join a private server-side room even for solo to enable authoritative rewards
+        const soloRoomId = "SOLO_" + Math.random().toString(36).substr(2, 6).toUpperCase();
+        initSocket();
+        NET.socket.emit('joinRoom', { roomId: soloRoomId, playerId: myPlayerId, isSolo: true });
     };
 
     const btnMP = document.getElementById('btn-multiplayer');
@@ -6007,40 +5997,14 @@ function handleEnemyDeath(enemy) {
     META.lastMoveTime = Date.now();
 
     if (!NET.isMultiplayer && GAME.entities.gems) {
-        // --- NEW ECONOMY (v1.402): 1 KILL = 1 DOGE | 1 BOSS = 500 DOGE ---
-        if (!META.currency) META.currency = 0;
-        if (!META.stats) META.stats = { totalDogecoins: 0, totalBossKills: 0 };
+        let isNuke = false, isMagnet = false;
         
-        if (enemy.isBoss) {
-            META.currency += 500;
-            GAME.dogeGained += 500;
-            META.stats.totalDogecoins += 500;
-            META.stats.totalBossKills++;
-            
-            if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
-            for (let i = 0; i < 10; i++) GAME.entities.gems.push(new Gem(enemy.x + (Math.random() - 0.5) * 150, enemy.y + (Math.random() - 0.5) * 150));
-            
-            if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
-            META.unopenedCrates.basic++;
-            saveMeta();
-            showLevelUp(true);
-            checkAchievements();
-        } else {
-            META.currency += 1;
-            GAME.dogeGained += 1;
-            META.stats.totalDogecoins += 1;
-
-            // Throttled save in solo mode (every 10 kills)
-            if (GAME.kills % 10 === 0) saveMeta();
-        }
-
         if (enemy.type === 4) { // Zloděj drop
             const drops = (enemy.stolenGems || 0) + 5;
             for (let i = 0; i < drops; i++) {
                 GAME.entities.gems.push(new Gem(enemy.x + (Math.random() - 0.5) * 100, enemy.y + (Math.random() - 0.5) * 100));
             }
         } else {
-            let isNuke = false, isMagnet = false;
             const gem = new Gem(enemy.x, enemy.y);
             gem.isNuke = isNuke; gem.isMagnet = isMagnet;
             GAME.entities.gems.push(gem);
@@ -6204,7 +6168,7 @@ function update(dt) {
                     } else {
                         if (t.kaktus && !e.isBoss) {
                             e.hp = 0; e.dead = true;
-                            if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: 99999 });
+                            NET.socket.emit('enemyHit', { id: e.id, damage: 99999 });
                         } else {
                             if (t.hp !== undefined) {
                                 let dmg = (e.damage || (e.isBoss ? 2 : 0.5)) * (t.shield || 1);
