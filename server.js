@@ -172,31 +172,20 @@ function broadcastServerStats() {
 }
 setInterval(broadcastServerStats, 5000);
 
-// --- ECONOMY CONFIG (v1.385) ---
-const REWARD_NORMAL_KILL = 1;
-const REWARD_BOSS_KILL = 500;
+// --- AUTHORITATIVE ECONOMY SYSTEM (v1.402.3) ---
+const PRICES = {
+    ships: { 1: 0, 2: 500, 3: 1000, 4: 1500, 5: 2000 },
+    abilities: { 1: 0, 2: 800, 3: 1200, 4: 1500 },
+    stats: {
+        hp: { base: 10, step: 0.5 },
+        speed: { base: 15, step: 0.5 },
+        luck: { base: 25, step: 0.5 },
+        regen: { base: 40, step: 0.5 },
+        armor: { base: 50, step: 0.5 }
+    },
+    crates: { basic: 150, premium: 1000, legendary: 5000 }
+};
 
-function rewardPlayer(socket, amount) {
-    const user = socket.authenticatedUser;
-    if (!user) return;
-    
-    db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
-        if (!err && row) {
-            let meta;
-            try {
-                meta = JSON.parse(Security.decrypt(row.meta));
-            } catch(e) { 
-                try { meta = JSON.parse(row.meta); } catch(e2) { meta = {}; }
-            }
-            
-            meta.currency = (meta.currency || 0) + amount;
-            if (!meta.stats) meta.stats = { totalDogecoins: 0 };
-            meta.stats.totalDogecoins = (meta.stats.totalDogecoins || 0) + amount;
-            
-            const encrypted = Security.encrypt(JSON.stringify(meta));
-            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user]);
-            
-// --- ITEM DATABASE (v1.396.5) ---
 const EMOJIS = [
     { id: 'soap', rarity: 'common', price: 20 },
     { id: 'money', rarity: 'rare', price: 100 },
@@ -216,6 +205,9 @@ const EMOJIS = [
     { id: 'crown', rarity: 'epic', price: 1000 },
     { id: 'ultra_rare', rarity: 'legendary', price: 5000, chance: 0.1 }
 ];
+
+const REWARD_NORMAL_KILL = 1;
+const REWARD_BOSS_KILL = 500;
 
 function generateLoot(crateType) {
     const roll = Math.random() * 100;
@@ -244,8 +236,25 @@ function generateLoot(crateType) {
     return possible.length === 0 ? EMOJIS[0] : possible[Math.floor(Math.random() * possible.length)];
 }
 
-// Inform client to update UI
-socket.emit('currencyUpdated', { amount: meta.currency });
+function rewardPlayer(socket, amount) {
+    const user = socket.authenticatedUser;
+    if (!user) return;
+    
+    db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+        if (!err && row) {
+            let meta;
+            try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { 
+                try { meta = JSON.parse(row.meta); } catch(e2) { meta = {}; }
+            }
+            
+            meta.currency = (meta.currency || 0) + amount;
+            if (!meta.stats) meta.stats = { totalDogecoins: 0 };
+            meta.stats.totalDogecoins = (meta.stats.totalDogecoins || 0) + amount;
+            
+            const encrypted = Security.encrypt(JSON.stringify(meta));
+            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+                socket.emit('currencyUpdated', { amount: meta.currency });
+            });
         }
     });
 }
