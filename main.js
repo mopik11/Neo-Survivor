@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.401
+ * NEO SURVIVOR - Core Game Logic - v1.402
  */
 
 window.addEventListener('beforeunload', () => {
@@ -3617,8 +3617,6 @@ if (NET.socket) {
     });
 }
 
-    startCrateAnimation(firstResult, type);
-}
 
 function clearCrateTimeouts() {
     if (GAME.crateTimeouts) {
@@ -6009,7 +6007,7 @@ function handleEnemyDeath(enemy) {
     META.lastMoveTime = Date.now();
 
     if (!NET.isMultiplayer && GAME.entities.gems) {
-        // --- NEW ECONOMY (v1.401): 1 KILL = 1 DOGE | 1 BOSS = 500 DOGE ---
+        // --- NEW ECONOMY (v1.402): 1 KILL = 1 DOGE | 1 BOSS = 500 DOGE ---
         if (!META.currency) META.currency = 0;
         if (!META.stats) META.stats = { totalDogecoins: 0, totalBossKills: 0 };
         
