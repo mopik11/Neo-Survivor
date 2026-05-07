@@ -297,7 +297,8 @@ const META = {
     currency: 0,
     lastDailyGift: 0,
     dailyStreak: 0,
-    upgrades: { hp: 0, speed: 0, luck: 0, regen: 0, armor: 0, hat: null, autoSelect: false },
+    autoSelect: false,
+    upgrades: { hp: 0, speed: 0, luck: 0, regen: 0, armor: 0, hat: null },
     ships: { 1: true, 2: false, 3: false, 4: false, 5: false },
     selectedShip: 1,
     abilities: { 1: true, 2: false, 3: false, 4: false },
@@ -496,7 +497,7 @@ const loadMeta = () => {
         }
         if (!META.settings) META.settings = { musicMenu: true, musicGame: true, sfx: true };
         if (META.upgrades && META.upgrades.hat === undefined) META.upgrades.hat = null;
-        if (META.upgrades && META.upgrades.autoSelect === undefined) META.upgrades.autoSelect = false;
+        if (META.autoSelect === undefined) META.autoSelect = false;
         if (!META.selectedLanguage) META.selectedLanguage = 'cs';
     }
     updateCurrencyUI();
@@ -2788,7 +2789,7 @@ function showLevelUp(isBossReward = false) {
     }
 
     // Auto Random Select logika
-    if (META.upgrades.autoSelect) {
+    if (META.autoSelect) {
         setTimeout(() => {
             if (modal.classList.contains('active')) {
                 const cards = container.querySelectorAll('.upgrade-card');
@@ -3335,8 +3336,20 @@ function showShipsMenu() {
                 saveMeta();
                 showShipsMenu();
             } else {
-                // ZERO TRUST: Only request purchase, don't update locally
-                NET.socket.emit('purchase', { type: 'ship', id: item.id, token: NET.sessionToken });
+                // OPTIMISTIC UI: Update locally first
+                if (META.currency >= item.cost) {
+                    META.currency -= item.cost;
+                    META.ships[item.id] = true;
+                    META.selectedShip = item.id;
+                    playSound('upgrade');
+                    showShipsMenu(); // Refresh immediately
+                }
+                
+                // AUTHORITATIVE REQUEST
+                if (!NET.socket) initSocket();
+                if (NET.socket) {
+                    NET.socket.emit('purchase', { type: 'ship', id: item.id, token: NET.sessionToken });
+                }
             }
         };
         shipsGrid.appendChild(card);
@@ -3368,14 +3381,25 @@ function showShipsMenu() {
                 saveMeta();
                 showShipsMenu();
             } else {
-                // ZERO TRUST: Only request purchase, don't update locally
-                NET.socket.emit('purchase', { type: 'ability', id: item.id, token: NET.sessionToken });
+                // OPTIMISTIC UI: Update locally first
+                if (META.currency >= item.cost) {
+                    META.currency -= item.cost;
+                    META.abilities[item.id] = true;
+                    META.selectedAbility = item.id;
+                    playSound('upgrade');
+                    showShipsMenu(); // Refresh immediately
+                }
+
+                // AUTHORITATIVE REQUEST
+                if (!NET.socket) initSocket();
+                if (NET.socket) {
+                    NET.socket.emit('purchase', { type: 'ability', id: item.id, token: NET.sessionToken });
+                }
             }
         };
         abilitiesGrid.appendChild(card);
     });
 }
-
 function showMetaMenu() {
     playSound('menuOpen');
     switchMusic('menu');
@@ -3421,7 +3445,12 @@ function showMetaMenu() {
                     <button class="btn-restart" style="background: ${type.border}; color: #000; font-size: 0.8rem; padding: 10px; border: none; width: 100%;">${window.T('OTEVŘÍT')}</button>
                 `;
                 card.querySelector('button').onclick = () => {
-                    // ZERO TRUST: Only request open, don't update locally
+                    // OPTIMISTIC UI: Decrement locally for instant feedback
+                    if (META.unopenedCrates[type.id] > 0) {
+                        META.unopenedCrates[type.id]--;
+                        showMetaMenu(); // Refresh UI
+                    }
+                    // ZERO TRUST: Request actual results from server
                     openCrate(type.id, 1);
                 };
                 rewardGrid.appendChild(card);
@@ -3450,9 +3479,22 @@ function showMetaMenu() {
         const cost = Math.floor(item.cost * (1 + (item.val || 0) * 0.5));
         card.innerHTML = `<h3>${window.T(item.name)}</h3><p>${window.T(item.desc)}</p><span class="cost">${formatNumber(cost)} DOGE</span>`;
         card.onclick = () => {
-            // ZERO TRUST: Only request purchase, don't update locally
-            NET.socket.emit('purchase', { type: 'stat', id: item.id, token: NET.sessionToken });
-            playSound('menuOpen'); 
+            // OPTIMISTIC UI: Update locally first for instant feedback
+            const currentVal = META.upgrades[item.id] || 0;
+            const cost = Math.floor(item.cost * (1 + currentVal * 0.5));
+            
+            if (META.currency >= cost) {
+                META.currency -= cost;
+                META.upgrades[item.id] = currentVal + 1;
+                playSound('upgrade');
+                showMetaMenu(); // Refresh UI immediately
+            }
+
+            // AUTHORITATIVE REQUEST: Server will confirm or revert via syncSuccess/purchaseError
+            if (!NET.socket) initSocket();
+            if (NET.socket) {
+                NET.socket.emit('purchase', { type: 'stat', id: item.id, token: NET.sessionToken });
+            }
         };
         upgradesGrid.appendChild(card);
     });
@@ -3495,12 +3537,22 @@ function showMetaMenu() {
                     btn.onclick = (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (!NET.socket) initSocket();
                         const count = parseInt(btn.getAttribute('data-count'));
-                        // ZERO TRUST: Only request purchase, don't update locally
+                        const totalCost = type.cost * count;
+
+                        // OPTIMISTIC UI: Update locally first
+                        if (META.currency >= totalCost) {
+                            META.currency -= totalCost;
+                            if (!META.unopenedCrates) META.unopenedCrates = { basic:0, premium:0, legendary:0 };
+                            META.unopenedCrates[type.id] = (META.unopenedCrates[type.id] || 0) + count;
+                            playSound('upgrade');
+                            showMetaMenu(); // Refresh immediately
+                        }
+
+                        // AUTHORITATIVE REQUEST
+                        if (!NET.socket) initSocket();
                         if (NET.socket) {
                             NET.socket.emit('purchase', { type: 'crate', id: type.id, count: count, token: NET.sessionToken });
-                            playSound('menuOpen'); 
                         } else {
                             window.showCustomAlert(window.T("Chyba připojení k serveru!"));
                         }
@@ -3595,27 +3647,7 @@ function openCrate(type = 'basic', count = 1) {
     NET.socket.emit('openCrate', { type: type, count: count, token: NET.sessionToken });
 }
 
-// Global listener for authoritative results
-if (NET.socket) {
-    NET.socket.on('crateResults', (data) => {
-        if (!GAME.crateQueue) GAME.crateQueue = [];
-        GAME.currentBatchResults = data.results;
-        GAME.crateQueue = [...data.results];
-        
-        const firstResult = GAME.crateQueue.shift();
-        startCrateAnimation(firstResult, data.type || 'basic');
-    });
 
-    NET.socket.on('purchaseSuccess', (data) => {
-        updateCurrencyUI();
-        if (data.type === 'ship' || data.type === 'ability') showShipsMenu();
-        else if (data.type === 'stat' || data.type === 'crate') showMetaMenu();
-    });
-
-    NET.socket.on('purchaseError', (msg) => {
-        window.showCustomAlert(window.T(msg));
-    });
-}
 
 
 function clearCrateTimeouts() {
@@ -4461,6 +4493,28 @@ function initSocket() {
                     showShipsMenu();
                 }
             }
+        });
+
+        NET.socket.on('crateResults', (data) => {
+            if (!data || !data.results) return;
+            if (!GAME.crateQueue) GAME.crateQueue = [];
+            GAME.currentBatchResults = data.results;
+            GAME.crateQueue = [...data.results];
+            
+            const firstResult = GAME.crateQueue.shift();
+            startCrateAnimation(firstResult, data.type || 'basic');
+        });
+
+        NET.socket.on('purchaseSuccess', (data) => {
+            updateCurrencyUI();
+            if (data.type === 'ship' || data.type === 'ability') showShipsMenu();
+            else if (data.type === 'stat' || data.type === 'crate') showMetaMenu();
+        });
+
+        NET.socket.on('purchaseError', (msg) => {
+            window.showCustomAlert(window.T(msg));
+            // Hard sync on error to revert any optimistic changes
+            NET.socket.emit('syncAccount', { meta: META, pass: localStorage.getItem('neoSurvivor_pass'), token: NET.sessionToken });
         });
 
 
@@ -5748,9 +5802,9 @@ function init() {
         if (btnSFX) btnSFX.style.background = META.settings.sfx ? 'rgba(255,255,255,0.1)' : '#ef4444';
         updateMusicVolume();
         const chkAuto = document.getElementById('chk-autoselect');
-        if (chkAuto) chkAuto.checked = !!META.upgrades.autoSelect;
+        if (chkAuto) chkAuto.checked = !!META.autoSelect;
         const chkAutoPause = document.getElementById('chk-autoselect-pause');
-        if (chkAutoPause) chkAutoPause.checked = !!META.upgrades.autoSelect;
+        if (chkAutoPause) chkAutoPause.checked = !!META.autoSelect;
     };
     const updateSettingUI = window.updateSettingUI;
 
@@ -5776,7 +5830,7 @@ function init() {
     const chkAuto = document.getElementById('chk-autoselect');
     if (chkAuto) {
         chkAuto.onchange = (e) => {
-            META.upgrades.autoSelect = e.target.checked;
+            META.autoSelect = e.target.checked;
             saveMeta();
             updateSettingUI(); // Sync pause menu checkbox if open
         };
@@ -5785,7 +5839,7 @@ function init() {
     const chkAutoPause = document.getElementById('chk-autoselect-pause');
     if (chkAutoPause) {
         chkAutoPause.onchange = (e) => {
-            META.upgrades.autoSelect = e.target.checked;
+            META.autoSelect = e.target.checked;
             saveMeta();
             updateSettingUI(); // Sync main settings checkbox if open
         };
