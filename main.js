@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.416.2
+ * NEO SURVIVOR - Core Game Logic - v1.417
  */
 
 window.addEventListener('beforeunload', () => {
@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.416.2'
+    version: 'v1.417'
 };
 
 let achievementsInitialized = false;
@@ -3668,7 +3668,10 @@ function openCrate(type = 'basic', count = 1) {
 
 function clearCrateTimeouts() {
     if (GAME.crateTimeouts) {
-        GAME.crateTimeouts.forEach(t => clearTimeout(t));
+        GAME.crateTimeouts.forEach(t => {
+            clearTimeout(t);
+            clearInterval(t);
+        });
     }
     GAME.crateTimeouts = [];
 }
@@ -3802,6 +3805,24 @@ function startCrateAnimation(winner, crateType = 'basic') {
         }
         const resultInfo = modal.querySelector('#crate-result-info');
         if (resultInfo) {
+            // Auto-advance logic (v1.417 - Robust fix)
+            if (GAME.crateQueue && GAME.crateQueue.length > 0) {
+                clearCrateTimeouts();
+                let timeLeft = 3;
+                const nextBtn = document.getElementById('btn-crate-collect');
+                if (nextBtn) nextBtn.innerText = `${window.T('DALŠÍ')} (${timeLeft}s)`;
+                
+                const autoInterval = setInterval(() => {
+                    timeLeft--;
+                    if (nextBtn) nextBtn.innerText = `${window.T('DALŠÍ')} (${timeLeft}s)`;
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(autoInterval);
+                        if (nextBtn) nextBtn.click();
+                    }
+                }, 1000);
+                GAME.crateTimeouts.push(autoInterval);
+            }
             resultInfo.style.opacity = '1';
             resultInfo.style.visibility = 'visible';
             resultInfo.style.transform = 'translateY(0)';
@@ -3815,22 +3836,6 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 btn.style.pointerEvents = 'auto';
                 btn.style.cursor = 'pointer';
             });
-
-            // Auto-advance logic (v1.415.2)
-            if (GAME.crateQueue && GAME.crateQueue.length > 0) {
-                let timeLeft = 3;
-                const timerEl = document.getElementById('crate-auto-timer');
-                const autoInterval = setInterval(() => {
-                    timeLeft--;
-                    if (timerEl) timerEl.innerText = timeLeft;
-                    if (timeLeft <= 0) {
-                        clearInterval(autoInterval);
-                        const nextBtn = document.getElementById('btn-crate-collect');
-                        if (nextBtn) nextBtn.click();
-                    }
-                }, 1000);
-                GAME.crateTimeouts.push(autoInterval);
-            }
         }
         const skipBtn = document.getElementById('btn-skip-crate');
         if (skipBtn) skipBtn.style.display = 'none';
@@ -3875,14 +3880,6 @@ function startCrateAnimation(winner, crateType = 'basic') {
         } else {
             showConfetti(20);
             playSound('crateWin');
-        }
-
-        if (GAME.crateQueue && GAME.crateQueue.length > 0) {
-            const t = setTimeout(() => {
-                const nextBtn = document.getElementById('btn-crate-collect');
-                if (nextBtn) nextBtn.click();
-            }, 3000);
-            GAME.crateTimeouts.push(t);
         }
     };
 
@@ -4105,7 +4102,10 @@ function sellAllEmojis() {
     // Server-Authoritative selling (v1.415)
     if (NET.socket && NET.socket.connected) {
         NET.socket.emit('sellAllItems', { token: NET.sessionToken });
-        window.showCustomAlert(window.T("Požadavek na prodej odeslán..."));
+        // Optimistic UI update (v1.417)
+        META.inventory = [];
+        showMetaMenu(); 
+        saveMetaLocalOnly();
     } else {
         // Fallback for offline
         let totalGain = 0;
@@ -4338,6 +4338,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
+            console.log("NEO SURVIVOR v1.417");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -6214,10 +6215,17 @@ function update(dt) {
         }
         META.lastMoveTime = now;
         META.isAFK = false;
-    } else if (GAME.active && !GAME.paused && !document.querySelector('.modal.active') && (now - (META.lastMoveTime || now) > 45000)) {
-        // AFK after 45s - show AFK screen (togglePause also saves session + disconnects MP socket)
+    } else if (GAME.active && !GAME.paused && !document.querySelector('.modal.active') && (now - (META.lastMoveTime || now) > 60000)) {
+        // AFK after 60s (Increased to 60s in v1.417)
         META.isAFK = true;
-        togglePause(true);
+        
+        if (NET.isMultiplayer) {
+            // In MP, just show AFK screen but DON'T pause the whole room via local loop
+            // togglePause will handle the disconnect/save session
+            togglePause(true);
+        } else {
+            togglePause(true);
+        }
     }
 
     // Periodic progress sync (Anti-Cheat compliance)

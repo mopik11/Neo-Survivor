@@ -1092,7 +1092,7 @@ io.on('connection', (socket) => {
         const p = socket.playerId;
         if (r && ROOMS[r] && ROOMS[r].players[p]) {
             // ZERO TRUST: Strict Whitelist for visual/non-critical properties only
-            const whitelist = ['x', 'y', 'rot', 'anim', 'hat', 'dead', 'hp', 'maxHp', 'flipX'];
+            const whitelist = ['x', 'y', 'rot', 'anim', 'hat', 'dead', 'hp', 'maxHp', 'flipX', 'aura', 'auraRange', 'auraLevel', 'fireTrail', 'kaktus', 'shipType', 'laserTargetsIds', 'orbitals'];
             whitelist.forEach(key => {
                 if (data[key] !== undefined) {
                     ROOMS[r].players[p][key] = data[key];
@@ -1339,9 +1339,9 @@ io.on('connection', (socket) => {
         if (r && ROOMS[r]) {
             const room = ROOMS[r];
             room.readyCount++;
-            const activePlayers = Object.values(room.players).filter(p => !p.dead && !p.disconnected).length;
+            const activePlayersCount = Object.values(room.players).filter(p => !p.disconnected).length;
 
-            if (room.readyCount >= activePlayers) {
+            if (room.readyCount >= activePlayersCount && activePlayersCount > 0) {
                 room.paused = false;
                 room.readyCount = 0;
                 io.to(r).emit('resumeGame');
