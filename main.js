@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.413
+ * NEO SURVIVOR - Core Game Logic - v1.415
  */
 
 window.addEventListener('beforeunload', () => {
@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.413'
+    version: 'v1.415.2'
 };
 
 const EMOJIS = [
@@ -2986,6 +2986,7 @@ function incrementStat(name, amount = 1) {
     if (name === 'earnedDogecoins') {
         META.stats.totalDogecoins = (META.stats.totalDogecoins || 0) + amount;
     }
+    checkAchievements();
 }
 
 function addCurrency(amount) {
@@ -4095,7 +4096,7 @@ function sellEmoji(id) {
 function sellAllEmojis() {
     if (!META.inventory || META.inventory.length === 0) return;
     
-    // Server-Authoritative selling (v1.413)
+    // Server-Authoritative selling (v1.415)
     if (NET.socket && NET.socket.connected) {
         NET.socket.emit('sellAllItems', { token: NET.sessionToken });
         window.showCustomAlert(window.T("Požadavek na prodej odeslán..."));
@@ -4511,12 +4512,25 @@ function initSocket() {
 
         NET.socket.on('syncSuccess', (data) => {
             if (data.meta) {
-                // ZERO TRUST: Overwrite sensitive fields with server truth, merge only non-sensitive
-                const protectedFields = ['currency', 'inventory', 'upgrades', 'ships', 'abilities', 'unopenedCrates', 'stats', 'maxLevel'];
+                // ZERO TRUST SMART MERGE (v1.415.2)
+                const protectedFields = ['currency', 'inventory', 'upgrades', 'ships', 'abilities', 'unopenedCrates', 'maxLevel'];
                 
                 for (let key in data.meta) {
-                    if (protectedFields.includes(key)) {
-                        META[key] = data.meta[key]; // Strict overwrite
+                    if (key === 'stats') {
+                        // Merge stats: keep the highest values to prevent regression from stale server data
+                        if (!META.stats) META.stats = {};
+                        for (let s in data.meta.stats) {
+                            if (typeof data.meta.stats[s] === 'number') {
+                                META.stats[s] = Math.max(META.stats[s] || 0, data.meta.stats[s] || 0);
+                            } else {
+                                META.stats[s] = data.meta.stats[s];
+                            }
+                        }
+                    } else if (key === 'achievements' || key === 'claimedAchievements') {
+                        // Merge boolean flags (once true, always true)
+                        META[key] = { ...META[key], ...data.meta[key] };
+                    } else if (protectedFields.includes(key)) {
+                        META[key] = data.meta[key]; // Strict overwrite for currency/inventory
                     } else if (typeof data.meta[key] === 'object' && data.meta[key] !== null && !Array.isArray(data.meta[key])) {
                         META[key] = { ...META[key], ...data.meta[key] };
                     } else {
@@ -4552,7 +4566,12 @@ function initSocket() {
         NET.socket.on('purchaseSuccess', (data) => {
             updateCurrencyUI();
             if (data.type === 'ship' || data.type === 'ability') showShipsMenu();
-            else if (data.type === 'stat' || data.type === 'crate') showMetaMenu();
+            else if (data.type === 'stat') showMetaMenu();
+            else if (data.type === 'crate') {
+                // AUTO-OPEN PURCHASED CRATE (v1.415.2)
+                // This keeps the "Získané bedny" section reserved only for rewards from battle
+                openCrate(data.id, 1);
+            }
         });
 
         NET.socket.on('purchaseError', (msg) => {
@@ -6866,7 +6885,7 @@ const initAudio = () => {
 
 
 
-// Reset AFK timer on ANY user interaction (v1.413)
+// Reset AFK timer on ANY user interaction (v1.415)
 ['mousedown', 'keydown', 'touchstart', 'mousemove'].forEach(evt => {
     window.addEventListener(evt, () => {
         if (GAME.active) {
