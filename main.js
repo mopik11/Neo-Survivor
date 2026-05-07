@@ -3604,7 +3604,7 @@ if (NET.socket) {
         GAME.crateQueue = [...data.results];
         
         const firstResult = GAME.crateQueue.shift();
-        showCrateOpening(firstResult);
+        startCrateAnimation(firstResult, data.type || 'basic');
     });
 
     NET.socket.on('purchaseSuccess', (data) => {

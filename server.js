@@ -659,15 +659,20 @@ io.on('connection', (socket) => {
                             try { oldMeta = JSON.parse(row.meta); } catch(e2) { oldMeta = {}; }
                         }
 
-                        // --- ZERO TRUST SMART MERGE (v1.396.3) ---
-                        // NEVER trust sensitive properties from the client
+                        // --- ZERO TRUST SMART MERGE (v1.402.2) ---
+                        // Allow client to update settings and selections, but enforce server truth for earned assets
                         const serverMeta = oldMeta || {};
-                        const merged = { ...meta, ...serverMeta }; // Use client meta for config, but override with server truth
+                        const merged = { ...serverMeta, ...meta }; 
                         
-                        // Enforce server-side truth for sensitive fields
+                        // RESTORE server-side truth for sensitive/earned fields
                         merged.currency = serverMeta.currency || 0;
-                        merged.maxLevel = Math.max(serverMeta.maxLevel || 1, row.max_level || 1);
+                        merged.inventory = serverMeta.inventory || [];
+                        merged.upgrades = serverMeta.upgrades || { hp:0, speed:0, luck:0, regen:0, armor:0 };
+                        merged.ships = serverMeta.ships || { 1: true };
+                        merged.abilities = serverMeta.abilities || { 1: true };
+                        merged.unopenedCrates = serverMeta.unopenedCrates || { basic: 0, premium: 0, legendary: 0 };
                         merged.stats = serverMeta.stats || { totalDogecoins: 0 };
+                        merged.maxLevel = Math.max(serverMeta.maxLevel || 1, row.max_level || 1);
                         
                         const encryptedMeta = Security.encrypt(JSON.stringify(merged));
                         db.run(`UPDATE accounts SET meta = ? WHERE username = ?`,
@@ -696,8 +701,14 @@ io.on('connection', (socket) => {
             if (!row) return;
 
             const currentMax = row.max_level || 1;
-            const reportedLevel = parseInt(data.level);
+            let reportedLevel = parseInt(data.level);
             
+            // ZERO TRUST: If player is in a room, use room level as the only truth
+            const r = socket.roomId;
+            if (r && ROOMS[r]) {
+                reportedLevel = ROOMS[r].level;
+            }
+
             if (reportedLevel > currentMax) {
                 // --- PROOF OF PLAY VALIDATION (v1.385) ---
                 // It takes at least 15 seconds of real gameplay to gain a level after level 5
@@ -913,8 +924,14 @@ io.on('connection', (socket) => {
     socket.on('enemyHit', (data) => {
         const r = socket.roomId;
         if (r && ROOMS[r]) {
-            const enemy = ROOMS[r].enemies.find(e => e.id === data.id);
-            if (enemy) {
+            const room = ROOMS[r];
+            const enemy = room.enemies.find(e => e.id === data.id);
+            if (enemy && room.players[socket.playerId]) {
+                // ZERO TRUST: Distance check (Anti-KillAll)
+                const p = room.players[socket.playerId];
+                const dist = Math.sqrt(Math.pow(enemy.x - p.x, 2) + Math.pow(enemy.y - p.y, 2));
+                if (dist > 1200) return; // Sanity check for max weapon range
+
                 enemy.hp -= data.damage;
                 if (enemy.hp <= 0) {
                     ROOMS[r].enemies = ROOMS[r].enemies.filter(e => e.id !== data.id);
@@ -975,7 +992,12 @@ io.on('connection', (socket) => {
         if (r && ROOMS[r]) {
             const room = ROOMS[r];
             const gem = room.gems.find(g => g.id === gemId);
-            if (!gem) return;
+            if (!gem || !room.players[socket.playerId]) return;
+
+            // ZERO TRUST: Distance check (Anti-Vacuum)
+            const p = room.players[socket.playerId];
+            const dist = Math.sqrt(Math.pow(gem.x - p.x, 2) + Math.pow(gem.y - p.y, 2));
+            if (dist > 350) return; // Max magnet/pickup range sanity check
 
             room.gems = room.gems.filter(g => g.id !== gemId);
             io.to(r).emit('gemCollected', { gemId: gemId, playerId: socket.playerId, isNuke: gem.isNuke, isMagnet: gem.isMagnet });
