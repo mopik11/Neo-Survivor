@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.417
+ * NEO SURVIVOR - Core Game Logic - v1.418
  */
 
 window.addEventListener('beforeunload', () => {
@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.417'
+    version: 'v1.418'
 };
 
 let achievementsInitialized = false;
@@ -549,7 +549,10 @@ const GAME = {
     stars: [],
     lastSniperTime: 0,
     canvas: null,
-    ctx: null
+    ctx: null,
+    netDamageBuffer: {},
+    netGemBuffer: new Set(),
+    lastNetSync: 0
 };
 
 const updateSpeedFactor = () => {
@@ -1006,7 +1009,9 @@ class Fire {
                     let finalDmg = dmg;
                     if (e.type === 8) finalDmg *= 0.5; // Shielder reduction
                     e.hp -= finalDmg;
-                    if (!e.isMeteorite) NET.socket.emit('enemyHit', { id: e.id, damage: finalDmg });
+                    if (!e.isMeteorite && NET.isMultiplayer) {
+                        GAME.netDamageBuffer[e.id] = (GAME.netDamageBuffer[e.id] || 0) + finalDmg;
+                    }
 
                     if (e.hp <= 0) {
                         AudioEngine.play('hit');
@@ -1092,7 +1097,9 @@ class FriendlyMinion {
                     target.hp -= finalDmg;
                     if (target.hp <= 0) handleEnemyDeath(target);
                     this.hp -= 2 * GAME.speedFactor;
-                    NET.socket.emit('enemyHit', { id: target.id, damage: finalDmg });
+                    if (NET.isMultiplayer) {
+                        GAME.netDamageBuffer[target.id] = (GAME.netDamageBuffer[target.id] || 0) + finalDmg;
+                    }
                 }
             }
         }
@@ -1304,7 +1311,7 @@ class Orbiter {
                     if (e.type === 8) finalDmg *= 0.5; // Shielder reduction
                     e.hp -= finalDmg;
                     if (NET.isMultiplayer && !e.isMeteorite) {
-                        NET.socket.emit('enemyHit', { id: e.id, damage: finalDmg });
+                        GAME.netDamageBuffer[e.id] = (GAME.netDamageBuffer[e.id] || 0) + finalDmg;
                     }
                     if (e.hp <= 0) {
                         AudioEngine.play('hit');
@@ -2181,7 +2188,7 @@ class Player {
                                 }
 
                                 if (NET.isMultiplayer) {
-                                    NET.socket.emit('enemyHit', { id: target.id, damage: finalDamage });
+                                    GAME.netDamageBuffer[target.id] = (GAME.netDamageBuffer[target.id] || 0) + finalDamage;
                                 }
                                 if (target.hp <= 0) {
                                     AudioEngine.play('hit');
@@ -4698,6 +4705,10 @@ function syncPlayer() {
 
     const savedUser = localStorage.getItem('neoSurvivor_user') || "Hráč";
 
+    const now = Date.now();
+    if (now - GAME.lastNetSync < 50) return; // Throttle to 20Hz
+    GAME.lastNetSync = now;
+
     NET.socket.emit('playerUpdate', {
         x: GAME.entities.player.x,
         y: GAME.entities.player.y,
@@ -4717,6 +4728,18 @@ function syncPlayer() {
         kills: GAME.kills || 0,
         minions: (GAME.entities.minions || []).map(m => ({ x: m.x, y: m.y, id: m.id }))
     });
+
+    // Flush damage buffer (v1.418)
+    if (Object.keys(GAME.netDamageBuffer).length > 0) {
+        NET.socket.emit('batchEnemyHit', GAME.netDamageBuffer);
+        GAME.netDamageBuffer = {};
+    }
+
+    // Flush gem buffer (v1.418)
+    if (GAME.netGemBuffer.size > 0) {
+        NET.socket.emit('batchGemPickup', Array.from(GAME.netGemBuffer));
+        GAME.netGemBuffer.clear();
+    }
 }
 
 function syncShot(proj) {
@@ -6476,7 +6499,7 @@ function update(dt) {
                         }
 
                         if (NET.isMultiplayer) {
-                            NET.socket.emit('enemyHit', { id: enemy.id, damage: damage });
+                            GAME.netDamageBuffer[enemy.id] = (GAME.netDamageBuffer[enemy.id] || 0) + damage;
                         }
 
                         // APPLY KNOCKBACK
@@ -6527,7 +6550,7 @@ function update(dt) {
                 AudioEngine.play('gem');
                 if (NET.isMultiplayer) {
                     GAME.entities.pickedGems.add(g.id);
-                    NET.socket.emit('gemPickup', g.id);
+                    GAME.netGemBuffer.add(g.id);
                     playSound('coin');
                 } else {
                     if (g.isNuke) {

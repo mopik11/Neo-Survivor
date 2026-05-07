@@ -1203,35 +1203,56 @@ io.on('connection', (socket) => {
     });
 
     socket.on('enemyHit', (data) => {
-        const r = socket.roomId;
-        if (r && ROOMS[r]) {
-            const room = ROOMS[r];
-            const enemy = room.enemies.find(e => e.id === data.id);
-            if (enemy && room.players[socket.playerId]) {
-                // ZERO TRUST: Distance check (Anti-KillAll)
-                const p = room.players[socket.playerId];
-                const dist = Math.sqrt(Math.pow(enemy.x - p.x, 2) + Math.pow(enemy.y - p.y, 2));
-                if (dist > 1200) return; // Sanity check for max weapon range
+        handleSingleHit(socket, data.id, data.damage);
+    });
 
-                enemy.hp -= data.damage;
-                if (enemy.hp <= 0) {
-                    ROOMS[r].enemies = ROOMS[r].enemies.filter(e => e.id !== data.id);
+    socket.on('batchEnemyHit', (data) => {
+        if (data) {
+            for (let id in data) handleSingleHit(socket, id, data[id]);
+        }
+    });
+
+    socket.on('gemPickup', (gemId) => {
+        handleSingleGem(socket, gemId);
+    });
+
+    socket.on('batchGemPickup', (gemIds) => {
+        if (Array.isArray(gemIds)) {
+            gemIds.forEach(id => handleSingleGem(socket, id));
+        }
+    });
+
+    function handleSingleHit(socket, enemyId, damage) {
+        const r = socket.roomId;
+        if (!r || !ROOMS[r]) return;
+        const room = ROOMS[r];
+        const enemy = room.enemies.find(e => e.id === enemyId);
+        if (enemy && room.players[socket.playerId]) {
+            const p = room.players[socket.playerId];
+            const dx = enemy.x - p.x;
+            const dy = enemy.y - p.y;
+            const d = Math.sqrt(dx*dx + dy*dy);
+            if (d > 1250) return;
+
+            enemy.hp -= damage;
+            if (enemy.hp <= 0) {
+                room.enemies = room.enemies.filter(e => e.id !== enemyId);
 
                     if (enemy.type === 4) { // Loot goblin drop
                         const drops = (enemy.stolenGems || 0) + 5;
                         for (let i = 0; i < drops; i++) {
-                            ROOMS[r].gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x + (Math.random() - 0.5) * 100, y: enemy.y + (Math.random() - 0.5) * 100 });
+                            room.gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x + (Math.random() - 0.5) * 100, y: enemy.y + (Math.random() - 0.5) * 100 });
                         }
                     } else {
                         let isNuke = false, isMagnet = false;
                         if (enemy.isBoss) {
                             rewardPlayer(socket, REWARD_BOSS_KILL);
                             if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
-                            for (let i = 0; i < 10; i++) ROOMS[r].gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x + (Math.random() - 0.5) * 150, y: enemy.y + (Math.random() - 0.5) * 150 });
+                            for (let i = 0; i < 10; i++) room.gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x + (Math.random() - 0.5) * 150, y: enemy.y + (Math.random() - 0.5) * 150 });
                             
                             // Pause for rewards
-                            ROOMS[r].paused = true;
-                            ROOMS[r].readyCount = 0;
+                            room.paused = true;
+                            room.readyCount = 0;
 
                             // Emit bossDefeated for rewards (crate + special upgrade)
                             rewardCrate(socket, 'basic');
@@ -1239,12 +1260,76 @@ io.on('connection', (socket) => {
                         } else {
                             rewardPlayer(socket, REWARD_NORMAL_KILL);
                         }
-                        ROOMS[r].gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x, y: enemy.y, isNuke, isMagnet });
-                    }
+                    room.gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x, y: enemy.y, isNuke, isMagnet });
                 }
             }
         }
-    });
+    }
+
+    function handleSingleGem(socket, gemId) {
+        const r = socket.roomId;
+        if (!r || !ROOMS[r]) return;
+        const room = ROOMS[r];
+        const gemIndex = room.gems.findIndex(g => g.id === gemId);
+        if (gemIndex === -1) return;
+        const gem = room.gems[gemIndex];
+        const p = room.players[socket.playerId];
+        if (p) {
+            const dx = gem.x - p.x;
+            const dy = gem.y - p.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist > 800) return; // Anti-Vacuum
+
+            room.gems.splice(gemIndex, 1);
+            io.to(r).emit('gemCollected', { gemId: gemId, playerId: socket.playerId, isNuke: gem.isNuke, isMagnet: gem.isMagnet });
+
+            if (gem.isNuke) {
+                room.enemies.forEach(e => {
+                    if (!e.isBoss) {
+                        e.hp = 0;
+                        room.gems.push({ id: Math.random().toString(36).substr(2, 9), x: e.x, y: e.y });
+                    }
+                });
+                room.enemies = room.enemies.filter(e => e.hp > 0);
+                io.to(r).emit('explosion', { x: p.x, y: p.y, radius: 1000, isNuke: true });
+            }
+
+            if (gem.isMagnet) {
+                const count = room.gems.length;
+                room.xp += count * 10;
+                room.gems = [];
+            }
+
+            room.xp += 10;
+            if (room.xp >= room.nextLevelXp) {
+                room.level++;
+                room.xp -= room.nextLevelXp;
+                room.nextLevelXp = Math.floor(room.nextLevelXp * 1.25);
+                room.paused = true;
+                room.readyCount = 0;
+
+                // --- SERVER-AUTHORITATIVE LEADERBOARD UPDATE ---
+                Object.values(room.players).forEach(p_lb => {
+                    if (p_lb.name) {
+                        db.run(`UPDATE accounts SET max_level = ? WHERE username = ? AND max_level < ?`, [room.level, p_lb.name.toLowerCase(), room.level], (err) => {
+                            if (!err) broadcastLeaderboard();
+                        });
+                    }
+                });
+
+                // CLEAR ENEMIES (except bosses) on level up for multiplayer
+                room.enemies = room.enemies.filter(e => e.isBoss);
+                io.to(r).emit('teamLevelUp', { level: room.level });
+
+                // Early Boss Warning for next boss (Level 4, 9, 14...)
+                if (room.level % CONFIG.BOSS_LEVEL_INTERVAL === CONFIG.BOSS_LEVEL_INTERVAL - 1) {
+                    const nextBossType = Math.floor(Math.random() * 7) + 1;
+                    room.nextBossType = nextBossType; // Store it for spawning
+                    io.to(r).emit('bossWarning', { type: nextBossType, soon: true });
+                }
+            }
+        }
+    }
 
     socket.on('spawnBait', (data) => {
         const r = socket.roomId;
@@ -1264,71 +1349,6 @@ io.on('connection', (socket) => {
                 bait.hp -= data.damage;
                 if (bait.hp <= 0) {
                     ROOMS[r].baits = ROOMS[r].baits.filter(b => b.id !== data.id);
-                }
-            }
-        }
-    });
-
-    socket.on('gemPickup', (gemId) => {
-        const r = socket.roomId;
-        if (r && ROOMS[r]) {
-            const room = ROOMS[r];
-            const gem = room.gems.find(g => g.id === gemId);
-            if (!gem || !room.players[socket.playerId]) return;
-
-            // ZERO TRUST: Distance check (Anti-Vacuum)
-            const p = room.players[socket.playerId];
-            const dist = Math.sqrt(Math.pow(gem.x - p.x, 2) + Math.pow(gem.y - p.y, 2));
-            if (dist > 350) return; // Max magnet/pickup range sanity check
-
-            room.gems = room.gems.filter(g => g.id !== gemId);
-            io.to(r).emit('gemCollected', { gemId: gemId, playerId: socket.playerId, isNuke: gem.isNuke, isMagnet: gem.isMagnet });
-
-            if (gem.isNuke) {
-                room.enemies.forEach(e => {
-                    if (!e.isBoss) {
-                        e.hp = 0;
-                        room.gems.push({ id: Math.random().toString(36).substr(2, 9), x: e.x, y: e.y });
-                    }
-                });
-                room.enemies = room.enemies.filter(e => e.hp > 0);
-                if (room.players[socket.playerId]) {
-                    io.to(r).emit('explosion', { x: room.players[socket.playerId].x, y: room.players[socket.playerId].y, radius: 1000, isNuke: true });
-                }
-            }
-
-            if (gem.isMagnet) {
-                room.gems.forEach(g => {
-                    room.xp += 10;
-                });
-                room.gems = [];
-            }
-
-            room.xp += 10;
-            if (room.xp >= room.nextLevelXp) {
-                room.level++;
-                room.xp -= room.nextLevelXp;
-                room.nextLevelXp = Math.floor(room.nextLevelXp * 1.25);
-                room.paused = true;
-                room.readyCount = 0;
-
-                // --- SERVER-AUTHORITATIVE LEADERBOARD UPDATE ---
-                Object.values(room.players).forEach(p => {
-                    if (p.name) {
-                        db.run(`UPDATE accounts SET max_level = ? WHERE username = ? AND max_level < ?`, [room.level, p.name.toLowerCase(), room.level], (err) => {
-                            if (!err) broadcastLeaderboard();
-                        });
-                    }
-                });
-                // CLEAR ENEMIES (except bosses) on level up for multiplayer
-                room.enemies = room.enemies.filter(e => e.isBoss);
-                io.to(r).emit('teamLevelUp', { level: room.level });
-
-                // Early Boss Warning for next boss (Level 4, 9, 14...)
-                if (room.level % CONFIG.BOSS_LEVEL_INTERVAL === CONFIG.BOSS_LEVEL_INTERVAL - 1) {
-                    const nextBossType = Math.floor(Math.random() * 7) + 1;
-                    room.nextBossType = nextBossType; // Store it for spawning
-                    io.to(r).emit('bossWarning', { type: nextBossType, soon: true });
                 }
             }
         }
@@ -1663,7 +1683,7 @@ setInterval(() => {
             console.error(`Chyba v místnosti ${roomId}:`, err);
         }
     }
-}, 50);
+}, 33);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server bezi na portu ${PORT}`));
