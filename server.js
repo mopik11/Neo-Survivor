@@ -240,6 +240,14 @@ function rewardPlayer(socket, amount) {
     const user = socket.authenticatedUser;
     if (!user) return;
     
+    // Track per-session earnings for accurate Game Over stats
+    const r = socket.roomId;
+    const p = socket.playerId;
+    if (r && ROOMS[r]) {
+        if (!ROOMS[r].dogeEarned) ROOMS[r].dogeEarned = {};
+        ROOMS[r].dogeEarned[p] = (ROOMS[r].dogeEarned[p] || 0) + amount;
+    }
+
     db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
         if (!err && row) {
             let meta;
@@ -254,6 +262,30 @@ function rewardPlayer(socket, amount) {
             const encrypted = Security.encrypt(JSON.stringify(meta));
             db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
                 socket.emit('currencyUpdated', { amount: meta.currency });
+            });
+        }
+    });
+}
+
+function rewardCrate(socket, crateType = 'basic') {
+    const user = socket.authenticatedUser;
+    if (!user) return;
+
+    db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+        if (!err && row) {
+            let meta;
+            try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { 
+                try { meta = JSON.parse(row.meta); } catch(e2) { meta = {}; }
+            }
+            
+            if (!meta.unopenedCrates) meta.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
+            meta.unopenedCrates[crateType] = (meta.unopenedCrates[crateType] || 0) + 1;
+            
+            const encrypted = Security.encrypt(JSON.stringify(meta));
+            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+                console.log(`[REWARD] Crate ${crateType} awarded to ${user}`);
+                // Notify client to re-sync
+                socket.emit('syncSuccess', { meta: meta });
             });
         }
     });
@@ -858,7 +890,8 @@ io.on('connection', (socket) => {
                 tombstones: [],
                 obstacles: [],
                 lastBossLevelSpawned: 0,
-                isSolo: data.isSolo || false
+                isSolo: data.isSolo || false,
+                dogeEarned: {}
             };
         } else {
             if (ROOMS[roomId].cleanupTimer) {
@@ -918,7 +951,7 @@ io.on('connection', (socket) => {
                         }
                     });
 
-                    io.to(r).emit('teamGameOver');
+                    io.to(r).emit('teamGameOver', { dogeEarned: ROOMS[r].dogeEarned });
 
                     ROOMS[r].level = 1;
                     ROOMS[r].xp = 0;
@@ -1028,6 +1061,7 @@ io.on('connection', (socket) => {
                             ROOMS[r].readyCount = 0;
 
                             // Emit bossDefeated for rewards (crate + special upgrade)
+                            rewardCrate(socket, 'basic');
                             io.to(r).emit('bossDefeated', { id: enemy.id });
                         } else {
                             rewardPlayer(socket, REWARD_NORMAL_KILL);

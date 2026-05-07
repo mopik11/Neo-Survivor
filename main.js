@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.408
+ * NEO SURVIVOR - Core Game Logic - v1.410
  */
 
 window.addEventListener('beforeunload', () => {
@@ -311,7 +311,8 @@ const META = {
     unopenedCrates: { basic: 0, premium: 0, legendary: 0 },
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
-    lastSession: null
+    lastSession: null,
+    version: 'v1.410'
 };
 
 const EMOJIS = [
@@ -4531,8 +4532,15 @@ function initSocket() {
             updateUI();
         });
 
-        NET.socket.on('teamGameOver', () => {
+        NET.socket.on('teamGameOver', (data) => {
             if (GAME.entities.player) GAME.entities.player.dead = true;
+            
+            // AUTHORITATIVE STATS: Use server-provided earnings if available
+            if (data && data.dogeEarned && data.dogeEarned[myPlayerId]) {
+                GAME.dogeGained = data.dogeEarned[myPlayerId];
+                console.log("[NET] Final earnings synced from server:", GAME.dogeGained);
+            }
+
             const waitModal = document.getElementById('waiting-modal');
             if (waitModal) waitModal.classList.remove('active');
             gameOver();
@@ -4555,10 +4563,8 @@ function initSocket() {
 
         NET.socket.on('bossDefeated', (data) => {
             console.log("[NET] Boss defeated event received!", data);
-            if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
-            META.unopenedCrates.basic++;
-            saveMeta();
-            // showCrateNotification moved to applyUpgrade with 5s delay
+            // Server awards the crate, we just prepare the UI
+            GAME.isBossRewardActive = true; 
             GAME.paused = true;
             showLevelUp(true);
             checkAchievements();
@@ -4595,6 +4601,15 @@ function initSocket() {
             shakeScreen(20);
             AudioEngine.play('hit');
         });
+
+        // 15s Heartbeat Sync to prevent data loss on refresh
+        if (NET.autoSyncInterval) clearInterval(NET.autoSyncInterval);
+        NET.autoSyncInterval = setInterval(() => {
+            if (GAME.active && !GAME.paused) {
+                console.log("[SYNC] Auto-sync heartbeat...");
+                saveMeta();
+            }
+        }, 15000);
 
     } catch (e) {
         console.error("Socket init failed", e);
