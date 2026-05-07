@@ -505,6 +505,8 @@ const GAME = {
     score: 0,
     kills: 0,
     time: 0,
+    engine: null,
+    remoteState: null,
     startTime: 0,
     coinsCollected: 0,
     dogeGained: 0,
@@ -4077,6 +4079,12 @@ function startGame() {
 
     GAME.active = true;
     GAME.paused = false;
+
+    if (!NET.isMultiplayer) {
+        GAME.engine = new GameEngine();
+        GAME.engine.addPlayer('me', META.playerName, META.selectedHat);
+    }
+
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     document.getElementById('ui-layer').style.display = 'block';
     document.getElementById('menu-anim-canvas').style.display = 'none';
@@ -4309,119 +4317,12 @@ function initSocket() {
             NET.socket.emit('upgradePicked');
         });
 
-        NET.socket.on('stateUpdate', (data) => {
+        NET.socket.on('gameState', (state) => {
             if (!GAME.active) return;
-            if (data.roomInfo) {
-                GAME.entities.player.level = data.roomInfo.level;
-                GAME.entities.player.xp = data.roomInfo.xp;
-                GAME.entities.player.nextLevelXp = data.roomInfo.nextLevelXp;
-            }
-
-            if (data.frozen) {
-                GAME.frozenUntil = Date.now() + 100; // Krátký buffer na vizuální efekt
-                const overlay = document.getElementById('freeze-overlay');
-                if (overlay) overlay.classList.add('active');
-            } else {
-                const overlay = document.getElementById('freeze-overlay');
-                if (overlay) overlay.classList.remove('active');
-            }
-
-            const currentEnemies = new Map(GAME.entities.enemies.map(e => [e.id, e]));
-            
-            let incomingEnemies = data.enemies || [];
-            // FILTER: If game is paused for a level-up, don't show normal enemies (keep bosses)
-            const levelUpModal = document.getElementById('levelup-modal');
-            if (GAME.paused && levelUpModal && levelUpModal.classList.contains('active')) {
-                incomingEnemies = incomingEnemies.filter(he => he.isBoss);
-            }
-
-            GAME.entities.enemies = incomingEnemies.map(he => {
-                let e = currentEnemies.get(he.id);
-                if (!e) {
-                    e = he.isBoss ? new Boss(he.x, he.y, 1, he.id, he.type) : new Enemy(he.x, he.y, 1, he.id, he.type);
-                    e.x = he.x; e.y = he.y;
-                }
-                e.targetX = he.x; e.targetY = he.y;
-                e.hp = he.hp; e.maxHp = he.maxHp;
-                e.possessed = he.possessed;
-                return e;
-            });
-
-            const currentGems = new Map(GAME.entities.gems.map(g => [g.id, g]));
-            GAME.entities.gems = data.gems
-                .filter(hg => !GAME.entities.pickedGems.has(hg.id))
-                .map(hg => {
-                    let g = currentGems.get(hg.id);
-                    if (!g) {
-                        g = new Gem(hg.x, hg.y, hg.id);
-                        g.isNuke = hg.isNuke;
-                        g.isMagnet = hg.isMagnet;
-                    } else if (!g.attracted && !g.ultraAttracted) {
-                        g.x = hg.x;
-                        g.y = hg.y;
-                    }
-                    return g;
-                });
-
-            if (data.baits) {
-                GAME.entities.baits = data.baits.map(b => {
-                    let bait = new Bait(b.x, b.y, b.hp);
-                    bait.id = b.id; bait.maxHp = b.maxHp; return bait;
-                });
-            }
-
-            if (data.tombstones) {
-                GAME.entities.tombstones = data.tombstones.map(t => new Tombstone(t.x, t.y, t.id, t.playerId, t.reviveProgress));
-            } else { GAME.entities.tombstones = []; }
-
-            GAME.entities.obstacles = [];
-
-            const newOthers = {};
-            for (let pId in data.players) {
-                if (pId === myPlayerId) continue;
-                if (data.players[pId].disconnected) continue;
-
-                if (!NET.others[pId]) newOthers[pId] = new Player(false);
-                else newOthers[pId] = NET.others[pId];
-
-                newOthers[pId].targetX = data.players[pId].x;
-                newOthers[pId].targetY = data.players[pId].y;
-                newOthers[pId].dead = data.players[pId].dead;
-                newOthers[pId].remoteHat = data.players[pId].hat;
-                newOthers[pId].aura = data.players[pId].aura;
-                newOthers[pId].auraRange = data.players[pId].auraRange;
-                newOthers[pId].orbitals = data.players[pId].orbitals || 0;
-                newOthers[pId].fireTrail = data.players[pId].fireTrail;
-                newOthers[pId].hasKaktus = data.players[pId].kaktus;
-                newOthers[pId].kaktus = data.players[pId].kaktus;
-                newOthers[pId].shipType = data.players[pId].shipType || 1;
-                newOthers[pId].laserTargetsIds = data.players[pId].laserTargetsIds || [];
-                newOthers[pId].remoteName = data.players[pId].name || "Hráč";
-                newOthers[pId].kills = data.players[pId].kills || 0;
-                newOthers[pId].hp = data.players[pId].hp || 0;
-                newOthers[pId].maxHp = data.players[pId].maxHp || 100;
-                newOthers[pId].remoteMinions = data.players[pId].minions || [];
-            }
-            NET.others = newOthers;
-            GAME.time = data.time;
+            GAME.remoteState = state;
         });
 
-        NET.socket.on('enemyShoot', (data) => {
-            const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, {
-                ownerId: 'remote', speed: data.speed, size: data.size, pierce: data.pierce,
-                bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life
-            });
-            if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
-        });
 
-        NET.socket.on('shoot', (data) => {
-            if (data.playerId === myPlayerId) return;
-            const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, {
-                ownerId: data.playerId, speed: data.speed, size: data.size, pierce: data.pierce,
-                bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life
-            });
-            if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
-        });
 
         NET.socket.on('gemCollected', (data) => {
             if (GAME.entities.gems) {
@@ -6096,360 +5997,86 @@ function lerpAngle(a, b, t) {
 }
 
 function update(dt) {
-    const now = Date.now();
-    
-    const isMoving = GAME.input.w || GAME.input.a || GAME.input.s || GAME.input.d || GAME.joystick.active;
-    if (isMoving) {
-        if (GAME.paused && META.isAFK) {
-            togglePause(false); // Resume from AFK in both solo and multiplayer
-        }
-        META.lastMoveTime = now;
-        META.isAFK = false;
-    } else if (GAME.active && !GAME.paused && !document.querySelector('.modal.active') && (now - (META.lastMoveTime || now) > 10000)) {
-        // AFK after 10s - show AFK screen (togglePause also saves session + disconnects MP socket)
-        // Only trigger if NO modal is currently active (e.g. Level Up)
-        META.isAFK = true;
-        togglePause(true);
+    if (!GAME.active || GAME.paused) return;
+
+    // 1. GATHER INPUTS
+    const inputs = {
+        up: GAME.input.w || GAME.input.up || (GAME.joystick.active && GAME.joystick.dy < -20),
+        down: GAME.input.s || GAME.input.down || (GAME.joystick.active && GAME.joystick.dy > 20),
+        left: GAME.input.a || GAME.input.left || (GAME.joystick.active && GAME.joystick.dx < -20),
+        right: GAME.input.d || GAME.input.right || (GAME.joystick.active && GAME.joystick.dx > 20),
+        mouseAngle: Math.atan2(mouseY - window.innerHeight / 2, mouseX - window.innerWidth / 2),
+        shooting: GAME.input.mousedown || GAME.input[' ']
+    };
+
+    // 2. APPLY OR SEND INPUTS
+    let currentState = null;
+    if (NET.isMultiplayer) {
+        NET.socket.emit('playerInput', inputs);
+        currentState = GAME.remoteState;
+    } else if (GAME.engine) {
+        GAME.engine.handleInput('me', inputs);
+        GAME.engine.update(dt);
+        currentState = GAME.engine.getState();
     }
 
-    // Periodic progress sync (Anti-Cheat compliance)
-    if (GAME.active && !GAME.paused && now - (GAME.lastSyncTime || 0) > 15000) {
-        GAME.lastSyncTime = now;
-        saveMeta();
+    // 3. SYNC ENTITIES FOR RENDERING (Keep existing render logic working)
+    if (currentState) {
+        syncEntitiesFromState(currentState);
     }
-
-    if (GAME.paused || !GAME.entities || !GAME.entities.player) {
-        return;
-    }
-
-    if (!NET.isMultiplayer) {
-        GAME.time += 1 / 60;
-        spawnEnemy();
-    }
-
-    // Spawnování meteoritů i v Multiplayeru
-    if (GAME.active && (now - (GAME.lastMeteorSpawn || 0) > 2000)) {
-        const alive = getAllAlivePlayers();
-        if (alive.length > 0) {
-            const pivot = alive[Math.floor(Math.random() * alive.length)];
-            if (!GAME.entities.meteorites) GAME.entities.meteorites = [];
-            if (Math.random() < 0.2 && GAME.entities.meteorites.length < 15) {
-                const ma = Math.random() * Math.PI * 2;
-                const mx = pivot.x + Math.cos(ma) * (CONFIG.SPAWN_RADIUS + 200);
-                const my = pivot.y + Math.sin(ma) * (CONFIG.SPAWN_RADIUS + 200);
-                GAME.entities.meteorites.push(new Meteorite(mx, my));
-            }
-        }
-        GAME.lastMeteorSpawn = now;
-    }
-
-    const p = GAME.entities.player;
-    if (isNaN(p.x) || isNaN(p.y)) { p.x = 0; p.y = 0; }
-    p.update(dt);
-    if (isNaN(p.x) || isNaN(p.y)) { p.x = 0; p.y = 0; }
-
-    if (NET.isMultiplayer && GAME.entities.tombstones && !p.dead) {
-        GAME.entities.tombstones.forEach(t => {
-            if (dist(p.x, p.y, t.x, t.y) < 100) {
-                if (NET.socket) NET.socket.emit('reviveProgress', { tombstoneId: t.id, amount: 0.5 });
-                if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
-                if (Math.random() < 0.1) GAME.entities.floatingTexts.push(new FloatingText(t.x, t.y - 25, "OŽIVOVÁNÍ...", "#3b82f6"));
-            }
-        });
-    }
-
-    GAME.camera.x = (p.x * GAME.zoom) - GAME.canvas.width / 2; GAME.camera.y = (p.y * GAME.zoom) - GAME.canvas.height / 2;
-    if (CONFIG.SCREEN_SHAKE > 0) { GAME.camera.x += (Math.random() - 0.5) * CONFIG.SCREEN_SHAKE; GAME.camera.y += (Math.random() - 0.5) * CONFIG.SCREEN_SHAKE; CONFIG.SCREEN_SHAKE *= 0.9; }
-
-    syncPlayer();
-
-    for (const id in NET.others) {
-        if (NET.others[id]) NET.others[id].update(dt);
-    }
-
-    if (GAME.entities.floatingTexts) {
-        for (let i = GAME.entities.floatingTexts.length - 1; i >= 0; i--) {
-            const ft = GAME.entities.floatingTexts[i];
-            if (ft) {
-                ft.update();
-                if (ft.life <= 0) GAME.entities.floatingTexts.splice(i, 1);
-            }
-        }
-    }
-
-    const targets = getAllTargets();
-    const alivePlayers = getAllAlivePlayers();
-    
-    if (GAME.entities.meteorites) {
-        GAME.entities.meteorites = GAME.entities.meteorites.filter(m => {
-            if (m && m.hp <= 0) {
-                incrementStat('totalMeteoritesDestroyed');
-                return false;
-            }
-            return m && m.hp > 0;
-        });
-    }
-
-    if (alivePlayers.length === 0 && GAME.active) gameOver();
-
-    if (!NET.isMultiplayer && now < GAME.frozenUntil) {
-        // V Solu nepřátelé úplně zmrznou
-    } else if (GAME.entities.enemies) {
-        GAME.entities.enemies.forEach((e) => {
-            if (!e) return;
-            e.update();
-            if (isNaN(e.x) || isNaN(e.y)) { e.x = 0; e.y = 0; }
-            targets.forEach(t => {
-                if (dist(t.x, t.y, e.x, e.y) < t.radius + e.radius && !t.possessed && !e.possessed) {
-                    if (t.isBait && !e.isBoss) {
-                        if (NET.isMultiplayer) {
-                            NET.socket.emit('baitHit', { id: t.obj.id, damage: (e.isBoss ? 5 : 1) * GAME.speedFactor });
-                        } else {
-                            t.obj.hp -= (e.isBoss ? 5 : 1) * GAME.speedFactor;
-                        }
-                    } else {
-                        if (t.kaktus && !e.isBoss) {
-                            e.hp = 0; e.dead = true;
-                            if (NET.isMultiplayer) NET.socket.emit('enemyHit', { id: e.id, damage: 99999 });
-                        } else {
-                            if (t.hp !== undefined) {
-                                let dmg = (e.damage || (e.isBoss ? 2 : 0.5)) * (t.shield || 1);
-                                if (t.isLocal) {
-                                    const armorRed = (META.upgrades.armor || 0) * 0.02;
-                                    dmg *= (1 - armorRed);
-                                }
-                                t.hp -= dmg;
-                                if (t.hp <= 0) t.dead = true;
-                            }
-
-                            if (t.isLocal) {
-                                shakeScreen(8);
-                                const overlay = document.getElementById('hit-overlay');
-                                if (overlay) {
-                                    overlay.style.opacity = '1';
-                                    setTimeout(() => overlay.style.opacity = '0', 100);
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        });
-
-        if (!NET.isMultiplayer) {
-            GAME.entities.enemies = GAME.entities.enemies.filter(e => e && e.hp > 0 && !e.dead);
-        }
-    }
-
-    if (GAME.entities.minions) {
-        for (let i = GAME.entities.minions.length - 1; i >= 0; i--) {
-            const m = GAME.entities.minions[i];
-            if (m) {
-                m.update();
-                if (m.hp <= 0) GAME.entities.minions.splice(i, 1);
-            }
-        }
-    }
-
-    if (GAME.entities.baits) {
-        GAME.entities.baits = GAME.entities.baits.filter(b => b && b.hp > 0);
-        GAME.entities.baits.forEach(b => b.update());
-    }
-
-    if (GAME.entities.meteorites) {
-        GAME.entities.meteorites = GAME.entities.meteorites.filter(m => m && m.hp > 0);
-        GAME.entities.meteorites.forEach(m => m.update());
-    }
-
-    if (GAME.entities.fire) {
-        for (let i = GAME.entities.fire.length - 1; i >= 0; i--) {
-            const f = GAME.entities.fire[i];
-            if (f) {
-                f.update();
-                if (f.life <= 0) {
-                    GAME.entities.fire.splice(i, 1);
-                }
-            }
-        }
-    }
-
-    if (GAME.entities.projectiles && GAME.entities.enemies) {
-        const enemies = GAME.entities.enemies;
-        for (let pIndex = GAME.entities.projectiles.length - 1; pIndex >= 0; pIndex--) {
-            const proj = GAME.entities.projectiles[pIndex];
-            if (!proj) continue;
-            proj.update();
-
-
-
-            if (proj.life <= 0) {
-                GAME.entities.projectiles.splice(pIndex, 1);
-                continue;
-            }
-
-            if (proj.isEnemy) {
-                alivePlayers.forEach(pl => {
-                    if (dist(proj.x, proj.y, pl.x, pl.y) < proj.radius + pl.radius) {
-                        let dmg = proj.damage * (pl.shield || 1);
-                        if (pl.isLocal) {
-                            const armorRed = (META.upgrades.armor || 0) * 0.02;
-                            dmg *= (1 - armorRed);
-                        }
-                        pl.hp -= dmg;
-                        if (pl.hp <= 0) pl.dead = true;
-                        GAME.entities.projectiles.splice(pIndex, 1);
-                        updateUI();
-
-                        if (pl.isLocal) {
-                            shakeScreen(5);
-                            const overlay = document.getElementById('hit-overlay');
-                            if (overlay) {
-                                overlay.style.opacity = '1';
-                                setTimeout(() => overlay.style.opacity = '0', 100);
-                            }
-                        }
-                    }
-                });
-            } else {
-                enemies.forEach((enemy) => {
-                    let hitDist = 0;
-                    let d = 0;
-
-                    if (proj.type === 'wall') {
-                        const vMag = Math.hypot(proj.vx, proj.vy) || 1;
-                        const nx = -proj.vy / vMag;
-                        const ny = proj.vx / vMag;
-                        const halfLen = proj.radius;
-
-                        const ax = proj.x - nx * halfLen;
-                        const ay = proj.y - ny * halfLen;
-                        const bx = proj.x + nx * halfLen;
-                        const by = proj.y + ny * halfLen;
-
-                        const px = enemy.x - ax;
-                        const py = enemy.y - ay;
-                        const dx = bx - ax;
-                        const dy = by - ay;
-                        const l2 = dx * dx + dy * dy;
-
-                        let t = 0;
-                        if (l2 > 0) t = Math.max(0, Math.min(1, (px * dx + py * dy) / l2));
-
-                        const closeX = ax + t * dx;
-                        const closeY = ay + t * dy;
-                        d = dist(enemy.x, enemy.y, closeX, closeY);
-                        hitDist = enemy.radius + 8;
-                    } else {
-                        d = dist(proj.x, proj.y, enemy.x, enemy.y);
-                        hitDist = proj.radius + enemy.radius;
-                    }
-
-                    if (!proj.hitEnemies.has(enemy) && d < hitDist && !enemy.possessed) {
-                        let damage = proj.damage;
-                        // Damage Resistance pro Štítonoše Bosse (Type 6)
-            let boss6Alive = GAME.entities.enemies.some(b => b.isBoss && b.type === 6);
-            if (boss6Alive && !enemy.isBoss) damage *= 0.5;
-
-            if (enemy.type === 8) damage *= 0.5; // Shield reduction
-                        enemy.hp -= damage;
-                        proj.hitEnemies.add(enemy);
-
-                        if (proj.isCrit) {
-                            if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
-                            GAME.entities.floatingTexts.push(new FloatingText(enemy.x, enemy.y - 25, "CRITICAL!", "#ef4444"));
-                        }
-
-                        if (NET.isMultiplayer) {
-                            NET.socket.emit('enemyHit', { id: enemy.id, damage: damage });
-                        }
-
-                        // APPLY KNOCKBACK
-                        const kbForce = GAME.entities.player.knockbackForce || 6;
-                        const kbAngle = Math.atan2(enemy.y - proj.y, enemy.x - proj.x);
-                        enemy.knockback.x = Math.cos(kbAngle) * kbForce;
-                        enemy.knockback.y = Math.sin(kbAngle) * kbForce;
-
-                        if (proj.bounce > 0) {
-                            const validTargets = enemies.filter(e => e !== enemy && !proj.hitEnemies.has(e));
-                            if (validTargets.length > 0) {
-                                const next = validTargets.sort((a, b) => dist(proj.x, proj.y, a.x, a.y) - dist(proj.x, proj.y, b.x, b.y))[0];
-                                const angle = Math.atan2(next.y - proj.y, next.x - proj.x);
-                                proj.vx = Math.cos(angle) * (proj.speed || CONFIG.PROJECTILE_SPEED);
-                                proj.vy = Math.sin(angle) * (proj.speed || CONFIG.PROJECTILE_SPEED);
-                                proj.bounce--;
-                                proj.life += 50; // Přidat životnost při odrazu, aby to fungovalo i u brokovnice
-                            }
-                        }
-                        if (proj.pierce > 1) proj.pierce--; else if (proj.pierce !== Infinity && proj.bounce <= 0) GAME.entities.projectiles.splice(pIndex, 1);
-                        if (enemy.hp <= 0) {
-                            handleEnemyDeath(enemy);
-                        }
-                    }
-                });
-            }
-
-            // Kolize projektilů s meteority (Vně nepřítele!)
-            if (!proj.isEnemy && GAME.entities.meteorites) {
-                GAME.entities.meteorites.forEach(m => {
-                    if (dist(proj.x, proj.y, m.x, m.y) < proj.radius + m.radius) {
-                        m.hp -= proj.damage;
-                        if (proj.type !== 'wall') proj.life = 0;
-                        if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
-                        GAME.entities.floatingTexts.push(new FloatingText(m.x, m.y, Math.floor(proj.damage).toString(), "#94a3b8"));
-                    }
-                });
-            }
-        }
-    }
-
-    if (GAME.entities.gems) {
-        for (let i = GAME.entities.gems.length - 1; i >= 0; i--) {
-            const g = GAME.entities.gems[i];
-            if (!g) continue;
-            g.update(p);
-            if (!p.dead && dist(p.x, p.y, g.x, g.y) < p.radius + g.radius) {
-                AudioEngine.play('gem');
-                if (NET.isMultiplayer) {
-                    GAME.entities.pickedGems.add(g.id);
-                    NET.socket.emit('gemPickup', g.id);
-                    playSound('coin');
-                } else {
-                    if (g.isNuke) {
-                        GAME.entities.enemies.forEach(e => {
-                            if (!e.isBoss) {
-                                e.hp = 0; e.dead = true;
-                                GAME.entities.gems.push(new Gem(e.x, e.y));
-                            }
-                        });
-                        if (GAME.entities.fire) {
-                            for (let j = 0; j < 30; j++) {
-                                const a = Math.random() * Math.PI * 2;
-                                const d = Math.random() * 800;
-                                GAME.entities.fire.push(new Fire(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, 0, false));
-                            }
-                        }
-                        shakeScreen(20); AudioEngine.play('hit');
-                        p.addXp(10);
-                        incrementStat('totalNukes');
-                    } else if (g.isMagnet) {
-                        const totalXp = GAME.entities.gems.length * Math.round(10 * (p.luckFactor || 1));
-                        p.addXp(totalXp);
-                        GAME.entities.gems = [];
-                        incrementStat('totalMagnets');
-                    } else {
-                        // Normal gem
-                        p.addXp(10);
-                        incrementStat('totalGemsCollected');
-                    }
-                    GAME.coinsCollected++;
-                    playSound('coin');
-                }
-                GAME.entities.gems.splice(i, 1);
-            }
-        }
-    }
-    updateUI();
 }
+
+function syncEntitiesFromState(state) {
+    if (!GAME.entities) GAME.entities = { player: null, enemies: [], projectiles: [], gems: [], floatingTexts: [] };
+
+    // Players
+    const myId = NET.isMultiplayer ? myPlayerId : 'me';
+    const me = state.players[myId];
+    if (me) {
+        if (!GAME.entities.player) GAME.entities.player = new Player(true);
+        Object.assign(GAME.entities.player, me);
+        // Camera follows player
+        GAME.camera.x = GAME.entities.player.x;
+        GAME.camera.y = GAME.entities.player.y;
+    }
+
+    // Others
+    NET.others = {};
+    for (const id in state.players) {
+        if (id === myId) continue;
+        const op = new Player(false);
+        Object.assign(op, state.players[id]);
+        NET.others[id] = op;
+    }
+
+    // Enemies
+    GAME.entities.enemies = state.enemies.map(se => {
+        const e = se.isBoss ? new Boss(se.x, se.y) : new Enemy(se.x, se.y);
+        Object.assign(e, se);
+        return e;
+    });
+
+    // Projectiles
+    GAME.entities.projectiles = state.projectiles.map(sp => {
+        const p = new Projectile(sp.x, sp.y, sp.x + Math.cos(sp.angle), sp.y + Math.sin(sp.angle));
+        Object.assign(p, sp);
+        return p;
+    });
+
+    // Gems
+    GAME.entities.gems = state.gems.map(sg => {
+        const g = new Gem(sg.x, sg.y, sg.id);
+        Object.assign(g, sg);
+        return g;
+    });
+
+    GAME.time = state.time;
+    GAME.level = state.level;
+    GAME.xp = state.xp;
+    GAME.nextLevelXp = state.nextLevelXp;
+}
+
+
 
 function render() {
     const ctx = GAME.ctx, cam = GAME.camera;

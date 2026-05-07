@@ -1,6 +1,8 @@
+const VERSION = "1.396";
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const GameEngine = require('./GameEngine');
 const sqlite3 = require('sqlite3').verbose();
 const crypto = require('node:crypto');
 let config = {};
@@ -643,43 +645,25 @@ io.on('connection', (socket) => {
         if (!ROOMS[roomId]) {
             ROOMS[roomId] = {
                 id: roomId,
-                players: {},
-                enemies: [],
-                gems: [],
-                baits: [],
-                time: 0,
-                lastBossTime: 0,
-                level: 1,
-                xp: 0,
-                nextLevelXp: 100,
-                paused: false,
-                readyCount: 0,
-                isGameOver: false,
-                cleanupTimer: null,
-                frozenUntil: 0, // Logika pro zamrznutí času
-                tombstones: [],
-                obstacles: [],
-                lastBossLevelSpawned: 0
+                engine: new GameEngine(),
+                lastTick: Date.now()
             };
-        } else {
-            if (ROOMS[roomId].cleanupTimer) {
-                clearTimeout(ROOMS[roomId].cleanupTimer);
-                ROOMS[roomId].cleanupTimer = null;
-            }
         }
 
-        if (!ROOMS[roomId].players[playerId]) {
-            ROOMS[roomId].players[playerId] = {
-                id: playerId, x: 0, y: 0, hp: 120, maxHp: 120, dead: false, hat: null, level: 1, disconnected: false, name: data.name || "Hráč"
-            };
-        } else {
-            ROOMS[roomId].players[playerId].disconnected = false;
-        }
+        ROOMS[roomId].engine.addPlayer(playerId, data.name || "Hráč", data.hat);
 
         socket.emit('joined', {
             roomId: roomId,
-            playerState: ROOMS[roomId].players[playerId]
+            state: ROOMS[roomId].engine.getState()
         });
+    });
+
+    socket.on('playerInput', (input) => {
+        const r = socket.roomId;
+        const p = socket.playerId;
+        if (r && ROOMS[r]) {
+            ROOMS[r].engine.handleInput(p, input);
+        }
     });
 
     socket.on('playerUpdate', (data) => {
@@ -964,287 +948,18 @@ io.on('connection', (socket) => {
 setInterval(() => {
     const now = Date.now();
     for (const roomId in ROOMS) {
-        try {
-            const room = ROOMS[roomId];
-            if (!room) continue;
-            if (room.paused || room.isGameOver) continue;
+        const room = ROOMS[roomId];
+        if (!room) continue;
 
-            room.time += 1 / 20;
+        const dt = now - (room.lastTick || now);
+        room.lastTick = now;
 
-            const playersArr = Object.values(room.players).filter(p => !p.dead && !p.disconnected);
-
-            const currentInterval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + room.time / 60));
-            const spawnChance = 1 / (currentInterval / 50);
-
-            if (playersArr.length > 0 && Math.random() < spawnChance) {
-                const pivot = playersArr[Math.floor(Math.random() * playersArr.length)];
-                const a = Math.random() * Math.PI * 2;
-                const radius = 700;
-                const x = pivot.x + Math.cos(a) * radius;
-                const y = pivot.y + Math.sin(a) * radius;
-                const mod = Math.floor(room.time / 60) + 1;
-
-                let isBoss = false;
-                let hp = CONFIG.ENEMY_BASE_HEALTH * mod;
-                let type = 1;
-                let speedMod = 1;
-
-                const rnd = Math.random();
-                if (room.level >= 3 && rnd < 0.15) type = 2; // Střelec
-                else if (room.level >= 4 && rnd < 0.10) type = 4; // Zloděj
-                else if (room.level >= 5 && rnd < 0.12) type = 3; // Kamikadze
-                else if (room.level >= 6 && rnd < 0.08) type = 5; // Support
-                else if (room.level >= 8 && rnd < 0.08) type = 6; // Skokan
-                else if (room.level >= 10 && rnd < 0.12) type = 7; // Sebevrah
-                else if (room.level >= 12 && rnd < 0.1) type = 8; // Štítonoš
-
-                const hasBoss = room.enemies.some(e => e.isBoss);
-                const isBossLevel = room.level > 0 && room.level % CONFIG.BOSS_LEVEL_INTERVAL === 0;
-                const bossAlreadySpawned = room.lastBossLevelSpawned === room.level;
-
-                if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
-                    isBoss = true;
-                    hp = (CONFIG.ENEMY_BASE_HEALTH * mod) * 50; // 50x HP
-                    type = room.nextBossType || Math.floor(Math.random() * 7) + 1;
-                    speedMod = 2; // 2x Speed for Boss
-                    room.lastBossLevelSpawned = room.level;
-                    room.nextBossType = null;
-                    io.to(roomId).emit('bossWarning', { type: type, soon: false });
-                }
-
-                room.enemies.push({
-                    id: Math.random().toString(36).substr(2, 9),
-                    x: x, y: y, hp: hp, maxHp: hp, isBoss: isBoss, type: type,
-                    lastShot: room.time,
-                    mod: mod * speedMod,
-                    possessed: false,
-                    stolenGems: 0,
-                    exploding: false,
-                    explodeTime: 0,
-                    jumpState: 'WALKING',
-                    jumpProgress: 0,
-                    jumpStart: { x: x, y: y },
-                    jumpTarget: { x: x, y: y },
-                    prepTime: 0
-                });
-
-                // Náhodné generování meteorů (překážek)
-                if (Math.random() < 0.1 && room.obstacles.length < 30) {
-                    room.obstacles.push({
-                        id: Math.random().toString(36).substr(2, 9),
-                        x: pivot.x + (Math.random() - 0.5) * 1500,
-                        y: pivot.y + (Math.random() - 0.5) * 1500,
-                        radius: 40 + Math.random() * 60
-                    });
-                }
-            }
-
-            // ZASTAVENÍ ČASU - Pokud je aktivní, nepřátelé nic nedělají
-            if (now < room.frozenUntil) {
-                io.to(roomId).emit('stateUpdate', {
-                    players: room.players,
-                    enemies: room.enemies,
-                    gems: room.gems,
-                    baits: room.baits,
-                    tombstones: room.tombstones,
-                    obstacles: room.obstacles,
-                    time: room.time,
-                    roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp },
-                    frozen: true
-                });
-                continue;
-            }
-
-            const possessedEnemies = room.enemies.filter(e => e.possessed);
-            const normalEnemies = room.enemies.filter(e => !e.possessed);
-            const targetsForNormal = [...playersArr, ...room.baits, ...possessedEnemies];
-
-            room.enemies.forEach(enemy => {
-                if (enemy.possessed) {
-                    // POSEDNUTÝ UFOUN ÚTOČÍ NA NORMÁLNÍ UFOUNY
-                    if (normalEnemies.length > 0) {
-                        const target = normalEnemies.sort((a, b) => dist(enemy.x, enemy.y, a.x, a.y) - dist(enemy.x, enemy.y, b.x, b.y))[0];
-                        const angle = Math.atan2(target.y - enemy.y, target.x - enemy.x);
-                        const speed = (CONFIG.ENEMY_BASE_SPEED + ((enemy.mod || 1) * 0.15)) * 1.5; // Zrychlený pohyb posedlých
-
-                        let nextX = enemy.x + Math.cos(angle) * speed;
-                        let nextY = enemy.y + Math.sin(angle) * speed;
-
-                        room.obstacles.forEach(obs => {
-                            if (dist(nextX, nextY, obs.x, obs.y) < 15 + obs.radius) {
-                                const pushAngle = Math.atan2(nextY - obs.y, nextX - obs.x);
-                                nextX = obs.x + Math.cos(pushAngle) * (15 + obs.radius);
-                                nextY = obs.y + Math.sin(pushAngle) * (15 + obs.radius);
-                            }
-                        });
-
-                        enemy.x = nextX;
-                        enemy.y = nextY;
-
-                        if (dist(enemy.x, enemy.y, target.x, target.y) < 30) {
-                            target.hp -= 50;
-                            enemy.hp -= 20;
-                            if (target.hp <= 0) {
-                                room.enemies = room.enemies.filter(e => e.id !== target.id);
-                                room.gems.push({ id: Math.random().toString(36).substr(2, 9), x: target.x, y: target.y });
-                            }
-                            if (enemy.hp <= 0) {
-                                room.enemies = room.enemies.filter(e => e.id !== enemy.id);
-                            }
-                        }
-                    }
-                } else {
-                    // NORMÁLNÍ UFOUN
-                    if (targetsForNormal.length === 0 && enemy.type !== 4) return;
-
-                    let target = targetsForNormal.find(t => t.isBait);
-                    if (!target) {
-                        target = targetsForNormal.sort((a, b) => dist(enemy.x, enemy.y, a.x, a.y) - dist(enemy.x, enemy.y, b.x, b.y))[0];
-                    }
-
-                    if (enemy.type === 4) { // Zloděj
-                        let gemTarget = room.gems.sort((a, b) => dist(enemy.x, enemy.y, a.x, a.y) - dist(enemy.x, enemy.y, b.x, b.y))[0];
-                        if (gemTarget) target = gemTarget;
-                        else target = { x: enemy.x * 2, y: enemy.y * 2 }; // Útěk
-                    }
-
-                    if (!target) return;
-
-                    const angle = Math.atan2(target.y - enemy.y, target.x - enemy.x);
-                    let speedMult = 1;
-                    if (enemy.isBoss) speedMult = 1.0; // Původní speedMod z push už je započítán
-                    if (enemy.type === 2) speedMult = 0.5;
-                    if (enemy.type === 5) speedMult = 0.4;
-                    if (enemy.type === 3 && enemy.exploding) speedMult = 0; // Kamikadze stojí před výbuchem
-                    if (enemy.type === 6) {
-                        if (enemy.jumpState === 'PREPARING' || enemy.jumpState === 'JUMPING') speedMult = 0;
-                        else speedMult = 0.7; // Skokan walking speed
-                    }
-                    if (enemy.type === 7) speedMult = 1.6; // Sebevrah
-                    if (enemy.type === 8) speedMult = 0.7; // Štítonoš
-
-                    const enemyMod = enemy.mod || 1;
-                    const speed = (CONFIG.ENEMY_BASE_SPEED + (enemyMod * 0.15)) * speedMult;
-
-                    let nextX = enemy.x + Math.cos(angle) * speed;
-                    let nextY = enemy.y + Math.sin(angle) * speed;
-
-                    room.obstacles.forEach(obs => {
-                        if (dist(nextX, nextY, obs.x, obs.y) < 15 + obs.radius) {
-                            const pushAngle = Math.atan2(nextY - obs.y, nextX - obs.x);
-                            nextX = obs.x + Math.cos(pushAngle) * (15 + obs.radius);
-                            nextY = obs.y + Math.sin(pushAngle) * (15 + obs.radius);
-                        }
-                    });
-
-                    enemy.x = nextX;
-                    enemy.y = nextY;
-
-                    if (enemy.type === 4 && target.id && room.gems.find(g => g.id === target.id)) {
-                        if (dist(enemy.x, enemy.y, target.x, target.y) < 30) {
-                            room.gems = room.gems.filter(g => g.id !== target.id);
-                            enemy.stolenGems++;
-                        }
-                    }
-
-                    if (enemy.type === 3 && !enemy.exploding) {
-                        if (dist(enemy.x, enemy.y, target.x, target.y) < 80 && !target.isBait && target.hp !== undefined) {
-                            enemy.exploding = true;
-                            enemy.explodeTime = now + 1500;
-                        }
-                    }
-
-                    if (enemy.type === 3 && enemy.exploding && now > enemy.explodeTime) {
-                        enemy.hp = 0;
-                        playersArr.forEach(p => { if (dist(p.x, p.y, enemy.x, enemy.y) < 150) p.hp -= 40; });
-                        room.enemies.forEach(e => { if (e.id !== enemy.id && dist(e.x, e.y, enemy.x, enemy.y) < 150) e.hp -= 150; });
-                        io.to(roomId).emit('explosion', { x: enemy.x, y: enemy.y, radius: 150, isNuke: false });
-                        room.enemies = room.enemies.filter(e => e.id !== enemy.id && e.hp > 0);
-                    }
-
-                    if (enemy.type === 5) { // Support UFO Heal
-                        room.enemies.forEach(e => {
-                            if (e.id !== enemy.id && !e.possessed && dist(e.x, e.y, enemy.x, enemy.y) < 250) {
-                                e.hp = Math.min(e.maxHp, e.hp + 0.5);
-                            }
-                        });
-                    }
-                    if (enemy.type === 2) {
-                        let dynamicInterval = Math.max(1500, 5000 - (room.level * 150));
-                        if (now - enemy.lastShot > dynamicInterval) {
-                            let inaccuracy = Math.max(0, 0.6 - (room.level * 0.03));
-                            let baseAngle = Math.atan2(target.y - enemy.y, target.x - enemy.x);
-                            let shootAngle = baseAngle + (Math.random() - 0.5) * inaccuracy;
-
-                            let tx = enemy.x + Math.cos(shootAngle) * 100;
-                            let ty = enemy.y + Math.sin(shootAngle) * 100;
-
-                            io.to(roomId).emit('enemyShoot', {
-                                x: enemy.x, y: enemy.y, tx: tx, ty: ty,
-                                dmg: 10, speed: CONFIG.PROJECTILE_SPEED * 1.2, size: 8, type: 'default'
-                            });
-                            enemy.lastShot = now;
-                        }
-                    }
-
-                    if (enemy.type === 6) { // SKOKAN (Server logic - v1.385)
-                        if (!enemy.jumpState) enemy.jumpState = 'WALKING';
-
-                        if (enemy.jumpState === 'WALKING') {
-                            if (dist(enemy.x, enemy.y, target.x, target.y) < 250) {
-                                enemy.jumpState = 'PREPARING';
-                                enemy.prepTime = now + 1000;
-                                enemy.jumpTarget = { x: target.x, y: target.y };
-                            }
-                        } else if (enemy.jumpState === 'PREPARING') {
-                            if (now > enemy.prepTime) {
-                                enemy.jumpState = 'JUMPING';
-                                enemy.jumpStart = { x: enemy.x, y: enemy.y };
-                                enemy.jumpProgress = 0;
-                            }
-                            // Stojí a míří (nedělat nic v x,y)
-                        } else if (enemy.jumpState === 'JUMPING') {
-                            enemy.jumpProgress += 0.04;
-                            enemy.x = enemy.jumpStart.x + (enemy.jumpTarget.x - enemy.jumpStart.x) * enemy.jumpProgress;
-                            enemy.y = enemy.jumpStart.y + (enemy.jumpTarget.y - enemy.jumpStart.y) * enemy.jumpProgress;
-
-                            if (enemy.jumpProgress >= 1) {
-                                enemy.jumpState = 'WALKING';
-                                playersArr.forEach(p => { if (dist(enemy.x, enemy.y, p.x, p.y) < 50) p.hp -= 15; });
-                            }
-                        }
-                    }
-                    
-                    if (enemy.type === 7 && !enemy.dead) { // SEBEVRAH
-                        if (dist(enemy.x, enemy.y, target.x, target.y) < 55) {
-                            enemy.hp = 0;
-                            playersArr.forEach(p => { if (dist(enemy.x, enemy.y, p.x, p.y) < 60) p.hp -= 35; });
-                        }
-                    }
-
-                    // Finální kontrola souřadnic (proti NaN)
-                    if (isNaN(enemy.x) || isNaN(enemy.y)) {
-                        enemy.x = 0; enemy.y = 0;
-                    }
-                }
-            });
-
-            io.to(roomId).emit('stateUpdate', {
-                players: room.players,
-                enemies: room.enemies,
-                gems: room.gems,
-                baits: room.baits,
-                tombstones: room.tombstones,
-                obstacles: room.obstacles,
-                time: room.time,
-                roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp },
-                frozen: false
-            });
-        } catch (err) {
-            console.error(`Chyba v místnosti ${roomId}:`, err);
-        }
+        room.engine.update(dt);
+        io.to(roomId).emit('gameState', room.engine.getState());
     }
-}, 50);
+}, 33); // ~30 FPS for multiplayer networking
+
+
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server bezi na portu ${PORT}`));
