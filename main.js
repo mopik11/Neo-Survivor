@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.406
+ * NEO SURVIVOR - Core Game Logic - v1.407
  */
 
 window.addEventListener('beforeunload', () => {
@@ -3211,7 +3211,13 @@ function togglePause(isAFK = false) {
         document.getElementById('stat-lifesteal').innerText = Math.floor(p.lifestealChance * 100) + '%';
         
         const checkAuto = document.getElementById('chk-autoselect-pause');
-        if (checkAuto) checkAuto.checked = !!META.upgrades.autoSelect;
+        if (checkAuto) {
+            checkAuto.checked = !!META.autoSelect;
+            checkAuto.onchange = () => {
+                META.autoSelect = checkAuto.checked;
+                saveMeta();
+            };
+        }
 
 
         // In multiplayer: disconnect socket immediately when paused/AFK
@@ -3593,8 +3599,9 @@ if (NET.socket) {
     });
 
     NET.socket.on('purchaseSuccess', (data) => {
+        updateCurrencyUI();
         if (data.type === 'ship' || data.type === 'ability') showShipsMenu();
-        else if (data.type === 'stat') showMetaMenu();
+        else if (data.type === 'stat' || data.type === 'crate') showMetaMenu();
     });
 
     NET.socket.on('purchaseError', (msg) => {
@@ -4425,17 +4432,25 @@ function initSocket() {
 
         NET.socket.on('syncSuccess', (data) => {
             if (data.meta) {
-                // Merge server-authoritative meta into local META
+                // ZERO TRUST: Overwrite sensitive fields with server truth, merge only non-sensitive
+                const protectedFields = ['currency', 'inventory', 'upgrades', 'ships', 'abilities', 'unopenedCrates', 'stats', 'maxLevel'];
+                
                 for (let key in data.meta) {
-                    if (typeof data.meta[key] === 'object' && data.meta[key] !== null && !Array.isArray(data.meta[key])) {
+                    if (protectedFields.includes(key)) {
+                        META[key] = data.meta[key]; // Strict overwrite
+                    } else if (typeof data.meta[key] === 'object' && data.meta[key] !== null && !Array.isArray(data.meta[key])) {
                         META[key] = { ...META[key], ...data.meta[key] };
                     } else {
                         META[key] = data.meta[key];
                     }
                 }
+                
                 updateCurrencyUI();
                 if (window.showMetaMenu && document.getElementById('meta-modal').classList.contains('active')) {
                     showMetaMenu();
+                }
+                if (window.showShipsMenu && document.getElementById('ships-modal').classList.contains('active')) {
+                    showShipsMenu();
                 }
             }
         });
@@ -5602,7 +5617,7 @@ function init() {
         tryFullscreen();
         AudioEngine.init(); AudioEngine.stopMenuMusic();
         
-        // --- ZERO TRUST SOLO PLAY (v1.406.7) ---
+        // --- ZERO TRUST SOLO PLAY (v1.407.7) ---
         // Join a private server-side room even for solo to enable authoritative rewards
         const soloRoomId = "SOLO_" + Math.random().toString(36).substr(2, 6).toUpperCase();
         initSocket();

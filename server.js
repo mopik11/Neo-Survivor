@@ -743,6 +743,7 @@ io.on('connection', (socket) => {
                         if (meta.settings) merged.settings = meta.settings;
                         if (meta.selectedLanguage) merged.selectedLanguage = meta.selectedLanguage;
                         if (meta.autoUpgrade !== undefined) merged.autoUpgrade = meta.autoUpgrade;
+                        if (meta.autoSelect !== undefined) merged.autoSelect = meta.autoSelect;
                         if (meta.selectedShip) merged.selectedShip = meta.selectedShip;
                         if (meta.selectedAbility) merged.selectedAbility = meta.selectedAbility;
                         if (meta.claimedAchievements) merged.claimedAchievements = meta.claimedAchievements;
