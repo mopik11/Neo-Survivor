@@ -237,16 +237,16 @@ function generateLoot(crateType) {
 }
 
 function rewardPlayer(socket, amount) {
-    const user = socket.authenticatedUser;
+    const r = socket.roomId;
+    const p = socket.playerId;
+    if (!r || !ROOMS[r] || !ROOMS[r].players[p]) return;
+
+    const user = ROOMS[r].players[p].username;
     if (!user) return;
     
     // Track per-session earnings for accurate Game Over stats
-    const r = socket.roomId;
-    const p = socket.playerId;
-    if (r && ROOMS[r]) {
-        if (!ROOMS[r].dogeEarned) ROOMS[r].dogeEarned = {};
-        ROOMS[r].dogeEarned[p] = (ROOMS[r].dogeEarned[p] || 0) + amount;
-    }
+    if (!ROOMS[r].dogeEarned) ROOMS[r].dogeEarned = {};
+    ROOMS[r].dogeEarned[p] = (ROOMS[r].dogeEarned[p] || 0) + amount;
 
     db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
         if (!err && row) {
@@ -745,11 +745,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('syncAccount', (data) => {
-        // SECURITY: Use socket-bound identity and session token (Anti-Console Exploit)
-        const user = socket.authenticatedUser;
-        if (!user || data.token !== socket.sessionToken) {
-            return socket.emit('syncError', "Nutné přihlášení nebo neplatný session token.");
-        }
+        // SECURITY: Whitelist of fields the client CAN update
+        let user = socket.authenticatedUser || data.user;
+        if (!user) return socket.emit('syncError', "Nutné přihlášení.");
 
         const { meta, pass } = data;
         if (!meta) return;
@@ -758,6 +756,8 @@ io.on('connection', (socket) => {
             if (row) {
                 Security.verifyPassword(pass, row.password).then(isMatch => {
                     if (isMatch) {
+                        socket.authenticatedUser = user;
+                        if (!socket.sessionToken) socket.sessionToken = data.token;
                         let oldMeta;
                         try {
                             const decrypted = Security.decrypt(row.meta);
@@ -902,10 +902,13 @@ io.on('connection', (socket) => {
 
         if (!ROOMS[roomId].players[playerId]) {
             ROOMS[roomId].players[playerId] = {
-                id: playerId, x: 0, y: 0, hp: 120, maxHp: 120, dead: false, hat: null, level: 1, disconnected: false, name: data.name || "Hráč"
+                id: playerId, x: 0, y: 0, hp: 120, maxHp: 120, dead: false, hat: null, level: 1, disconnected: false, 
+                name: data.name || "Hráč",
+                username: data.username || null 
             };
         } else {
             ROOMS[roomId].players[playerId].disconnected = false;
+            if (data.username) ROOMS[roomId].players[playerId].username = data.username;
         }
 
         socket.emit('joined', {

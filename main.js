@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.410
+ * NEO SURVIVOR - Core Game Logic - v1.412
  */
 
 window.addEventListener('beforeunload', () => {
@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.410'
+    version: 'v1.412'
 };
 
 const EMOJIS = [
@@ -3523,10 +3523,23 @@ function showMetaMenu() {
         card.style.zIndex = '5';
         card.style.paddingBottom = '60px'; 
 
+        const owned = (META.unopenedCrates && META.unopenedCrates[type.id]) || 0;
         card.innerHTML = `
-            <h3>${window.T(type.name)}</h3>
-            <div style="font-size: 0.7rem; color: #fbbf24; font-weight: 800; margin-bottom: 5px;">${formatNumber(type.cost)} DOGE / ks</div>
-            <div class="crate-multipliers" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; position: absolute; bottom: 10px; left: 10px; right: 10px;">
+            <h3 style="margin-bottom: 2px;">${window.T(type.name)}</h3>
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">${window.T('Máš:')} <span style="color: ${type.border}; font-weight: 900;">${owned}ks</span></div>
+            <div style="font-size: 0.65rem; color: #fbbf24; font-weight: 800; margin-bottom: 12px; opacity: 0.8;">${formatNumber(type.cost)} DOGE / ks</div>
+            
+            ${owned > 0 ? `
+                <button class="btn-open" style="width: 100%; background: ${type.border}; color: #000; font-weight: 900; padding: 12px 0; border-radius: 12px; margin-bottom: 15px; border: none; cursor: pointer; box-shadow: 0 4px 15px ${type.border}44; font-size: 0.9rem; letter-spacing: 1px; transition: all 0.2s;">
+                    ${window.T('OTEVŘÍT')}
+                </button>
+            ` : `
+                <div style="height: 44px; margin-bottom: 15px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: #64748b; font-weight: 800; text-transform: uppercase;">
+                    ${window.T('Žádné bedny')}
+                </div>
+            `}
+
+            <div class="crate-multipliers" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 5px;">
                 ${[1, 2, 5, 10].map(count => {
                     const canAfford = META.currency >= type.cost * count;
                     return `<button class="btn-bulk" data-count="${count}" style="background: ${canAfford ? 'rgba(255,255,255,0.05)' : 'rgba(239, 68, 68, 0.05)'}; border: 1px solid ${canAfford ? 'rgba(255,255,255,0.15)' : 'rgba(239, 68, 68, 0.2)'}; color: ${canAfford ? '#fff' : '#ef4444'}; padding: 10px 0; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: ${canAfford ? 'pointer' : 'not-allowed'}; transition: all 0.2s; opacity: ${canAfford ? 1 : 0.5};">${count}x</button>`;
@@ -3534,31 +3547,37 @@ function showMetaMenu() {
             </div>
         `;
 
-                card.querySelectorAll('.btn-bulk').forEach(btn => {
-                    btn.onclick = (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const count = parseInt(btn.getAttribute('data-count'));
-                        const totalCost = type.cost * count;
+        const btnOpen = card.querySelector('.btn-open');
+        if (btnOpen) {
+            btnOpen.onclick = (e) => {
+                e.stopPropagation();
+                openCrate(type.id, 1);
+            };
+        }
 
-                        // OPTIMISTIC UI: Update locally first
-                        if (META.currency >= totalCost) {
-                            META.currency -= totalCost;
-                            if (!META.unopenedCrates) META.unopenedCrates = { basic:0, premium:0, legendary:0 };
-                            META.unopenedCrates[type.id] = (META.unopenedCrates[type.id] || 0) + count;
-                            playSound('upgrade');
-                            showMetaMenu(); // Refresh immediately
-                        }
+        card.querySelectorAll('.btn-bulk').forEach(btn => {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const count = parseInt(btn.getAttribute('data-count'));
+                const totalCost = type.cost * count;
 
-                        // AUTHORITATIVE REQUEST
-                        if (!NET.socket) initSocket();
-                        if (NET.socket) {
-                            NET.socket.emit('purchase', { type: 'crate', id: type.id, count: count, token: NET.sessionToken });
-                        } else {
-                            window.showCustomAlert(window.T("Chyba připojení k serveru!"));
-                        }
-                    };
-                });
+                if (META.currency >= totalCost) {
+                    META.currency -= totalCost;
+                    if (!META.unopenedCrates) META.unopenedCrates = { basic:0, premium:0, legendary:0 };
+                    META.unopenedCrates[type.id] = (META.unopenedCrates[type.id] || 0) + count;
+                    playSound('upgrade');
+                    showMetaMenu();
+                }
+
+                if (!NET.socket) initSocket();
+                if (NET.socket) {
+                    NET.socket.emit('purchase', { type: 'crate', id: type.id, count: count, token: NET.sessionToken });
+                } else {
+                    window.showCustomAlert(window.T("Chyba připojení k serveru!"));
+                }
+            };
+        });
         cratesGrid.appendChild(card);
     });
     container.appendChild(cratesSection);
@@ -4675,7 +4694,6 @@ window.showHostModal = () => {
     // QR Code generation
     const qrImg = document.getElementById('qr-code-img');
     if (qrImg) {
-        // Construct the full URL with the room parameter
         const joinUrl = window.location.href.split('?')[0] + `?room=${roomName}`;
         qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl)}`;
         qrImg.style.display = 'block';
@@ -4710,7 +4728,12 @@ window.joinCloudServer = (roomName) => {
         return;
     }
     initSocket();
-    NET.socket.emit('joinRoom', { roomId: roomName.trim().toUpperCase(), playerId: myPlayerId });
+    NET.socket.emit('joinRoom', { 
+        roomId: roomName.trim().toUpperCase(), 
+        playerId: myPlayerId,
+        username: localStorage.getItem('neoSurvivor_user'),
+        name: localStorage.getItem('neoSurvivor_user')
+    });
 };
 
 window.connectToId = (id) => {
@@ -5698,7 +5721,13 @@ function init() {
         // Join a private server-side room even for solo to enable authoritative rewards
         const soloRoomId = "SOLO_" + Math.random().toString(36).substr(2, 6).toUpperCase();
         initSocket();
-        NET.socket.emit('joinRoom', { roomId: soloRoomId, playerId: myPlayerId, isSolo: true });
+        NET.socket.emit('joinRoom', { 
+            roomId: soloRoomId, 
+            playerId: myPlayerId, 
+            isSolo: true,
+            username: localStorage.getItem('neoSurvivor_user'),
+            name: localStorage.getItem('neoSurvivor_user')
+        });
     };
 
     const btnMP = document.getElementById('btn-multiplayer');
