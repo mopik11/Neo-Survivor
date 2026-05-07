@@ -197,13 +197,70 @@ const EMOJIS = [
     { id: 'dead', rarity: 'uncommon', price: 30 },
     { id: 'hands_up', rarity: 'uncommon', price: 35 },
     { id: 'dislike', rarity: 'common', price: 10 },
-    { id: 'cat', rarity: 'uncommon', price: 40 },
-    { id: 'cool', rarity: 'uncommon', price: 40 },
-    { id: 'fire', rarity: 'rare', price: 120 },
-    { id: 'heart', rarity: 'rare', price: 150 },
-    { id: 'gold_medal', rarity: 'epic', price: 500 },
-    { id: 'crown', rarity: 'epic', price: 1000 },
-    { id: 'ultra_rare', rarity: 'legendary', price: 5000, chance: 0.1 }
+    { id: 'heart', rarity: 'rare', price: 80 },
+    { id: 'open_hands', rarity: 'uncommon', price: 40 },
+    { id: 'handshake', rarity: 'uncommon', price: 40 },
+    { id: 'guard', rarity: 'epic', price: 250 },
+    { id: 'hero', rarity: 'epic', price: 300 },
+    { id: 'sunflower', rarity: 'rare', price: 120 },
+    { id: 'leaf', rarity: 'common', price: 20 },
+    { id: 'owl', rarity: 'epic', price: 400 },
+    { id: 'chick', rarity: 'rare', price: 150 },
+    { id: 'icecream', rarity: 'uncommon', price: 50 },
+    { id: 'cake', rarity: 'rare', price: 180 },
+    { id: 'fishcake', rarity: 'epic', price: 350 },
+    { id: 'alien', rarity: 'epic', price: 500 },
+    { id: 'ghost', rarity: 'uncommon', price: 60 },
+    { id: 'robot', rarity: 'rare', price: 200 },
+    { id: 'fire', rarity: 'rare', price: 150 },
+    { id: 'star', rarity: 'uncommon', price: 45 },
+    { id: 'pizza', rarity: 'uncommon', price: 55 },
+    { id: 'burger', rarity: 'uncommon', price: 55 },
+    { id: 'sushi', rarity: 'rare', price: 220 },
+    { id: 'taco', rarity: 'rare', price: 210 },
+    { id: 'coffee', rarity: 'common', price: 25 },
+    { id: 'beer', rarity: 'uncommon', price: 40 },
+    { id: 'rocket', rarity: 'epic', price: 600 },
+    { id: 'ufo', rarity: 'legendary', price: 2000 },
+    { id: 'ring', rarity: 'legendary', price: 5000 },
+    { id: 'oni', rarity: 'epic', price: 450 },
+    { id: 'vampire', rarity: 'epic', price: 480 },
+    { id: 'zombie', rarity: 'uncommon', price: 40 },
+    { id: 'dragon', rarity: 'legendary', price: 3500 },
+    { id: 'volcano', rarity: 'rare', price: 180 },
+    { id: 'galaxy', rarity: 'legendary', price: 6000 },
+    { id: 'saturn', rarity: 'rare', price: 250 },
+    { id: 'invader', rarity: 'epic', price: 550 },
+    { id: 'spy', rarity: 'rare', price: 200 },
+    { id: 'fox', rarity: 'uncommon', price: 45 },
+    { id: 'bear', rarity: 'uncommon', price: 45 },
+    { id: 'panda', rarity: 'rare', price: 120 },
+    { id: 'koala', rarity: 'rare', price: 125 },
+    { id: 'tiger', rarity: 'epic', price: 450 },
+    { id: 'lion', rarity: 'epic', price: 500 },
+    { id: 'frog', rarity: 'common', price: 20 },
+    { id: 'monkey', rarity: 'uncommon', price: 50 },
+    { id: 'penguin', rarity: 'rare', price: 180 },
+    { id: 'unicorn', rarity: 'legendary', price: 4000 },
+    { id: 'butterfly', rarity: 'rare', price: 160 },
+    { id: 'turtle', rarity: 'uncommon', price: 70 },
+    { id: 'octopus', rarity: 'epic', price: 600 },
+    { id: 'whale', rarity: 'epic', price: 650 },
+    { id: 'apple', rarity: 'common', price: 15 },
+    { id: 'banana', rarity: 'common', price: 15 },
+    { id: 'watermelon', rarity: 'uncommon', price: 35 },
+    { id: 'sushi_roll', rarity: 'rare', price: 240 },
+    { id: 'ramen', rarity: 'rare', price: 260 },
+    { id: 'ice_cube', rarity: 'common', price: 10 },
+    { id: 'crystal', rarity: 'epic', price: 700 },
+    { id: 'rainbow', rarity: 'legendary', price: 4500 },
+    { id: 'clover', rarity: 'rare', price: 300 },
+    { id: 'diamond_gem', rarity: 'rare', price: 400 },
+    { id: 'gold_bar', rarity: 'epic', price: 800 },
+    { id: 'hat_crown', rarity: 'legendary', price: 1000 },
+    { id: 'hat_wizard', rarity: 'legendary', price: 1200 },
+    { id: 'hat_ninja', rarity: 'legendary', price: 1500 },
+    { id: 'ultra_rare', rarity: 'legendary', price: 20000, chance: 1 }
 ];
 
 const REWARD_NORMAL_KILL = 1;
@@ -538,7 +595,118 @@ io.on('connection', (socket) => {
         });
     });
 
-    socket.on('purchase', (data) => {
+    socket.on('sellAllItems', (data) => {
+        const user = socket.authenticatedUser;
+        if (!user || data.token !== socket.sessionToken) return;
+
+        db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+            if (err || !row) return;
+            let meta;
+            try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
+            if (!meta || !meta.inventory) return;
+
+            let totalGain = 0;
+            const newInventory = [];
+            meta.inventory.forEach(inv => {
+                const emoji = EMOJIS.find(e => e.id === inv.id);
+                if (!emoji) return;
+                const isEquipped = (meta.upgrades && meta.upgrades.hat === emoji.id);
+                if (isEquipped) {
+                    newInventory.push(inv);
+                } else {
+                    totalGain += emoji.price * (inv.count || 1);
+                }
+            });
+
+            if (totalGain > 0) {
+                meta.currency = (meta.currency || 0) + totalGain;
+                if (!meta.stats) meta.stats = { totalDogecoins: 0 };
+                meta.stats.totalDogecoins = (meta.stats.totalDogecoins || 0) + totalGain;
+            }
+            meta.inventory = newInventory;
+
+            const encrypted = Security.encrypt(JSON.stringify(meta));
+            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+                socket.emit('syncSuccess', { meta: meta });
+                socket.emit('currencyUpdated', { amount: meta.currency });
+            });
+        });
+    });
+
+    socket.on('claimDailyGift', (data) => {
+        const user = socket.authenticatedUser;
+        if (!user || data.token !== socket.sessionToken) return;
+
+        db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+            if (err || !row) return;
+            let meta;
+            try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
+            
+            const now = Date.now();
+            const day = 24 * 3600 * 1000;
+            const lastClaim = meta.lastDailyGift || 0;
+            if (now - lastClaim < day) return;
+
+            if (now - lastClaim > 2 * day) meta.dailyStreak = 1;
+            else meta.dailyStreak = (meta.dailyStreak || 0) + 1;
+
+            const rewards = [50, 100, 200, 400, 800];
+            const reward = rewards[Math.min(meta.dailyStreak - 1, rewards.length - 1)];
+
+            meta.currency = (meta.currency || 0) + reward;
+            meta.lastDailyGift = now;
+            if (!meta.stats) meta.stats = { totalDogecoins: 0 };
+            meta.stats.totalDogecoins = (meta.stats.totalDogecoins || 0) + reward;
+
+            const encrypted = Security.encrypt(JSON.stringify(meta));
+            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+                socket.emit('syncSuccess', { meta: meta });
+                socket.emit('currencyUpdated', { amount: meta.currency });
+            });
+        });
+    });
+
+    socket.on('claimAchievement', (data) => {
+        const user = socket.authenticatedUser;
+        if (!user || !data.id || data.token !== socket.sessionToken) return;
+
+        db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+            if (err || !row) return;
+            let meta;
+            try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
+            
+            // Achievement reward mapping (matched with main.js)
+            const rewards = {
+                wide: 100, cheapskate: 250, boss_slayer: 300, veteran: 500, collector: 400, gambling: 200, 
+                cookie: 1000, millionaire: 2000, crate_opener: 500, murderer: 100, genocide: 500, 
+                god_of_death: 2000, boss_hunter: 500, boss_nightmare: 1000, elite_pilot: 500, 
+                legendary_pilot: 1000, explorer_fan: 300, laser_fan: 300, defender_fan: 300, 
+                shotgun_fan: 300, necro_fan: 300, nuke_happy: 200, magnet_master: 200, 
+                medic: 200, time_master: 300, puppet_master: 300, healer: 400, gem_collector: 500, 
+                speed_demon: 200, tank: 200, glass_cannon: 300, multiplayer_fan: 300, rich_kid: 500, 
+                lucky_star: 1000, asteroid_miner: 200, asteroid_destroyer: 500, first_win: 200, 
+                survivor: 500, immortal: 1000, first_battle: 50
+            };
+
+            const reward = rewards[data.id];
+            if (!reward) return;
+
+            if (!meta.achievements || !meta.achievements[data.id]) return;
+            if (meta.claimedAchievements && meta.claimedAchievements[data.id]) return;
+
+            if (!meta.claimedAchievements) meta.claimedAchievements = {};
+            meta.claimedAchievements[data.id] = true;
+            meta.currency = (meta.currency || 0) + reward;
+            if (!meta.stats) meta.stats = { totalDogecoins: 0 };
+            meta.stats.totalDogecoins = (meta.stats.totalDogecoins || 0) + reward;
+
+            const encrypted = Security.encrypt(JSON.stringify(meta));
+            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+                socket.emit('syncSuccess', { meta: meta });
+                socket.emit('currencyUpdated', { amount: meta.currency });
+            });
+        });
+    });
         const user = socket.authenticatedUser;
         if (!user || data.token !== socket.sessionToken) return;
 
@@ -779,6 +947,8 @@ io.on('connection', (socket) => {
                         if (meta.selectedShip) merged.selectedShip = meta.selectedShip;
                         if (meta.selectedAbility) merged.selectedAbility = meta.selectedAbility;
                         if (meta.claimedAchievements) merged.claimedAchievements = meta.claimedAchievements;
+                        if (meta.achievements) merged.achievements = meta.achievements;
+                        if (meta.stats) merged.stats = meta.stats;
                         
                         // NEVER trust these from the client - use server-side truth only
                         merged.currency = serverMeta.currency || 0;
@@ -787,7 +957,6 @@ io.on('connection', (socket) => {
                         merged.ships = serverMeta.ships || { 1: true };
                         merged.abilities = serverMeta.abilities || { 1: true };
                         merged.unopenedCrates = serverMeta.unopenedCrates || { basic: 0, premium: 0, legendary: 0 };
-                        merged.stats = serverMeta.stats || { totalDogecoins: 0 };
                         merged.maxLevel = Math.max(serverMeta.maxLevel || 1, (row ? row.max_level : 1) || 1);
                         
                         const encryptedMeta = Security.encrypt(JSON.stringify(merged));

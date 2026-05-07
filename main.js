@@ -3147,15 +3147,23 @@ function showAchievementsMenu() {
 window.claimAchievement = function(id) {
     const ach = ACHIEVEMENTS.find(a => a.id === id);
     if (!ach) return;
-    if (!META.achievements[id]) return;
+    if (!META.achievements || !META.achievements[id]) return;
     if (META.claimedAchievements && META.claimedAchievements[id]) return;
 
-    if (!META.claimedAchievements) META.claimedAchievements = {};
-    META.claimedAchievements[id] = true;
-    
-    addCurrency(ach.reward);
-    saveMeta();
-    showAchievementsMenu(); // Refresh
+    // Server-Authoritative claim
+    if (NET.socket && NET.socket.connected) {
+        NET.socket.emit('claimAchievement', { id: id, token: NET.sessionToken });
+        // Optimistic UI
+        if (!META.claimedAchievements) META.claimedAchievements = {};
+        META.claimedAchievements[id] = true;
+        showAchievementsMenu();
+    } else {
+        if (!META.claimedAchievements) META.claimedAchievements = {};
+        META.claimedAchievements[id] = true;
+        addCurrency(ach.reward);
+        saveMeta();
+        showAchievementsMenu(); 
+    }
     
     AudioEngine.play('coin');
     showCurrencyNotification(ach.reward, "Odměna vybrána!");
@@ -4086,25 +4094,30 @@ function sellEmoji(id) {
 
 function sellAllEmojis() {
     if (!META.inventory || META.inventory.length === 0) return;
-    let totalGain = 0;
-    const newInventory = [];
-    META.inventory.forEach(inv => {
-        const emoji = EMOJIS.find(e => e.id === inv.id);
-        if (!emoji) return;
-        const isEquipped = (emoji.id === META.upgrades.hat);
-        if (isEquipped) {
-            newInventory.push(inv);
-        } else {
-            totalGain += emoji.price * inv.count;
+    
+    // Server-Authoritative selling (v1.413)
+    if (NET.socket && NET.socket.connected) {
+        NET.socket.emit('sellAllItems', { token: NET.sessionToken });
+        window.showCustomAlert(window.T("Požadavek na prodej odeslán..."));
+    } else {
+        // Fallback for offline
+        let totalGain = 0;
+        const newInventory = [];
+        META.inventory.forEach(inv => {
+            const emoji = EMOJIS.find(e => e.id === inv.id);
+            if (!emoji) return;
+            const isEquipped = (emoji.id === META.upgrades.hat);
+            if (isEquipped) newInventory.push(inv);
+            else totalGain += emoji.price * inv.count;
+        });
+        if (totalGain > 0) {
+            META.currency += totalGain;
+            showCurrencyNotification(totalGain, window.T("HROMADNÝ PRODEJ"));
         }
-    });
-    if (totalGain > 0) {
-        META.currency += totalGain;
-        showCurrencyNotification(totalGain, window.T("HROMADNÝ PRODEJ"));
+        META.inventory = newInventory;
+        saveMeta();
+        showMetaMenu();
     }
-    META.inventory = newInventory;
-    saveMeta();
-    showMetaMenu();
 }
 
 function startGame() {
@@ -4512,11 +4525,15 @@ function initSocket() {
                 }
                 
                 updateCurrencyUI();
+                checkAchievements(); // Sync achievements after meta update
                 if (window.showMetaMenu && document.getElementById('meta-modal').classList.contains('active')) {
                     showMetaMenu();
                 }
                 if (window.showShipsMenu && document.getElementById('ships-modal').classList.contains('active')) {
                     showShipsMenu();
+                }
+                if (window.showAchievementsMenu && document.getElementById('achievements-modal').classList.contains('active')) {
+                    showAchievementsMenu();
                 }
             }
         });
@@ -5567,39 +5584,33 @@ function init() {
 
         btnDaily.onclick = () => {
             const now = Date.now();
-            const hour = 3600 * 1000;
-            const day = 24 * hour;
-            
+            const day = 24 * 3600 * 1000;
             const lastClaim = META.lastDailyGift || 0;
             const timeSince = now - lastClaim;
 
-            if (timeSince < day) {
-                const remaining = day - timeSince;
-                const h = Math.floor(remaining / hour);
-                const m = Math.floor((remaining % hour) / (60 * 1000));
-                window.showCustomAlert(window.T("Další dárek za ") + h + "h " + m + "m!");
-                return;
-            }
+            if (timeSince < day) return;
 
-            // Streak logic
-            if (timeSince > 2 * day) {
-                META.dailyStreak = 1; // Reset if missed a day (over 48h)
+            // Server-Authoritative claim
+            if (NET.socket && NET.socket.connected) {
+                NET.socket.emit('claimDailyGift', { token: NET.sessionToken });
+                
+                // Optimistic UI feedback
+                btnDaily.style.opacity = '0.5';
+                btnDaily.style.filter = 'grayscale(1)';
+                btnDaily.style.pointerEvents = 'none';
+                showConfetti(50);
             } else {
-                META.dailyStreak = (META.dailyStreak || 0) + 1;
+                // Local fallback
+                if (timeSince > 2 * day) META.dailyStreak = 1;
+                else META.dailyStreak = (META.dailyStreak || 0) + 1;
+                const rewards = [50, 100, 200, 400, 800];
+                const reward = rewards[Math.min(META.dailyStreak - 1, rewards.length - 1)];
+                META.currency += reward;
+                META.lastDailyGift = now;
+                saveMeta();
+                showCurrencyNotification(reward, `DENNÍ ODMĚNA (${META.dailyStreak}. DEN)`);
+                showConfetti(100);
             }
-
-            const rewards = [50, 100, 200, 400, 800];
-            const reward = rewards[Math.min(META.dailyStreak - 1, rewards.length - 1)];
-
-            META.currency += reward;
-            META.lastDailyGift = now;
-            saveMeta();
-            
-            showCurrencyNotification(reward, `DENNÍ ODMĚNA (${META.dailyStreak}. DEN)`);
-            showConfetti(100);
-            btnDaily.style.opacity = '0.5';
-            btnDaily.style.filter = 'grayscale(1)';
-            btnDaily.style.pointerEvents = 'none';
         };
 
         // Daily Timer Logic
@@ -6181,9 +6192,8 @@ function update(dt) {
         }
         META.lastMoveTime = now;
         META.isAFK = false;
-    } else if (GAME.active && !GAME.paused && !document.querySelector('.modal.active') && (now - (META.lastMoveTime || now) > 10000)) {
-        // AFK after 10s - show AFK screen (togglePause also saves session + disconnects MP socket)
-        // Only trigger if NO modal is currently active (e.g. Level Up)
+    } else if (GAME.active && !GAME.paused && !document.querySelector('.modal.active') && (now - (META.lastMoveTime || now) > 45000)) {
+        // AFK after 45s - show AFK screen (togglePause also saves session + disconnects MP socket)
         META.isAFK = true;
         togglePause(true);
     }
@@ -6855,6 +6865,18 @@ const initAudio = () => {
 };
 
 
+
+// Reset AFK timer on ANY user interaction (v1.413)
+['mousedown', 'keydown', 'touchstart', 'mousemove'].forEach(evt => {
+    window.addEventListener(evt, () => {
+        if (GAME.active) {
+            META.lastMoveTime = Date.now();
+            if (GAME.paused && META.isAFK) {
+                togglePause(false); 
+            }
+        }
+    }, { passive: true });
+});
 
 ['click', 'keydown', 'touchstart'].forEach(type => window.addEventListener(type, initAudio));
 
