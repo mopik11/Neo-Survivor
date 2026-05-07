@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.412
+ * NEO SURVIVOR - Core Game Logic - v1.413
  */
 
 window.addEventListener('beforeunload', () => {
@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.412'
+    version: 'v1.413'
 };
 
 const EMOJIS = [
@@ -3678,6 +3678,12 @@ function clearCrateTimeouts() {
 }
 
 function startCrateAnimation(winner, crateType = 'basic') {
+    // AUTHORITATIVE LOOKUP: Server only sends ID/Rarity/Price, client must find name/icon
+    const fullData = EMOJIS.find(e => e.id === winner.id);
+    if (fullData) {
+        winner = { ...winner, ...fullData };
+    }
+
     switchMusic('crates');
     // 1. CLEAR EVERYTHING BEFORE STARTING NEW ANIMATION
     clearCrateTimeouts();
@@ -4517,6 +4523,7 @@ function initSocket() {
 
         NET.socket.on('crateResults', (data) => {
             if (!data || !data.results) return;
+            GAME.lastCrateBatchSize = data.results.length; // Fix NaN display
             if (!GAME.crateQueue) GAME.crateQueue = [];
             GAME.currentBatchResults = data.results;
             GAME.crateQueue = [...data.results];
