@@ -1,8 +1,6 @@
-const VERSION = "1.396";
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const GameEngine = require('./GameEngine');
 const sqlite3 = require('sqlite3').verbose();
 const crypto = require('node:crypto');
 let config = {};
@@ -198,8 +196,56 @@ function rewardPlayer(socket, amount) {
             const encrypted = Security.encrypt(JSON.stringify(meta));
             db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user]);
             
-            // Inform client to update UI
-            socket.emit('currencyUpdated', { amount: meta.currency });
+// --- ITEM DATABASE (v1.396.5) ---
+const EMOJIS = [
+    { id: 'soap', rarity: 'common', price: 20 },
+    { id: 'money', rarity: 'rare', price: 100 },
+    { id: 'smile', rarity: 'common', price: 15 },
+    { id: 'nerd', rarity: 'common', price: 15 },
+    { id: 'laugh', rarity: 'common', price: 15 },
+    { id: 'ugh', rarity: 'common', price: 15 },
+    { id: 'surprise', rarity: 'uncommon', price: 30 },
+    { id: 'dead', rarity: 'uncommon', price: 30 },
+    { id: 'hands_up', rarity: 'uncommon', price: 35 },
+    { id: 'dislike', rarity: 'common', price: 10 },
+    { id: 'cat', rarity: 'uncommon', price: 40 },
+    { id: 'cool', rarity: 'uncommon', price: 40 },
+    { id: 'fire', rarity: 'rare', price: 120 },
+    { id: 'heart', rarity: 'rare', price: 150 },
+    { id: 'gold_medal', rarity: 'epic', price: 500 },
+    { id: 'crown', rarity: 'epic', price: 1000 },
+    { id: 'ultra_rare', rarity: 'legendary', price: 5000, chance: 0.1 }
+];
+
+function generateLoot(crateType) {
+    const roll = Math.random() * 100;
+    const diamond = EMOJIS.find(e => e.id === 'ultra_rare');
+    if (diamond && roll < (diamond.chance || 0.1)) return diamond;
+
+    let rarity = 'common';
+    if (crateType === 'legendary') {
+        if (roll < 15) rarity = 'legendary';
+        else if (roll < 60) rarity = 'epic';
+        else rarity = 'rare';
+    } else if (crateType === 'premium') {
+        if (roll < 1) rarity = 'legendary';
+        else if (roll < 15) rarity = 'epic';
+        else if (roll < 50) rarity = 'rare';
+        else rarity = 'uncommon';
+    } else {
+        if (roll < 0.1) rarity = 'legendary';
+        else if (roll < 0.5) rarity = 'epic';
+        else if (roll < 5) rarity = 'rare';
+        else if (roll < 30) rarity = 'uncommon';
+        else rarity = 'common';
+    }
+
+    const possible = EMOJIS.filter(e => e.rarity === rarity && e.id !== 'ultra_rare');
+    return possible.length === 0 ? EMOJIS[0] : possible[Math.floor(Math.random() * possible.length)];
+}
+
+// Inform client to update UI
+socket.emit('currencyUpdated', { amount: meta.currency });
         }
     });
 }
@@ -392,6 +438,65 @@ io.on('connection', (socket) => {
     });
 
     // --- BĚŽNÁ LOGIKA HRY ---
+    socket.on('openCrate', (data) => {
+        const user = socket.authenticatedUser;
+        if (!user || !data.type || data.token !== socket.sessionToken) return;
+
+        db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+            if (err || !row) return;
+            let meta;
+            try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
+            if (!meta || !meta.unopenedCrates || (meta.unopenedCrates[data.type] || 0) < 1) return;
+
+            const count = Math.min(meta.unopenedCrates[data.type], data.count || 1);
+            const results = [];
+            for (let i = 0; i < count; i++) {
+                const item = generateLoot(data.type);
+                results.push(item);
+                if (!meta.inventory) meta.inventory = [];
+                const invItem = meta.inventory.find(inv => inv.id === item.id);
+                if (invItem) invItem.count++; else meta.inventory.push({ id: item.id, count: 1 });
+            }
+
+            meta.unopenedCrates[data.type] -= count;
+            const encrypted = Security.encrypt(JSON.stringify(meta));
+            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+                socket.emit('syncSuccess', { meta: meta });
+                socket.emit('crateResults', { results: results });
+            });
+        });
+    });
+
+    socket.on('sellItem', (data) => {
+        const user = socket.authenticatedUser;
+        if (!user || !data.id || data.token !== socket.sessionToken) return;
+
+        db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+            if (err || !row) return;
+            let meta;
+            try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
+            if (!meta || !meta.inventory) return;
+
+            const invIdx = meta.inventory.findIndex(inv => inv.id === data.id);
+            if (invIdx === -1) return;
+
+            const emoji = EMOJIS.find(e => e.id === data.id);
+            if (!emoji) return;
+
+            const countToSell = Math.min(meta.inventory[invIdx].count, data.count || 1);
+            const gain = emoji.price * countToSell;
+
+            meta.currency += gain;
+            meta.inventory[invIdx].count -= countToSell;
+            if (meta.inventory[invIdx].count <= 0) meta.inventory.splice(invIdx, 1);
+
+            const encrypted = Security.encrypt(JSON.stringify(meta));
+            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+                socket.emit('syncSuccess', { meta: meta });
+            });
+        });
+    });
+
     socket.on('register', (data) => {
         let { user, pass } = data;
         if (!user || user.length < 3 || user.length > 15 || !pass || pass.length < 1) {
@@ -554,15 +659,21 @@ io.on('connection', (socket) => {
                             try { oldMeta = JSON.parse(row.meta); } catch(e2) { oldMeta = {}; }
                         }
 
-                        // --- SMART MERGE (v1.385.2) ---
-                        const merged = { ...oldMeta, ...meta };
-                        merged.maxLevel = Math.max(oldMeta.maxLevel || 1, row.max_level || 1, meta.maxLevel || 1);
-
+                        // --- ZERO TRUST SMART MERGE (v1.396.3) ---
+                        // NEVER trust sensitive properties from the client
+                        const serverMeta = oldMeta || {};
+                        const merged = { ...meta, ...serverMeta }; // Use client meta for config, but override with server truth
+                        
+                        // Enforce server-side truth for sensitive fields
+                        merged.currency = serverMeta.currency || 0;
+                        merged.maxLevel = Math.max(serverMeta.maxLevel || 1, row.max_level || 1);
+                        merged.stats = serverMeta.stats || { totalDogecoins: 0 };
+                        
                         const encryptedMeta = Security.encrypt(JSON.stringify(merged));
                         db.run(`UPDATE accounts SET meta = ? WHERE username = ?`,
                             [encryptedMeta, user],
                             (err) => {
-                                // Sync success - Return the FULL merged meta to the client
+                                // Sync success - Return the AUTHORITATIVE merged meta to the client
                                 socket.emit('syncSuccess', { meta: merged });
                             });
                     }
@@ -645,36 +756,56 @@ io.on('connection', (socket) => {
         if (!ROOMS[roomId]) {
             ROOMS[roomId] = {
                 id: roomId,
-                engine: new GameEngine(),
-                lastTick: Date.now()
+                players: {},
+                enemies: [],
+                gems: [],
+                baits: [],
+                time: 0,
+                lastBossTime: 0,
+                level: 1,
+                xp: 0,
+                nextLevelXp: 100,
+                paused: false,
+                readyCount: 0,
+                isGameOver: false,
+                cleanupTimer: null,
+                frozenUntil: 0, // Logika pro zamrznutí času
+                tombstones: [],
+                obstacles: [],
+                lastBossLevelSpawned: 0
             };
+        } else {
+            if (ROOMS[roomId].cleanupTimer) {
+                clearTimeout(ROOMS[roomId].cleanupTimer);
+                ROOMS[roomId].cleanupTimer = null;
+            }
         }
 
-        ROOMS[roomId].engine.addPlayer(playerId, data.name || "Hráč", data.hat);
+        if (!ROOMS[roomId].players[playerId]) {
+            ROOMS[roomId].players[playerId] = {
+                id: playerId, x: 0, y: 0, hp: 120, maxHp: 120, dead: false, hat: null, level: 1, disconnected: false, name: data.name || "Hráč"
+            };
+        } else {
+            ROOMS[roomId].players[playerId].disconnected = false;
+        }
 
         socket.emit('joined', {
             roomId: roomId,
-            state: ROOMS[roomId].engine.getState()
+            playerState: ROOMS[roomId].players[playerId]
         });
-    });
-
-    socket.on('playerInput', (input) => {
-        const r = socket.roomId;
-        const p = socket.playerId;
-        if (r && ROOMS[r]) {
-            ROOMS[r].engine.handleInput(p, input);
-        }
     });
 
     socket.on('playerUpdate', (data) => {
         const r = socket.roomId;
         const p = socket.playerId;
         if (r && ROOMS[r] && ROOMS[r].players[p]) {
-            // ANTI-CHEAT: Prevent Prototype Pollution and Admin Spoofing
-            for (let key in data) {
-                if (key === '__proto__' || key === 'constructor' || key === 'isAdmin') continue;
-                ROOMS[r].players[p][key] = data[key];
-            }
+            // ZERO TRUST: Strict Whitelist for visual/non-critical properties only
+            const whitelist = ['x', 'y', 'rot', 'anim', 'hat', 'dead', 'hp', 'maxHp', 'flipX'];
+            whitelist.forEach(key => {
+                if (data[key] !== undefined) {
+                    ROOMS[r].players[p][key] = data[key];
+                }
+            });
 
             if (data.dead && !ROOMS[r].isGameOver) {
                 // Hráč umřel -> Vytvořit náhrobek
@@ -948,18 +1079,287 @@ io.on('connection', (socket) => {
 setInterval(() => {
     const now = Date.now();
     for (const roomId in ROOMS) {
-        const room = ROOMS[roomId];
-        if (!room) continue;
+        try {
+            const room = ROOMS[roomId];
+            if (!room) continue;
+            if (room.paused || room.isGameOver) continue;
 
-        const dt = now - (room.lastTick || now);
-        room.lastTick = now;
+            room.time += 1 / 20;
 
-        room.engine.update(dt);
-        io.to(roomId).emit('gameState', room.engine.getState());
+            const playersArr = Object.values(room.players).filter(p => !p.dead && !p.disconnected);
+
+            const currentInterval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + room.time / 60));
+            const spawnChance = 1 / (currentInterval / 50);
+
+            if (playersArr.length > 0 && Math.random() < spawnChance) {
+                const pivot = playersArr[Math.floor(Math.random() * playersArr.length)];
+                const a = Math.random() * Math.PI * 2;
+                const radius = 700;
+                const x = pivot.x + Math.cos(a) * radius;
+                const y = pivot.y + Math.sin(a) * radius;
+                const mod = Math.floor(room.time / 60) + 1;
+
+                let isBoss = false;
+                let hp = CONFIG.ENEMY_BASE_HEALTH * mod;
+                let type = 1;
+                let speedMod = 1;
+
+                const rnd = Math.random();
+                if (room.level >= 3 && rnd < 0.15) type = 2; // Střelec
+                else if (room.level >= 4 && rnd < 0.10) type = 4; // Zloděj
+                else if (room.level >= 5 && rnd < 0.12) type = 3; // Kamikadze
+                else if (room.level >= 6 && rnd < 0.08) type = 5; // Support
+                else if (room.level >= 8 && rnd < 0.08) type = 6; // Skokan
+                else if (room.level >= 10 && rnd < 0.12) type = 7; // Sebevrah
+                else if (room.level >= 12 && rnd < 0.1) type = 8; // Štítonoš
+
+                const hasBoss = room.enemies.some(e => e.isBoss);
+                const isBossLevel = room.level > 0 && room.level % CONFIG.BOSS_LEVEL_INTERVAL === 0;
+                const bossAlreadySpawned = room.lastBossLevelSpawned === room.level;
+
+                if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
+                    isBoss = true;
+                    hp = (CONFIG.ENEMY_BASE_HEALTH * mod) * 50; // 50x HP
+                    type = room.nextBossType || Math.floor(Math.random() * 7) + 1;
+                    speedMod = 2; // 2x Speed for Boss
+                    room.lastBossLevelSpawned = room.level;
+                    room.nextBossType = null;
+                    io.to(roomId).emit('bossWarning', { type: type, soon: false });
+                }
+
+                room.enemies.push({
+                    id: Math.random().toString(36).substr(2, 9),
+                    x: x, y: y, hp: hp, maxHp: hp, isBoss: isBoss, type: type,
+                    lastShot: room.time,
+                    mod: mod * speedMod,
+                    possessed: false,
+                    stolenGems: 0,
+                    exploding: false,
+                    explodeTime: 0,
+                    jumpState: 'WALKING',
+                    jumpProgress: 0,
+                    jumpStart: { x: x, y: y },
+                    jumpTarget: { x: x, y: y },
+                    prepTime: 0
+                });
+
+                // Náhodné generování meteorů (překážek)
+                if (Math.random() < 0.1 && room.obstacles.length < 30) {
+                    room.obstacles.push({
+                        id: Math.random().toString(36).substr(2, 9),
+                        x: pivot.x + (Math.random() - 0.5) * 1500,
+                        y: pivot.y + (Math.random() - 0.5) * 1500,
+                        radius: 40 + Math.random() * 60
+                    });
+                }
+            }
+
+            // ZASTAVENÍ ČASU - Pokud je aktivní, nepřátelé nic nedělají
+            if (now < room.frozenUntil) {
+                io.to(roomId).emit('stateUpdate', {
+                    players: room.players,
+                    enemies: room.enemies,
+                    gems: room.gems,
+                    baits: room.baits,
+                    tombstones: room.tombstones,
+                    obstacles: room.obstacles,
+                    time: room.time,
+                    roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp },
+                    frozen: true
+                });
+                continue;
+            }
+
+            const possessedEnemies = room.enemies.filter(e => e.possessed);
+            const normalEnemies = room.enemies.filter(e => !e.possessed);
+            const targetsForNormal = [...playersArr, ...room.baits, ...possessedEnemies];
+
+            room.enemies.forEach(enemy => {
+                if (enemy.possessed) {
+                    // POSEDNUTÝ UFOUN ÚTOČÍ NA NORMÁLNÍ UFOUNY
+                    if (normalEnemies.length > 0) {
+                        const target = normalEnemies.sort((a, b) => dist(enemy.x, enemy.y, a.x, a.y) - dist(enemy.x, enemy.y, b.x, b.y))[0];
+                        const angle = Math.atan2(target.y - enemy.y, target.x - enemy.x);
+                        const speed = (CONFIG.ENEMY_BASE_SPEED + ((enemy.mod || 1) * 0.15)) * 1.5; // Zrychlený pohyb posedlých
+
+                        let nextX = enemy.x + Math.cos(angle) * speed;
+                        let nextY = enemy.y + Math.sin(angle) * speed;
+
+                        room.obstacles.forEach(obs => {
+                            if (dist(nextX, nextY, obs.x, obs.y) < 15 + obs.radius) {
+                                const pushAngle = Math.atan2(nextY - obs.y, nextX - obs.x);
+                                nextX = obs.x + Math.cos(pushAngle) * (15 + obs.radius);
+                                nextY = obs.y + Math.sin(pushAngle) * (15 + obs.radius);
+                            }
+                        });
+
+                        enemy.x = nextX;
+                        enemy.y = nextY;
+
+                        if (dist(enemy.x, enemy.y, target.x, target.y) < 30) {
+                            target.hp -= 50;
+                            enemy.hp -= 20;
+                            if (target.hp <= 0) {
+                                room.enemies = room.enemies.filter(e => e.id !== target.id);
+                                room.gems.push({ id: Math.random().toString(36).substr(2, 9), x: target.x, y: target.y });
+                            }
+                            if (enemy.hp <= 0) {
+                                room.enemies = room.enemies.filter(e => e.id !== enemy.id);
+                            }
+                        }
+                    }
+                } else {
+                    // NORMÁLNÍ UFOUN
+                    if (targetsForNormal.length === 0 && enemy.type !== 4) return;
+
+                    let target = targetsForNormal.find(t => t.isBait);
+                    if (!target) {
+                        target = targetsForNormal.sort((a, b) => dist(enemy.x, enemy.y, a.x, a.y) - dist(enemy.x, enemy.y, b.x, b.y))[0];
+                    }
+
+                    if (enemy.type === 4) { // Zloděj
+                        let gemTarget = room.gems.sort((a, b) => dist(enemy.x, enemy.y, a.x, a.y) - dist(enemy.x, enemy.y, b.x, b.y))[0];
+                        if (gemTarget) target = gemTarget;
+                        else target = { x: enemy.x * 2, y: enemy.y * 2 }; // Útěk
+                    }
+
+                    if (!target) return;
+
+                    const angle = Math.atan2(target.y - enemy.y, target.x - enemy.x);
+                    let speedMult = 1;
+                    if (enemy.isBoss) speedMult = 1.0; // Původní speedMod z push už je započítán
+                    if (enemy.type === 2) speedMult = 0.5;
+                    if (enemy.type === 5) speedMult = 0.4;
+                    if (enemy.type === 3 && enemy.exploding) speedMult = 0; // Kamikadze stojí před výbuchem
+                    if (enemy.type === 6) {
+                        if (enemy.jumpState === 'PREPARING' || enemy.jumpState === 'JUMPING') speedMult = 0;
+                        else speedMult = 0.7; // Skokan walking speed
+                    }
+                    if (enemy.type === 7) speedMult = 1.6; // Sebevrah
+                    if (enemy.type === 8) speedMult = 0.7; // Štítonoš
+
+                    const enemyMod = enemy.mod || 1;
+                    const speed = (CONFIG.ENEMY_BASE_SPEED + (enemyMod * 0.15)) * speedMult;
+
+                    let nextX = enemy.x + Math.cos(angle) * speed;
+                    let nextY = enemy.y + Math.sin(angle) * speed;
+
+                    room.obstacles.forEach(obs => {
+                        if (dist(nextX, nextY, obs.x, obs.y) < 15 + obs.radius) {
+                            const pushAngle = Math.atan2(nextY - obs.y, nextX - obs.x);
+                            nextX = obs.x + Math.cos(pushAngle) * (15 + obs.radius);
+                            nextY = obs.y + Math.sin(pushAngle) * (15 + obs.radius);
+                        }
+                    });
+
+                    enemy.x = nextX;
+                    enemy.y = nextY;
+
+                    if (enemy.type === 4 && target.id && room.gems.find(g => g.id === target.id)) {
+                        if (dist(enemy.x, enemy.y, target.x, target.y) < 30) {
+                            room.gems = room.gems.filter(g => g.id !== target.id);
+                            enemy.stolenGems++;
+                        }
+                    }
+
+                    if (enemy.type === 3 && !enemy.exploding) {
+                        if (dist(enemy.x, enemy.y, target.x, target.y) < 80 && !target.isBait && target.hp !== undefined) {
+                            enemy.exploding = true;
+                            enemy.explodeTime = now + 1500;
+                        }
+                    }
+
+                    if (enemy.type === 3 && enemy.exploding && now > enemy.explodeTime) {
+                        enemy.hp = 0;
+                        playersArr.forEach(p => { if (dist(p.x, p.y, enemy.x, enemy.y) < 150) p.hp -= 40; });
+                        room.enemies.forEach(e => { if (e.id !== enemy.id && dist(e.x, e.y, enemy.x, enemy.y) < 150) e.hp -= 150; });
+                        io.to(roomId).emit('explosion', { x: enemy.x, y: enemy.y, radius: 150, isNuke: false });
+                        room.enemies = room.enemies.filter(e => e.id !== enemy.id && e.hp > 0);
+                    }
+
+                    if (enemy.type === 5) { // Support UFO Heal
+                        room.enemies.forEach(e => {
+                            if (e.id !== enemy.id && !e.possessed && dist(e.x, e.y, enemy.x, enemy.y) < 250) {
+                                e.hp = Math.min(e.maxHp, e.hp + 0.5);
+                            }
+                        });
+                    }
+                    if (enemy.type === 2) {
+                        let dynamicInterval = Math.max(1500, 5000 - (room.level * 150));
+                        if (now - enemy.lastShot > dynamicInterval) {
+                            let inaccuracy = Math.max(0, 0.6 - (room.level * 0.03));
+                            let baseAngle = Math.atan2(target.y - enemy.y, target.x - enemy.x);
+                            let shootAngle = baseAngle + (Math.random() - 0.5) * inaccuracy;
+
+                            let tx = enemy.x + Math.cos(shootAngle) * 100;
+                            let ty = enemy.y + Math.sin(shootAngle) * 100;
+
+                            io.to(roomId).emit('enemyShoot', {
+                                x: enemy.x, y: enemy.y, tx: tx, ty: ty,
+                                dmg: 10, speed: CONFIG.PROJECTILE_SPEED * 1.2, size: 8, type: 'default'
+                            });
+                            enemy.lastShot = now;
+                        }
+                    }
+
+                    if (enemy.type === 6) { // SKOKAN (Server logic - v1.385)
+                        if (!enemy.jumpState) enemy.jumpState = 'WALKING';
+
+                        if (enemy.jumpState === 'WALKING') {
+                            if (dist(enemy.x, enemy.y, target.x, target.y) < 250) {
+                                enemy.jumpState = 'PREPARING';
+                                enemy.prepTime = now + 1000;
+                                enemy.jumpTarget = { x: target.x, y: target.y };
+                            }
+                        } else if (enemy.jumpState === 'PREPARING') {
+                            if (now > enemy.prepTime) {
+                                enemy.jumpState = 'JUMPING';
+                                enemy.jumpStart = { x: enemy.x, y: enemy.y };
+                                enemy.jumpProgress = 0;
+                            }
+                            // Stojí a míří (nedělat nic v x,y)
+                        } else if (enemy.jumpState === 'JUMPING') {
+                            enemy.jumpProgress += 0.04;
+                            enemy.x = enemy.jumpStart.x + (enemy.jumpTarget.x - enemy.jumpStart.x) * enemy.jumpProgress;
+                            enemy.y = enemy.jumpStart.y + (enemy.jumpTarget.y - enemy.jumpStart.y) * enemy.jumpProgress;
+
+                            if (enemy.jumpProgress >= 1) {
+                                enemy.jumpState = 'WALKING';
+                                playersArr.forEach(p => { if (dist(enemy.x, enemy.y, p.x, p.y) < 50) p.hp -= 15; });
+                            }
+                        }
+                    }
+                    
+                    if (enemy.type === 7 && !enemy.dead) { // SEBEVRAH
+                        if (dist(enemy.x, enemy.y, target.x, target.y) < 55) {
+                            enemy.hp = 0;
+                            playersArr.forEach(p => { if (dist(enemy.x, enemy.y, p.x, p.y) < 60) p.hp -= 35; });
+                        }
+                    }
+
+                    // Finální kontrola souřadnic (proti NaN)
+                    if (isNaN(enemy.x) || isNaN(enemy.y)) {
+                        enemy.x = 0; enemy.y = 0;
+                    }
+                }
+            });
+
+            io.to(roomId).emit('stateUpdate', {
+                players: room.players,
+                enemies: room.enemies,
+                gems: room.gems,
+                baits: room.baits,
+                tombstones: room.tombstones,
+                obstacles: room.obstacles,
+                time: room.time,
+                roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp },
+                frozen: false
+            });
+        } catch (err) {
+            console.error(`Chyba v místnosti ${roomId}:`, err);
+        }
     }
-}, 33); // ~30 FPS for multiplayer networking
-
-
+}, 50);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server bezi na portu ${PORT}`));
