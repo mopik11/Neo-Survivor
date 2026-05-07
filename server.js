@@ -707,6 +707,7 @@ io.on('connection', (socket) => {
             });
         });
     });
+    socket.on('purchase', (data) => {
         const user = socket.authenticatedUser;
         if (!user || data.token !== socket.sessionToken) return;
 
