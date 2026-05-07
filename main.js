@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.407
+ * NEO SURVIVOR - Core Game Logic - v1.408
  */
 
 window.addEventListener('beforeunload', () => {
@@ -428,13 +428,13 @@ const ACHIEVEMENTS = [
     { id: 'multiplayer_fan', name: 'Pařmen', desc: 'Odehraj 20 multiplayerových her', icon: '👥', reward: 500 },
     { id: 'rich_kid', name: 'Boháč', desc: 'Měj u sebe 50 000 Dogecoinů najednou', icon: '💸', reward: 1000 },
     { id: 'lucky_star', name: 'Šťastná Hvězda', desc: 'Získej Diamant (Ultra Rare) z bedny', icon: '✨', reward: 5000 },
-    { id: 'asteroid_miner', name: 'Těžař Asteroidů', desc: 'Znič celkem 100 meteoritů', icon: '⛏️', reward: 300 },
-    { id: 'asteroid_destroyer', name: 'Ničitel Asteroidů', desc: 'Znič celkem 500 meteoritů', icon: '🌋', reward: 1000 },
-    { id: 'first_win', name: 'Přeživší', desc: 'Přežij alespoň 10 minut v jedné hře', icon: '⏱️', reward: 200 },
-    { id: 'survivor', name: 'Veterán Přežití', desc: 'Přežij alespoň 20 minut v jedné hře', icon: '🔥', reward: 500 },
-    { id: 'immortal', name: 'Nesmrtelný', desc: 'Přežij alespoň 30 minut v jedné hře', icon: '♾️', reward: 1000 },
-    { id: 'first_battle', name: 'První Bitva', desc: 'Odehraj svoji úplně první bitvu', icon: '⚔️', reward: 50 }
-];
+        { id: 'asteroid_miner', name: 'Těžař Asteroidů', desc: 'Znič celkem 100 meteoritů', icon: '⛏️', reward: 300 },
+        { id: 'asteroid_destroyer', name: 'Ničitel Asteroidů', desc: 'Znič celkem 500 meteoritů', icon: '🌋', reward: 1000 },
+        { id: 'first_win', name: 'Přeživší', desc: 'Přežij alespoň 10 minut v jedné hře', icon: '⏱️', reward: 200 },
+        { id: 'survivor', name: 'Veterán Přežití', desc: 'Přežij alespoň 20 minut v jedné hře', icon: '🔥', reward: 500 },
+        { id: 'immortal', name: 'Nesmrtelný', desc: 'Přežij alespoň 30 minut v jedné hře', icon: '♾️', reward: 1000 },
+        { id: 'first_battle', name: 'První Bitva', desc: 'Odehraj svoji úplně první bitvu', icon: '⚔️', reward: 50 }
+    ];
 
 const formatNumber = (num) => {
     return (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
@@ -458,9 +458,12 @@ const saveMeta = () => {
     const savedUser = localStorage.getItem('neoSurvivor_user');
     const savedPass = localStorage.getItem('neoSurvivor_pass');
 
-    if (savedUser && savedPass && NET.socket && NET.socket.connected) {
-        NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META, token: NET.sessionToken });
-        NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel, token: NET.sessionToken });
+    if (savedUser && savedPass) {
+        if (!NET.socket) initSocket();
+        if (NET.socket) {
+            NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META, token: NET.sessionToken });
+            NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel, token: NET.sessionToken });
+        }
     }
 };
 
@@ -3488,16 +3491,21 @@ function showMetaMenu() {
             </div>
         `;
 
-        card.querySelectorAll('.btn-bulk').forEach(btn => {
-            btn.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const count = parseInt(btn.getAttribute('data-count'));
-                // ZERO TRUST: Only request purchase, don't update locally
-                NET.socket.emit('purchase', { type: 'crate', id: type.id, count: count, token: NET.sessionToken });
-                playSound('menuOpen'); 
-            };
-        });
+                card.querySelectorAll('.btn-bulk').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!NET.socket) initSocket();
+                        const count = parseInt(btn.getAttribute('data-count'));
+                        // ZERO TRUST: Only request purchase, don't update locally
+                        if (NET.socket) {
+                            NET.socket.emit('purchase', { type: 'crate', id: type.id, count: count, token: NET.sessionToken });
+                            playSound('menuOpen'); 
+                        } else {
+                            window.showCustomAlert(window.T("Chyba připojení k serveru!"));
+                        }
+                    };
+                });
         cratesGrid.appendChild(card);
     });
     container.appendChild(cratesSection);
@@ -5617,7 +5625,7 @@ function init() {
         tryFullscreen();
         AudioEngine.init(); AudioEngine.stopMenuMusic();
         
-        // --- ZERO TRUST SOLO PLAY (v1.407.7) ---
+        // --- ZERO TRUST SOLO PLAY (v1.408.7) ---
         // Join a private server-side room even for solo to enable authoritative rewards
         const soloRoomId = "SOLO_" + Math.random().toString(36).substr(2, 6).toUpperCase();
         initSocket();
@@ -5639,6 +5647,7 @@ function init() {
 
     const btnShips = document.getElementById('btn-ships-menu');
     if (btnShips) btnShips.onclick = () => {
+        if (!NET.socket) initSocket();
         showShipsMenu();
         document.getElementById('ships-modal').classList.add('active');
     };
@@ -5646,7 +5655,11 @@ function init() {
     if (btnCloseShips) btnCloseShips.onclick = () => document.getElementById('ships-modal').classList.remove('active');
 
     const btnMeta = document.getElementById('btn-meta-menu');
-    if (btnMeta) btnMeta.onclick = () => { showMetaMenu(); document.getElementById('meta-modal').classList.add('active'); };
+    if (btnMeta) btnMeta.onclick = () => { 
+        if (!NET.socket) initSocket();
+        showMetaMenu(); 
+        document.getElementById('meta-modal').classList.add('active'); 
+    };
     const btnCloseMeta = document.getElementById('btn-close-meta');
     if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
 
