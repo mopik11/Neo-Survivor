@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.405
+ * NEO SURVIVOR - Core Game Logic - v1.406
  */
 
 window.addEventListener('beforeunload', () => {
@@ -3325,14 +3325,9 @@ function showShipsMenu() {
                 META.selectedShip = item.id;
                 saveMeta();
                 showShipsMenu();
-            } else if (META.currency >= item.cost) {
-                META.currency -= item.cost;
-                META.ships[item.id] = true;
-                META.selectedShip = item.id;
-                saveMeta();
-                showShipsMenu();
             } else {
-                window.showCustomAlert(window.T("Nemáš dost Dogecoinu!"));
+                // ZERO TRUST: Only request purchase, don't update locally
+                NET.socket.emit('purchase', { type: 'ship', id: item.id, token: NET.sessionToken });
             }
         };
         shipsGrid.appendChild(card);
@@ -3363,14 +3358,9 @@ function showShipsMenu() {
                 META.selectedAbility = item.id;
                 saveMeta();
                 showShipsMenu();
-            } else if (META.currency >= item.cost) {
-                META.currency -= item.cost;
-                META.abilities[item.id] = true;
-                META.selectedAbility = item.id;
-                saveMeta();
-                showShipsMenu();
             } else {
-                window.showCustomAlert(window.T("Nemáš dost Dogecoinu!"));
+                // ZERO TRUST: Only request purchase, don't update locally
+                NET.socket.emit('purchase', { type: 'ability', id: item.id, token: NET.sessionToken });
             }
         };
         abilitiesGrid.appendChild(card);
@@ -3422,8 +3412,7 @@ function showMetaMenu() {
                     <button class="btn-restart" style="background: ${type.border}; color: #000; font-size: 0.8rem; padding: 10px; border: none; width: 100%;">${window.T('OTEVŘÍT')}</button>
                 `;
                 card.querySelector('button').onclick = () => {
-                    META.unopenedCrates[type.id]--;
-                    saveMeta();
+                    // ZERO TRUST: Only request open, don't update locally
                     openCrate(type.id, 1);
                 };
                 rewardGrid.appendChild(card);
@@ -3452,10 +3441,9 @@ function showMetaMenu() {
         const cost = Math.floor(item.cost * (1 + (item.val || 0) * 0.5));
         card.innerHTML = `<h3>${window.T(item.name)}</h3><p>${window.T(item.desc)}</p><span class="cost">${formatNumber(cost)} DOGE</span>`;
         card.onclick = () => {
-            if (META.currency < cost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
-            playSound('upgrade');
-            META.upgrades[item.id] = (META.upgrades[item.id] || 0) + 1;
-            META.currency -= cost; saveMeta(); showMetaMenu();
+            // ZERO TRUST: Only request purchase, don't update locally
+            NET.socket.emit('purchase', { type: 'stat', id: item.id, token: NET.sessionToken });
+            playSound('menuOpen'); 
         };
         upgradesGrid.appendChild(card);
     });
@@ -3499,12 +3487,9 @@ function showMetaMenu() {
                 e.preventDefault();
                 e.stopPropagation();
                 const count = parseInt(btn.getAttribute('data-count'));
-                const totalCost = type.cost * count;
-                if (META.currency < totalCost) { window.showCustomAlert(window.T("Nemáš dost Dogecoinu!")); return; }
-                playSound('upgrade'); 
-                META.currency -= totalCost;
-                saveMeta();
-                openCrate(type.id, count);
+                // ZERO TRUST: Only request purchase, don't update locally
+                NET.socket.emit('purchase', { type: 'crate', id: type.id, count: count, token: NET.sessionToken });
+                playSound('menuOpen'); 
             };
         });
         cratesGrid.appendChild(card);
@@ -5617,7 +5602,7 @@ function init() {
         tryFullscreen();
         AudioEngine.init(); AudioEngine.stopMenuMusic();
         
-        // --- ZERO TRUST SOLO PLAY (v1.405.7) ---
+        // --- ZERO TRUST SOLO PLAY (v1.406.7) ---
         // Join a private server-side room even for solo to enable authoritative rewards
         const soloRoomId = "SOLO_" + Math.random().toString(36).substr(2, 6).toUpperCase();
         initSocket();

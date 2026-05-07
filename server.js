@@ -734,12 +734,20 @@ io.on('connection', (socket) => {
                             try { oldMeta = JSON.parse(row.meta); } catch(e2) { oldMeta = {}; }
                         }
 
-                        // --- ZERO TRUST SMART MERGE (v1.402.2) ---
-                        // Allow client to update settings and selections, but enforce server truth for earned assets
+                        // --- ZERO TRUST SMART MERGE (v1.405.9) ---
+                        // Trust ONLY specific non-sensitive fields from the client
                         const serverMeta = oldMeta || {};
-                        const merged = { ...serverMeta, ...meta }; 
+                        const merged = { ...serverMeta }; 
                         
-                        // RESTORE server-side truth for sensitive/earned fields
+                        // Whitelist of fields the client CAN update
+                        if (meta.settings) merged.settings = meta.settings;
+                        if (meta.selectedLanguage) merged.selectedLanguage = meta.selectedLanguage;
+                        if (meta.autoUpgrade !== undefined) merged.autoUpgrade = meta.autoUpgrade;
+                        if (meta.selectedShip) merged.selectedShip = meta.selectedShip;
+                        if (meta.selectedAbility) merged.selectedAbility = meta.selectedAbility;
+                        if (meta.claimedAchievements) merged.claimedAchievements = meta.claimedAchievements;
+                        
+                        // NEVER trust these from the client - use server-side truth only
                         merged.currency = serverMeta.currency || 0;
                         merged.inventory = serverMeta.inventory || [];
                         merged.upgrades = serverMeta.upgrades || { hp:0, speed:0, luck:0, regen:0, armor:0 };
@@ -747,7 +755,7 @@ io.on('connection', (socket) => {
                         merged.abilities = serverMeta.abilities || { 1: true };
                         merged.unopenedCrates = serverMeta.unopenedCrates || { basic: 0, premium: 0, legendary: 0 };
                         merged.stats = serverMeta.stats || { totalDogecoins: 0 };
-                        merged.maxLevel = Math.max(serverMeta.maxLevel || 1, row.max_level || 1);
+                        merged.maxLevel = Math.max(serverMeta.maxLevel || 1, (row ? row.max_level : 1) || 1);
                         
                         const encryptedMeta = Security.encrypt(JSON.stringify(merged));
                         db.run(`UPDATE accounts SET meta = ? WHERE username = ?`,
@@ -812,20 +820,10 @@ io.on('connection', (socket) => {
     });
 
     socket.on('requestRooms', () => {
-        const activeRooms = [];
-        for (const roomId in ROOMS) {
-            let activeCount = 0;
-            for (const p in ROOMS[roomId].players) {
-                if (!ROOMS[roomId].players[p].disconnected) activeCount++;
-            }
-            if (activeCount > 0) {
-                activeRooms.push({
-                    id: roomId,
-                    players: activeCount,
-                    level: ROOMS[roomId].level
-                });
-            }
-        }
+        // ZERO TRUST: Filter out private solo rooms from public server list
+        const activeRooms = Object.values(ROOMS)
+            .filter(r => !r.isGameOver && !r.isSolo)
+            .map(r => ({ id: r.id, players: Object.keys(r.players).length, level: r.level }));
         socket.emit('roomList', activeRooms);
     });
 
