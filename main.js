@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.416
+ * NEO SURVIVOR - Core Game Logic - v1.416.2
  */
 
 window.addEventListener('beforeunload', () => {
@@ -312,8 +312,10 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.416'
+    version: 'v1.416.2'
 };
+
+let achievementsInitialized = false;
 
 const EMOJIS = [
     { id: 'soap', name: 'Mýdlo', icon: '🫆', rarity: 'common', price: 20 },
@@ -2907,7 +2909,7 @@ function applyUpgrade(id, record = true) {
     }
 }
 
-function checkAchievements() {
+function checkAchievements(silent = false) {
     if (!GAME) return;
     if (!META.achievements) META.achievements = {};
     if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0 };
@@ -2972,11 +2974,16 @@ function checkAchievements() {
         if (unlocked) {
             META.achievements[ach.id] = true;
             changed = true;
-            showAchievementUnlocked(ach.name);
+            if (!silent && achievementsInitialized) {
+                showAchievementUnlocked(ach.name);
+            }
         }
     });
 
-    if (changed) saveMeta();
+    if (changed) {
+        if (silent) saveMetaLocalOnly();
+        else saveMeta();
+    }
 }
 
 function incrementStat(name, amount = 1) {
@@ -4534,7 +4541,8 @@ function initSocket() {
                 }
                 
                 updateCurrencyUI();
-                checkAchievements(); // Sync achievements after meta update
+                checkAchievements(true); // Silent sync on first load
+                achievementsInitialized = true; // Enable notifications for future unlocks
                 if (window.showMetaMenu && document.getElementById('meta-modal').classList.contains('active')) {
                     showMetaMenu();
                 }
