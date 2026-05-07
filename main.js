@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.415
+ * NEO SURVIVOR - Core Game Logic - v1.416
  */
 
 window.addEventListener('beforeunload', () => {
@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.415.2'
+    version: 'v1.416'
 };
 
 const EMOJIS = [
@@ -3532,22 +3532,10 @@ function showMetaMenu() {
         card.style.zIndex = '5';
         card.style.paddingBottom = '60px'; 
 
-        const owned = (META.unopenedCrates && META.unopenedCrates[type.id]) || 0;
         card.innerHTML = `
             <h3 style="margin-bottom: 2px;">${window.T(type.name)}</h3>
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">${window.T('Máš:')} <span style="color: ${type.border}; font-weight: 900;">${owned}ks</span></div>
             <div style="font-size: 0.65rem; color: #fbbf24; font-weight: 800; margin-bottom: 12px; opacity: 0.8;">${formatNumber(type.cost)} DOGE / ks</div>
             
-            ${owned > 0 ? `
-                <button class="btn-open" style="width: 100%; background: ${type.border}; color: #000; font-weight: 900; padding: 12px 0; border-radius: 12px; margin-bottom: 15px; border: none; cursor: pointer; box-shadow: 0 4px 15px ${type.border}44; font-size: 0.9rem; letter-spacing: 1px; transition: all 0.2s;">
-                    ${window.T('OTEVŘÍT')}
-                </button>
-            ` : `
-                <div style="height: 44px; margin-bottom: 15px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: #64748b; font-weight: 800; text-transform: uppercase;">
-                    ${window.T('Žádné bedny')}
-                </div>
-            `}
-
             <div class="crate-multipliers" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 5px;">
                 ${[1, 2, 5, 10].map(count => {
                     const canAfford = META.currency >= type.cost * count;
@@ -3555,14 +3543,6 @@ function showMetaMenu() {
                 }).join('')}
             </div>
         `;
-
-        const btnOpen = card.querySelector('.btn-open');
-        if (btnOpen) {
-            btnOpen.onclick = (e) => {
-                e.stopPropagation();
-                openCrate(type.id, 1);
-            };
-        }
 
         card.querySelectorAll('.btn-bulk').forEach(btn => {
             btn.onclick = (e) => {
@@ -3761,10 +3741,13 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 <div id="crate-winner-rarity" style="font-size: 1.1rem; font-weight: 800; color: ${getRarityColor(winner.rarity)}; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 30px;">${winner.rarity.toUpperCase()}</div>
                 
                 <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">${(GAME.crateQueue && GAME.crateQueue.length > 0) ? window.T('DALŠÍ') : window.T('PŘIDAT DO SBÍRKY')}</button>
+                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">
+                        ${(GAME.crateQueue && GAME.crateQueue.length > 0) ? `${window.T('DALŠÍ')} (<span id="crate-auto-timer">3</span>s)` : window.T('PŘIDAT DO SBÍRKY')}
+                    </button>
                     <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">${window.T('PRODAT')} (+${winner.price})</button>
-                    ${(GAME.crateQueue.length === 0 && GAME.lastCrateBatchSize > 1) ? `<button id="btn-crate-sell-all" class="btn-restart" style="min-width: 150px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem;">${window.T('HROMADNÝ PRODEJ')}</button>` : ''}
-                    <button id="btn-crate-again" class="btn-restart" style="min-width: 150px; background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: none;">${window.T('ZATOČIT ZNOVU')}</button>
+                    ${(GAME.crateQueue && GAME.crateQueue.length === 0 && (GAME.lastCrateBatchSize || 1) > 1) ? `
+                        <button id="btn-crate-sell-all" class="btn-restart" style="min-width: 180px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem; border: none; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);">${window.T('PRODAT VŠE')} (+${GAME.currentBatchResults.reduce((s, i) => s + i.price, 0)})</button>
+                    ` : ''}
                 </div>
             </div>
         </div>
@@ -3825,6 +3808,22 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 btn.style.pointerEvents = 'auto';
                 btn.style.cursor = 'pointer';
             });
+
+            // Auto-advance logic (v1.415.2)
+            if (GAME.crateQueue && GAME.crateQueue.length > 0) {
+                let timeLeft = 3;
+                const timerEl = document.getElementById('crate-auto-timer');
+                const autoInterval = setInterval(() => {
+                    timeLeft--;
+                    if (timerEl) timerEl.innerText = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(autoInterval);
+                        const nextBtn = document.getElementById('btn-crate-collect');
+                        if (nextBtn) nextBtn.click();
+                    }
+                }, 1000);
+                GAME.crateTimeouts.push(autoInterval);
+            }
         }
         const skipBtn = document.getElementById('btn-skip-crate');
         if (skipBtn) skipBtn.style.display = 'none';
@@ -4136,7 +4135,6 @@ function startGame() {
         if (META.lastSession.upgrades) {
             META.lastSession.upgrades.forEach(uid => applyUpgrade(uid, false));
         }
-        window.showCustomAlert(window.T("Session obnovena! Pokračuješ na levelu") + " " + p.level);
         META.lastSession = null;
         saveMeta();
     }
@@ -4275,9 +4273,11 @@ function initSocket() {
             NET.socket.emit('requestLeaderboard');
             if (NET.serverPollingInterval) window.requestServerList();
 
-            NET.socket.on('chatMessage', (data) => {
-                if (window.addChatMessage) window.addChatMessage(data.user, data.text);
-            });
+        });
+
+        // Game Event Listeners - MOVED OUTSIDE of 'connect' callback to prevent duplicate listeners on reconnect (v1.416)
+        NET.socket.on('chatMessage', (data) => {
+            if (window.addChatMessage) window.addChatMessage(data.user, data.text);
         });
 
         NET.socket.on('leaderboardData', (data) => {
@@ -4365,13 +4365,8 @@ function initSocket() {
                 }
                 META.lastSession = null; // Clear after restore
                 saveMeta();
-                window.showCustomAlert(window.T('Postup obnoven! Zpět ve hře.'));
             }
             
-            // AUTOMATIC UNBLOCK: If the server is currently stuck waiting for players to pick an upgrade,
-            // the new player will never see the level-up modal and will block the game forever.
-            // By emitting 'upgradePicked' immediately upon joining, we ensure the server doesn't wait for us.
-            // If the game is NOT in a level-up state, the server will simply ignore this or reset it on the next level-up.
             NET.socket.emit('upgradePicked');
         });
 
