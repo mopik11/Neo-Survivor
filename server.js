@@ -301,6 +301,9 @@ function rewardPlayer(socket, amount) {
     if (!r || !ROOMS[r] || !ROOMS[r].players[p]) return;
 
     const player = ROOMS[r].players[p];
+    
+    // Debug logging for rewards (v1.426)
+    // console.log(`[REWARD] ${player.username || p} received ${amount} DOGE`);
 
     // 1. Memory tracking for Game Over stats (FOR EVERYONE)
     if (!ROOMS[r].dogeEarned) ROOMS[r].dogeEarned = {};
@@ -1106,8 +1109,16 @@ io.on('connection', (socket) => {
     socket.on('joinRoom', (data) => {
         if (!data || !data.roomId || !data.playerId) return;
 
-        const roomId = data.roomId;
+        const roomId = data.roomId.toUpperCase();
         const playerId = data.playerId;
+
+        // Prevent joining if room is finished or in game over state (v1.426)
+        if (ROOMS[roomId]) {
+            if (ROOMS[roomId].isGameOver || ROOMS[roomId].isFinished) {
+                socket.emit('error', { msg: "Místnost je již uzavřena nebo hra skončila. Vytvoř novou." });
+                return;
+            }
+        }
 
         socket.join(roomId);
         socket.roomId = roomId;
@@ -1206,6 +1217,7 @@ io.on('connection', (socket) => {
                     });
 
                     io.to(r).emit('teamGameOver', { dogeEarned: ROOMS[r].dogeEarned });
+                    ROOMS[r].isFinished = true; // Mark room as dead (v1.426)
 
                     ROOMS[r].level = 1;
                     ROOMS[r].xp = 0;
@@ -1221,6 +1233,12 @@ io.on('connection', (socket) => {
                     ROOMS[r].readyCount = 0;
                     ROOMS[r].frozenUntil = 0;
                     ROOMS[r].lastBossLevelSpawned = 0;
+                    
+                    // Reset all player statuses so they aren't dead in the next join/ready cycle
+                    Object.keys(ROOMS[r].players).forEach(pId => {
+                        ROOMS[r].players[pId].dead = false;
+                        ROOMS[r].players[pId].hp = ROOMS[r].players[pId].maxHp || 120;
+                    });
 
                     setTimeout(() => {
                         if (ROOMS[r]) ROOMS[r].isGameOver = false;
@@ -1432,6 +1450,21 @@ io.on('connection', (socket) => {
                 room.paused = false;
                 room.readyCount = 0;
                 io.to(r).emit('resumeGame');
+            }
+        }
+    });
+
+    socket.on('playerReady', () => {
+        const r = socket.roomId;
+        if (r && ROOMS[r]) {
+            ROOMS[r].readyCount++;
+            const activePlayersCount = Object.values(ROOMS[r].players).filter(p => !p.disconnected).length;
+            if (ROOMS[r].readyCount >= activePlayersCount && activePlayersCount > 0) {
+                ROOMS[r].paused = false;
+                ROOMS[r].isGameOver = false;
+                ROOMS[r].isFinished = false;
+                ROOMS[r].readyCount = 0;
+                io.to(r).emit('allReady');
             }
         }
     });

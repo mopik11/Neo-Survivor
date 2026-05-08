@@ -4175,6 +4175,10 @@ function startGame() {
 
     GAME.active = true;
     GAME.paused = false;
+
+    if (NET.isMultiplayer && NET.socket) {
+        NET.socket.emit('playerReady');
+    }
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     document.getElementById('ui-layer').style.display = 'block';
     document.getElementById('menu-anim-canvas').style.display = 'none';
@@ -4365,7 +4369,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("NEO SURVIVOR v1.425");
+            console.log("NEO SURVIVOR v1.426");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
