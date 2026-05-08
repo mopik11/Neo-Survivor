@@ -300,14 +300,51 @@ function rewardPlayer(socket, amount) {
 
     const player = ROOMS[r].players[p];
 
-    // 1. Memory tracking for Game Over stats (FOR EVERYONE, even guests)
+    // 1. Memory tracking for Game Over stats (FOR EVERYONE)
     if (!ROOMS[r].dogeEarned) ROOMS[r].dogeEarned = {};
     ROOMS[r].dogeEarned[p] = (ROOMS[r].dogeEarned[p] || 0) + amount;
 
-    if (!player.username) return;
+    // 2. Accumulate in memory (ONLY if logged in)
+    if (player.username) {
+        player.pendingRewards = (player.pendingRewards || 0) + amount;
+    }
+}
 
-    // 2. Accumulate in memory instead of immediate DB write
-    player.pendingRewards = (player.pendingRewards || 0) + amount;
+function killEnemy(room, enemyId, socket = null) {
+    const enemy = room.enemies.find(e => e.id === enemyId);
+    if (!enemy) return;
+
+    // Determine who to reward
+    let rewardTarget = socket;
+    if (!rewardTarget) {
+        // If no explicit killer (e.g. explosion), reward the closest active player
+        const activePlayers = Object.keys(room.players).filter(id => !room.players[id].dead && !room.players[id].disconnected);
+        if (activePlayers.length > 0) {
+            let closestId = activePlayers[0];
+            let minDist = Infinity;
+            activePlayers.forEach(id => {
+                const d = dist(enemy.x, enemy.y, room.players[id].x, room.players[id].y);
+                if (d < minDist) { minDist = d; closestId = id; }
+            });
+            // Get socket for the closest player
+            const sid = Array.from(io.sockets.adapter.rooms.get(room.id) || []).find(s => io.sockets.sockets.get(s).playerId === closestId);
+            if (sid) rewardTarget = io.sockets.sockets.get(sid);
+        }
+    }
+
+    if (rewardTarget) {
+        if (enemy.isBoss) {
+            rewardPlayer(rewardTarget, REWARD_BOSS_KILL);
+            rewardCrate(rewardTarget, 'basic');
+            io.to(room.id).emit('bossDefeated', { id: enemy.id });
+            room.paused = true;
+            room.readyCount = 0;
+        } else {
+            rewardPlayer(rewardTarget, REWARD_NORMAL_KILL);
+        }
+    }
+
+    room.enemies = room.enemies.filter(e => e.id !== enemyId);
 }
 
 function flushPlayerRewards(socket) {
@@ -322,8 +359,7 @@ function flushPlayerRewards(socket) {
         return;
     }
 
-    // Reset BEFORE async operation to avoid double-processing if another flush happens
-    player.pendingRewards = 0;
+    player.pendingRewards = 0; // Reset before async
 
     db.get(`SELECT meta FROM accounts WHERE username = ?`, [player.username], (err, row) => {
         if (!err && row) {
@@ -979,6 +1015,17 @@ io.on('connection', (socket) => {
                         merged.abilities = serverMeta.abilities || { 1: true };
                         merged.unopenedCrates = serverMeta.unopenedCrates || { basic: 0, premium: 0, legendary: 0 };
                         merged.maxLevel = Math.max(serverMeta.maxLevel || 1, (row ? row.max_level : 1) || 1);
+
+                        // CRITICAL: If player is currently in a room, include their PENDING rewards in the sync
+                        if (socket.roomId && ROOMS[socket.roomId] && ROOMS[socket.roomId].players[socket.playerId]) {
+                            const p = ROOMS[socket.roomId].players[socket.playerId];
+                            if (p.pendingRewards > 0) {
+                                merged.currency = (merged.currency || 0) + p.pendingRewards;
+                                if (!merged.stats) merged.stats = { totalDogecoins: 0 };
+                                merged.stats.totalDogecoins = (merged.stats.totalDogecoins || 0) + p.pendingRewards;
+                                p.pendingRewards = 0; // Consumption
+                            }
+                        }
                         
                         const encryptedMeta = Security.encrypt(JSON.stringify(merged));
                         db.run(`UPDATE accounts SET meta = ? WHERE username = ?`,
@@ -1260,35 +1307,19 @@ io.on('connection', (socket) => {
             const dx = enemy.x - p.x;
             const dy = enemy.y - p.y;
             const d = Math.sqrt(dx*dx + dy*dy);
-            if (d > 1250) return;
+            if (d > 3000) return; // Anti-cheat distance
 
             enemy.hp -= damage;
             if (enemy.hp <= 0) {
-                room.enemies = room.enemies.filter(e => e.id !== enemyId);
+                killEnemy(room, enemyId, socket);
 
-                    if (enemy.type === 4) { // Loot goblin drop
-                        const drops = (enemy.stolenGems || 0) + 5;
-                        for (let i = 0; i < drops; i++) {
-                            room.gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x + (Math.random() - 0.5) * 100, y: enemy.y + (Math.random() - 0.5) * 100 });
-                        }
-                    } else {
-                        let isNuke = false, isMagnet = false;
-                        if (enemy.isBoss) {
-                            rewardPlayer(socket, REWARD_BOSS_KILL);
-                            if (Math.random() < 0.5) isNuke = true; else isMagnet = true;
-                            for (let i = 0; i < 10; i++) room.gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x + (Math.random() - 0.5) * 150, y: enemy.y + (Math.random() - 0.5) * 150 });
-                            
-                            // Pause for rewards
-                            room.paused = true;
-                            room.readyCount = 0;
-
-                            // Emit bossDefeated for rewards (crate + special upgrade)
-                            rewardCrate(socket, 'basic');
-                            io.to(r).emit('bossDefeated', { id: enemy.id });
-                        } else {
-                            rewardPlayer(socket, REWARD_NORMAL_KILL);
-                        }
-                    room.gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x, y: enemy.y, isNuke, isMagnet });
+                if (enemy.type === 4) { // Loot goblin drop
+                    const drops = (enemy.stolenGems || 0) + 5;
+                    for (let i = 0; i < drops; i++) {
+                        room.gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x + (Math.random() - 0.5) * 100, y: enemy.y + (Math.random() - 0.5) * 100 });
+                    }
+                } else if (!enemy.isBoss) {
+                    room.gems.push({ id: Math.random().toString(36).substr(2, 9), x: enemy.x, y: enemy.y });
                 }
             }
         }
@@ -1570,11 +1601,11 @@ setInterval(() => {
                             target.hp -= 50;
                             enemy.hp -= 20;
                             if (target.hp <= 0) {
-                                room.enemies = room.enemies.filter(e => e.id !== target.id);
+                                killEnemy(room, target.id);
                                 room.gems.push({ id: Math.random().toString(36).substr(2, 9), x: target.x, y: target.y });
                             }
                             if (enemy.hp <= 0) {
-                                room.enemies = room.enemies.filter(e => e.id !== enemy.id);
+                                killEnemy(room, enemy.id);
                             }
                         }
                     }
@@ -1642,9 +1673,13 @@ setInterval(() => {
                     if (enemy.type === 3 && enemy.exploding && now > enemy.explodeTime) {
                         enemy.hp = 0;
                         playersArr.forEach(p => { if (dist(p.x, p.y, enemy.x, enemy.y) < 150) p.hp -= 40; });
-                        room.enemies.forEach(e => { if (e.id !== enemy.id && dist(e.x, e.y, enemy.x, enemy.y) < 150) e.hp -= 150; });
+                        
+                        // Kill all enemies in blast radius (properly rewarded)
+                        const nearby = room.enemies.filter(e => e.id !== enemy.id && dist(e.x, e.y, enemy.x, enemy.y) < 150);
+                        nearby.forEach(e => { e.hp = 0; killEnemy(room, e.id); });
+                        
                         io.to(roomId).emit('explosion', { x: enemy.x, y: enemy.y, radius: 150, isNuke: false });
-                        room.enemies = room.enemies.filter(e => e.id !== enemy.id && e.hp > 0);
+                        killEnemy(room, enemy.id);
                     }
 
                     if (enemy.type === 5) { // Support UFO Heal
