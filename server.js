@@ -298,14 +298,33 @@ function rewardPlayer(socket, amount) {
     const p = socket.playerId;
     if (!r || !ROOMS[r] || !ROOMS[r].players[p]) return;
 
-    const user = ROOMS[r].players[p].username;
-    if (!user) return;
-    
-    // Track per-session earnings for accurate Game Over stats
+    const player = ROOMS[r].players[p];
+    if (!player.username) return;
+
+    // 1. Memory tracking for Game Over stats
     if (!ROOMS[r].dogeEarned) ROOMS[r].dogeEarned = {};
     ROOMS[r].dogeEarned[p] = (ROOMS[r].dogeEarned[p] || 0) + amount;
 
-    db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+    // 2. Accumulate in memory instead of immediate DB write
+    player.pendingRewards = (player.pendingRewards || 0) + amount;
+}
+
+function flushPlayerRewards(socket) {
+    const r = socket.roomId;
+    const p = socket.playerId;
+    if (!r || !ROOMS[r] || !ROOMS[r].players[p]) return;
+
+    const player = ROOMS[r].players[p];
+    const amount = player.pendingRewards || 0;
+    if (amount <= 0 || !player.username) {
+        player.pendingRewards = 0;
+        return;
+    }
+
+    // Reset BEFORE async operation to avoid double-processing if another flush happens
+    player.pendingRewards = 0;
+
+    db.get(`SELECT meta FROM accounts WHERE username = ?`, [player.username], (err, row) => {
         if (!err && row) {
             let meta;
             try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { 
@@ -317,7 +336,7 @@ function rewardPlayer(socket, amount) {
             meta.stats.totalDogecoins = (meta.stats.totalDogecoins || 0) + amount;
             
             const encrypted = Security.encrypt(JSON.stringify(meta));
-            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, player.username], () => {
                 socket.emit('currencyUpdated', { amount: meta.currency });
             });
         }
@@ -1061,7 +1080,8 @@ io.on('connection', (socket) => {
                 obstacles: [],
                 lastBossLevelSpawned: 0,
                 isSolo: data.isSolo || false,
-                dogeEarned: {}
+                dogeEarned: {},
+                lastRewardFlush: Date.now()
             };
         } else {
             if (ROOMS[roomId].cleanupTimer) {
@@ -1074,7 +1094,8 @@ io.on('connection', (socket) => {
             ROOMS[roomId].players[playerId] = {
                 id: playerId, x: 0, y: 0, hp: 120, maxHp: 120, dead: false, hat: null, level: 1, disconnected: false, 
                 name: data.name || "Hráč",
-                username: data.username || null 
+                username: data.username || null,
+                pendingRewards: 0 
             };
         } else {
             ROOMS[roomId].players[playerId].disconnected = false;
@@ -1122,6 +1143,12 @@ io.on('connection', (socket) => {
                                 }
                             });
                         }
+                    });
+
+                    // Flush all rewards on Game Over
+                    Object.keys(ROOMS[r].players).forEach(pId => {
+                        const s = io.sockets.sockets.get(Array.from(io.sockets.adapter.rooms.get(r) || []).find(sid => io.sockets.sockets.get(sid).playerId === pId));
+                        if (s) flushPlayerRewards(s);
                     });
 
                     io.to(r).emit('teamGameOver', { dogeEarned: ROOMS[r].dogeEarned });
@@ -1305,8 +1332,10 @@ io.on('connection', (socket) => {
                 room.level++;
                 room.xp -= room.nextLevelXp;
                 room.nextLevelXp = Math.floor(room.nextLevelXp * 1.25);
-                room.paused = true;
                 room.readyCount = 0;
+
+                // Flush rewards on Level Up
+                flushPlayerRewards(socket);
 
                 // --- SERVER-AUTHORITATIVE LEADERBOARD UPDATE ---
                 Object.values(room.players).forEach(p_lb => {
@@ -1396,6 +1425,7 @@ io.on('connection', (socket) => {
                 }
             }
         }
+        flushPlayerRewards(socket); // Flush on disconnect
         broadcastServerStats();
     });
 });
@@ -1407,6 +1437,21 @@ setInterval(() => {
             const room = ROOMS[roomId];
             if (!room) continue;
             if (room.paused || room.isGameOver) continue;
+
+            // Periodic Reward Flush (every 5 seconds)
+            if (now - (room.lastRewardFlush || 0) > 5000) {
+                room.lastRewardFlush = now;
+                Object.keys(room.players).forEach(pId => {
+                    const socketId = Array.from(io.sockets.adapter.rooms.get(roomId) || []).find(sid => {
+                        const s = io.sockets.sockets.get(sid);
+                        return s && s.playerId === pId;
+                    });
+                    if (socketId) {
+                        const s = io.sockets.sockets.get(socketId);
+                        if (s) flushPlayerRewards(s);
+                    }
+                });
+            }
 
             room.time += 1 / 20;
 

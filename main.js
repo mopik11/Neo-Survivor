@@ -3216,10 +3216,19 @@ function gameOver() {
     document.getElementById('gameover-modal').classList.add('active');
 }
 
-function togglePause(isAFK = false) {
+function togglePause(isAFK = false, forceState = null) {
     if (!GAME.active) return;
 
-    GAME.paused = !GAME.paused;
+    const oldPaused = GAME.paused;
+    if (forceState !== null) {
+        GAME.paused = forceState;
+    } else {
+        GAME.paused = !GAME.paused;
+    }
+
+    // If state didn't actually change, do nothing (prevents loops)
+    if (oldPaused === GAME.paused) return;
+
     GAME.pauseStartTime = GAME.paused ? Date.now() : null;
 
     const pauseTitle = document.querySelector('#pause-modal h1');
@@ -3765,9 +3774,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
                     </button>
                     <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">${window.T('PRODAT')} (+${winner.price})</button>
                     <button id="btn-crate-again" class="btn-restart" style="min-width: 180px; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: none;">${window.T('ZATOČIT ZNOVU')}</button>
-                    ${(GAME.crateQueue && GAME.crateQueue.length === 0 && (GAME.lastCrateBatchSize || 1) > 1) ? `
-                        <button id="btn-crate-sell-all" class="btn-restart" style="min-width: 180px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem; border: none; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);">${window.T('PRODAT VŠE')} (+${(GAME.currentBatchResults || []).reduce((s, i) => s + (i.price || 0), 0)})</button>
-                    ` : ''}
+                    <button id="btn-crate-sell-all" class="btn-restart" style="min-width: 180px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem; border: none; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); display: none;">${window.T('PRODAT VŠE')}</button>
                 </div>
             </div>
         </div>
@@ -3850,22 +3857,26 @@ function startCrateAnimation(winner, crateType = 'basic') {
         const skipBtn = document.getElementById('btn-skip-crate');
         if (skipBtn) skipBtn.style.display = 'none';
         
-        // Proactive exit check: If user cannot afford another spin, hide the "Spin Again" button
-        const crateCost = { 'basic': 150, 'premium': 1000, 'legendary': 5000 }[crateType];
-        const totalBatchCost = crateCost * (GAME.lastCrateBatchSize || 1);
-        const canAffordAgain = META.currency >= totalBatchCost;
+        const isAtEnd = !GAME.crateQueue || GAME.crateQueue.length === 0;
         
         const btnAgain = document.getElementById('btn-crate-again');
         if (btnAgain) {
-            const hasSpareCrates = META.unopenedCrates && META.unopenedCrates[GAME.lastCrateType] > 0;
-            if (hasSpareCrates) {
+            const hasSpareCrates = META.unopenedCrates && META.unopenedCrates[crateType] > 0;
+            if (isAtEnd && hasSpareCrates) {
                 btnAgain.style.display = 'block';
-                btnAgain.innerText = window.T('ZATOČIT ZNOVU') + ' (BEDNA)';
-                btnAgain.style.background = 'rgba(16, 185, 129, 0.2)';
-                btnAgain.style.color = '#10b981';
-                btnAgain.style.borderColor = 'rgba(16, 185, 129, 0.3)';
             } else {
                 btnAgain.style.display = 'none';
+            }
+        }
+
+        const btnSellAll = document.getElementById('btn-crate-sell-all');
+        if (btnSellAll) {
+            if (isAtEnd && (GAME.lastCrateBatchSize || 1) > 1) {
+                const total = (GAME.currentBatchResults || []).reduce((s, i) => s + (i.price || 0), 0);
+                btnSellAll.style.display = 'block';
+                btnSellAll.innerText = `${window.T('PRODAT VŠE')} (+${total})`;
+            } else {
+                btnSellAll.style.display = 'none';
             }
         }
 
@@ -4348,7 +4359,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("NEO SURVIVOR v1.417");
+            console.log("NEO SURVIVOR v1.419");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -5080,7 +5091,7 @@ function init() {
             "Otevírání:": "Opening:",
             "V menu 'VYLEPŠENÍ' klikni na bednu. Animaci lze přeskočit (SKIP).": "In the 'UPGRADES' menu, click on a crate. Animation can be skipped (SKIP).",
             "Prodej:": "Selling:",
-            "Nepotřebné věci z beden můžeš hned prodat za Dogecoiny.": "Unneeded items from crates can be sold immediately for Dogecoins.",
+            "Nepotřebné věci z beden můžeš hned prodat za Dogecoiny.": "Unneeded items from crates can be sold immediately for Dogecoiny.",
             "RARITA": "RARITY",
             "OBYČ.": "COMMON",
             "PREM.": "PREM.",
@@ -5272,7 +5283,7 @@ function init() {
             "Z každého bosse vypadne vzácná Vesmírná bedna!": "Every boss drops a rare Space Crate!",
             "💎 VZÁCNÉ NÁLEZY": "💎 RARE FINDS",
             "Extrémně vzácný nález (šance 1%).": "Extremely rare find (1% chance).",
-            "Diamant lze prodat za 20,000 Dogecoinů!": "Diamond can be sold for 20,000 Dogecoins!",
+            "Diamant lze prodat za 20,000 Dogecoinů!": "Diamond can be sold for 20,000 Dogecoiny!",
             "Sbírej unikátní emoji čepice pro vizuální prestiž.": "Collect unique emoji hats for visual prestige.",
             "💡 PRO TIPY": "💡 PRO TIPS",
             "Kupuj trvalá vylepšení v menu 'VYLEPŠENÍ'.": "Buy permanent upgrades in the 'UPGRADES' menu.",
@@ -5333,7 +5344,7 @@ function init() {
             "PRODAT CELOU VÁRKU": "SELL ALL",
             "PRODAT CELOU VÁRKU (+... DOGE)": "SELL ALL (+... DOGE)",
             "Široký": "Wide", "Skrblík": "Cheapskate", "Lovec Bossů": "Boss Slayer", "Vesmírný Veterán": "Space Veteran", "Sběratel": "Collector", "Let's go gambling": "Let's go gambling", "Cookie clicker": "Cookie clicker", "Milionář": "Millionaire", "Zasloužilý Otevírač": "Crate Opener", "Vrah": "Murderer", "Genocida": "Genocide", "Bůh Smrti": "God of Death", "Lovec Hlav": "Boss Hunter", "Noční Můra Bossů": "Boss Nightmare", "Elitní Pilot": "Elite Pilot", "Legendární Pilot": "Legendary Pilot", "Průzkumník Fanoušek": "Explorer Fan", "Laser Fanoušek": "Laser Fan", "Obránce Fanoušek": "Defender Fan", "Brokovnice Fanoušek": "Shotgun Fan", "Nekromant Fanoušek": "Necro Fan", "Atombombarďák": "Nuke Happy", "Magnetický Mistr": "Magnet Master", "Zdravotník": "Medic", "Mistr Času": "Time Master", "Loutkař": "Puppet Master", "Léčitel": "Healer", "Sběratel Gemů": "Gem Collector", "Rychlostní Démon": "Speed Demon", "Tank": "Tank", "Skleněné Dělo": "Glass Cannon", "Pařmen": "Multiplayer Fan", "Boháč": "Rich Kid", "Šťastná Hvězda": "Lucky Star", "Těžař Asteroidů": "Asteroid Miner", "Ničitel Asteroidů": "Asteroid Destroyer", "Přeživší": "Survivor", "Veterán Přežití": "Survival Veteran", "Nesmrtelný": "Immortal",
-            "Získej 5x upgrade na šířku zdi v jedné hře": "Get 5x wall width upgrades in one game", "Získej celkem 5000 Dogecoinů": "Collect 5,000 Dogecoins total", "Poraz celkem 10 bossů": "Defeat 10 bosses total", "Dosáhni levelu 50 v jedné hře": "Reach level 50 in one game", "Odemkni všechny 3 základní lodě": "Unlock all 3 base ships", "Zmáčkni 100x tlačítko pro náhodný výběr": "Press random select button 100 times", "Odehraj celkem 24 hodin": "Play for 24 hours total", "Získej celkem 100 000 Dogecoinů": "Collect 100,000 Dogecoins total", "Otevři celkem 50 beden": "Open 50 crates total", "Zabij celkem 1 000 nepřátel": "Kill 1,000 enemies total", "Zabij celkem 10 000 nepřátel": "Kill 10,000 enemies total", "Zabij celkem 100 000 nepřátel": "Kill 100,000 enemies total", "Poraz celkem 50 bossů": "Defeat 50 bosses total", "Poraz celkem 100 bossů": "Defeat 100 bosses total", "Dosáhni levelu 75 v jedné hře": "Reach level 75 in one game", "Dosáhni levelu 100 v jedné hře": "Reach level 100 in one game", "Odehraj 50 her za Průzkumníka": "Play 50 games as Explorer", "Odehraj 50 her za Laserovou Loď": "Play 50 games as Laser Ship", "Odehraj 50 her za Obránce": "Play 50 games as Defender", "Odehraj 50 her za Brokovnici": "Play 50 games as Shotgun", "Odehraj 50 her za Nekromancera": "Play 50 games as Necromancer", "Použij celkem 50 atomovek": "Use 50 nukes total", "Použij celkem 100 magnetů": "Use 100 magnets total", "Použij celkem 100 lékárniček": "Use 100 medkits total", "Použij zastavení času 50x": "Use time stop 50 times", "Použij posednutí 50x": "Use possession 50 times", "Vyléč celkem 5000 HP aurou": "Heal 5,000 HP total with aura", "Posbírej celkem 50 000 gemů": "Collect 50,000 gems total", "Vylepši Rychlost na maximum v jedné hře": "Max Speed in one game", "Vylepši HP na maximum v jedné hře": "Max HP in one game", "Maxuj Damage bez vylepšení HP": "Max Damage without HP upgrades", "Odehraj 20 multiplayerových her": "Play 20 multiplayer games", "Měj u sebe 50 000 Dogecoinů najednou": "Have 50,000 Dogecoins at once", "Získej Diamant (Ultra Rare) z bedny": "Get Diamond (Ultra Rare) from crate", "Znič celkem 100 meteoritů": "Destroy 100 meteorites total", "Znič celkem 500 meteoritů": "Destroy 500 meteorites total", "Přežij alespoň 10 minut v jedné hře": "Survive 10 minutes in one game", "Přežij alespoň 20 minut v jedné hře": "Survive 20 minutes in one game", "Přežij alespoň 30 minut v jedné hře": "Survive 30 minutes in one game",
+            "Získej 5x upgrade na šířku zdi v jedné hře": "Get 5x wall width upgrades in one game", "Získej celkem 5000 Dogecoinů": "Collect 5,000 Dogecoinors total", "Poraz celkem 10 bossů": "Defeat 10 bosses total", "Dosáhni levelu 50 v jedné hře": "Reach level 50 in one game", "Odemkni všechny 3 základní lodě": "Unlock all 3 base ships", "Zmáčkni 100x tlačítko pro náhodný výběr": "Press random select button 100 times", "Odehraj celkem 24 hodin": "Play for 24 hours total", "Získej celkem 100 000 Dogecoinů": "Collect 100,000 Dogecoinors total", "Otevři celkem 50 beden": "Open 50 crates total", "Zabij celkem 1 000 nepřátel": "Kill 1,000 enemies total", "Zabij celkem 10 000 nepřátel": "Kill 10,000 enemies total", "Zabij celkem 100 000 nepřátel": "Kill 100,000 enemies total", "Poraz celkem 50 bossů": "Defeat 50 bosses total", "Poraz celkem 100 bossů": "Defeat 100 bosses total", "Dosáhni levelu 75 v jedné hře": "Reach level 75 in one game", "Dosáhni levelu 100 v jedné hře": "Reach level 100 in one game", "Odehraj 50 her za Průzkumníka": "Play 50 games as Explorer", "Odehraj 50 her za Laserovou Loď": "Play 50 games as Laser Ship", "Odehraj 50 her za Obránce": "Play 50 games as Defender", "Odehraj 50 her za Brokovnici": "Play 50 games as Shotgun", "Odehraj 50 her za Nekromancera": "Play 50 games as Necromancer", "Použij celkem 50 atomovek": "Use 50 nukes total", "Použij celkem 100 magnetů": "Use 100 magnets total", "Použij celkem 100 lékárniček": "Use 100 medkits total", "Použij zastavení času 50x": "Use time stop 50 times", "Použij posednutí 50x": "Use possession 50 times", "Vyléč celkem 5000 HP aurou": "Heal 5,000 HP total with aura", "Posbírej celkem 50 000 gemů": "Collect 50,000 gems total", "Vylepši Rychlost na maximum v jedné hře": "Max Speed in one game", "Vylepši HP na maximum v jedné hře": "Max HP in one game", "Maxuj Damage bez vylepšení HP": "Max Damage without HP upgrades", "Odehraj 20 multiplayerových her": "Play 20 multiplayer games", "Měj u sebe 50 000 Dogecoinů najednou": "Have 50,000 Dogecoinors at once", "Získej Diamant (Ultra Rare) z bedny": "Get Diamond (Ultra Rare) from crate", "Znič celkem 100 meteoritů": "Destroy 100 meteorites total", "Znič celkem 500 meteoritů": "Destroy 500 meteorites total", "Přežij alespoň 10 minut v jedné hře": "Survive 10 minutes in one game", "Přežij alespoň 20 minut v jedné hře": "Survive 20 minutes in one game", "Přežij alespoň 30 minut v jedné hře": "Survive 30 minutes in one game",
             "Žádné aktivní servery": "No active servers",
             "Postup obnoven! Zpět ve hře.": "Progress restored! Back in the game.",
             "v bitvě": "in battle",
@@ -5388,7 +5399,7 @@ function init() {
             "Vzácná emoji můžeš prodat za Dogecoiny:": "You can sell rare emojis for Dogecoiny:",
             "💎 EXTRÉMNÍ NÁLEZ!": "💎 EXTREME FIND!",
             "Diamant (💎) má hodnotu 20 000 Doge a šanci 0.001% (padá z JAKÉKOLIV bedny!)": "Diamond (💎) is worth 20,000 Doge and has a 0.001% chance (drops from ANY crate!)",
-            "Nemáš dost Dogecoinu!": "Not enough Dogecoins!",
+            "Nemáš dost Dogecoinu!": "Not enough Dogecoinors!",
             "PRODÁNO:": "SOLD:",
             "PRODEJ:": "SALE:",
             "Velryba": "Whale",
@@ -5413,7 +5424,7 @@ function init() {
             "ZÁKLADNÍ STATY": "BASIC STATS",
             "Odehraj 20 multiplayerových her": "Play 20 multiplayer games",
             "Boháč": "Rich Kid",
-            "Měj u sebe 50 000 Dogecoinů najednou": "Have 50,000 Dogecoins at once",
+            "Měj u sebe 50 000 Dogecoinů najednou": "Have 50,000 Dogecoinors at once",
             "Šťastná Hvězda": "Lucky Star",
             "Získej Diamant (Ultra Rare) z bedny": "Get Diamond (Ultra Rare) from crate",
             "Těžař Asteroidů": "Asteroid Miner",
@@ -6078,7 +6089,12 @@ function init() {
             return;
         }
         const dFromCenter = dist(t.clientX, t.clientY, GAME.joystick.startX, GAME.joystick.startY);
-        if (dFromCenter < 120) { GAME.joystick.active = true; GAME.joystick.currentX = t.clientX; GAME.joystick.currentY = t.clientY; }
+        if (dFromCenter < 120) { 
+            GAME.joystick.active = true; 
+            GAME.joystick.currentX = t.clientX; 
+            GAME.joystick.currentY = t.clientY; 
+            META.lastMoveTime = Date.now(); // Reset AFK on joystick touch
+        }
     });
     GAME.canvas.addEventListener('touchmove', (e) => {
         if (!GAME.joystick.active) return;
@@ -6243,17 +6259,10 @@ function update(dt) {
         }
         META.lastMoveTime = now;
         META.isAFK = false;
-    } else if (GAME.active && !GAME.paused && !document.querySelector('.modal.active') && (now - (META.lastMoveTime || now) > 30000)) {
-        // AFK after 30s (User request)
+    } else if (GAME.active && !GAME.paused && !document.querySelector('.modal.active') && (now - (META.lastMoveTime || now) > 180000)) {
+        // AFK after 180s (3 minutes) - Restored to safer value for mobile
         META.isAFK = true;
-        
-        if (NET.isMultiplayer) {
-            // In MP, just show AFK screen but DON'T pause the whole room via local loop
-            // togglePause will handle the disconnect/save session
-            togglePause(true);
-        } else {
-            togglePause(true);
-        }
+        togglePause(true, true); // Force pause
     }
 
     // Periodic progress sync (Anti-Cheat compliance)
@@ -6925,7 +6934,8 @@ const initAudio = () => {
 
 
 // Reset AFK timer on ANY user interaction (v1.415)
-['mousedown', 'keydown', 'touchstart', 'mousemove'].forEach(evt => {
+// Added 'touchmove' for mobile stability (v1.419)
+['mousedown', 'keydown', 'touchstart', 'touchmove', 'mousemove'].forEach(evt => {
     window.addEventListener(evt, () => {
         if (GAME.active) {
             META.lastMoveTime = Date.now();
