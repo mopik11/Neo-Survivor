@@ -299,11 +299,12 @@ function rewardPlayer(socket, amount) {
     if (!r || !ROOMS[r] || !ROOMS[r].players[p]) return;
 
     const player = ROOMS[r].players[p];
-    if (!player.username) return;
 
-    // 1. Memory tracking for Game Over stats
+    // 1. Memory tracking for Game Over stats (FOR EVERYONE, even guests)
     if (!ROOMS[r].dogeEarned) ROOMS[r].dogeEarned = {};
     ROOMS[r].dogeEarned[p] = (ROOMS[r].dogeEarned[p] || 0) + amount;
+
+    if (!player.username) return;
 
     // 2. Accumulate in memory instead of immediate DB write
     player.pendingRewards = (player.pendingRewards || 0) + amount;
