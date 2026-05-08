@@ -1193,8 +1193,7 @@ io.on('connection', (socket) => {
                         if (p.username) {
                             db.get(`SELECT max_level FROM accounts WHERE username = ?`, [p.username], (err, row) => {
                                 if (row && finalLevel > row.max_level) {
-                                    const validatedLevel = Math.min(HARD_CAP_LEVEL, finalLevel);
-                                    db.run(`UPDATE accounts SET max_level = ? WHERE username = ?`, [validatedLevel, p.username]);
+                                    db.run(`UPDATE accounts SET max_level = ? WHERE username = ?`, [finalLevel, p.username]);
                                 }
                             });
                         }

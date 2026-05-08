@@ -3197,6 +3197,12 @@ function gameOver() {
     META.stats.totalPlayTime = (META.stats.totalPlayTime || 0) + GAME.time;
     
     checkAchievements();
+    
+    // PERMANENTLY ADD REWARDS TO ACCOUNT (v1.425)
+    if (GAME.dogeGained > 0) {
+        addCurrency(GAME.dogeGained);
+    }
+    
     saveMeta();
 
     const statsLevel = document.getElementById('final-level');
@@ -4359,7 +4365,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("NEO SURVIVOR v1.421");
+            console.log("NEO SURVIVOR v1.425");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -4657,6 +4663,13 @@ function initSocket() {
             GAME.paused = true;
             showLevelUp(true);
             checkAchievements();
+    
+            // PERMANENTLY ADD REWARDS TO ACCOUNT (v1.425)
+            if (GAME.dogeGained > 0) {
+                addCurrency(GAME.dogeGained);
+            }
+            
+            saveMeta();
         });
 
         NET.socket.on('playerRevived', (data) => {
@@ -4902,7 +4915,7 @@ function handleAuth(isLogin) {
         localStorage.setItem('neoSurvivor_pass', passVal);
         saveMetaLocalOnly();
 
-        document.getElementById('display-player-name').innerText = META.playerName;
+        document.getElementById('display-player-name').innerText = nameVal;
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('menu-modal').classList.add('active');
 
@@ -6187,6 +6200,12 @@ const timeStep = 1000 / 60;
 function handleEnemyDeath(enemy) {
     if (!enemy || enemy.dead || enemy.hp > 0) return;
     enemy.dead = true;
+    
+    // SOLO REWARDS (v1.425)
+    if (!NET.isMultiplayer) {
+        GAME.kills++;
+        GAME.dogeGained++;
+    }
     AudioEngine.play('hit');
 
     // Reset AFK timer on Level-Up / Kill
