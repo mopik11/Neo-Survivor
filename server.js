@@ -1118,10 +1118,16 @@ io.on('connection', (socket) => {
     });
 
     socket.on('requestRooms', () => {
-        // ZERO TRUST: Filter out private solo rooms AND finished rooms from public server list (v1.431)
+        // ZERO TRUST: Filter out private solo, finished, or abandoned rooms (v1.432)
         const activeRooms = Object.values(ROOMS)
-            .filter(r => !r.isGameOver && !r.isSolo && !r.isFinished)
-            .map(r => ({ id: r.id, players: Object.keys(r.players).length, level: r.level }));
+            .filter(r => {
+                const activePlayers = Object.values(r.players).filter(p => !p.disconnected);
+                return !r.isGameOver && !r.isSolo && !r.isFinished && activePlayers.length > 0;
+            })
+            .map(r => {
+                const activePlayersCount = Object.values(r.players).filter(p => !p.disconnected).length;
+                return { id: r.id, players: activePlayersCount, level: r.level };
+            });
         socket.emit('roomList', activeRooms);
     });
 
