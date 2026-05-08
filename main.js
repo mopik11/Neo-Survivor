@@ -3282,6 +3282,8 @@ function togglePause(isAFK = false) {
         // Auto-rejoin room if it was a multiplayer session
         if (META.lastSession && META.lastSession.roomId) {
             console.log('[RESUME] Attempting auto-rejoin to room:', META.lastSession.roomId);
+            // We set lastMoveTime here too to prevent immediate AFK trigger
+            META.lastMoveTime = Date.now();
             window.joinCloudServer(META.lastSession.roomId);
         }
     }
@@ -3470,12 +3472,12 @@ function showMetaMenu() {
                 `;
                 card.querySelector('button').onclick = () => {
                     // OPTIMISTIC UI: Decrement locally for instant feedback
-                    if (META.unopenedCrates[type.id] > 0) {
-                        META.unopenedCrates[type.id]--;
+                    const total = META.unopenedCrates[type.id] || 0;
+                    if (total > 0) {
+                        META.unopenedCrates[type.id] = 0;
                         showMetaMenu(); // Refresh UI
+                        openCrate(type.id, total);
                     }
-                    // ZERO TRUST: Request actual results from server
-                    openCrate(type.id, 1);
                 };
                 rewardGrid.appendChild(card);
             }
@@ -3762,8 +3764,9 @@ function startCrateAnimation(winner, crateType = 'basic') {
                         ${(GAME.crateQueue && GAME.crateQueue.length > 0) ? `${window.T('DALŠÍ')} (<span id="crate-auto-timer">3</span>s)` : window.T('PŘIDAT DO SBÍRKY')}
                     </button>
                     <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">${window.T('PRODAT')} (+${winner.price})</button>
+                    <button id="btn-crate-again" class="btn-restart" style="min-width: 180px; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: none;">${window.T('ZATOČIT ZNOVU')}</button>
                     ${(GAME.crateQueue && GAME.crateQueue.length === 0 && (GAME.lastCrateBatchSize || 1) > 1) ? `
-                        <button id="btn-crate-sell-all" class="btn-restart" style="min-width: 180px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem; border: none; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);">${window.T('PRODAT VŠE')} (+${GAME.currentBatchResults.reduce((s, i) => s + i.price, 0)})</button>
+                        <button id="btn-crate-sell-all" class="btn-restart" style="min-width: 180px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem; border: none; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);">${window.T('PRODAT VŠE')} (+${(GAME.currentBatchResults || []).reduce((s, i) => s + (i.price || 0), 0)})</button>
                     ` : ''}
                 </div>
             </div>
@@ -4352,7 +4355,8 @@ function initSocket() {
             if (NET.serverPollingInterval) clearInterval(NET.serverPollingInterval);
 
             // Session logic moved below startGame to ensure player exists
-            if (!GAME.active) {
+            const wasNotActive = !GAME.active;
+            if (wasNotActive) {
                 startGame();
 
                 if (playerState && (playerState.x !== 0 || playerState.y !== 0)) {
@@ -4364,8 +4368,9 @@ function initSocket() {
                 }
             }
 
-            // Restore session if rejoining after AFK/pause disconnect
-            if (META.lastSession && META.lastSession.roomId === roomId) {
+            // Restore session ONLY if we just started the game (fresh connect/refresh)
+            // If we were already active (just resuming from AFK), we DON'T re-apply upgrades
+            if (wasNotActive && META.lastSession && META.lastSession.roomId === roomId) {
                 console.log('[REJOIN] Restoring session for room:', roomId);
                 const session = META.lastSession;
                 if (GAME.entities && GAME.entities.player) {
@@ -4378,7 +4383,7 @@ function initSocket() {
                         });
                     }
                 }
-                META.lastSession = null; // Clear after restore
+                META.lastSession = null; 
                 saveMeta();
             }
             
@@ -6238,8 +6243,8 @@ function update(dt) {
         }
         META.lastMoveTime = now;
         META.isAFK = false;
-    } else if (GAME.active && !GAME.paused && !document.querySelector('.modal.active') && (now - (META.lastMoveTime || now) > 60000)) {
-        // AFK after 60s (Increased to 60s in v1.417)
+    } else if (GAME.active && !GAME.paused && !document.querySelector('.modal.active') && (now - (META.lastMoveTime || now) > 30000)) {
+        // AFK after 30s (User request)
         META.isAFK = true;
         
         if (NET.isMultiplayer) {
