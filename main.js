@@ -4369,7 +4369,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("NEO SURVIVOR v1.430");
+            console.log("NEO SURVIVOR v1.431");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -4409,6 +4409,13 @@ function initSocket() {
             }
             
             NET.socket.emit('upgradePicked');
+        });
+
+        NET.socket.on('killConfirmed', (data) => {
+            GAME.kills++;
+            if (data.amount) {
+                GAME.dogeGained += data.amount;
+            }
         });
 
         NET.socket.on('stateUpdate', (data) => {

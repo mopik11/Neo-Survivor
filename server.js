@@ -324,6 +324,9 @@ function rewardPlayer(socket, amount) {
     if (player.username) {
         player.pendingRewards = (player.pendingRewards || 0) + amount;
     }
+
+    // 3. Notify client for responsive UI (v1.431)
+    socket.emit('killConfirmed', { amount: amount, totalSessionDoge: ROOMS[r].dogeEarned[p] });
 }
 
 function killEnemy(room, enemyId, rewardTarget = null) {
@@ -1115,9 +1118,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('requestRooms', () => {
-        // ZERO TRUST: Filter out private solo rooms from public server list
+        // ZERO TRUST: Filter out private solo rooms AND finished rooms from public server list (v1.431)
         const activeRooms = Object.values(ROOMS)
-            .filter(r => !r.isGameOver && !r.isSolo)
+            .filter(r => !r.isGameOver && !r.isSolo && !r.isFinished)
             .map(r => ({ id: r.id, players: Object.keys(r.players).length, level: r.level }));
         socket.emit('roomList', activeRooms);
     });
