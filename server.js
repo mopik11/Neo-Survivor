@@ -140,7 +140,18 @@ const CONFIG = {
     ENEMY_BASE_SPEED: 4.5,
     SPAWN_INTERVAL: 800,
     BOSS_INTERVAL: 60,
-    BOSS_LEVEL_INTERVAL: 5
+    BOSS_LEVEL_INTERVAL: 5,
+    BASE_PLAYER_HP: 120,
+    BASE_PLAYER_DMG: 20
+};
+
+const UPGRADE_CONFIG = {
+    hp: { base: 10, step: 0.5 },
+    speed: { base: 0.02, step: 0.5 },
+    luck: { base: 0.05, step: 0.5 },
+    regen: { base: 0.1, step: 0.5 },
+    armor: { base: 0.02, step: 0.5 },
+    damage: { base: 5, step: 0.5 } // Added server-side damage tracking
 };
 
 function dist(x1, y1, x2, y2) {
@@ -1161,8 +1172,33 @@ io.on('connection', (socket) => {
         }
 
         if (!ROOMS[roomId].players[playerId]) {
+            // AUTHORITATIVE STAT LOADING (v1.430)
+            let authDmg = CONFIG.BASE_PLAYER_DMG;
+            let authMaxHp = CONFIG.BASE_PLAYER_HP;
+            
+            if (data.username) {
+                db.get(`SELECT meta FROM accounts WHERE username = ?`, [data.username.toLowerCase()], (err, row) => {
+                    if (row) {
+                        try {
+                            const meta = JSON.parse(Security.decrypt(row.meta));
+                            const upg = meta.upgrades || {};
+                            // Damage: 20 + (level * 5)
+                            authDmg += (upg.damage || 0) * 5;
+                            authMaxHp += (upg.hp || 0) * 10;
+                            
+                            if (ROOMS[roomId] && ROOMS[roomId].players[playerId]) {
+                                ROOMS[roomId].players[playerId].damage = authDmg;
+                                ROOMS[roomId].players[playerId].maxHp = authMaxHp;
+                                ROOMS[roomId].players[playerId].hp = authMaxHp;
+                            }
+                        } catch(e) {}
+                    }
+                });
+            }
+
             ROOMS[roomId].players[playerId] = {
-                id: playerId, x: 0, y: 0, hp: 120, maxHp: 120, dead: false, hat: null, level: 1, disconnected: false, 
+                id: playerId, x: 0, y: 0, hp: authMaxHp, maxHp: authMaxHp, damage: authDmg, 
+                dead: false, hat: null, level: 1, disconnected: false, 
                 name: data.name || "Hráč",
                 username: data.username || null,
                 pendingRewards: 0,
@@ -1317,7 +1353,11 @@ io.on('connection', (socket) => {
             const d = Math.sqrt(dx*dx + dy*dy);
             if (d > 3000) return; // Anti-cheat distance
 
-            enemy.hp -= damage;
+            // SERVER-AUTHORITATIVE DAMAGE (v1.430)
+            // We ignore the 'damage' value from the client and use our internal one
+            const effectiveDamage = p.damage || 20;
+            enemy.hp -= effectiveDamage;
+            
             if (enemy.hp <= 0) {
                 killEnemy(room, enemyId, socket);
 
