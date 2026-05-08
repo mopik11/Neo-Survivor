@@ -109,11 +109,13 @@ const db = new sqlite3.Database('./neo_survivor.db', (err) => {
                 password TEXT,
                 meta TEXT,
                 max_level INTEGER,
-                last_level_up INTEGER
+                last_level_up INTEGER,
+                currency INTEGER DEFAULT 0
             )`);
             
             // Migrace (v1.385): Přidání sloupce last_level_up pokud chybí
             db.run(`ALTER TABLE accounts ADD COLUMN last_level_up INTEGER DEFAULT 0`, (err) => {});
+            db.run(`ALTER TABLE accounts ADD COLUMN currency INTEGER DEFAULT 0`, (err) => {});
             db.run(`DELETE FROM accounts WHERE username IS NULL OR username = '' OR password IS NULL OR password = ''`);
             db.run(`UPDATE accounts SET username = LOWER(username)`);
 
@@ -357,22 +359,22 @@ function flushPlayerRewards(socket) {
         return;
     }
 
-    player.pendingRewards = 0; // Reset before async
+    player.pendingRewards = 0;
 
-    db.get(`SELECT meta FROM accounts WHERE username = ?`, [player.username], (err, row) => {
-        if (!err && row) {
-            let meta;
-            try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { 
-                try { meta = JSON.parse(row.meta); } catch(e2) { meta = {}; }
-            }
-            
-            meta.currency = (meta.currency || 0) + amount;
-            if (!meta.stats) meta.stats = { totalDogecoins: 0 };
-            meta.stats.totalDogecoins = (meta.stats.totalDogecoins || 0) + amount;
-            
-            const encrypted = Security.encrypt(JSON.stringify(meta));
-            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, player.username], () => {
-                socket.emit('currencyUpdated', { amount: meta.currency });
+    // ATOMIC UPDATE: Use SQL increment to prevent race conditions
+    db.run(`UPDATE accounts SET currency = currency + ? WHERE username = ?`, [amount, player.username], (err) => {
+        if (!err) {
+            db.get(`SELECT currency, meta FROM accounts WHERE username = ?`, [player.username], (err, row) => {
+                if (row) {
+                    socket.emit('currencyUpdated', { amount: row.currency });
+                    
+                    // Also update the meta blob in background to keep it in sync (for legacy reasons)
+                    let meta;
+                    try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = {}; }
+                    meta.currency = row.currency;
+                    const encrypted = Security.encrypt(JSON.stringify(meta));
+                    db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, player.username]);
+                }
             });
         }
     });
@@ -765,7 +767,7 @@ io.on('connection', (socket) => {
         const user = socket.authenticatedUser;
         if (!user || data.token !== socket.sessionToken) return;
 
-        db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+        db.get(`SELECT currency, meta FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err || !row) return;
             let meta;
             try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
@@ -777,8 +779,7 @@ io.on('connection', (socket) => {
             if (data.type === 'ship') {
                 cost = (PRICES.ships && PRICES.ships[data.id]) || 0;
                 if (!meta.ships) meta.ships = { 1: true };
-                if (meta.currency >= cost && !meta.ships[data.id]) {
-                    meta.currency -= cost;
+                if (row.currency >= cost && !meta.ships[data.id]) {
                     meta.ships[data.id] = true;
                     meta.selectedShip = data.id;
                     success = true;
@@ -786,8 +787,7 @@ io.on('connection', (socket) => {
             } else if (data.type === 'ability') {
                 cost = (PRICES.abilities && PRICES.abilities[data.id]) || 0;
                 if (!meta.abilities) meta.abilities = { 1: true };
-                if (meta.currency >= cost && !meta.abilities[data.id]) {
-                    meta.currency -= cost;
+                if (row.currency >= cost && !meta.abilities[data.id]) {
                     meta.abilities[data.id] = true;
                     meta.selectedAbility = data.id;
                     success = true;
@@ -798,8 +798,7 @@ io.on('connection', (socket) => {
                 if (!meta.upgrades) meta.upgrades = { hp:0, speed:0, luck:0, regen:0, armor:0 };
                 const currentVal = meta.upgrades[data.id] || 0;
                 cost = Math.floor(cfg.base * (1 + currentVal * cfg.step));
-                if (meta.currency >= cost) {
-                    meta.currency -= cost;
+                if (row.currency >= cost) {
                     meta.upgrades[data.id] = currentVal + 1;
                     success = true;
                 }
@@ -807,8 +806,7 @@ io.on('connection', (socket) => {
                 const baseCost = (PRICES.crates && PRICES.crates[data.id]) || 0;
                 const count = data.count || 1;
                 cost = baseCost * count;
-                if (meta.currency >= cost) {
-                    meta.currency -= cost;
+                if (row.currency >= cost) {
                     if (!meta.unopenedCrates) meta.unopenedCrates = { basic:0, premium:0, legendary:0 };
                     meta.unopenedCrates[data.id] = (meta.unopenedCrates[data.id] || 0) + count;
                     success = true;
@@ -816,8 +814,10 @@ io.on('connection', (socket) => {
             }
 
             if (success) {
+                const newCurrency = row.currency - cost;
+                meta.currency = newCurrency;
                 const encrypted = Security.encrypt(JSON.stringify(meta));
-                db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+                db.run(`UPDATE accounts SET meta = ?, currency = ? WHERE username = ?`, [encrypted, newCurrency, user], () => {
                     socket.emit('syncSuccess', { meta: meta });
                     socket.emit('purchaseSuccess', { type: data.type, id: data.id });
                 });
@@ -857,8 +857,8 @@ io.on('connection', (socket) => {
             console.log(`[REGISTER] Creating new account: "${user}"`);
             Security.hashPassword(pass).then(hashedPass => {
                 const encryptedMeta = Security.encrypt(JSON.stringify(defaultMeta));
-                db.run(`INSERT INTO accounts (username, password, meta, max_level) VALUES (?, ?, ?, ?)`,
-                    [user, hashedPass, encryptedMeta, 1],
+                db.run(`INSERT INTO accounts (username, password, meta, max_level, currency) VALUES (?, ?, ?, ?, ?)`,
+                    [user, hashedPass, encryptedMeta, 1, 0],
                     (err) => {
                         if (err) {
                             console.error(`[REGISTER] DB Error:`, err);
@@ -919,7 +919,7 @@ io.on('connection', (socket) => {
         if (!user) return;
         user = user.toLowerCase().trim();
         console.log(`[LOGIN] Attempt: "${user}"`);
-        db.get(`SELECT password, meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+        db.get(`SELECT password, meta, currency FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err) console.error(`[LOGIN] DB Error:`, err);
             
             if (row) {
@@ -946,8 +946,15 @@ io.on('connection', (socket) => {
                                 }).catch(e => console.error("[LOGIN] Migration error:", e));
                             }
 
-                            console.log(`[LOGIN] Success: "${user}"`);
-                            socket.authenticatedUser = user; socket.sessionToken = crypto.randomBytes(16).toString('hex'); socket.emit('loginResponse', { success: true, meta: parsedMeta, token: socket.sessionToken });
+                             // Lazy Migration (v1.424): Ensure currency column is synced with meta
+                             if (parsedMeta.currency !== undefined && row.currency === 0 && parsedMeta.currency > 0) {
+                                 db.run(`UPDATE accounts SET currency = ? WHERE username = ?`, [parsedMeta.currency, user]);
+                                 row.currency = parsedMeta.currency;
+                             }
+                             parsedMeta.currency = row.currency;
+
+                             console.log(`[LOGIN] Success: "${user}"`);
+                             socket.authenticatedUser = user; socket.sessionToken = crypto.randomBytes(16).toString('hex'); socket.emit('loginResponse', { success: true, meta: parsedMeta, token: socket.sessionToken });
                         } catch (e) {
                             console.error(`[LOGIN] Meta parse error for "${user}":`, e.message);
                             socket.emit('loginResponse', { success: false, msg: "Chyba při načítání dat účtu." });
@@ -975,7 +982,7 @@ io.on('connection', (socket) => {
         const { meta, pass } = data;
         if (!meta) return;
 
-        db.get(`SELECT password, max_level, meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+        db.get(`SELECT password, max_level, meta, currency FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (row) {
                 Security.verifyPassword(pass, row.password).then(isMatch => {
                     if (isMatch) {
@@ -1005,25 +1012,26 @@ io.on('connection', (socket) => {
                         if (meta.achievements) merged.achievements = meta.achievements;
                         if (meta.stats) merged.stats = meta.stats;
                         
-                        // NEVER trust these from the client - use server-side truth only
-                        merged.currency = serverMeta.currency || 0;
+                        // Use atomic column value
+                        merged.currency = row.currency;
+                        
+                        // CRITICAL: If player is currently in a room, include their PENDING rewards in the sync
+                        if (socket.roomId && ROOMS[socket.roomId] && ROOMS[socket.roomId].players[socket.playerId]) {
+                            const p = ROOMS[socket.roomId].players[socket.playerId];
+                            if (p.pendingRewards > 0) {
+                                const reward = p.pendingRewards;
+                                p.pendingRewards = 0;
+                                merged.currency += reward;
+                                db.run(`UPDATE accounts SET currency = currency + ? WHERE username = ?`, [reward, user]);
+                            }
+                        }
+                        
                         merged.inventory = serverMeta.inventory || [];
                         merged.upgrades = serverMeta.upgrades || { hp:0, speed:0, luck:0, regen:0, armor:0 };
                         merged.ships = serverMeta.ships || { 1: true };
                         merged.abilities = serverMeta.abilities || { 1: true };
                         merged.unopenedCrates = serverMeta.unopenedCrates || { basic: 0, premium: 0, legendary: 0 };
                         merged.maxLevel = Math.max(serverMeta.maxLevel || 1, (row ? row.max_level : 1) || 1);
-
-                        // CRITICAL: If player is currently in a room, include their PENDING rewards in the sync
-                        if (socket.roomId && ROOMS[socket.roomId] && ROOMS[socket.roomId].players[socket.playerId]) {
-                            const p = ROOMS[socket.roomId].players[socket.playerId];
-                            if (p.pendingRewards > 0) {
-                                merged.currency = (merged.currency || 0) + p.pendingRewards;
-                                if (!merged.stats) merged.stats = { totalDogecoins: 0 };
-                                merged.stats.totalDogecoins = (merged.stats.totalDogecoins || 0) + p.pendingRewards;
-                                p.pendingRewards = 0; // Consumption
-                            }
-                        }
                         
                         const encryptedMeta = Security.encrypt(JSON.stringify(merged));
                         db.run(`UPDATE accounts SET meta = ? WHERE username = ?`,
