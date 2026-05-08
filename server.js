@@ -310,27 +310,9 @@ function rewardPlayer(socket, amount) {
     }
 }
 
-function killEnemy(room, enemyId, socket = null) {
+function killEnemy(room, enemyId, rewardTarget = null) {
     const enemy = room.enemies.find(e => e.id === enemyId);
     if (!enemy) return;
-
-    // Determine who to reward
-    let rewardTarget = socket;
-    if (!rewardTarget) {
-        // If no explicit killer (e.g. explosion), reward the closest active player
-        const activePlayers = Object.keys(room.players).filter(id => !room.players[id].dead && !room.players[id].disconnected);
-        if (activePlayers.length > 0) {
-            let closestId = activePlayers[0];
-            let minDist = Infinity;
-            activePlayers.forEach(id => {
-                const d = dist(enemy.x, enemy.y, room.players[id].x, room.players[id].y);
-                if (d < minDist) { minDist = d; closestId = id; }
-            });
-            // Get socket for the closest player
-            const sid = Array.from(io.sockets.adapter.rooms.get(room.id) || []).find(s => io.sockets.sockets.get(s).playerId === closestId);
-            if (sid) rewardTarget = io.sockets.sockets.get(sid);
-        }
-    }
 
     if (rewardTarget) {
         if (enemy.isBoss) {
@@ -341,6 +323,22 @@ function killEnemy(room, enemyId, socket = null) {
             room.readyCount = 0;
         } else {
             rewardPlayer(rewardTarget, REWARD_NORMAL_KILL);
+        }
+    } else {
+        // Find the closest player's socket from our in-memory player state (safer)
+        const activePlayerIds = Object.keys(room.players).filter(id => !room.players[id].dead && !room.players[id].disconnected);
+        if (activePlayerIds.length > 0) {
+            let closestId = activePlayerIds[0];
+            let minDist = Infinity;
+            activePlayerIds.forEach(id => {
+                const d = dist(enemy.x, enemy.y, room.players[id].x, room.players[id].y);
+                if (d < minDist) { minDist = d; closestId = id; }
+            });
+            const pObj = room.players[closestId];
+            if (pObj && pObj.socketId) {
+                const s = io.sockets.sockets.get(pObj.socketId);
+                if (s) rewardPlayer(s, REWARD_NORMAL_KILL);
+            }
         }
     }
 
@@ -1143,7 +1141,8 @@ io.on('connection', (socket) => {
                 id: playerId, x: 0, y: 0, hp: 120, maxHp: 120, dead: false, hat: null, level: 1, disconnected: false, 
                 name: data.name || "Hráč",
                 username: data.username || null,
-                pendingRewards: 0 
+                pendingRewards: 0,
+                socketId: socket.id 
             };
         } else {
             ROOMS[roomId].players[playerId].disconnected = false;
