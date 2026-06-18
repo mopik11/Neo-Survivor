@@ -4289,7 +4289,11 @@ function initSocket() {
         : "https://jeanne-unlistening-nondialectally.ngrok-free.dev/";
 
     try {
-        NET.socket = io(SERVER_URL);
+        NET.socket = io(SERVER_URL, {
+        extraHeaders: {
+            "ngrok-skip-browser-warning": "true"
+            }
+        });
 
         NET.socket.on('connect', () => {
             console.warn("CLOUD: Připojeno k hernímu serveru!");
