@@ -59,7 +59,6 @@ const Security = {
         });
     },
 
-    // Data Encryption (AES-256-CBC)
     encrypt: (text) => {
         const iv = crypto.randomBytes(16);
         const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
