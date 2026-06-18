@@ -4617,9 +4617,7 @@ function initSocket() {
             if (data.type === 'ship' || data.type === 'ability') showShipsMenu();
             else if (data.type === 'stat') showMetaMenu();
             else if (data.type === 'crate') {
-                // AUTO-OPEN PURCHASED CRATE (v1.415.2)
-                // This keeps the "Získané bedny" section reserved only for rewards from battle
-                openCrate(data.id, 1);
+                // Server now instantly unboxes crates in bulk, no need to manually open
             }
         });
 

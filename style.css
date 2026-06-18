@@ -1074,7 +1074,7 @@ canvas {
 }
 
 /* Mobilní layout pro chat - pod minimapu */
-@media screen and (max-width: 850px) {
+@media screen and (max-width: 950px), screen and (max-height: 550px) {
     #global-chat {
         left: auto !important;
         right: 10px !important;
@@ -1230,7 +1230,7 @@ canvas {
     }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 950px), (max-height: 550px) {
     #btn-chat-mobile {
         display: flex !important;
         align-items: center;

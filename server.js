@@ -177,7 +177,16 @@ function broadcastServerStats() {
             }
         }
     }
-    const totalOnline = io.sockets.sockets.size;
+    // Zjistíme počet unikátních hráčů podle playerId
+    const uniquePlayers = new Set();
+    for (const [id, socket] of io.sockets.sockets) {
+        if (socket.playerId) {
+            uniquePlayers.add(socket.playerId);
+        } else {
+            uniquePlayers.add(id); // Pokud nemá playerId, počítáme socket
+        }
+    }
+    const totalOnline = uniquePlayers.size;
     io.emit('serverStats', {
         online: totalOnline,
         inBattle: playersInRooms
@@ -336,7 +345,12 @@ function killEnemy(room, enemyId, rewardTarget = null) {
     if (rewardTarget) {
         if (enemy.isBoss) {
             rewardPlayer(rewardTarget, REWARD_BOSS_KILL);
-            rewardCrate(rewardTarget, 'basic');
+            // Better crates for higher levels
+            let crateType = 'basic';
+            if (room.level >= 30) crateType = 'legendary';
+            else if (room.level >= 15) crateType = 'premium';
+            
+            rewardCrate(rewardTarget, crateType);
             io.to(room.id).emit('bossDefeated', { id: enemy.id });
             room.paused = true;
             room.readyCount = 0;
@@ -731,13 +745,14 @@ io.on('connection', (socket) => {
             const rewards = [50, 100, 200, 400, 800];
             const reward = rewards[Math.min(meta.dailyStreak - 1, rewards.length - 1)];
 
-            meta.currency = (meta.currency || 0) + reward;
+            const newCurrency = (meta.currency || 0) + reward;
+            meta.currency = newCurrency;
             meta.lastDailyGift = now;
             if (!meta.stats) meta.stats = { totalDogecoins: 0 };
             meta.stats.totalDogecoins = (meta.stats.totalDogecoins || 0) + reward;
 
             const encrypted = Security.encrypt(JSON.stringify(meta));
-            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+            db.run(`UPDATE accounts SET meta = ?, currency = ? WHERE username = ?`, [encrypted, newCurrency, user], () => {
                 socket.emit('syncSuccess', { meta: meta });
                 socket.emit('currencyUpdated', { amount: meta.currency });
             });
@@ -829,8 +844,16 @@ io.on('connection', (socket) => {
                 const count = data.count || 1;
                 cost = baseCost * count;
                 if (row.currency >= cost) {
-                    if (!meta.unopenedCrates) meta.unopenedCrates = { basic:0, premium:0, legendary:0 };
-                    meta.unopenedCrates[data.id] = (meta.unopenedCrates[data.id] || 0) + count;
+                    // INSTANT UNBOXING (no inventory for bought crates)
+                    const results = [];
+                    for (let i = 0; i < count; i++) {
+                        const item = generateLoot(data.id);
+                        results.push(item);
+                        if (!meta.inventory) meta.inventory = [];
+                        const invItem = meta.inventory.find(inv => inv.id === item.id);
+                        if (invItem) invItem.count++; else meta.inventory.push({ id: item.id, count: 1 });
+                    }
+                    socket.emit('crateResults', { results: results, type: data.id, bulk: true });
                     success = true;
                 }
             }
@@ -1477,7 +1500,7 @@ io.on('connection', (socket) => {
         if (r && ROOMS[r]) {
             const room = ROOMS[r];
             room.readyCount++;
-            const activePlayersCount = Object.values(room.players).filter(p => !p.disconnected).length;
+            const activePlayersCount = Object.values(room.players).filter(p => !p.disconnected && !p.dead).length;
 
             if (room.readyCount >= activePlayersCount && activePlayersCount > 0) {
                 room.paused = false;
@@ -1581,7 +1604,7 @@ setInterval(() => {
 
                 if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
                     isBoss = true;
-                    hp = (CONFIG.ENEMY_BASE_HEALTH * mod) * 50; // 50x HP
+                    hp = (CONFIG.ENEMY_BASE_HEALTH * mod) * 150; // 150x HP
                     type = room.nextBossType || Math.floor(Math.random() * 7) + 1;
                     speedMod = 2; // 2x Speed for Boss
                     room.lastBossLevelSpawned = room.level;
