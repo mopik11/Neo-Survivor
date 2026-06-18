@@ -4290,8 +4290,9 @@ function initSocket() {
 
     try {
         NET.socket = io(SERVER_URL, {
-        extraHeaders: {
-            "ngrok-skip-browser-warning": "true"
+            transports: ['websocket'], // VYNUCENÍ WEBSOCKETŮ - tohle řeší 90% CORS problémů
+            extraHeaders: {
+                "ngrok-skip-browser-warning": "true"
             }
         });
 
