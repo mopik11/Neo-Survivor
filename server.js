@@ -158,8 +158,18 @@ function dist(x1, y1, x2, y2) {
 }
 
 function broadcastLeaderboard() {
-    db.all(`SELECT username as name, max_level as level FROM accounts ORDER BY max_level DESC LIMIT 10`, [], (err, rows) => {
+    db.all(`SELECT username as name, max_level as level FROM accounts ORDER BY max_level DESC`, [], (err, rows) => {
         if (!err && rows) {
+            const onlineUsers = new Set();
+            for (const [id, socket] of io.sockets.sockets) {
+                if (socket.authenticatedUser) {
+                    onlineUsers.add(socket.authenticatedUser);
+                }
+            }
+            
+            rows.forEach(row => {
+                row.online = onlineUsers.has(row.name);
+            });
             io.emit('leaderboardData', rows);
         }
     });
@@ -793,7 +803,7 @@ io.on('connection', (socket) => {
             meta.stats.totalDogecoins = (meta.stats.totalDogecoins || 0) + reward;
 
             const encrypted = Security.encrypt(JSON.stringify(meta));
-            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+            db.run(`UPDATE accounts SET meta = ?, currency = ? WHERE username = ?`, [encrypted, meta.currency, user], () => {
                 socket.emit('syncSuccess', { meta: meta });
                 socket.emit('currencyUpdated', { amount: meta.currency });
             });
@@ -1046,12 +1056,12 @@ io.on('connection', (socket) => {
                         const merged = { ...serverMeta }; 
                         
                         // Whitelist of fields the client CAN update
-                        if (meta.settings) merged.settings = meta.settings;
-                        if (meta.selectedLanguage) merged.selectedLanguage = meta.selectedLanguage;
+                        if (meta.settings !== undefined) merged.settings = meta.settings;
+                        if (meta.selectedLanguage !== undefined) merged.selectedLanguage = meta.selectedLanguage;
                         if (meta.autoUpgrade !== undefined) merged.autoUpgrade = meta.autoUpgrade;
                         if (meta.autoSelect !== undefined) merged.autoSelect = meta.autoSelect;
-                        if (meta.selectedShip) merged.selectedShip = meta.selectedShip;
-                        if (meta.selectedAbility) merged.selectedAbility = meta.selectedAbility;
+                        if (meta.selectedShip !== undefined) merged.selectedShip = meta.selectedShip;
+                        if (meta.selectedAbility !== undefined) merged.selectedAbility = meta.selectedAbility;
                         if (meta.claimedAchievements) merged.claimedAchievements = meta.claimedAchievements;
                         if (meta.achievements) merged.achievements = meta.achievements;
                         if (meta.stats) merged.stats = meta.stats;

@@ -3122,7 +3122,21 @@ function showAchievementsMenu() {
     if (!container) return;
     container.innerHTML = '';
 
-    ACHIEVEMENTS.forEach(ach => {
+    const sortedAchievements = [...ACHIEVEMENTS].sort((a, b) => {
+        const aUnlocked = META.achievements && META.achievements[a.id];
+        const aClaimed = META.claimedAchievements && META.claimedAchievements[a.id];
+        const bUnlocked = META.achievements && META.achievements[b.id];
+        const bClaimed = META.claimedAchievements && META.claimedAchievements[b.id];
+
+        const aIsClaimable = aUnlocked && !aClaimed;
+        const bIsClaimable = bUnlocked && !bClaimed;
+
+        if (aIsClaimable && !bIsClaimable) return -1;
+        if (!aIsClaimable && bIsClaimable) return 1;
+        return ACHIEVEMENTS.indexOf(a) - ACHIEVEMENTS.indexOf(b);
+    });
+
+    sortedAchievements.forEach(ach => {
         const isUnlocked = META.achievements && META.achievements[ach.id];
         const isClaimed = META.claimedAchievements && META.claimedAchievements[ach.id];
         
@@ -4342,8 +4356,9 @@ function initSocket() {
 
                 const row = document.createElement('div');
                 row.className = `lb-row ${medalClass}`;
+                const statusDot = p.online ? '<span style="color: #10b981; font-size: 1.2rem; text-shadow: 0 0 5px #10b981;">●</span>' : '<span style="color: #ef4444; font-size: 1.2rem; opacity: 0.5;">●</span>';
                 row.innerHTML = `
-                    <span><span style="display:inline-block; width: 30px;">${rank}</span> ${p.name}</span>
+                    <span><span style="display:inline-block; width: 30px;">${rank}</span> <span style="margin-right: 5px;">${statusDot}</span> ${p.name}</span>
                     <span>LVL ${p.level}</span>
                 `;
                 list.appendChild(row);
@@ -5637,7 +5652,7 @@ function init() {
                     }
                     // Immediately sync our (potentially newer) local settings up to the server
                     if (NET.socket && NET.socket.connected) {
-                        NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META });
+                        NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META, token: NET.sessionToken });
                     }
                     
                     if (META.selectedLanguage) window.setLanguage(META.selectedLanguage);
