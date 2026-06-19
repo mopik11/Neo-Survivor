@@ -95,8 +95,6 @@
             <span id="daily-timer" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: #fbbf24; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.5); white-space: nowrap; pointer-events: none; opacity: 0.9;"></span>
           </button>
 
-
-
           
           <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem; letter-spacing: 1px;">
             <span data-i18n="Hráč:">Hráč:</span> <span id="display-player-name" style="color: var(--accent-color); font-weight: bold;">---</span> | <span data-i18n="Nej. Level:">Nej. Level:</span> <span id="display-max-level" style="color: var(--xp-color); font-weight: bold;">0</span> | Doge: <span id="display-doge" style="color: #fbbf24; font-weight: bold;">0</span>
@@ -122,7 +120,6 @@
                 <button class="btn-restart btn-sub" id="btn-leaderboard" style="background: rgba(245, 158, 11, 0.15);"><span>🏆</span> <span data-i18n="ŽEBŘÍČEK">ŽEBŘÍČEK</span></button>
                 <button class="btn-restart btn-sub" id="btn-achievements" style="background: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24 !important;"><span>🌟</span> <span data-i18n="ÚSPĚCHY">ÚSPĚCHY</span></button>
 
-
               </div>
             </div>
 
@@ -140,7 +137,19 @@
           <div style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
             © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.442
           </div>
-        </div>
+
+          <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; opacity: 0.6; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+            <a href="https://freedns.afraid.org/" target="_blank" style="color: #94a3b8; font-size: 0.75rem; text-decoration: none; letter-spacing: 1px; font-weight: bold;">Free DNS</a>
+            
+            <a href="https://github.com" target="_blank" style="color: #94a3b8; display: flex; align-items: center;" title="GitHub">
+              <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+            </a>
+
+            <a href="https://cloud.google.com" target="_blank" style="color: #94a3b8; display: flex; align-items: center;" title="Google Cloud">
+              <svg height="18" width="18" viewBox="0 0 512 512" fill="currentColor"><path d="M256.02,64c-70.52,0-131.67,41.97-161.42,102.58C40.66,177.01,0,223.75,0,281.04 C0,348.9,54.67,404,121.99,404h280.95c60.2,0,109.06-49.03,109.06-109.43c0-57.06-43.3-104.38-98.81-108.97 C392.23,105.73,330.12,64,256.02,64z"/></svg>
+            </a>
+          </div>
+          </div>
       </div>
 
       <div id="leaderboard-modal" class="modal">
@@ -161,8 +170,7 @@
           <div class="modal-body">
             <h2 style="font-size: 2.5rem; margin-bottom: 1rem; color: #fbbf24; text-shadow: 0 0 20px rgba(245, 158, 11, 0.4);">🌟 <span data-i18n="VESMÍRNÉ ÚSPĚCHY">VESMÍRNÉ ÚSPĚCHY</span></h2>
             <div id="achievements-list" style="width: 100%; display: flex; flex-direction: column; gap: 12px; padding-right: 5px;">
-                <!-- Dynamically populated -->
-            </div>
+                </div>
           </div>
         </div>
       </div>
@@ -452,11 +460,9 @@
       </div>
 
       <div id="disconnect-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #1e1b4b 0%, #020617 100%); z-index: 999999; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden;">
-        <!-- Animated background elements -->
         <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml;utf8,<svg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22><filter id=%22noiseFilter%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/></filter><rect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/></svg>'); opacity: 0.05; mix-blend-mode: overlay; pointer-events: none;"></div>
         <div style="position: absolute; width: 600px; height: 600px; background: radial-gradient(circle, rgba(239,68,68,0.15) 0%, rgba(0,0,0,0) 70%); border-radius: 50%; filter: blur(40px); animation: pulse 4s ease-in-out infinite;"></div>
         
-        <!-- Icon -->
         <div style="position: relative; margin-bottom: 2rem;">
             <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 20px rgba(239, 68, 68, 0.6)); animation: float 3s ease-in-out infinite;">
                 <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
