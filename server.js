@@ -1,3 +1,4 @@
+require('dotenv').config(); // <-- PŘIDÁNO: Načtení .env souboru
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -331,9 +332,6 @@ function rewardPlayer(socket, amount) {
 
     const player = ROOMS[r].players[p];
     
-    // Debug logging for rewards (v1.426)
-    // console.log(`[REWARD] ${player.username || p} received ${amount} DOGE`);
-
     // 1. Memory tracking for Game Over stats (FOR EVERYONE)
     if (!ROOMS[r].dogeEarned) ROOMS[r].dogeEarned = {};
     ROOMS[r].dogeEarned[p] = (ROOMS[r].dogeEarned[p] || 0) + amount;
@@ -461,9 +459,6 @@ function sanitizeMeta(meta) {
     
     return meta;
 }
-
-
-
 
 io.on('connection', (socket) => {
     console.log('Hráč připojen:', socket.id);
