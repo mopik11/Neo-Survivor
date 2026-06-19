@@ -1154,12 +1154,19 @@ io.on('connection', (socket) => {
                     }
                 }
                 
-                merged.inventory = serverMeta.inventory || [];
-                merged.upgrades = serverMeta.upgrades || { hp:0, speed:0, luck:0, regen:0, armor:0 };
-                merged.ships = serverMeta.ships || { 1: true };
-                merged.abilities = serverMeta.abilities || { 1: true };
-                merged.unopenedCrates = serverMeta.unopenedCrates || { basic: 0, premium: 0, legendary: 0 };
-                merged.maxLevel = Math.max(serverMeta.maxLevel || 1, (row ? row.max_level : 1) || 1);
+                // Server-authoritative fields (client cannot fake these)
+                merged.inventory       = serverMeta.inventory || [];
+                merged.upgrades        = serverMeta.upgrades  || { hp:0, speed:0, luck:0, regen:0, armor:0 };
+                merged.unopenedCrates  = serverMeta.unopenedCrates || { basic: 0, premium: 0, legendary: 0 };
+                merged.maxLevel        = Math.max(serverMeta.maxLevel || 1, (row ? row.max_level : 1) || 1);
+                
+                // Ships/abilities: union (once unlocked, always unlocked - merge server + client)
+                merged.ships     = Object.assign({}, serverMeta.ships    || { 1: true }, merged.ships    || {});
+                merged.abilities = Object.assign({}, serverMeta.abilities || { 1: true }, merged.abilities || {});
+                
+                // NOTE: selectedShip, selectedAbility, autoSelect, autoUpgrade, settings
+                // are already correctly set from client data above (lines 1117-1122)
+
                 
                 const encryptedMeta = Security.encrypt(JSON.stringify(merged));
                 db.run(`UPDATE accounts SET meta = ? WHERE username = ?`,

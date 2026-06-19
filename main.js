@@ -4659,9 +4659,10 @@ function initSocket() {
             if (data.meta) {
                 mergeMeta(data.meta);
                 updateCurrencyUI();
-                saveMetaLocalOnly();
-                checkAchievements(true); // Silent sync on first load
-                achievementsInitialized = true; // Enable notifications for future unlocks
+                if (window.updateSettingUI) window.updateSettingUI();
+                updateMusicVolume();
+                checkAchievements(true);
+                achievementsInitialized = true;
                 if (window.showMetaMenu && document.getElementById('meta-modal').classList.contains('active')) {
                     showMetaMenu();
                 }
