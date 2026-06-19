@@ -4847,6 +4847,8 @@ function initSocket() {
 
     } catch (e) {
         console.error("Socket init failed", e);
+        const discModal = document.getElementById('disconnect-modal');
+        if (discModal) discModal.style.display = 'flex';
     }
 }
 
