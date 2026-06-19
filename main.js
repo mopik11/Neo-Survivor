@@ -454,6 +454,7 @@ const updateCurrencyUI = () => {
 };
 
 const saveMetaLocalOnly = () => {
+    META.metaLastUpdated = Date.now();
     localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
     localStorage.setItem('neoSurvivor_musicMenu', META.settings.musicMenu);
     localStorage.setItem('neoSurvivor_musicGame', META.settings.musicGame);
@@ -573,36 +574,41 @@ const mergeMeta = (serverMeta) => {
     }
     
     // 8. Player preferences (settings, autoSelect, selectedLanguage, selectedShip, selectedAbility):
-    // Merge server settings to synchronize settings across devices
-    if (serverMeta.settings) {
-        META.settings.musicMenu = serverMeta.settings.musicMenu === true || serverMeta.settings.musicMenu === "true";
-        META.settings.musicGame = serverMeta.settings.musicGame === true || serverMeta.settings.musicGame === "true";
-        META.settings.sfx = serverMeta.settings.sfx === true || serverMeta.settings.sfx === "true";
+    // Merge server settings ONLY if server has newer or equal timestamp (prevents race conditions on fast F5)
+    const shouldSyncSettings = !META.metaLastUpdated || !serverMeta.metaLastUpdated || serverMeta.metaLastUpdated >= META.metaLastUpdated;
+    
+    if (shouldSyncSettings) {
+        if (serverMeta.settings) {
+            META.settings.musicMenu = serverMeta.settings.musicMenu === true || serverMeta.settings.musicMenu === "true";
+            META.settings.musicGame = serverMeta.settings.musicGame === true || serverMeta.settings.musicGame === "true";
+            META.settings.sfx = serverMeta.settings.sfx === true || serverMeta.settings.sfx === "true";
+        }
+        if (serverMeta.selectedLanguage) {
+            META.selectedLanguage = serverMeta.selectedLanguage;
+            if (window.setLanguage) window.setLanguage(serverMeta.selectedLanguage);
+        }
+        if (serverMeta.autoUpgrade !== undefined) {
+            META.autoUpgrade = serverMeta.autoUpgrade === true || serverMeta.autoUpgrade === "true";
+        }
+        if (serverMeta.autoSelect !== undefined) {
+            META.autoSelect = serverMeta.autoSelect === true || serverMeta.autoSelect === "true";
+        }
+        if (serverMeta.selectedShip) {
+            META.selectedShip = parseInt(serverMeta.selectedShip, 10) || 1;
+        }
+        if (serverMeta.selectedAbility) {
+            META.selectedAbility = parseInt(serverMeta.selectedAbility, 10) || 1;
+        }
+        if (serverMeta.metaLastUpdated) {
+            META.metaLastUpdated = serverMeta.metaLastUpdated;
+        }
     }
-    if (serverMeta.selectedLanguage) {
-        META.selectedLanguage = serverMeta.selectedLanguage;
-    }
-    if (serverMeta.autoUpgrade !== undefined) {
-        META.autoUpgrade = serverMeta.autoUpgrade === true || serverMeta.autoUpgrade === "true";
-    }
-    if (serverMeta.autoSelect !== undefined) {
-        META.autoSelect = serverMeta.autoSelect === true || serverMeta.autoSelect === "true";
-    }
+
     if (serverMeta.lastDailyGift !== undefined) {
         META.lastDailyGift = serverMeta.lastDailyGift;
     }
     if (serverMeta.dailyStreak !== undefined) {
         META.dailyStreak = serverMeta.dailyStreak;
-    }
-    if (serverMeta.selectedLanguage) {
-        META.selectedLanguage = serverMeta.selectedLanguage;
-        if (window.setLanguage) window.setLanguage(serverMeta.selectedLanguage);
-    }
-    if (serverMeta.selectedShip) {
-        META.selectedShip = parseInt(serverMeta.selectedShip, 10) || 1;
-    }
-    if (serverMeta.selectedAbility) {
-        META.selectedAbility = parseInt(serverMeta.selectedAbility, 10) || 1;
     }
     saveMetaLocalOnly();
 };

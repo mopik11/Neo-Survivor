@@ -1120,6 +1120,7 @@ io.on('connection', (socket) => {
                 if (meta.autoSelect !== undefined) merged.autoSelect = meta.autoSelect;
                 if (meta.selectedShip !== undefined) merged.selectedShip = meta.selectedShip;
                 if (meta.selectedAbility !== undefined) merged.selectedAbility = meta.selectedAbility;
+                if (meta.metaLastUpdated !== undefined) merged.metaLastUpdated = meta.metaLastUpdated;
                 // Union merge achievements and claimedAchievements (once true, always true) to prevent client-side rollbacks
                 if (meta.claimedAchievements) {
                     if (!merged.claimedAchievements) merged.claimedAchievements = {};
