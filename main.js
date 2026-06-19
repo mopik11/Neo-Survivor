@@ -594,12 +594,10 @@ const mergeMeta = (serverMeta) => {
     }
     if (serverMeta.selectedAbility && localStorage.getItem('neoSurvivor_selectedAbility') === null) {
         META.selectedAbility = parseInt(serverMeta.selectedAbility, 10) || 1;
-        }
-        if (serverMeta.metaLastUpdated) {
-            META.metaLastUpdated = serverMeta.metaLastUpdated;
-        }
     }
-
+    if (serverMeta.metaLastUpdated) {
+        META.metaLastUpdated = serverMeta.metaLastUpdated;
+    }
     if (serverMeta.lastDailyGift !== undefined) {
         META.lastDailyGift = serverMeta.lastDailyGift;
     }
