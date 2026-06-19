@@ -457,31 +457,23 @@ const saveMetaLocalOnly = () => {
     // Cloud-only mode: no localStorage game data – just update UI
     updateCurrencyUI();
 };
+let _saveMetaTimer = null;
 const saveMeta = () => {
-    // Cloud-only: sync directly to server
-    const savedUser = localStorage.getItem('neoSurvivor_user');
-    const savedPass = localStorage.getItem('neoSurvivor_pass');
-
-    if (savedUser && savedPass) {
-        if (!NET.socket) initSocket();
-        if (NET.socket) {
-            const payload = { user: savedUser, pass: savedPass, meta: META, token: NET.sessionToken };
-            console.log('[SAVEMETA] Odesílám syncAccount:', {
-                selectedShip: META.selectedShip,
-                selectedAbility: META.selectedAbility,
-                autoSelect: META.autoSelect,
-                musicMenu: META.settings?.musicMenu,
-                musicGame: META.settings?.musicGame,
-                token: NET.sessionToken
-            });
-            NET.socket.emit('syncAccount', payload);
+    // Debounce: many rapid calls collapse into one syncAccount after 400ms
+    if (_saveMetaTimer) clearTimeout(_saveMetaTimer);
+    _saveMetaTimer = setTimeout(() => {
+        _saveMetaTimer = null;
+        const savedUser = localStorage.getItem('neoSurvivor_user');
+        const savedPass = localStorage.getItem('neoSurvivor_pass');
+        if (savedUser && savedPass && NET.socket && NET.socket.connected) {
+            console.log('[SAVEMETA] syncAccount:', { selectedShip: META.selectedShip, autoSelect: META.autoSelect, musicMenu: META.settings?.musicMenu });
+            NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META, token: NET.sessionToken });
             NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel, token: NET.sessionToken });
         }
-    } else {
-        console.warn('[SAVEMETA] Žádný uložený uživatel – nelze syncovat!');
-    }
-    updateCurrencyUI();
+        updateCurrencyUI();
+    }, 400);
 };
+
 
 const loadMeta = () => {
     // Cloud-only mode: defaults only – real data comes from server after login
@@ -502,7 +494,9 @@ const loadMeta = () => {
     updateCurrencyUI();
 };
 
-const mergeMeta = (serverMeta) => {
+// mergeMeta: apply server data into META
+// skipPreferences=true means don't overwrite user-selected preferences (used by syncSuccess to avoid race conditions)
+const mergeMeta = (serverMeta, skipPreferences = false) => {
     if (!serverMeta) return;
 
     // CLOUD-ONLY: Server is fully authoritative for ALL fields
@@ -553,31 +547,31 @@ const mergeMeta = (serverMeta) => {
         Object.assign(META.unopenedCrates, serverMeta.unopenedCrates);
     }
     
-    // 8. Preferences – server is fully authoritative (no localStorage interference)
-    if (serverMeta.settings) {
-        META.settings.musicMenu = serverMeta.settings.musicMenu === true || serverMeta.settings.musicMenu === "true";
-        META.settings.musicGame = serverMeta.settings.musicGame === true || serverMeta.settings.musicGame === "true";
-        META.settings.sfx       = serverMeta.settings.sfx       === true || serverMeta.settings.sfx       === "true";
+    // 8. Preferences – server is fully authoritative (only on login, not on syncSuccess)
+    if (!skipPreferences) {
+        if (serverMeta.settings) {
+            META.settings.musicMenu = serverMeta.settings.musicMenu === true || serverMeta.settings.musicMenu === "true";
+            META.settings.musicGame = serverMeta.settings.musicGame === true || serverMeta.settings.musicGame === "true";
+            META.settings.sfx       = serverMeta.settings.sfx       === true || serverMeta.settings.sfx       === "true";
+        }
+        if (serverMeta.selectedLanguage !== undefined) {
+            META.selectedLanguage = serverMeta.selectedLanguage;
+            if (window.setLanguage) window.setLanguage(serverMeta.selectedLanguage);
+        }
+        if (serverMeta.autoUpgrade !== undefined)  META.autoUpgrade  = serverMeta.autoUpgrade  === true || serverMeta.autoUpgrade  === "true";
+        if (serverMeta.autoSelect  !== undefined)  META.autoSelect   = serverMeta.autoSelect   === true || serverMeta.autoSelect   === "true";
+        if (serverMeta.selectedShip    !== undefined) META.selectedShip    = parseInt(serverMeta.selectedShip,    10) || 1;
+        if (serverMeta.selectedAbility !== undefined) META.selectedAbility = parseInt(serverMeta.selectedAbility, 10) || 1;
     }
-    if (serverMeta.selectedLanguage !== undefined) {
-        META.selectedLanguage = serverMeta.selectedLanguage;
-        if (window.setLanguage) window.setLanguage(serverMeta.selectedLanguage);
-    }
-    if (serverMeta.autoUpgrade !== undefined)  META.autoUpgrade  = serverMeta.autoUpgrade  === true || serverMeta.autoUpgrade  === "true";
-    if (serverMeta.autoSelect  !== undefined)  META.autoSelect   = serverMeta.autoSelect   === true || serverMeta.autoSelect   === "true";
-    if (serverMeta.selectedShip    !== undefined) META.selectedShip    = parseInt(serverMeta.selectedShip,    10) || 1;
-    if (serverMeta.selectedAbility !== undefined) META.selectedAbility = parseInt(serverMeta.selectedAbility, 10) || 1;
     if (serverMeta.metaLastUpdated !== undefined) META.metaLastUpdated = serverMeta.metaLastUpdated;
     if (serverMeta.lastDailyGift   !== undefined) META.lastDailyGift   = serverMeta.lastDailyGift;
     if (serverMeta.dailyStreak     !== undefined) META.dailyStreak     = serverMeta.dailyStreak;
 
-    console.log('[MERGEMETA] Po merge:', {
+    console.log('[MERGEMETA] Po merge (skipPrefs=' + skipPreferences + '):', {
         selectedShip: META.selectedShip,
-        selectedAbility: META.selectedAbility,
         autoSelect: META.autoSelect,
         musicMenu: META.settings?.musicMenu,
         server_selectedShip: serverMeta.selectedShip,
-        server_autoSelect: serverMeta.autoSelect,
     });
 
     updateCurrencyUI();
@@ -4365,6 +4359,8 @@ window.softResetToMenu = () => {
     saveMeta();
 };
 
+
+
 document.addEventListener('click', (e) => {
     if (e.target.closest('.btn-reload')) {
         e.preventDefault();
@@ -4678,10 +4674,10 @@ function initSocket() {
 
         NET.socket.on('syncSuccess', (data) => {
             if (data.meta) {
-                mergeMeta(data.meta);
+                // skipPreferences=true: don't let stale server responses overwrite what user just changed
+                mergeMeta(data.meta, true);
                 updateCurrencyUI();
                 if (window.updateSettingUI) window.updateSettingUI();
-                updateMusicVolume();
                 checkAchievements(true);
                 achievementsInitialized = true;
                 if (window.showMetaMenu && document.getElementById('meta-modal').classList.contains('active')) {
