@@ -1120,8 +1120,23 @@ io.on('connection', (socket) => {
                 if (meta.autoSelect !== undefined) merged.autoSelect = meta.autoSelect;
                 if (meta.selectedShip !== undefined) merged.selectedShip = meta.selectedShip;
                 if (meta.selectedAbility !== undefined) merged.selectedAbility = meta.selectedAbility;
-                if (meta.claimedAchievements) merged.claimedAchievements = meta.claimedAchievements;
-                if (meta.achievements) merged.achievements = meta.achievements;
+                // Union merge achievements and claimedAchievements (once true, always true) to prevent client-side rollbacks
+                if (meta.claimedAchievements) {
+                    if (!merged.claimedAchievements) merged.claimedAchievements = {};
+                    for (let id in meta.claimedAchievements) {
+                        if (meta.claimedAchievements[id]) {
+                            merged.claimedAchievements[id] = true;
+                        }
+                    }
+                }
+                if (meta.achievements) {
+                    if (!merged.achievements) merged.achievements = {};
+                    for (let id in meta.achievements) {
+                        if (meta.achievements[id]) {
+                            merged.achievements[id] = true;
+                        }
+                    }
+                }
                 if (meta.stats) merged.stats = meta.stats;
                 
                 // Use atomic column value
