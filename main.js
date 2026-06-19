@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.418'
+    version: 'v1.500'
 };
 
 let achievementsInitialized = false;
@@ -4602,6 +4602,7 @@ function initSocket() {
                 }
                 
                 updateCurrencyUI();
+                saveMetaLocalOnly();
                 checkAchievements(true); // Silent sync on first load
                 achievementsInitialized = true; // Enable notifications for future unlocks
                 if (window.showMetaMenu && document.getElementById('meta-modal').classList.contains('active')) {

@@ -639,7 +639,18 @@ io.on('connection', (socket) => {
     // --- BĚŽNÁ LOGIKA HRY ---
     socket.on('openCrate', (data) => {
         const user = socket.authenticatedUser;
-        if (!user || !data.type || data.token !== socket.sessionToken) return;
+        if (!user) {
+            console.warn(`[OPENCRATE] Blocked: socket is not authenticated.`);
+            return;
+        }
+        if (!data || !data.type) {
+            console.warn(`[OPENCRATE] Blocked for "${user}": missing crate type.`);
+            return;
+        }
+        if (data.token !== socket.sessionToken) {
+            console.warn(`[OPENCRATE] Blocked for "${user}": session token mismatch. Client token: "${data ? data.token : 'none'}", Server token: "${socket.sessionToken}"`);
+            return;
+        }
 
         db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err || !row) return;
@@ -668,7 +679,18 @@ io.on('connection', (socket) => {
 
     socket.on('sellItem', (data) => {
         const user = socket.authenticatedUser;
-        if (!user || !data.id || data.token !== socket.sessionToken) return;
+        if (!user) {
+            console.warn(`[SELLITEM] Blocked: socket is not authenticated.`);
+            return;
+        }
+        if (!data || !data.id) {
+            console.warn(`[SELLITEM] Blocked for "${user}": missing item ID.`);
+            return;
+        }
+        if (data.token !== socket.sessionToken) {
+            console.warn(`[SELLITEM] Blocked for "${user}": session token mismatch. Client token: "${data ? data.token : 'none'}", Server token: "${socket.sessionToken}"`);
+            return;
+        }
 
         db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err || !row) return;
@@ -698,7 +720,14 @@ io.on('connection', (socket) => {
 
     socket.on('sellAllItems', (data) => {
         const user = socket.authenticatedUser;
-        if (!user || data.token !== socket.sessionToken) return;
+        if (!user) {
+            console.warn(`[SELLALLITEMS] Blocked: socket is not authenticated.`);
+            return;
+        }
+        if (data.token !== socket.sessionToken) {
+            console.warn(`[SELLALLITEMS] Blocked for "${user}": session token mismatch. Client token: "${data ? data.token : 'none'}", Server token: "${socket.sessionToken}"`);
+            return;
+        }
 
         db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err || !row) return;
@@ -736,7 +765,14 @@ io.on('connection', (socket) => {
 
     socket.on('claimDailyGift', (data) => {
         const user = socket.authenticatedUser;
-        if (!user || data.token !== socket.sessionToken) return;
+        if (!user) {
+            console.warn(`[DAILYGIFT] Blocked: socket is not authenticated.`);
+            return;
+        }
+        if (data.token !== socket.sessionToken) {
+            console.warn(`[DAILYGIFT] Blocked for "${user}": session token mismatch. Client token: "${data ? data.token : 'none'}", Server token: "${socket.sessionToken}"`);
+            return;
+        }
 
         db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err || !row) return;
@@ -770,7 +806,18 @@ io.on('connection', (socket) => {
 
     socket.on('claimAchievement', (data) => {
         const user = socket.authenticatedUser;
-        if (!user || !data.id || data.token !== socket.sessionToken) return;
+        if (!user) {
+            console.warn(`[ACHIEVEMENT] Claim blocked: socket is not authenticated.`);
+            return;
+        }
+        if (!data || !data.id) {
+            console.warn(`[ACHIEVEMENT] Claim blocked for "${user}": missing achievement ID.`);
+            return;
+        }
+        if (data.token !== socket.sessionToken) {
+            console.warn(`[ACHIEVEMENT] Claim blocked for "${user}": session token mismatch. Client token: "${data ? data.token : 'none'}", Server token: "${socket.sessionToken}"`);
+            return;
+        }
 
         db.get(`SELECT meta, currency FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err || !row) return;
@@ -816,7 +863,14 @@ io.on('connection', (socket) => {
     });
     socket.on('purchase', (data) => {
         const user = socket.authenticatedUser;
-        if (!user || data.token !== socket.sessionToken) return;
+        if (!user) {
+            console.warn(`[PURCHASE] Blocked: socket is not authenticated.`);
+            return;
+        }
+        if (data.token !== socket.sessionToken) {
+            console.warn(`[PURCHASE] Blocked for "${user}": session token mismatch. Client token: "${data ? data.token : 'none'}", Server token: "${socket.sessionToken}"`);
+            return;
+        }
 
         db.get(`SELECT currency, meta FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err || !row) return;
@@ -1035,71 +1089,84 @@ io.on('connection', (socket) => {
 
     socket.on('syncAccount', (data) => {
         // SECURITY: Whitelist of fields the client CAN update
-        let user = socket.authenticatedUser || data.user;
+        let user = socket.authenticatedUser || (data.user ? data.user.toLowerCase().trim() : null);
         if (!user) return socket.emit('syncError', "Nutné přihlášení.");
 
         const { meta, pass } = data;
         if (!meta) return;
 
         db.get(`SELECT password, max_level, meta, currency FROM accounts WHERE username = ?`, [user], (err, row) => {
-            if (row) {
+            if (err || !row) return socket.emit('syncError', "Účet nenalezen.");
+
+            const proceedWithSync = () => {
+                if (!socket.sessionToken) socket.sessionToken = data.token;
+                let oldMeta;
+                try {
+                    const decrypted = Security.decrypt(row.meta);
+                    oldMeta = JSON.parse(decrypted);
+                } catch (e) {
+                    try { oldMeta = JSON.parse(row.meta); } catch(e2) { oldMeta = {}; }
+                }
+
+                // --- ZERO TRUST SMART MERGE (v1.405.9) ---
+                // Trust ONLY specific non-sensitive fields from the client
+                const serverMeta = oldMeta || {};
+                const merged = { ...serverMeta }; 
+                
+                // Whitelist of fields the client CAN update
+                if (meta.settings !== undefined) merged.settings = meta.settings;
+                if (meta.selectedLanguage !== undefined) merged.selectedLanguage = meta.selectedLanguage;
+                if (meta.autoUpgrade !== undefined) merged.autoUpgrade = meta.autoUpgrade;
+                if (meta.autoSelect !== undefined) merged.autoSelect = meta.autoSelect;
+                if (meta.selectedShip !== undefined) merged.selectedShip = meta.selectedShip;
+                if (meta.selectedAbility !== undefined) merged.selectedAbility = meta.selectedAbility;
+                if (meta.claimedAchievements) merged.claimedAchievements = meta.claimedAchievements;
+                if (meta.achievements) merged.achievements = meta.achievements;
+                if (meta.stats) merged.stats = meta.stats;
+                
+                // Use atomic column value
+                merged.currency = row.currency;
+                
+                // CRITICAL: If player is currently in a room, include their PENDING rewards in the sync
+                if (socket.roomId && ROOMS[socket.roomId] && ROOMS[socket.roomId].players[socket.playerId]) {
+                    const p = ROOMS[socket.roomId].players[socket.playerId];
+                    if (p.pendingRewards > 0) {
+                        const reward = p.pendingRewards;
+                        p.pendingRewards = 0;
+                        merged.currency += reward;
+                        db.run(`UPDATE accounts SET currency = currency + ? WHERE username = ?`, [reward, user]);
+                    }
+                }
+                
+                merged.inventory = serverMeta.inventory || [];
+                merged.upgrades = serverMeta.upgrades || { hp:0, speed:0, luck:0, regen:0, armor:0 };
+                merged.ships = serverMeta.ships || { 1: true };
+                merged.abilities = serverMeta.abilities || { 1: true };
+                merged.unopenedCrates = serverMeta.unopenedCrates || { basic: 0, premium: 0, legendary: 0 };
+                merged.maxLevel = Math.max(serverMeta.maxLevel || 1, (row ? row.max_level : 1) || 1);
+                
+                const encryptedMeta = Security.encrypt(JSON.stringify(merged));
+                db.run(`UPDATE accounts SET meta = ? WHERE username = ?`,
+                    [encryptedMeta, user],
+                    (err) => {
+                        if (err) return socket.emit('syncError', "DB Error in syncAccount: " + err.message);
+                        // Sync success - Return the AUTHORITATIVE merged meta to the client
+                        socket.emit('syncSuccess', { meta: merged });
+                    });
+            };
+
+            if (socket.authenticatedUser === user) {
+                proceedWithSync();
+            } else {
                 Security.verifyPassword(pass, row.password).then(isMatch => {
                     if (isMatch) {
                         socket.authenticatedUser = user;
-                        if (!socket.sessionToken) socket.sessionToken = data.token;
-                        let oldMeta;
-                        try {
-                            const decrypted = Security.decrypt(row.meta);
-                            oldMeta = JSON.parse(decrypted);
-                        } catch (e) {
-                            try { oldMeta = JSON.parse(row.meta); } catch(e2) { oldMeta = {}; }
-                        }
-
-                        // --- ZERO TRUST SMART MERGE (v1.405.9) ---
-                        // Trust ONLY specific non-sensitive fields from the client
-                        const serverMeta = oldMeta || {};
-                        const merged = { ...serverMeta }; 
-                        
-                        // Whitelist of fields the client CAN update
-                        if (meta.settings !== undefined) merged.settings = meta.settings;
-                        if (meta.selectedLanguage !== undefined) merged.selectedLanguage = meta.selectedLanguage;
-                        if (meta.autoUpgrade !== undefined) merged.autoUpgrade = meta.autoUpgrade;
-                        if (meta.autoSelect !== undefined) merged.autoSelect = meta.autoSelect;
-                        if (meta.selectedShip !== undefined) merged.selectedShip = meta.selectedShip;
-                        if (meta.selectedAbility !== undefined) merged.selectedAbility = meta.selectedAbility;
-                        if (meta.claimedAchievements) merged.claimedAchievements = meta.claimedAchievements;
-                        if (meta.achievements) merged.achievements = meta.achievements;
-                        if (meta.stats) merged.stats = meta.stats;
-                        
-                        // Use atomic column value
-                        merged.currency = row.currency;
-                        
-                        // CRITICAL: If player is currently in a room, include their PENDING rewards in the sync
-                        if (socket.roomId && ROOMS[socket.roomId] && ROOMS[socket.roomId].players[socket.playerId]) {
-                            const p = ROOMS[socket.roomId].players[socket.playerId];
-                            if (p.pendingRewards > 0) {
-                                const reward = p.pendingRewards;
-                                p.pendingRewards = 0;
-                                merged.currency += reward;
-                                db.run(`UPDATE accounts SET currency = currency + ? WHERE username = ?`, [reward, user]);
-                            }
-                        }
-                        
-                        merged.inventory = serverMeta.inventory || [];
-                        merged.upgrades = serverMeta.upgrades || { hp:0, speed:0, luck:0, regen:0, armor:0 };
-                        merged.ships = serverMeta.ships || { 1: true };
-                        merged.abilities = serverMeta.abilities || { 1: true };
-                        merged.unopenedCrates = serverMeta.unopenedCrates || { basic: 0, premium: 0, legendary: 0 };
-                        merged.maxLevel = Math.max(serverMeta.maxLevel || 1, (row ? row.max_level : 1) || 1);
-                        
-                        const encryptedMeta = Security.encrypt(JSON.stringify(merged));
-                        db.run(`UPDATE accounts SET meta = ? WHERE username = ?`,
-                            [encryptedMeta, user],
-                            (err) => {
-                                // Sync success - Return the AUTHORITATIVE merged meta to the client
-                                socket.emit('syncSuccess', { meta: merged });
-                            });
+                        proceedWithSync();
+                    } else {
+                        socket.emit('syncError', "Chyba ověření hesla.");
                     }
+                }).catch(e => {
+                    socket.emit('syncError', "Chyba při ověřování hesla: " + e.message);
                 });
             }
         });
@@ -1111,8 +1178,17 @@ io.on('connection', (socket) => {
 
     socket.on('submitScore', (data) => {
         const user = socket.authenticatedUser;
-        if (!user || !data || !data.level || data.token !== socket.sessionToken) {
-            return; // Silently ignore invalid or unauthenticated score submissions
+        if (!user) {
+            console.warn(`[SUBMITSCORE] Blocked: socket is not authenticated.`);
+            return;
+        }
+        if (!data || !data.level) {
+            console.warn(`[SUBMITSCORE] Blocked for "${user}": missing level data.`);
+            return;
+        }
+        if (data.token !== socket.sessionToken) {
+            console.warn(`[SUBMITSCORE] Blocked for "${user}": session token mismatch. Client token: "${data ? data.token : 'none'}", Server token: "${socket.sessionToken}"`);
+            return;
         }
 
         db.get(`SELECT max_level, last_level_up FROM accounts WHERE username = ?`, [user], (err, row) => {
@@ -1180,6 +1256,11 @@ io.on('connection', (socket) => {
                 socket.emit('error', { msg: "Místnost je již uzavřena nebo hra skončila. Vytvoř novou." });
                 return;
             }
+        }
+
+        // Zabráníme vytvoření "duchů" při rychlém dvojkliku (odstraní starého hráče pro daný socket)
+        if (socket.roomId && socket.playerId && ROOMS[socket.roomId] && ROOMS[socket.roomId].players[socket.playerId]) {
+            delete ROOMS[socket.roomId].players[socket.playerId];
         }
 
         socket.join(roomId);
