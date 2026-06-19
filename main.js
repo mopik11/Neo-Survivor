@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.442'
+    version: 'v1.520'
 };
 
 let achievementsInitialized = false;
@@ -4400,6 +4400,9 @@ function initSocket() {
         NET.socket.on('connect', () => {
             console.warn("CLOUD: Připojeno k hernímu serveru!");
 
+            const discModal = document.getElementById('disconnect-modal');
+            if (discModal) discModal.classList.remove('active');
+
             if (!localStorage.getItem('neoSurvivor_pid')) {
                 myPlayerId = Math.random().toString(36).substr(2, 9);
                 localStorage.setItem('neoSurvivor_pid', myPlayerId);
@@ -4417,6 +4420,18 @@ function initSocket() {
             NET.socket.emit('requestLeaderboard');
             if (NET.serverPollingInterval) window.requestServerList();
 
+        });
+
+        NET.socket.on('connect_error', () => {
+            console.warn("CLOUD: Chyba připojení k serveru!");
+            const discModal = document.getElementById('disconnect-modal');
+            if (discModal) discModal.classList.add('active');
+        });
+
+        NET.socket.on('disconnect', () => {
+            console.warn("CLOUD: Odpojeno od herního serveru!");
+            const discModal = document.getElementById('disconnect-modal');
+            if (discModal) discModal.classList.add('active');
         });
 
         // Game Event Listeners - MOVED OUTSIDE of 'connect' callback to prevent duplicate listeners on reconnect (v1.416)
@@ -5563,7 +5578,10 @@ function init() {
             "s": "s",
             "verze:": "version:",
             "Zatím nemáš žádná emoji. Otevři bednu!": "No emojis yet. Open a crate!",
-            "MÁLO DOGE - ZAVŘÍT": "OUT OF DOGE - CLOSE"
+            "MÁLO DOGE - ZAVŘÍT": "OUT OF DOGE - CLOSE",
+            "Out of Service": "Out of Service",
+            "Server je momentálně nedostupný nebo došlo k odpojení. Zkontroluj prosím své internetové připojení.": "The server is currently unavailable or disconnected. Please check your internet connection.",
+            "Zkusit znovu": "Try Again"
         }
     };
 
