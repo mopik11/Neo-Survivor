@@ -575,11 +575,18 @@ const mergeMeta = (serverMeta) => {
     // 8. Player preferences (settings, autoSelect, selectedLanguage, selectedShip, selectedAbility):
     // Merge server settings to synchronize settings across devices
     if (serverMeta.settings) {
-        if (!META.settings) META.settings = {};
-        Object.assign(META.settings, serverMeta.settings);
+        META.settings.musicMenu = serverMeta.settings.musicMenu === true || serverMeta.settings.musicMenu === "true";
+        META.settings.musicGame = serverMeta.settings.musicGame === true || serverMeta.settings.musicGame === "true";
+        META.settings.sfx = serverMeta.settings.sfx === true || serverMeta.settings.sfx === "true";
+    }
+    if (serverMeta.selectedLanguage) {
+        META.selectedLanguage = serverMeta.selectedLanguage;
+    }
+    if (serverMeta.autoUpgrade !== undefined) {
+        META.autoUpgrade = serverMeta.autoUpgrade === true || serverMeta.autoUpgrade === "true";
     }
     if (serverMeta.autoSelect !== undefined) {
-        META.autoSelect = serverMeta.autoSelect;
+        META.autoSelect = serverMeta.autoSelect === true || serverMeta.autoSelect === "true";
     }
     if (serverMeta.lastDailyGift !== undefined) {
         META.lastDailyGift = serverMeta.lastDailyGift;
@@ -592,10 +599,10 @@ const mergeMeta = (serverMeta) => {
         if (window.setLanguage) window.setLanguage(serverMeta.selectedLanguage);
     }
     if (serverMeta.selectedShip) {
-        META.selectedShip = serverMeta.selectedShip;
+        META.selectedShip = parseInt(serverMeta.selectedShip, 10) || 1;
     }
     if (serverMeta.selectedAbility) {
-        META.selectedAbility = serverMeta.selectedAbility;
+        META.selectedAbility = parseInt(serverMeta.selectedAbility, 10) || 1;
     }
     saveMetaLocalOnly();
 };
