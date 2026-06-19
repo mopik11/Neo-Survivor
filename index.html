@@ -451,13 +451,11 @@
         </div>
       </div>
 
-      <div id="disconnect-modal" class="modal" style="z-index: 99999;">
-        <div class="modal-content" style="max-width: 480px; padding: 3rem 2rem; border: 2px solid #ef4444; background: rgba(15, 23, 42, 0.95); box-shadow: 0 0 40px rgba(239, 68, 68, 0.15); text-align: center;">
-          <div style="font-size: 4rem; margin-bottom: 1.5rem; filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.5));">⚠️</div>
-          <h2 style="color: #f87171; font-size: 2.2rem; margin: 0 0 10px 0; text-shadow: 0 0 15px rgba(239, 68, 68, 0.3);" data-i18n="Out of Service">Out of Service</h2>
-          <p style="color: #94a3b8; font-size: 0.95rem; margin: 0 0 30px 0; line-height: 1.6;" data-i18n="Server je momentálně nedostupný nebo došlo k odpojení. Zkontroluj prosím své internetové připojení.">Server je momentálně nedostupný nebo došlo k odpojení. Zkontroluj prosím své internetové připojení.</p>
-          <button onclick="location.reload()" class="btn-restart" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); border: none; padding: 12px 25px; font-weight: 800; border-radius: 12px; cursor: pointer; color: white;" data-i18n="Zkusit znovu">Zkusit znovu</button>
-        </div>
+      <div id="disconnect-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 999999; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+        <div style="font-size: 6rem; margin-bottom: 1.5rem; filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.5));">⚠️</div>
+        <h1 style="color: #ef4444; font-size: 3rem; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px;">Out of Service</h1>
+        <p style="color: #94a3b8; font-size: 1.2rem; max-width: 600px;">Spojení se serverem bylo přerušeno. Hra je momentálně nedostupná.</p>
+        <button onclick="location.reload()" class="btn-restart" style="margin-top: 30px; background: #ef4444; border: none; padding: 15px 30px; font-weight: 800; border-radius: 12px; cursor: pointer; color: white;" data-i18n="Zkusit znovu">Zkusit znovu</button>
       </div>
 
       <div id="pause-modal" class="modal">

@@ -581,6 +581,12 @@ const mergeMeta = (serverMeta) => {
     if (serverMeta.autoSelect !== undefined) {
         META.autoSelect = serverMeta.autoSelect;
     }
+    if (serverMeta.lastDailyGift !== undefined) {
+        META.lastDailyGift = serverMeta.lastDailyGift;
+    }
+    if (serverMeta.dailyStreak !== undefined) {
+        META.dailyStreak = serverMeta.dailyStreak;
+    }
     if (serverMeta.selectedLanguage) {
         META.selectedLanguage = serverMeta.selectedLanguage;
         if (window.setLanguage) window.setLanguage(serverMeta.selectedLanguage);
@@ -591,6 +597,7 @@ const mergeMeta = (serverMeta) => {
     if (serverMeta.selectedAbility) {
         META.selectedAbility = serverMeta.selectedAbility;
     }
+    saveMetaLocalOnly();
 };
 
 const GAME = {
@@ -3272,6 +3279,7 @@ window.claimAchievement = function(id) {
         // Optimistic UI
         if (!META.claimedAchievements) META.claimedAchievements = {};
         META.claimedAchievements[id] = true;
+        saveMetaLocalOnly(); // Prevent F5 exploit/bug
         showAchievementsMenu();
     } else {
         if (!META.claimedAchievements) META.claimedAchievements = {};
@@ -4401,7 +4409,7 @@ function initSocket() {
             console.warn("CLOUD: Připojeno k hernímu serveru!");
 
             const discModal = document.getElementById('disconnect-modal');
-            if (discModal) discModal.classList.remove('active');
+            if (discModal) discModal.style.display = 'none';
 
             if (!localStorage.getItem('neoSurvivor_pid')) {
                 myPlayerId = Math.random().toString(36).substr(2, 9);
@@ -4425,13 +4433,13 @@ function initSocket() {
         NET.socket.on('connect_error', () => {
             console.warn("CLOUD: Chyba připojení k serveru!");
             const discModal = document.getElementById('disconnect-modal');
-            if (discModal) discModal.classList.add('active');
+            if (discModal) discModal.style.display = 'flex';
         });
 
         NET.socket.on('disconnect', () => {
             console.warn("CLOUD: Odpojeno od herního serveru!");
             const discModal = document.getElementById('disconnect-modal');
-            if (discModal) discModal.classList.add('active');
+            if (discModal) discModal.style.display = 'flex';
         });
 
         // Game Event Listeners - MOVED OUTSIDE of 'connect' callback to prevent duplicate listeners on reconnect (v1.416)
@@ -4531,6 +4539,16 @@ function initSocket() {
             }
             
             NET.socket.emit('upgradePicked');
+        });
+
+        NET.socket.on('dailyGiftClaimed', (data) => {
+            if (typeof showCurrencyNotification === 'function') {
+                showCurrencyNotification(data.amount, `DENNÍ ODMĚNA (${data.streak}. DEN)`);
+            }
+            if (typeof updateDailyGiftUI === 'function') {
+                updateDailyGiftUI();
+            }
+            saveMetaLocalOnly();
         });
 
         NET.socket.on('killConfirmed', (data) => {
