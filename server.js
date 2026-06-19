@@ -1,4 +1,4 @@
-require('dotenv').config(); // <-- PŘIDÁNO: Načtení .env souboru
+require('dotenv').config({ path: __dirname + '/.env' }); // Pojistka na absolutní cestu
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -47,15 +47,25 @@ const Security = {
 
     verifyPassword: (password, hash) => {
         return new Promise((resolve, reject) => {
-            if (!hash.includes(':')) {
-                // Zpětná kompatibilita pro plain-text hesla
-                resolve(password === hash);
+            if (!hash) {
+                resolve(false);
                 return;
             }
-            const [salt, key] = hash.split(':');
-            crypto.scrypt(password, salt, 64, (err, derivedKey) => {
+            
+            // Očištění hashe od neviditelných znaků (CRLF z Windows), uvozovek a mezer
+            const cleanHash = hash.replace(/['"\r\n]/g, '').trim(); 
+            
+            if (!cleanHash.includes(':')) {
+                // Zpětná kompatibilita pro plain-text hesla
+                resolve(password === cleanHash);
+                return;
+            }
+            
+            const [salt, key] = cleanHash.split(':');
+            crypto.scrypt(password, salt.trim(), 64, (err, derivedKey) => {
                 if (err) reject(err);
-                resolve(key === derivedKey.toString('hex'));
+                // Striktní porovnání očištěných klíčů
+                resolve(key.trim() === derivedKey.toString('hex'));
             });
         });
     },
@@ -1965,4 +1975,4 @@ setInterval(() => {
 }, 33);
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server bezi na portu ${PORT}`));
+server.listen(PORT, () => console.log(`Server běží na portu ${PORT}`));
