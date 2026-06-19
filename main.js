@@ -5735,8 +5735,31 @@ function init() {
                     if (res.token) NET.sessionToken = res.token;
                     META.playerName = savedUser;
                     
-                    if (res.meta) mergeMeta(res.meta);
-                    // Immediately sync our (potentially newer) local settings up to the server
+                    if (res.meta) {
+                        // SNAPSHOT local preferences BEFORE merge – server must NEVER overwrite these
+                        const localPrefs = {
+                            musicMenu:       localStorage.getItem('neoSurvivor_musicMenu'),
+                            musicGame:       localStorage.getItem('neoSurvivor_musicGame'),
+                            sfx:             localStorage.getItem('neoSurvivor_sfx'),
+                            autoSelect:      localStorage.getItem('neoSurvivor_autoSelect'),
+                            selectedShip:    localStorage.getItem('neoSurvivor_selectedShip'),
+                            selectedAbility: localStorage.getItem('neoSurvivor_selectedAbility'),
+                            lang:            localStorage.getItem('neoSurvivor_lang'),
+                        };
+
+                        mergeMeta(res.meta);
+
+                        // RESTORE local preferences – override whatever mergeMeta wrote
+                        if (localPrefs.musicMenu       !== null) META.settings.musicMenu   = (localPrefs.musicMenu   !== 'false');
+                        if (localPrefs.musicGame       !== null) META.settings.musicGame   = (localPrefs.musicGame   !== 'false');
+                        if (localPrefs.sfx             !== null) META.settings.sfx         = (localPrefs.sfx         !== 'false');
+                        if (localPrefs.autoSelect      !== null) META.autoSelect            = (localPrefs.autoSelect  === 'true');
+                        if (localPrefs.selectedShip    !== null) META.selectedShip          = parseInt(localPrefs.selectedShip, 10)    || 1;
+                        if (localPrefs.selectedAbility !== null) META.selectedAbility       = parseInt(localPrefs.selectedAbility, 10) || 1;
+                        if (localPrefs.lang            !== null) META.selectedLanguage      = localPrefs.lang;
+                    }
+
+                    // Sync the correct (restored) META back to server
                     if (NET.socket && NET.socket.connected) {
                         NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META, token: NET.sessionToken });
                     }
