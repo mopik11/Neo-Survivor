@@ -454,19 +454,11 @@ const updateCurrencyUI = () => {
 };
 
 const saveMetaLocalOnly = () => {
-    META.metaLastUpdated = Date.now();
-    localStorage.setItem('neoSurvivor_meta', JSON.stringify(META));
-    localStorage.setItem('neoSurvivor_musicMenu', META.settings.musicMenu);
-    localStorage.setItem('neoSurvivor_musicGame', META.settings.musicGame);
-    localStorage.setItem('neoSurvivor_sfx', META.settings.sfx);
-    localStorage.setItem('neoSurvivor_autoSelect', META.autoSelect);
-    localStorage.setItem('neoSurvivor_selectedShip', META.selectedShip);
-    localStorage.setItem('neoSurvivor_selectedAbility', META.selectedAbility);
-    localStorage.setItem('neoSurvivor_lang', META.selectedLanguage);
+    // Cloud-only mode: no localStorage game data – just update UI
     updateCurrencyUI();
 };
 const saveMeta = () => {
-    saveMetaLocalOnly();
+    // Cloud-only: sync directly to server
     const savedUser = localStorage.getItem('neoSurvivor_user');
     const savedPass = localStorage.getItem('neoSurvivor_pass');
 
@@ -477,16 +469,11 @@ const saveMeta = () => {
             NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel, token: NET.sessionToken });
         }
     }
+    updateCurrencyUI();
 };
 
 const loadMeta = () => {
-    const data = localStorage.getItem('neoSurvivor_meta');
-    if (data) {
-        const parsed = JSON.parse(data);
-        Object.assign(META, parsed);
-    }
-    
-    // Default fallback initializations
+    // Cloud-only mode: defaults only – real data comes from server after login
     if (!META.settings) META.settings = { musicMenu: true, musicGame: true, sfx: true };
     if (!META.upgrades) META.upgrades = { hp: 0, speed: 0, luck: 0, regen: 0, armor: 0, hat: null };
     if (!META.ships) META.ships = { 1: true, 2: false, 3: false, 4: false, 5: false };
@@ -496,44 +483,27 @@ const loadMeta = () => {
     if (!META.stats) META.stats = { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0, totalKills: 0, totalMeteoritesDestroyed: 0, totalNukes: 0, totalMagnets: 0, totalGemsCollected: 0 };
     if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
     if (!META.selectedLanguage) META.selectedLanguage = 'cs';
-
-    // Overwrite from individual localStorage keys for absolute local persistence
-    const localMM = localStorage.getItem('neoSurvivor_musicMenu');
-    if (localMM !== null) META.settings.musicMenu = (localMM !== 'false');
-    
-    const localMG = localStorage.getItem('neoSurvivor_musicGame');
-    if (localMG !== null) META.settings.musicGame = (localMG !== 'false');
-    
-    const localSFX = localStorage.getItem('neoSurvivor_sfx');
-    if (localSFX !== null) META.settings.sfx = (localSFX !== 'false');
-    
-    const localAuto = localStorage.getItem('neoSurvivor_autoSelect');
-    if (localAuto !== null) META.autoSelect = (localAuto === 'true');
-    
-    const localShip = localStorage.getItem('neoSurvivor_selectedShip');
-    if (localShip !== null) META.selectedShip = parseInt(localShip, 10) || 1;
-    
-    const localAbility = localStorage.getItem('neoSurvivor_selectedAbility');
-    if (localAbility !== null) META.selectedAbility = parseInt(localAbility, 10) || 1;
-    
-    const localLang = localStorage.getItem('neoSurvivor_lang');
-    if (localLang !== null) META.selectedLanguage = localLang;
-    
+    if (META.selectedShip === undefined) META.selectedShip = 1;
+    if (META.selectedAbility === undefined) META.selectedAbility = 1;
+    if (META.autoSelect === undefined) META.autoSelect = false;
+    if (META.autoUpgrade === undefined) META.autoUpgrade = false;
     updateCurrencyUI();
 };
 
 const mergeMeta = (serverMeta) => {
     if (!serverMeta) return;
 
-    // 1. Currency: server is authoritative
+    // CLOUD-ONLY: Server is fully authoritative for ALL fields
+
+    // 1. Currency
     if (serverMeta.currency !== undefined) META.currency = serverMeta.currency;
     
-    // 2. Max Level: keep the highest
+    // 2. Max Level
     if (serverMeta.maxLevel !== undefined) {
         META.maxLevel = Math.max(META.maxLevel || 1, serverMeta.maxLevel || 1);
     }
     
-    // 3. Stats: keep highest values
+    // 3. Stats: keep highest
     if (serverMeta.stats) {
         if (!META.stats) META.stats = {};
         for (let s in serverMeta.stats) {
@@ -545,66 +515,51 @@ const mergeMeta = (serverMeta) => {
         }
     }
     
-    // 4. Boolean maps (achievements, claimedAchievements, ships, abilities): once true, always true (Union)
+    // 4. Boolean maps: union (once true, always true)
     const unionFields = ['achievements', 'claimedAchievements', 'ships', 'abilities'];
     unionFields.forEach(field => {
         if (serverMeta[field]) {
             if (!META[field]) META[field] = {};
             for (let id in serverMeta[field]) {
-                if (serverMeta[field][id]) {
-                    META[field][id] = true;
-                }
+                if (serverMeta[field][id]) META[field][id] = true;
             }
         }
     });
     
-    // 5. Inventory: server is authoritative
+    // 5. Inventory
     if (serverMeta.inventory) META.inventory = serverMeta.inventory;
     
-    // 6. Upgrades: server is authoritative
+    // 6. Upgrades
     if (serverMeta.upgrades) {
         if (!META.upgrades) META.upgrades = {};
         Object.assign(META.upgrades, serverMeta.upgrades);
     }
     
-    // 7. Unopened Crates: server is authoritative
+    // 7. Unopened Crates
     if (serverMeta.unopenedCrates) {
         if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
         Object.assign(META.unopenedCrates, serverMeta.unopenedCrates);
     }
     
-    // 8. Player preferences: Local storage ALWAYS wins over server unless it's a new PC
+    // 8. Preferences – server is fully authoritative (no localStorage interference)
     if (serverMeta.settings) {
-        if (localStorage.getItem('neoSurvivor_musicMenu') === null) META.settings.musicMenu = serverMeta.settings.musicMenu === true || serverMeta.settings.musicMenu === "true";
-        if (localStorage.getItem('neoSurvivor_musicGame') === null) META.settings.musicGame = serverMeta.settings.musicGame === true || serverMeta.settings.musicGame === "true";
-        if (localStorage.getItem('neoSurvivor_sfx') === null) META.settings.sfx = serverMeta.settings.sfx === true || serverMeta.settings.sfx === "true";
+        META.settings.musicMenu = serverMeta.settings.musicMenu === true || serverMeta.settings.musicMenu === "true";
+        META.settings.musicGame = serverMeta.settings.musicGame === true || serverMeta.settings.musicGame === "true";
+        META.settings.sfx       = serverMeta.settings.sfx       === true || serverMeta.settings.sfx       === "true";
     }
-    if (serverMeta.selectedLanguage && localStorage.getItem('neoSurvivor_lang') === null) {
+    if (serverMeta.selectedLanguage !== undefined) {
         META.selectedLanguage = serverMeta.selectedLanguage;
         if (window.setLanguage) window.setLanguage(serverMeta.selectedLanguage);
     }
-    if (serverMeta.autoUpgrade !== undefined) {
-        META.autoUpgrade = serverMeta.autoUpgrade === true || serverMeta.autoUpgrade === "true";
-    }
-    if (serverMeta.autoSelect !== undefined && localStorage.getItem('neoSurvivor_autoSelect') === null) {
-        META.autoSelect = serverMeta.autoSelect === true || serverMeta.autoSelect === "true";
-    }
-    if (serverMeta.selectedShip && localStorage.getItem('neoSurvivor_selectedShip') === null) {
-        META.selectedShip = parseInt(serverMeta.selectedShip, 10) || 1;
-    }
-    if (serverMeta.selectedAbility && localStorage.getItem('neoSurvivor_selectedAbility') === null) {
-        META.selectedAbility = parseInt(serverMeta.selectedAbility, 10) || 1;
-    }
-    if (serverMeta.metaLastUpdated) {
-        META.metaLastUpdated = serverMeta.metaLastUpdated;
-    }
-    if (serverMeta.lastDailyGift !== undefined) {
-        META.lastDailyGift = serverMeta.lastDailyGift;
-    }
-    if (serverMeta.dailyStreak !== undefined) {
-        META.dailyStreak = serverMeta.dailyStreak;
-    }
-    saveMetaLocalOnly();
+    if (serverMeta.autoUpgrade !== undefined)  META.autoUpgrade  = serverMeta.autoUpgrade  === true || serverMeta.autoUpgrade  === "true";
+    if (serverMeta.autoSelect  !== undefined)  META.autoSelect   = serverMeta.autoSelect   === true || serverMeta.autoSelect   === "true";
+    if (serverMeta.selectedShip    !== undefined) META.selectedShip    = parseInt(serverMeta.selectedShip,    10) || 1;
+    if (serverMeta.selectedAbility !== undefined) META.selectedAbility = parseInt(serverMeta.selectedAbility, 10) || 1;
+    if (serverMeta.metaLastUpdated !== undefined) META.metaLastUpdated = serverMeta.metaLastUpdated;
+    if (serverMeta.lastDailyGift   !== undefined) META.lastDailyGift   = serverMeta.lastDailyGift;
+    if (serverMeta.dailyStreak     !== undefined) META.dailyStreak     = serverMeta.dailyStreak;
+
+    updateCurrencyUI();
 };
 
 const GAME = {
@@ -5735,39 +5690,12 @@ function init() {
                     if (res.token) NET.sessionToken = res.token;
                     META.playerName = savedUser;
                     
-                    if (res.meta) {
-                        // SNAPSHOT local preferences BEFORE merge – server must NEVER overwrite these
-                        const localPrefs = {
-                            musicMenu:       localStorage.getItem('neoSurvivor_musicMenu'),
-                            musicGame:       localStorage.getItem('neoSurvivor_musicGame'),
-                            sfx:             localStorage.getItem('neoSurvivor_sfx'),
-                            autoSelect:      localStorage.getItem('neoSurvivor_autoSelect'),
-                            selectedShip:    localStorage.getItem('neoSurvivor_selectedShip'),
-                            selectedAbility: localStorage.getItem('neoSurvivor_selectedAbility'),
-                            lang:            localStorage.getItem('neoSurvivor_lang'),
-                        };
+                    // Cloud-only: server is fully authoritative, load everything from server
+                    if (res.meta) mergeMeta(res.meta);
 
-                        mergeMeta(res.meta);
-
-                        // RESTORE local preferences – override whatever mergeMeta wrote
-                        if (localPrefs.musicMenu       !== null) META.settings.musicMenu   = (localPrefs.musicMenu   !== 'false');
-                        if (localPrefs.musicGame       !== null) META.settings.musicGame   = (localPrefs.musicGame   !== 'false');
-                        if (localPrefs.sfx             !== null) META.settings.sfx         = (localPrefs.sfx         !== 'false');
-                        if (localPrefs.autoSelect      !== null) META.autoSelect            = (localPrefs.autoSelect  === 'true');
-                        if (localPrefs.selectedShip    !== null) META.selectedShip          = parseInt(localPrefs.selectedShip, 10)    || 1;
-                        if (localPrefs.selectedAbility !== null) META.selectedAbility       = parseInt(localPrefs.selectedAbility, 10) || 1;
-                        if (localPrefs.lang            !== null) META.selectedLanguage      = localPrefs.lang;
-                    }
-
-                    // Sync the correct (restored) META back to server
-                    if (NET.socket && NET.socket.connected) {
-                        NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META, token: NET.sessionToken });
-                    }
-                    
                     if (META.selectedLanguage) window.setLanguage(META.selectedLanguage);
                     if (window.updateSettingUI) window.updateSettingUI();
                     updateMusicVolume();
-                    saveMetaLocalOnly();
                     document.getElementById('display-max-level').innerText = META.maxLevel || 1;
                     updateCurrencyUI();
                 }
