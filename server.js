@@ -1168,6 +1168,7 @@ io.on('connection', (socket) => {
                 // are already correctly set from client data above (lines 1117-1122)
 
                 
+                console.log(`[SYNC] Ukládám pro "${user}": selectedShip=${merged.selectedShip}, selectedAbility=${merged.selectedAbility}, autoSelect=${merged.autoSelect}, musicMenu=${merged.settings?.musicMenu}`);
                 const encryptedMeta = Security.encrypt(JSON.stringify(merged));
                 db.run(`UPDATE accounts SET meta = ? WHERE username = ?`,
                     [encryptedMeta, user],

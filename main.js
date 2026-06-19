@@ -465,15 +465,27 @@ const saveMeta = () => {
     if (savedUser && savedPass) {
         if (!NET.socket) initSocket();
         if (NET.socket) {
-            NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META, token: NET.sessionToken });
+            const payload = { user: savedUser, pass: savedPass, meta: META, token: NET.sessionToken };
+            console.log('[SAVEMETA] Odesílám syncAccount:', {
+                selectedShip: META.selectedShip,
+                selectedAbility: META.selectedAbility,
+                autoSelect: META.autoSelect,
+                musicMenu: META.settings?.musicMenu,
+                musicGame: META.settings?.musicGame,
+                token: NET.sessionToken
+            });
+            NET.socket.emit('syncAccount', payload);
             NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel, token: NET.sessionToken });
         }
+    } else {
+        console.warn('[SAVEMETA] Žádný uložený uživatel – nelze syncovat!');
     }
     updateCurrencyUI();
 };
 
 const loadMeta = () => {
     // Cloud-only mode: defaults only – real data comes from server after login
+    console.log('[LOADMETA] Nastavuji výchozí hodnoty (data přijdou ze serveru po přihlášení)');
     if (!META.settings) META.settings = { musicMenu: true, musicGame: true, sfx: true };
     if (!META.upgrades) META.upgrades = { hp: 0, speed: 0, luck: 0, regen: 0, armor: 0, hat: null };
     if (!META.ships) META.ships = { 1: true, 2: false, 3: false, 4: false, 5: false };
@@ -558,6 +570,15 @@ const mergeMeta = (serverMeta) => {
     if (serverMeta.metaLastUpdated !== undefined) META.metaLastUpdated = serverMeta.metaLastUpdated;
     if (serverMeta.lastDailyGift   !== undefined) META.lastDailyGift   = serverMeta.lastDailyGift;
     if (serverMeta.dailyStreak     !== undefined) META.dailyStreak     = serverMeta.dailyStreak;
+
+    console.log('[MERGEMETA] Po merge:', {
+        selectedShip: META.selectedShip,
+        selectedAbility: META.selectedAbility,
+        autoSelect: META.autoSelect,
+        musicMenu: META.settings?.musicMenu,
+        server_selectedShip: serverMeta.selectedShip,
+        server_autoSelect: serverMeta.autoSelect,
+    });
 
     updateCurrencyUI();
 };
