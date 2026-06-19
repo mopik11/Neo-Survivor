@@ -772,7 +772,7 @@ io.on('connection', (socket) => {
         const user = socket.authenticatedUser;
         if (!user || !data.id || data.token !== socket.sessionToken) return;
 
-        db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+        db.get(`SELECT meta, currency FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err || !row) return;
             let meta;
             try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
@@ -798,14 +798,19 @@ io.on('connection', (socket) => {
 
             if (!meta.claimedAchievements) meta.claimedAchievements = {};
             meta.claimedAchievements[data.id] = true;
-            meta.currency = (meta.currency || 0) + reward;
+            
+            // Místo meta.currency použijeme přesnou databázovou hodnotu
+            const newCurrency = (row.currency || 0) + reward;
+            meta.currency = newCurrency;
+            
             if (!meta.stats) meta.stats = { totalDogecoins: 0 };
             meta.stats.totalDogecoins = (meta.stats.totalDogecoins || 0) + reward;
 
             const encrypted = Security.encrypt(JSON.stringify(meta));
-            db.run(`UPDATE accounts SET meta = ?, currency = ? WHERE username = ?`, [encrypted, meta.currency, user], () => {
+            db.run(`UPDATE accounts SET meta = ?, currency = ? WHERE username = ?`, [encrypted, newCurrency, user], (err) => {
+                if (err) return socket.emit('syncError', "DB Error in claimAchievement: " + err.message);
                 socket.emit('syncSuccess', { meta: meta });
-                socket.emit('currencyUpdated', { amount: meta.currency });
+                socket.emit('currencyUpdated', { amount: newCurrency });
             });
         });
     });

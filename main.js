@@ -4358,7 +4358,7 @@ function initSocket() {
                 row.className = `lb-row ${medalClass}`;
                 const statusDot = p.online ? '<span style="color: #10b981; font-size: 1.2rem; text-shadow: 0 0 5px #10b981;">●</span>' : '<span style="color: #ef4444; font-size: 1.2rem; opacity: 0.5;">●</span>';
                 row.innerHTML = `
-                    <span><span style="display:inline-block; width: 30px;">${rank}</span> <span style="margin-right: 5px;">${statusDot}</span> ${p.name}</span>
+                    <span><span style="display:inline-block; width: 30px;">${rank}</span> ${p.name} <span style="margin-left: 5px;">${statusDot}</span></span>
                     <span>LVL ${p.level}</span>
                 `;
                 list.appendChild(row);
