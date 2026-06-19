@@ -575,7 +575,7 @@ const mergeMeta = (serverMeta) => {
     
     // 8. Player preferences (settings, autoSelect, selectedLanguage, selectedShip, selectedAbility):
     // Merge server settings ONLY if server has newer or equal timestamp (prevents race conditions on fast F5)
-    const shouldSyncSettings = !META.metaLastUpdated || !serverMeta.metaLastUpdated || serverMeta.metaLastUpdated >= META.metaLastUpdated;
+    const shouldSyncSettings = !META.metaLastUpdated || (serverMeta.metaLastUpdated && serverMeta.metaLastUpdated >= META.metaLastUpdated);
     
     if (shouldSyncSettings) {
         if (serverMeta.settings) {
