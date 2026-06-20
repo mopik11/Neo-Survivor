@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.471" />
+    <link rel="stylesheet" href="style.css?v=1.472" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -85,7 +85,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.471
+            NEO SURVIVOR v1.472
           </div>
         </div>
       </div>
@@ -100,16 +100,17 @@
             <span id="daily-timer" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: #fbbf24; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.5); white-space: nowrap; pointer-events: none; opacity: 0.9;"></span>
           </button>
 
-          
-          <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem; letter-spacing: 1px;">
+          <!-- Player Stats -->
+          <div id="menu-player-stats" class="player-stats-card" style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem; letter-spacing: 1px;">
             <span data-i18n="Hráč:">Hráč:</span> <span id="display-player-name" style="color: var(--accent-color); font-weight: bold;">---</span> | <span data-i18n="Nej. Level:">Nej. Level:</span> <span id="display-max-level" style="color: var(--xp-color); font-weight: bold;">0</span> | Doge: <span id="display-doge" style="color: #fbbf24; font-weight: bold;">0</span>
           </div>
-          <div style="font-size: 0.75rem; color: #64748b; margin-top: -0.5rem; margin-bottom: 1.5rem; letter-spacing: 1px;">
+          <!-- Active Players -->
+          <div id="menu-active-players" class="active-players-card" style="font-size: 0.75rem; color: #64748b; margin-top: -0.5rem; margin-bottom: 1.5rem; letter-spacing: 1px;">
              <span data-i18n="Aktivních hráčů online:">Aktivních hráčů online:</span> <span id="active-players-count" style="color: #6366f1; font-weight: bold;">?</span>
           </div>
 
           <div class="menu-sections" style="width: 100%; display: flex; flex-direction: column; gap: 15px;">
-            <div class="menu-group">
+            <div class="menu-group" id="menu-group-game">
               <h3 class="menu-group-title">HRA</h3>
               <div class="menu-actions-row">
                 <button class="btn-restart btn-main desktop-play-btn" id="btn-start"><span>🕹️</span> SOLO</button>
@@ -123,18 +124,17 @@
               </div>
             </div>
 
-            <div class="menu-group">
+            <div class="menu-group" id="menu-group-progression">
               <h3 class="menu-group-title">POSTUP</h3>
               <div class="menu-actions-grid">
                 <button class="btn-restart btn-sub" id="btn-ships-menu" style="background: rgba(16, 185, 129, 0.15);"><span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span></button>
                 <button class="btn-restart btn-sub" id="btn-meta-menu" style="background: rgba(255, 255, 255, 0.05);"><span>🧬</span> <span data-i18n="VYLEPŠENÍ">VYLEPŠENÍ</span></button>
                 <button class="btn-restart btn-sub" id="btn-leaderboard" style="background: rgba(245, 158, 11, 0.15);"><span>🏆</span> <span data-i18n="ŽEBŘÍČEK">ŽEBŘÍČEK</span></button>
                 <button class="btn-restart btn-sub" id="btn-achievements" style="background: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24 !important;"><span>🌟</span> <span data-i18n="ÚSPĚCHY">ÚSPĚCHY</span></button>
-
               </div>
             </div>
 
-            <div class="menu-group">
+            <div class="menu-group" id="menu-group-other">
               <h3 class="menu-group-title">OSTATNÍ</h3>
               <div class="menu-actions-grid secondary">
                 <button class="btn-restart btn-mini" id="btn-tutorial" style="background: rgba(56, 189, 248, 0.1);"><span>📖</span> <span data-i18n="NÁVOD">NÁVOD</span></button>
@@ -145,11 +145,11 @@
             </div>
           </div>
 
-          <div style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-            © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.471
+          <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
+            © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.472
           </div>
 
-          <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; opacity: 0.6; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+          <div id="menu-links" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; opacity: 0.6; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
             <a href="https://freedns.afraid.org/" target="_blank" style="color: #94a3b8; font-size: 0.75rem; text-decoration: none; letter-spacing: 1px; font-weight: bold;">Free DNS</a>
             
             <a href="https://github.com" target="_blank" style="color: #94a3b8; display: flex; align-items: center;" title="GitHub">
@@ -569,6 +569,6 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script type="module" src="./main.js?v=1.471"></script>
+    <script type="module" src="./main.js?v=1.472"></script>
   </body>
 </html>

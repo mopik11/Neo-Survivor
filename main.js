@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.471
+ * NEO SURVIVOR - Core Game Logic - v1.472
  */
 
 window.addEventListener('beforeunload', () => {
@@ -441,7 +441,16 @@ const ACHIEVEMENTS = [
     ];
 
 const formatNumber = (num) => {
-    return (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    const val = Math.abs(num || 0);
+    const sign = (num || 0) < 0 ? "-" : "";
+    if (val < 1000000) {
+        return sign + val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    }
+    const suffixes = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"];
+    const i = Math.floor(Math.log10(val) / 3);
+    if (i >= suffixes.length) return sign + "∞";
+    const formatted = (val / Math.pow(10, i * 3)).toFixed(2);
+    return sign + parseFloat(formatted) + suffixes[i];
 };
 
 const updateCurrencyUI = () => {
@@ -4509,7 +4518,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("NEO SURVIVOR v1.471");
+            console.log("NEO SURVIVOR v1.472");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -5022,7 +5031,7 @@ function handleAuth(isLogin) {
 
                 document.getElementById('display-player-name').innerText = META.playerName;
                 document.getElementById('display-max-level').innerText = META.maxLevel || 1;
-                document.getElementById('display-doge').innerText = META.currency || 0;
+                document.getElementById('display-doge').innerText = formatNumber(META.currency || 0);
                 
                 if (META.selectedLanguage) window.setLanguage(META.selectedLanguage);
                 if (window.updateSettingUI) window.updateSettingUI();
