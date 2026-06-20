@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.470
+ * NEO SURVIVOR - Core Game Logic - v1.471
  */
 
 window.addEventListener('beforeunload', () => {
@@ -4435,8 +4435,10 @@ function initSocket() {
 
         NET.socket.on('connect_error', () => {
             console.warn("CLOUD: Chyba připojení k serveru!");
-            const discModal = document.getElementById('disconnect-modal');
-            if (discModal) discModal.style.display = 'flex';
+            if (NET.isMultiplayer) {
+                const discModal = document.getElementById('disconnect-modal');
+                if (discModal) discModal.style.display = 'flex';
+            }
         });
 
         NET.socket.on('disconnect', (reason) => {
@@ -4444,8 +4446,10 @@ function initSocket() {
             if (reason === 'io client disconnect') {
                 return; // Ignorujeme manuální odpojení
             }
-            const discModal = document.getElementById('disconnect-modal');
-            if (discModal) discModal.style.display = 'flex';
+            if (NET.isMultiplayer) {
+                const discModal = document.getElementById('disconnect-modal');
+                if (discModal) discModal.style.display = 'flex';
+            }
         });
 
         // Game Event Listeners - MOVED OUTSIDE of 'connect' callback to prevent duplicate listeners on reconnect (v1.416)
@@ -4505,7 +4509,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("NEO SURVIVOR v1.470");
+            console.log("NEO SURVIVOR v1.471");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -4847,8 +4851,10 @@ function initSocket() {
 
     } catch (e) {
         console.error("Socket init failed", e);
-        const discModal = document.getElementById('disconnect-modal');
-        if (discModal) discModal.style.display = 'flex';
+        if (NET.isMultiplayer) {
+            const discModal = document.getElementById('disconnect-modal');
+            if (discModal) discModal.style.display = 'flex';
+        }
     }
 }
 
