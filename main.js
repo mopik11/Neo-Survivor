@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.464
+ * NEO SURVIVOR - Core Game Logic - v1.465
  */
 
 window.addEventListener('beforeunload', () => {
@@ -472,6 +472,20 @@ const saveMeta = () => {
         }
         updateCurrencyUI();
     }, 400);
+};
+
+const saveMetaForce = () => {
+    if (_saveMetaTimer) {
+        clearTimeout(_saveMetaTimer);
+        _saveMetaTimer = null;
+    }
+    const savedUser = localStorage.getItem('neoSurvivor_user');
+    const savedPass = localStorage.getItem('neoSurvivor_pass');
+    if (savedUser && savedPass && NET.socket && NET.socket.connected) {
+        NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META, token: NET.sessionToken });
+        NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel, token: NET.sessionToken });
+    }
+    updateCurrencyUI();
 };
 
 
@@ -3470,7 +3484,7 @@ function showShipsMenu() {
         card.onclick = () => {
             if (owned) {
                 META.selectedShip = item.id;
-                saveMeta();
+                saveMetaForce();
                 showShipsMenu();
             } else {
                 // OPTIMISTIC UI: Update locally first
@@ -3515,7 +3529,7 @@ function showShipsMenu() {
         card.onclick = () => {
             if (owned) {
                 META.selectedAbility = item.id;
-                saveMeta();
+                saveMetaForce();
                 showShipsMenu();
             } else {
                 // OPTIMISTIC UI: Update locally first
@@ -4491,7 +4505,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("NEO SURVIVOR v1.464");
+            console.log("NEO SURVIVOR v1.465");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -6059,19 +6073,19 @@ function init() {
     if (document.getElementById('btn-toggle-music-menu')) {
         document.getElementById('btn-toggle-music-menu').onclick = () => {
             META.settings.musicMenu = !META.settings.musicMenu;
-            saveMeta(); updateSettingUI();
+            saveMetaForce(); updateSettingUI();
         };
     }
     if (document.getElementById('btn-toggle-music-game')) {
         document.getElementById('btn-toggle-music-game').onclick = () => {
             META.settings.musicGame = !META.settings.musicGame;
-            saveMeta(); updateSettingUI();
+            saveMetaForce(); updateSettingUI();
         };
     }
     if (document.getElementById('btn-toggle-sfx')) {
         document.getElementById('btn-toggle-sfx').onclick = () => {
             META.settings.sfx = !META.settings.sfx;
-            saveMeta(); updateSettingUI();
+            saveMetaForce(); updateSettingUI();
         };
     }
 
@@ -6079,7 +6093,7 @@ function init() {
     if (chkAuto) {
         chkAuto.onchange = (e) => {
             META.autoSelect = e.target.checked;
-            saveMeta();
+            saveMetaForce();
             updateSettingUI(); // Sync pause menu checkbox if open
         };
     }
@@ -6088,7 +6102,7 @@ function init() {
     if (chkAutoPause) {
         chkAutoPause.onchange = (e) => {
             META.autoSelect = e.target.checked;
-            saveMeta();
+            saveMetaForce();
             updateSettingUI(); // Sync main settings checkbox if open
         };
     }
