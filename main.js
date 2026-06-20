@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.461
+ * NEO SURVIVOR - Core Game Logic - v1.462
  */
 
 window.addEventListener('beforeunload', () => {
@@ -3392,12 +3392,22 @@ function togglePause(isAFK = false, forceState = null) {
 
 function tryFullscreen() {
     const isFS = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullscreenElement || document.msFullscreenElement;
-    if (isFS) return;
+    
+    const lockLandscape = () => {
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(e => console.warn('Orientation lock failed:', e));
+        }
+    };
+
+    if (isFS) {
+        lockLandscape();
+        return;
+    }
 
     try {
         const el = document.documentElement;
         const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-        if (rfs) rfs.call(el).catch(e => {
+        if (rfs) rfs.call(el).then(lockLandscape).catch(e => {
             // Pouze tiché selhání, pokud prohlížeč vyžaduje silnější gesto
         });
     } catch (err) {
@@ -4478,7 +4488,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("NEO SURVIVOR v1.432");
+            console.log("NEO SURVIVOR v1.462");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -5888,8 +5898,21 @@ function init() {
 
     setInterval(() => { if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume(); }, 500);
 
+    function checkAndShowRotateAnimation() {
+        if (window.innerWidth < window.innerHeight && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+            const modal = document.getElementById('rotate-device-modal');
+            if (modal) {
+                modal.classList.add('active');
+                setTimeout(() => {
+                    modal.classList.remove('active');
+                }, 3000);
+            }
+        }
+    }
+
     const btnStart = document.getElementById('btn-start');
     if (btnStart) btnStart.onclick = () => {
+        checkAndShowRotateAnimation();
         NET.isMultiplayer = false;
         tryFullscreen();
         AudioEngine.init(); AudioEngine.stopMenuMusic();
@@ -5909,6 +5932,7 @@ function init() {
 
     const btnMP = document.getElementById('btn-multiplayer');
     if (btnMP) btnMP.onclick = (e) => {
+        checkAndShowRotateAnimation();
         if (e) e.preventDefault();
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('multiplayer-modal').classList.add('active');

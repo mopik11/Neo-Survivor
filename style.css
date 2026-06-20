@@ -1313,4 +1313,22 @@ canvas {
 #gameover-stats span {
     font-weight: 800;
     color: var(--accent-color);
+}
+
+@media (min-width: 900px) {
+  .menu-sections {
+    flex-direction: row !important;
+    justify-content: space-between;
+    align-items: stretch;
+  }
+  .menu-group {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+@keyframes rotatePhone {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(-90deg); }
+  100% { transform: rotate(-90deg); }
 }
