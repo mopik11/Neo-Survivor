@@ -1339,42 +1339,11 @@ canvas {
 }
 
 @media screen and (max-height: 550px) {
-  .modal-content {
+  /* COMPACT OTHER MODALS */
+  .modal-content:not(#menu-modal .modal-content) {
     padding: 0.6rem !important;
     max-height: 98vh !important;
     border-radius: 12px !important;
-  }
-  .menu-sections {
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-    justify-content: center !important;
-  }
-  .menu-group {
-    flex: 1 1 45% !important;
-    min-width: 140px !important;
-    margin-bottom: 2px !important;
-  }
-  .menu-group-title {
-    margin-bottom: 4px !important;
-    font-size: 0.7rem !important;
-  }
-  .setting-group {
-    padding: 4px 8px !important;
-    margin-bottom: 4px !important;
-    font-size: 0.75rem !important;
-  }
-  .btn-restart {
-    padding: 0.4rem 0.6rem !important;
-    font-size: 0.7rem !important;
-  }
-  #menu-modal .logo {
-    font-size: 1.6rem !important;
-    margin-bottom: 0 !important;
-  }
-  #menu-modal .subtitle {
-    font-size: 0.6rem !important;
-    margin-bottom: 0.2rem !important;
   }
   .upgrade-grid, .stats-grid, #ships-grid, #abilities-grid, #achievements-list {
     grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)) !important;
@@ -1423,6 +1392,167 @@ canvas {
   }
   .achievement-info p {
     font-size: 0.6rem !important;
+  }
+
+  /* BRAWL STARS MAIN MENU LAYOUT */
+  #menu-modal {
+    padding: 0 !important;
+  }
+  #menu-modal .modal-content {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: none !important;
+    max-width: none !important;
+    border-radius: 0 !important;
+    padding: 20px !important;
+    position: fixed !important;
+    top: 0; left: 0;
+    overflow: hidden;
+  }
+  
+  #menu-modal .logo {
+    position: absolute !important;
+    top: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    font-size: 2.2rem !important;
+    margin: 0 !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+  #menu-modal .subtitle {
+    position: absolute !important;
+    top: 60px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    font-size: 0.7rem !important;
+    margin: 0 !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+
+  #btn-daily-gift {
+    top: 20px !important;
+    right: 80px !important; /* Make room for settings column */
+    z-index: 10 !important;
+  }
+
+  /* Player Stats */
+  #menu-modal > .modal-content > div:nth-child(4) {
+    position: absolute !important;
+    top: 20px !important;
+    left: 20px !important;
+    margin: 0 !important;
+    text-align: left !important;
+    font-size: 1rem !important;
+    z-index: 10 !important;
+    background: rgba(0,0,0,0.5);
+    padding: 5px 10px;
+    border-radius: 10px;
+  }
+  #menu-modal > .modal-content > div:nth-child(5) {
+    position: absolute !important;
+    top: 60px !important;
+    left: 20px !important;
+    margin: 0 !important;
+    text-align: left !important;
+    font-size: 0.8rem !important;
+    z-index: 10 !important;
+  }
+
+  .menu-sections {
+    display: contents !important;
+  }
+  .menu-group {
+    display: contents !important;
+  }
+  .menu-group-title {
+    display: none !important;
+  }
+
+  /* HRA: Bottom Right */
+  .menu-actions-row {
+    position: absolute !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
+    width: 200px !important;
+    z-index: 10 !important;
+  }
+  .menu-actions-row button {
+    padding: 15px !important;
+    font-size: 1.2rem !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.5) !important;
+    margin: 0 !important;
+    height: auto !important;
+  }
+  #btn-multiplayer {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    border: 2px solid #34d399 !important;
+  }
+
+  /* POSTUP: Left Side */
+  .menu-actions-grid:not(.secondary) {
+    position: absolute !important;
+    bottom: 20px !important;
+    left: 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 160px !important;
+    z-index: 10 !important;
+  }
+  .menu-actions-grid:not(.secondary) button {
+    padding: 10px !important;
+    font-size: 0.85rem !important;
+    text-align: left !important;
+    margin: 0 !important;
+    border-radius: 8px !important;
+    justify-content: flex-start !important;
+  }
+
+  /* OSTATNÍ: Top Right Column */
+  .menu-actions-grid.secondary {
+    position: absolute !important;
+    top: 20px !important;
+    right: 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    z-index: 10 !important;
+  }
+  .menu-actions-grid.secondary button {
+    width: 45px !important;
+    height: 45px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin: 0 !important;
+  }
+  .menu-actions-grid.secondary button span:first-child {
+    font-size: 1.2rem !important;
+    margin: 0 !important;
+  }
+  .menu-actions-grid.secondary button span:last-child {
+    display: none !important;
+  }
+
+  /* Verze */
+  #menu-modal > .modal-content > div:nth-child(7) {
+    position: absolute !important;
+    bottom: 10px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    margin: 0 !important;
+  }
+  /* Odkazy */
+  #menu-modal > .modal-content > div:nth-child(8) {
+    display: none !important;
   }
 }
 
