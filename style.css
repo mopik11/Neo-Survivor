@@ -1464,11 +1464,15 @@ canvas {
     left: 20px !important;
     margin: 0 !important;
     text-align: left !important;
-    font-size: 1rem !important;
+    font-size: 0.85rem !important;
     z-index: 10 !important;
     background: rgba(0,0,0,0.5);
     padding: 5px 10px;
     border-radius: 10px;
+    max-width: 350px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
   #menu-modal > .modal-content > div:nth-child(5) {
     position: absolute !important;
@@ -1476,7 +1480,7 @@ canvas {
     left: 20px !important;
     margin: 0 !important;
     text-align: left !important;
-    font-size: 0.8rem !important;
+    font-size: 0.75rem !important;
     z-index: 10 !important;
   }
 

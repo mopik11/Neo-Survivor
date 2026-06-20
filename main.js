@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.468
+ * NEO SURVIVOR - Core Game Logic - v1.469
  */
 
 window.addEventListener('beforeunload', () => {
@@ -4505,7 +4505,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("NEO SURVIVOR v1.468");
+            console.log("NEO SURVIVOR v1.469");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -5928,16 +5928,38 @@ function init() {
     }
 
     const btnStart = document.getElementById('btn-start');
-    const btnPlayAction = document.getElementById('btn-play-action');
-    const modeSelect = document.getElementById('game-mode-select');
-    if (btnPlayAction && modeSelect) {
-        btnPlayAction.onclick = () => {
-            if (modeSelect.value === 'solo') {
-                document.getElementById('btn-start').click();
+    // Portrait lock logic
+    const portraitOverlay = document.getElementById('portrait-lock-overlay');
+    function checkPortraitLock() {
+        if (!portraitOverlay) return;
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobileDevice && window.innerHeight > window.innerWidth) {
+            portraitOverlay.style.display = 'flex';
+        } else {
+            portraitOverlay.style.display = 'none';
+        }
+    }
+    
+    window.addEventListener('resize', checkPortraitLock);
+    checkPortraitLock(); // initial check
+    
+    if (portraitOverlay) {
+        portraitOverlay.addEventListener('click', () => {
+            let elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().then(() => {
+                    if (screen.orientation && screen.orientation.lock) {
+                        screen.orientation.lock('landscape').catch(e => console.log(e));
+                    }
+                    portraitOverlay.style.display = 'none';
+                }).catch(e => {
+                    console.log(e);
+                    portraitOverlay.style.display = 'none';
+                });
             } else {
-                document.getElementById('btn-multiplayer').click();
+                portraitOverlay.style.display = 'none';
             }
-        };
+        });
     }
 
     if (btnStart) btnStart.onclick = () => {
