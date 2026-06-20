@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.463
+ * NEO SURVIVOR - Core Game Logic - v1.464
  */
 
 window.addEventListener('beforeunload', () => {
@@ -4425,8 +4425,11 @@ function initSocket() {
             if (discModal) discModal.style.display = 'flex';
         });
 
-        NET.socket.on('disconnect', () => {
-            console.warn("CLOUD: Odpojeno od herního serveru!");
+        NET.socket.on('disconnect', (reason) => {
+            console.warn("CLOUD: Odpojeno od herního serveru! Důvod:", reason);
+            if (reason === 'io client disconnect') {
+                return; // Ignorujeme manuální odpojení
+            }
             const discModal = document.getElementById('disconnect-modal');
             if (discModal) discModal.style.display = 'flex';
         });
@@ -4488,7 +4491,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("NEO SURVIVOR v1.463");
+            console.log("NEO SURVIVOR v1.464");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
