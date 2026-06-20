@@ -1338,6 +1338,94 @@ canvas {
   margin-bottom: 0px;
 }
 
+@media screen and (max-height: 550px) {
+  .modal-content {
+    padding: 0.6rem !important;
+    max-height: 98vh !important;
+    border-radius: 12px !important;
+  }
+  .menu-sections {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    justify-content: center !important;
+  }
+  .menu-group {
+    flex: 1 1 45% !important;
+    min-width: 140px !important;
+    margin-bottom: 2px !important;
+  }
+  .menu-group-title {
+    margin-bottom: 4px !important;
+    font-size: 0.7rem !important;
+  }
+  .setting-group {
+    padding: 4px 8px !important;
+    margin-bottom: 4px !important;
+    font-size: 0.75rem !important;
+  }
+  .btn-restart {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.7rem !important;
+  }
+  #menu-modal .logo {
+    font-size: 1.6rem !important;
+    margin-bottom: 0 !important;
+  }
+  #menu-modal .subtitle {
+    font-size: 0.6rem !important;
+    margin-bottom: 0.2rem !important;
+  }
+  .upgrade-grid, .stats-grid, #ships-grid, #abilities-grid, #achievements-list {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)) !important;
+    gap: 4px !important;
+  }
+  .upgrade-card, .achievement-item, .stat-item {
+    padding: 0.4rem !important;
+    min-height: 50px !important;
+  }
+  .upgrade-icon {
+    font-size: 1rem !important;
+    margin-bottom: 0 !important;
+  }
+  .upgrade-card h3 {
+    font-size: 0.7rem !important;
+    margin-bottom: 2px !important;
+  }
+  .upgrade-card p {
+    font-size: 0.55rem !important;
+    margin-bottom: 2px !important;
+  }
+  .upgrade-card span.cost {
+    font-size: 0.6rem !important;
+    margin-top: 2px !important;
+  }
+  .tutorial-card {
+    min-width: 130px !important;
+    padding: 0.5rem !important;
+  }
+  .tutorial-card h3 {
+    font-size: 0.75rem !important;
+  }
+  .tutorial-card p {
+    font-size: 0.6rem !important;
+  }
+  h2 {
+    font-size: 1rem !important;
+    margin-bottom: 0.3rem !important;
+    margin-top: 0.2rem !important;
+  }
+  .achievement-icon {
+    font-size: 1.2rem !important;
+  }
+  .achievement-info h3 {
+    font-size: 0.75rem !important;
+  }
+  .achievement-info p {
+    font-size: 0.6rem !important;
+  }
+}
+
 @keyframes rotatePhone {
   0% { transform: rotate(0deg); }
   50% { transform: rotate(-90deg); }
