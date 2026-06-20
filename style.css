@@ -1509,6 +1509,12 @@ canvas {
     flex-direction: column !important;
     gap: 10px !important;
   }
+  .desktop-play-btn {
+    display: none !important;
+  }
+  .mobile-play-ui {
+    display: block !important;
+  }
   #game-mode-select {
     width: 100%;
     padding: 10px;
