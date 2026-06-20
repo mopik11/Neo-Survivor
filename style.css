@@ -1338,6 +1338,26 @@ canvas {
   margin-bottom: 0px;
 }
 
+#game-mode-select {
+  width: 100%;
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.8);
+  color: white;
+  border: 2px solid var(--accent-color);
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  outline: none;
+  appearance: none;
+  text-align: center;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+#game-mode-select option {
+  background: #0f172a;
+  color: white;
+}
+
 @media screen and (max-height: 550px) {
   /* COMPACT OTHER MODALS */
   .modal-content:not(#menu-modal .modal-content) {
@@ -1461,49 +1481,56 @@ canvas {
   }
 
   .menu-sections {
-    display: contents !important;
+    display: block !important;
+    position: static !important;
   }
   .menu-group {
-    display: contents !important;
+    display: block !important;
+    margin: 0 !important;
   }
   .menu-group-title {
     display: none !important;
   }
 
   /* HRA: Bottom Right */
-  .menu-actions-row {
+  .menu-sections > .menu-group:nth-child(1) {
     position: absolute !important;
     bottom: 20px !important;
     right: 20px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 15px !important;
     width: 200px !important;
     z-index: 10 !important;
   }
-  .menu-actions-row button {
-    padding: 15px !important;
-    font-size: 1.2rem !important;
-    border-radius: 12px !important;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.5) !important;
-    margin: 0 !important;
-    height: auto !important;
-  }
-  #btn-multiplayer {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-    border: 2px solid #34d399 !important;
-  }
-
-  /* POSTUP: Left Side */
-  .menu-actions-grid:not(.secondary) {
-    position: absolute !important;
-    bottom: 20px !important;
-    left: 20px !important;
+  .menu-actions-row {
     display: flex !important;
     flex-direction: column !important;
     gap: 10px !important;
+  }
+  #game-mode-select {
+    width: 100%;
+    padding: 10px;
+    background: rgba(15, 23, 42, 0.8);
+    color: white;
+    border: 2px solid var(--accent-color);
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: bold;
+    outline: none;
+    appearance: none;
+    text-align: center;
+  }
+  
+  /* POSTUP: Left Side */
+  .menu-sections > .menu-group:nth-child(2) {
+    position: absolute !important;
+    bottom: 20px !important;
+    left: 20px !important;
     width: 160px !important;
     z-index: 10 !important;
+  }
+  .menu-actions-grid:not(.secondary) {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
   }
   .menu-actions-grid:not(.secondary) button {
     padding: 10px !important;
@@ -1515,14 +1542,16 @@ canvas {
   }
 
   /* OSTATNÍ: Top Right Column */
-  .menu-actions-grid.secondary {
+  .menu-sections > .menu-group:nth-child(3) {
     position: absolute !important;
     top: 20px !important;
     right: 20px !important;
+    z-index: 10 !important;
+  }
+  .menu-actions-grid.secondary {
     display: flex !important;
     flex-direction: column !important;
     gap: 10px !important;
-    z-index: 10 !important;
   }
   .menu-actions-grid.secondary button {
     width: 45px !important;

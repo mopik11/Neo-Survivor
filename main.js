@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.467
+ * NEO SURVIVOR - Core Game Logic - v1.468
  */
 
 window.addEventListener('beforeunload', () => {
@@ -4505,7 +4505,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("NEO SURVIVOR v1.467");
+            console.log("NEO SURVIVOR v1.468");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -5928,6 +5928,18 @@ function init() {
     }
 
     const btnStart = document.getElementById('btn-start');
+    const btnPlayAction = document.getElementById('btn-play-action');
+    const modeSelect = document.getElementById('game-mode-select');
+    if (btnPlayAction && modeSelect) {
+        btnPlayAction.onclick = () => {
+            if (modeSelect.value === 'solo') {
+                document.getElementById('btn-start').click();
+            } else {
+                document.getElementById('btn-multiplayer').click();
+            }
+        };
+    }
+
     if (btnStart) btnStart.onclick = () => {
         checkAndShowRotateAnimation();
         NET.isMultiplayer = false;
