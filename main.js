@@ -4415,7 +4415,7 @@ function initSocket() {
     // Automatická detekce serveru (lokální vs produkční)
     const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? "http://localhost:3000"
-        : "https://jeanne-unlistening-nondialectally.ngrok-free.dev/";
+        : "http://34.66.74.34:3000";
 
     try {
         NET.socket = io(SERVER_URL, {
@@ -4452,10 +4452,8 @@ function initSocket() {
 
         NET.socket.on('connect_error', () => {
             console.warn("CLOUD: Chyba připojení k serveru!");
-            if (NET.isMultiplayer) {
-                const discModal = document.getElementById('disconnect-modal');
-                if (discModal) discModal.style.display = 'flex';
-            }
+            const discModal = document.getElementById('disconnect-modal');
+            if (discModal) discModal.style.display = 'flex';
         });
 
         NET.socket.on('disconnect', (reason) => {
@@ -4463,10 +4461,8 @@ function initSocket() {
             if (reason === 'io client disconnect') {
                 return; // Ignorujeme manuální odpojení
             }
-            if (NET.isMultiplayer) {
-                const discModal = document.getElementById('disconnect-modal');
-                if (discModal) discModal.style.display = 'flex';
-            }
+            const discModal = document.getElementById('disconnect-modal');
+            if (discModal) discModal.style.display = 'flex';
         });
 
         // Game Event Listeners - MOVED OUTSIDE of 'connect' callback to prevent duplicate listeners on reconnect (v1.416)
@@ -5053,6 +5049,16 @@ function handleAuth(isLogin) {
                 if (!GAME.loopStarted) {
                     GAME.loopStarted = true;
                     requestAnimationFrame(loop);
+                }
+                
+                const params = new URLSearchParams(window.location.search);
+                const roomId = params.get('room');
+                if (roomId && roomId.length === 6) {
+                    if (typeof window.joinCloudServer === 'function') {
+                        window.joinCloudServer(roomId.toUpperCase());
+                    }
+                    const newUrl = window.location.origin + window.location.pathname;
+                    window.history.replaceState({}, document.title, newUrl);
                 }
             } else {
                 console.warn(`[AUTH] ${eventName} failed: ${res.msg}`);
@@ -5710,19 +5716,63 @@ function init() {
             const text = document.getElementById('qr-join-text');
             const confirmBtn = document.getElementById('btn-qr-join-confirm');
             
-            if (modal && text && confirmBtn) {
+            const loggedInDiv = document.getElementById('qr-join-logged-in');
+            const loggedOutDiv = document.getElementById('qr-join-logged-out');
+            const loginBtn = document.getElementById('btn-qr-join-login');
+            const guestBtn = document.getElementById('btn-qr-join-guest');
+            
+            if (modal && text) {
                 text.innerText = window.T("Připojit se k místnosti ") + roomId.toUpperCase() + "?";
                 modal.classList.add('active');
-                
-                confirmBtn.onclick = () => {
-                    modal.classList.remove('active');
-                    if (typeof window.joinCloudServer === 'function') {
-                        window.joinCloudServer(roomId.toUpperCase());
+
+                const savedUser = localStorage.getItem('neoSurvivor_user');
+                if (savedUser) {
+                    if(loggedInDiv) loggedInDiv.style.display = 'flex';
+                    if(loggedOutDiv) loggedOutDiv.style.display = 'none';
+                    if(confirmBtn) {
+                        confirmBtn.onclick = () => {
+                            modal.classList.remove('active');
+                            if (typeof window.joinCloudServer === 'function') {
+                                window.joinCloudServer(roomId.toUpperCase());
+                            }
+                            const newUrl = window.location.origin + window.location.pathname;
+                            window.history.replaceState({}, document.title, newUrl);
+                        };
                     }
-                    // Remove param from URL without refresh
-                    const newUrl = window.location.origin + window.location.pathname;
-                    window.history.replaceState({}, document.title, newUrl);
-                };
+                } else {
+                    if(loggedInDiv) loggedInDiv.style.display = 'none';
+                    if(loggedOutDiv) loggedOutDiv.style.display = 'flex';
+                    
+                    if(loginBtn) {
+                        loginBtn.onclick = () => {
+                            modal.classList.remove('active');
+                            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+                            document.getElementById('login-modal').classList.add('active');
+                        };
+                    }
+                    if(guestBtn) {
+                        guestBtn.onclick = () => {
+                            const guestName = "Guest" + Math.floor(1000 + Math.random() * 9000);
+                            META.playerName = guestName;
+                            
+                            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+                            document.getElementById('menu-modal').classList.add('active');
+                            
+                            if (typeof window.joinCloudServer === 'function') {
+                                window.joinCloudServer(roomId.toUpperCase());
+                            }
+                            const newUrl = window.location.origin + window.location.pathname;
+                            window.history.replaceState({}, document.title, newUrl);
+                            
+                            if (!GAME.loopStarted) {
+                                GAME.loopStarted = true;
+                                requestAnimationFrame(loop);
+                            }
+                            
+                            modal.classList.remove('active');
+                        };
+                    }
+                }
             }
         }
     }

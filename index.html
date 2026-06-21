@@ -468,11 +468,19 @@
 
       <div id="qr-join-modal" class="modal">
         <div class="modal-content" style="max-width: 400px;">
-          <button class="btn-close-x" onclick="document.getElementById('qr-join-modal').classList.remove('active')">×</button>
+          <button class="btn-close-x" onclick="document.getElementById('qr-join-modal').classList.remove('active'); window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);">×</button>
           <div class="modal-body">
             <h2 style="font-size: 2.2rem; color: #10b981; margin-bottom: 1rem;" data-i18n="MÍSTNOST">MÍSTNOST</h2>
             <p id="qr-join-text" style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 25px;">Připojit se k místnosti ABCDEF?</p>
-            <button id="btn-qr-join-confirm" class="btn-restart" style="width:100%; background:#10b981; margin-bottom:10px;" data-i18n="PŘIPOJIT">PŘIPOJIT</button>
+            
+            <div id="qr-join-logged-out" style="display: none; flex-direction: column; gap: 10px;">
+              <button id="btn-qr-join-login" class="btn-restart" style="width:100%; background:#3b82f6; margin-bottom:0;" data-i18n="PŘIHLÁSIT SE">PŘIHLÁSIT SE</button>
+              <button id="btn-qr-join-guest" class="btn-restart" style="width:100%; background:#64748b; margin-bottom:10px;" data-i18n="HRÁT JAKO HOST">HRÁT JAKO HOST</button>
+            </div>
+            
+            <div id="qr-join-logged-in" style="display: none; flex-direction: column; gap: 10px;">
+              <button id="btn-qr-join-confirm" class="btn-restart" style="width:100%; background:#10b981; margin-bottom:10px;" data-i18n="PŘIPOJIT">PŘIPOJIT</button>
+            </div>
           </div>
         </div>
       </div>
