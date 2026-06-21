@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.497'
+    version: 'v1.498'
 };
 
 let achievementsInitialized = false;
@@ -3885,7 +3885,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
                     </svg>
                 </div>
                 
-                <div id="crate-carousel" style="display: flex; gap: ${itemGap}px; width: fit-content; transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1); transform: translateX(0); padding-left: 50%;">
+                <div id="crate-carousel" style="display: flex; gap: ${itemGap}px; width: ${40 * itemWidth}px; box-sizing: content-box; transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1); transform: translateX(0); padding-left: 50%;">
                     ${randomItems.map(item => `
                         <div class="crate-item" style="min-width: ${itemSize}px; height: ${itemSize}px; background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.08); border-bottom: 3px solid ${getRarityColor(item.rarity)}; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
                             <div style="font-size: ${isMobile ? '2.5rem' : '3.5rem'}; filter: drop-shadow(0 0 8px rgba(255,255,255,0.05));">${item.icon}</div>
@@ -4367,6 +4367,10 @@ function resetGame() {
 }
 
 window.softResetToMenu = () => {
+    if (GAME.active && GAME.dogeGained > 0) {
+        addCurrency(GAME.dogeGained);
+        showCurrencyNotification(GAME.dogeGained, "VÝNOS Z BITVY (Ukončeno)");
+    }
     GAME.active = false;
     GAME.paused = false;
     
