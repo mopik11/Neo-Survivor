@@ -1650,11 +1650,11 @@ canvas {
 @media screen and (max-height: 550px) {
   /* COMPACT OTHER MODALS */
   .modal-content:not(#menu-modal .modal-content) {
-    padding: 10px !important;
-    max-height: 98vh !important;
-    width: 95vw !important;
-    max-width: 95vw !important;
-    border-radius: 12px !important;
+    padding: 12px 20px !important;
+    max-height: 95vh !important;
+    width: 85vw !important;
+    max-width: 480px !important;
+    border-radius: 16px !important;
   }
   
   .btn-close-x {
@@ -1976,7 +1976,9 @@ canvas {
     position: absolute !important;
     top: 70px !important;
     right: 15px !important;
-    width: auto !important;
+    width: 224px !important;
+    max-width: calc(100vw - 30px) !important;
+    box-sizing: border-box !important;
     background: rgba(15, 23, 42, 0.95) !important;
     backdrop-filter: blur(10px) !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
@@ -2047,24 +2049,51 @@ canvas {
     margin: 0 !important;
   }
 
-  /* Version text */
-  #menu-version {
+  #menu-footer {
     position: absolute !important;
-    bottom: 10px !important;
+    bottom: 5px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 4px !important;
+    z-index: 100 !important;
+    width: auto !important;
+    pointer-events: auto !important;
+  }
+  
+  #menu-version {
+    position: static !important;
+    transform: none !important;
     margin: 0 !important;
     font-size: 0.6rem !important;
     color: rgba(71, 73, 105, 0.6) !important;
     pointer-events: none;
-    z-index: 1 !important;
+    z-index: auto !important;
+    white-space: nowrap !important;
   }
   
   #menu-links {
-    display: none !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 12px !important;
+    opacity: 0.5 !important;
+    margin: 0 !important;
   }
+  
+  #menu-links svg {
+    height: 12px !important;
+    width: 12px !important;
+  }
+  
+  #menu-links a {
+    font-size: 0.6rem !important;
+  }
+}
 
-/* Premium Settings Toggle Buttons (v1.480) */
+/* Premium Settings Toggle Buttons (v1.480) - Solid Bright Colors for Maximum Distinction */
 .btn-setting-toggle {
   display: flex !important;
   flex-direction: column !important;
@@ -2081,23 +2110,23 @@ canvas {
   box-sizing: border-box !important;
 }
 
-/* Enabled / Active State */
+/* Enabled / Active State - Bright Green */
 .btn-setting-toggle.active {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0.05) 100%) !important;
+  background: #10b981 !important;
   border: 2px solid #10b981 !important;
   color: #fff !important;
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.3) !important;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.5) !important;
 }
 
-/* Disabled / Inactive State */
+/* Disabled / Inactive State - Solid Red */
 .btn-setting-toggle.disabled {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.05) 100%) !important;
+  background: #ef4444 !important;
   border: 2px solid #ef4444 !important;
-  color: #f87171 !important;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.2) !important;
+  color: #fff !important;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.4) !important;
 }
 
-/* Neutral default state */
+/* Neutral default state (Language buttons when inactive) */
 .btn-setting-toggle.neutral {
   background: rgba(255, 255, 255, 0.05) !important;
   border: 2px solid rgba(255, 255, 255, 0.1) !important;
@@ -2105,9 +2134,92 @@ canvas {
   box-shadow: none !important;
 }
 
+/* Neutral Active State (Language buttons when active - Solid Indigo) */
 .btn-setting-toggle.neutral.active {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(99, 102, 241, 0.05) 100%) !important;
+  background: #6366f1 !important;
   border: 2px solid #6366f1 !important;
   color: #fff !important;
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.3) !important;
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.5) !important;
+}
+
+/* Premium Crates & Purchase Buttons Styling (v1.480) */
+.crates-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  width: 100%;
+}
+
+.crate-card {
+  padding: 1.5rem !important;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.crate-card h3 {
+  font-size: 1.15rem !important;
+  margin-bottom: 6px !important;
+}
+
+.btn-bulk {
+  padding: 12px 8px !important;
+  font-size: 0.9rem !important;
+  border-radius: 10px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box;
+}
+
+.btn-bulk:not(.disabled) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+.btn-bulk:not(.disabled):hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 10px rgba(255, 255, 255, 0.1) !important;
+}
+
+.btn-bulk:not(.disabled):active {
+  transform: translateY(0) !important;
+}
+
+.btn-bulk.disabled {
+  background: rgba(239, 68, 68, 0.05) !important;
+  border: 1px solid rgba(239, 68, 68, 0.15) !important;
+  color: #ef4444 !important;
+  cursor: not-allowed !important;
+  opacity: 0.5 !important;
+}
+
+@media (max-width: 950px), (max-height: 550px) {
+  .crates-grid {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)) !important;
+    gap: 8px !important;
+  }
+  
+  .crate-card {
+    padding: 8px !important;
+    min-height: auto !important;
+  }
+  
+  .crate-card h3 {
+    font-size: 0.75rem !important;
+    margin-bottom: 2px !important;
+  }
+  
+  .btn-bulk {
+    padding: 6px 4px !important;
+    font-size: 0.65rem !important;
+    border-radius: 6px !important;
+  }
 }

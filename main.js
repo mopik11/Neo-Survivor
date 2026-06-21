@@ -3660,7 +3660,7 @@ function showMetaMenu() {
     const cratesSection = document.createElement('div');
     cratesSection.innerHTML = `<h2 style="color: #fbbf24; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(251,191,36,0.2); padding-bottom: 5px;">📦 ${window.T('VESMÍRNÉ BEDNY')}</h2>`;
     const cratesGrid = document.createElement('div');
-    cratesGrid.className = 'menu-actions-grid';
+    cratesGrid.className = 'crates-grid';
     cratesSection.appendChild(cratesGrid);
 
     const crateTypes = [
@@ -3671,12 +3671,11 @@ function showMetaMenu() {
 
     crateTypes.forEach(type => {
         const card = document.createElement('div');
-        card.className = 'upgrade-card';
+        card.className = 'upgrade-card crate-card';
         card.style.background = type.color;
         card.style.borderColor = type.border;
         card.style.position = 'relative';
         card.style.zIndex = '5';
-        card.style.paddingBottom = '60px'; 
 
         card.innerHTML = `
             <h3 style="margin-bottom: 2px;">${window.T(type.name)}</h3>
@@ -3685,7 +3684,7 @@ function showMetaMenu() {
             <div class="crate-multipliers" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 5px;">
                 ${[1, 2, 5, 10].map(count => {
                     const canAfford = META.currency >= type.cost * count;
-                    return `<button class="btn-bulk" data-count="${count}" style="background: ${canAfford ? 'rgba(255,255,255,0.05)' : 'rgba(239, 68, 68, 0.05)'}; border: 1px solid ${canAfford ? 'rgba(255,255,255,0.15)' : 'rgba(239, 68, 68, 0.2)'}; color: ${canAfford ? '#fff' : '#ef4444'}; padding: 10px 0; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: ${canAfford ? 'pointer' : 'not-allowed'}; transition: all 0.2s; opacity: ${canAfford ? 1 : 0.5};">${count}x</button>`;
+                    return `<button class="btn-bulk ${canAfford ? '' : 'disabled'}" data-count="${count}">${count}x</button>`;
                 }).join('')}
             </div>
         `;
