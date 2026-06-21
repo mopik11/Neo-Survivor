@@ -3235,29 +3235,25 @@ function showAchievementsMenu() {
         const isClaimed = META.claimedAchievements && META.claimedAchievements[ach.id];
         
         const item = document.createElement('div');
-        item.style.background = isClaimed ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.05)';
-        item.style.padding = '15px';
-        item.style.borderRadius = '12px';
-        item.style.display = 'flex';
-        item.style.alignItems = 'center';
-        item.style.gap = '15px';
-        item.style.border = isUnlocked ? '1px solid rgba(251, 191, 36, 0.4)' : '1px solid rgba(255,255,255,0.1)';
-        if (isClaimed) item.style.opacity = '0.6';
+        let classes = 'achievement-item';
+        if (isUnlocked) classes += ' unlocked';
+        if (isClaimed) classes += ' claimed';
+        item.className = classes;
 
         let claimButton = '';
         if (isUnlocked && !isClaimed) {
             claimButton = `<button class="btn-restart" style="padding: 8px 15px; font-size: 0.75rem; background: #10b981; margin: 0; min-width: 120px;" onclick="window.claimAchievement('${ach.id}')">${window.T('VYDĚLAT:')} ${ach.reward} DOGE</button>`;
         } else if (isClaimed) {
-            claimButton = `<div style="color: #64748b; font-size: 0.75rem; font-weight: 800; text-transform: uppercase;">${window.T('VYDĚLÁNO')} (${ach.reward} DOGE)</div>`;
+            claimButton = `<div style="color: #64748b; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; white-space: nowrap;">${window.T('VYDĚLÁNO')}<br>${ach.reward} DOGE</div>`;
         } else {
-            claimButton = `<div style="color: #475569; font-size: 1.5rem;">🌑</div>`;
+            claimButton = `<div style="color: #334155; font-size: 1.5rem;">🌑</div>`;
         }
 
         item.innerHTML = `
-            <div style="font-size: 2rem; opacity: ${isUnlocked ? 1 : 0.3};">${ach.icon}</div>
-            <div style="flex: 1;">
-                <h3 style="margin: 0; color: ${isUnlocked ? '#fbbf24' : '#94a3b8'}; font-size: 1.1rem;">${window.T(ach.name)}</h3>
-                <p style="margin: 5px 0 0 0; color: #64748b; font-size: 0.85rem;">${window.T(ach.desc)}</p>
+            <div class="achievement-icon" style="opacity: ${isUnlocked ? 1 : 0.25};">${ach.icon}</div>
+            <div class="achievement-info">
+                <h3 style="color: ${isUnlocked ? '#fbbf24' : '#475569'};">${window.T(ach.name)}</h3>
+                <p>${window.T(ach.desc)}</p>
             </div>
             ${claimButton}
         `;
@@ -4485,10 +4481,12 @@ function initSocket() {
 
                 const row = document.createElement('div');
                 row.className = `lb-row ${medalClass}`;
-                const statusDot = p.online ? '<span style="color: #10b981; font-size: 1.2rem; text-shadow: 0 0 5px #10b981;">●</span>' : '<span style="color: #ef4444; font-size: 1.2rem; opacity: 0.5;">●</span>';
+                const isOnline = p.online;
                 row.innerHTML = `
-                    <span><span style="display:inline-block; width: 30px;">${rank}</span> ${p.name} <span style="margin-left: 5px;">${statusDot}</span></span>
-                    <span>LVL ${p.level}</span>
+                    <span class="lb-rank">${rank}</span>
+                    <span class="lb-name">${p.name}</span>
+                    <span class="lb-status" style="background: ${isOnline ? '#10b981' : '#ef4444'}; box-shadow: 0 0 6px ${isOnline ? '#10b981' : 'transparent'};"></span>
+                    <span class="lb-level">LVL ${p.level}</span>
                 `;
                 list.appendChild(row);
             });
@@ -4518,7 +4516,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("=== NEO SURVIVOR v1.478 ===");
+            console.log("=== NEO SURVIVOR v1.479 ===");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
