@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.479" />
+    <link rel="stylesheet" href="style.css?v=1.480" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -85,7 +85,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.479
+            NEO SURVIVOR v1.480
           </div>
         </div>
       </div>
@@ -120,11 +120,24 @@
                 <button class="btn-restart btn-main desktop-play-btn" id="btn-start"><span>🕹️</span> SOLO</button>
                 <button class="btn-restart btn-main btn-mp desktop-play-btn" id="btn-multiplayer"><span>🌐</span> MULTIPLAYER</button>
                 
-                <select id="game-mode-select" class="styled-select mobile-play-ui" style="display: none;">
-                    <option value="solo">🕹️ SOLO</option>
-                    <option value="multiplayer">🌐 MULTIPLAYER</option>
-                </select>
-                <button class="btn-restart btn-main mobile-play-ui" id="btn-play-action" style="display: none; font-size: 1.5rem; padding: 15px 30px; border-radius: 15px; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);"><span>🚀</span> HRÁT</button>
+                 <!-- Hidden real select to maintain JS compatibility -->
+                 <select id="game-mode-select" style="display: none !important;">
+                     <option value="solo">solo</option>
+                     <option value="multiplayer">multiplayer</option>
+                 </select>
+
+                 <!-- Custom dropdown replacement -->
+                 <div class="custom-dropdown mobile-play-ui" id="custom-game-mode-dropdown" style="display: none;">
+                   <div class="dropdown-trigger" id="game-mode-trigger">
+                     <span id="game-mode-label">🕹️ SOLO</span>
+                     <span class="dropdown-arrow"></span>
+                   </div>
+                   <div class="dropdown-options" id="game-mode-options">
+                     <div class="dropdown-option selected" data-value="solo">🕹️ SOLO</div>
+                     <div class="dropdown-option" data-value="multiplayer">🌐 MULTIPLAYER</div>
+                   </div>
+                 </div>
+                 <button class="btn-restart btn-main mobile-play-ui" id="btn-play-action" style="display: none; font-size: 1.5rem; padding: 15px 30px; border-radius: 15px; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);"><span>🚀</span> HRÁT</button>
               </div>
             </div>
 
@@ -150,7 +163,7 @@
           </div>
 
           <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-            © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.479
+            © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.480
           </div>
 
           <div id="menu-links" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; opacity: 0.6; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
@@ -198,23 +211,23 @@
             <div style="width: 100%; margin-bottom: 20px;">
                 <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 10px;" data-i18n="JAZYK / LANGUAGE:">JAZYK / LANGUAGE:</p>
                 <div style="display: flex; gap: 10px;">
-                    <button id="btn-lang-cs" class="btn-restart" style="flex: 1; padding: 0.5rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); font-weight: 800;">CZ</button>
-                    <button id="btn-lang-en" class="btn-restart" style="flex: 1; padding: 0.5rem; background: rgba(255,255,255,0.05); border: none;">EN</button>
+                    <button id="btn-lang-cs" class="btn-restart btn-setting-toggle neutral" style="flex: 1; padding: 0.5rem;">CZ</button>
+                    <button id="btn-lang-en" class="btn-restart btn-setting-toggle neutral" style="flex: 1; padding: 0.5rem;">EN</button>
                 </div>
             </div>
 
             <div style="width: 100%; margin-bottom: 20px;">
                 <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 10px;" data-i18n="ZVUKY A HUDBA:">ZVUKY A HUDBA:</p>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                    <button id="btn-toggle-music-menu" class="btn-restart" style="padding: 0.8rem; background: rgba(255,255,255,0.1); border: none; flex-direction: column; gap: 5px;">
+                    <button id="btn-toggle-music-menu" class="btn-restart btn-setting-toggle">
                       <span style="font-size: 1.2rem;">🏠</span>
                       <span style="font-size: 0.6rem; font-weight: 800;" data-i18n="MENU">MENU</span>
                     </button>
-                    <button id="btn-toggle-music-game" class="btn-restart" style="padding: 0.8rem; background: rgba(255,255,255,0.1); border: none; flex-direction: column; gap: 5px;">
+                    <button id="btn-toggle-music-game" class="btn-restart btn-setting-toggle">
                       <span style="font-size: 1.2rem;">🎮</span>
                       <span style="font-size: 0.6rem; font-weight: 800;" data-i18n="HRA">HRA</span>
                     </button>
-                    <button id="btn-toggle-sfx" class="btn-restart" style="padding: 0.8rem; background: rgba(255,255,255,0.1); border: none; flex-direction: column; gap: 5px;">
+                    <button id="btn-toggle-sfx" class="btn-restart btn-setting-toggle">
                       <span style="font-size: 1.2rem;">🔊</span>
                       <span style="font-size: 0.6rem; font-weight: 800;" data-i18n="SFX">SFX</span>
                     </button>

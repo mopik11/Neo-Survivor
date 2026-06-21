@@ -4516,7 +4516,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("=== NEO SURVIVOR v1.479 ===");
+            console.log("=== NEO SURVIVOR v1.480 ===");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -5716,13 +5716,13 @@ function init() {
     }
 
     const langCs = document.getElementById('btn-lang-cs');
-    if (langCs) langCs.onclick = () => window.setLanguage('cs');
+    if (langCs) langCs.onclick = () => { window.setLanguage('cs'); if (window.updateSettingUI) window.updateSettingUI(); };
     const langEn = document.getElementById('btn-lang-en');
-    if (langEn) langEn.onclick = () => window.setLanguage('en');
+    if (langEn) langEn.onclick = () => { window.setLanguage('en'); if (window.updateSettingUI) window.updateSettingUI(); };
     const langDe = document.getElementById('btn-lang-de');
-    if (langDe) langDe.onclick = () => window.setLanguage('de');
+    if (langDe) langDe.onclick = () => { window.setLanguage('de'); if (window.updateSettingUI) window.updateSettingUI(); };
     const langEs = document.getElementById('btn-lang-es');
-    if (langEs) langEs.onclick = () => window.setLanguage('es');
+    if (langEs) langEs.onclick = () => { window.setLanguage('es'); if (window.updateSettingUI) window.updateSettingUI(); };
     
     window.setLanguage(localStorage.getItem('neoSurvivor_lang') || 'cs');
 
@@ -5952,6 +5952,54 @@ function init() {
             }
         };
     }
+
+    // Custom Dropdown Logic (v1.480)
+    const customDropdown = document.getElementById('custom-game-mode-dropdown');
+    const dropdownTrigger = document.getElementById('game-mode-trigger');
+    const dropdownOptions = document.getElementById('game-mode-options');
+    if (customDropdown && dropdownTrigger && dropdownOptions && modeSelect) {
+        dropdownTrigger.onclick = (e) => {
+            e.stopPropagation();
+            const isOpen = dropdownTrigger.classList.contains('active');
+            if (isOpen) {
+                dropdownTrigger.classList.remove('active');
+                dropdownOptions.classList.remove('show');
+            } else {
+                dropdownTrigger.classList.add('active');
+                dropdownOptions.classList.add('show');
+            }
+        };
+
+        const optionsList = dropdownOptions.querySelectorAll('.dropdown-option');
+        optionsList.forEach(opt => {
+            opt.onclick = (e) => {
+                e.stopPropagation();
+                const value = opt.getAttribute('data-value');
+                
+                // Update hidden select
+                modeSelect.value = value;
+                
+                // Update visual label
+                const labelSpan = document.getElementById('game-mode-label');
+                if (labelSpan) {
+                    labelSpan.innerHTML = opt.innerHTML;
+                }
+                
+                // Update selected class
+                optionsList.forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
+                
+                // Close options list
+                dropdownTrigger.classList.remove('active');
+                dropdownOptions.classList.remove('show');
+            };
+        });
+
+        document.addEventListener('click', () => {
+            dropdownTrigger.classList.remove('active');
+            dropdownOptions.classList.remove('show');
+        });
+    }
     
     // Portrait lock logic
     const portraitOverlay = document.getElementById('portrait-lock-overlay');
@@ -6126,10 +6174,27 @@ function init() {
         const btnMM = document.getElementById('btn-toggle-music-menu');
         const btnMG = document.getElementById('btn-toggle-music-game');
         const btnSFX = document.getElementById('btn-toggle-sfx');
-        if (btnMM) btnMM.style.background = META.settings.musicMenu ? 'rgba(255,255,255,0.1)' : '#ef4444';
-        if (btnMG) btnMG.style.background = META.settings.musicGame ? 'rgba(255,255,255,0.1)' : '#ef4444';
-        if (btnSFX) btnSFX.style.background = META.settings.sfx ? 'rgba(255,255,255,0.1)' : '#ef4444';
+        if (btnMM) {
+            btnMM.classList.toggle('active', !!META.settings.musicMenu);
+            btnMM.classList.toggle('disabled', !META.settings.musicMenu);
+        }
+        if (btnMG) {
+            btnMG.classList.toggle('active', !!META.settings.musicGame);
+            btnMG.classList.toggle('disabled', !META.settings.musicGame);
+        }
+        if (btnSFX) {
+            btnSFX.classList.toggle('active', !!META.settings.sfx);
+            btnSFX.classList.toggle('disabled', !META.settings.sfx);
+        }
         updateMusicVolume();
+        
+        // Sync language buttons active state
+        const btnCs = document.getElementById('btn-lang-cs');
+        const btnEn = document.getElementById('btn-lang-en');
+        const currentLang = localStorage.getItem('neoSurvivor_lang') || 'cs';
+        if (btnCs) btnCs.classList.toggle('active', currentLang === 'cs');
+        if (btnEn) btnEn.classList.toggle('active', currentLang === 'en');
+
         const chkAuto = document.getElementById('chk-autoselect');
         if (chkAuto) chkAuto.checked = !!META.autoSelect;
         const chkAutoPause = document.getElementById('chk-autoselect-pause');
