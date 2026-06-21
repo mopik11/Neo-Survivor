@@ -2724,6 +2724,16 @@ function showBossWarning(name = "", soon = false) {
     }
 }
 
+function getAbilityCooldown() {
+    const ability = META.selectedAbility || 1;
+    if (ability === 1) return 15000;
+    if (ability === 2) return 20000;
+    if (ability === 3) return 25000;
+    if (ability === 4) return 20000;
+    if (ability === 5) return 2000;
+    return 15000;
+}
+
 function updateUI() {
     // Survival time check for achievements
     if (GAME.timer > 0 && GAME.timer % 60 === 0) {
@@ -2736,7 +2746,7 @@ function updateUI() {
     document.getElementById('xp-bar-fill').style.width = `${(p.xp / p.nextLevelXp) * 100}%`;
     document.getElementById('hp-bar-fill').style.width = `${(p.hp / p.maxHp) * 100}%`;
     document.getElementById('kill-count').innerText = GAME.kills;
-    const sRatio = Math.min(1, (Date.now() - GAME.lastSniperTime) / CONFIG.SNIPER_COOLDOWN);
+    const sRatio = Math.min(1, (Date.now() - GAME.lastSniperTime) / getAbilityCooldown());
     const sBar = document.getElementById('sniper-bar');
     if (sBar) sBar.style.width = `${sRatio * 100}%`;
 
@@ -2745,6 +2755,8 @@ function updateUI() {
         if (META.selectedAbility === 1) ultIcon.innerText = "🎯";
         if (META.selectedAbility === 2) ultIcon.innerText = "⏳";
         if (META.selectedAbility === 3) ultIcon.innerText = "👻";
+        if (META.selectedAbility === 4) ultIcon.innerText = "⚕️";
+        if (META.selectedAbility === 5) ultIcon.innerText = "🌀";
     }
 
     if (!p.hasKaktus) {
@@ -3516,7 +3528,8 @@ function showShipsMenu() {
         { id: 1, name: 'Odstřelovač', desc: 'Základní průrazná střela', cost: 0, icon: '🎯' },
         { id: 2, name: 'Zastavení času', desc: 'Znehybní všechny nepřátele na 5s', cost: 800, icon: '⏳' },
         { id: 3, name: 'Posednutí', desc: '10 nejbližších ufounů přejde na tvou stranu', cost: 1200, icon: '👻' },
-        { id: 4, name: 'Léčivá aura', desc: 'Léčíš spoluhráče ve své blízkosti', cost: 1500, icon: '⚕️' }
+        { id: 4, name: 'Léčivá aura', desc: 'Léčíš spoluhráče ve své blízkosti', cost: 1500, icon: '⚕️' },
+        { id: 5, name: 'Portály', desc: 'Vytvoř propojené portály (červený a modrý)', cost: 1800, icon: '🌀' }
     ];
 
     abilities.forEach(item => {
@@ -5923,7 +5936,7 @@ function init() {
         const rect = GAME.canvas.getBoundingClientRect();
         const sx = (e.clientX - rect.left) / GAME.zoom;
         const sy = (e.clientY - rect.top) / GAME.zoom;
-        if (Date.now() - GAME.lastSniperTime >= CONFIG.SNIPER_COOLDOWN) {
+        if (Date.now() - GAME.lastSniperTime >= getAbilityCooldown()) {
             useUltimate(sx, sy);
             GAME.lastSniperTime = Date.now();
         }
@@ -6357,7 +6370,7 @@ function init() {
         const sx = (t.clientX - rect.left) / GAME.zoom;
         const sy = (t.clientY - rect.top) / GAME.zoom;
         if (t.clientX > window.innerWidth / 2) {
-            if (Date.now() - GAME.lastSniperTime >= CONFIG.SNIPER_COOLDOWN) {
+            if (Date.now() - GAME.lastSniperTime >= getAbilityCooldown()) {
                 useUltimate(sx, sy);
                 GAME.lastSniperTime = Date.now();
             }
@@ -6449,6 +6462,20 @@ function useUltimate(cx, cy) {
         if (NET.isMultiplayer && NET.socket && healed.length > 0) {
             NET.socket.emit('useAbility', { type: 'medic' });
             NET.socket.emit('healPlayers', { targets: healed, amount: p.maxHp * 0.5 });
+        }
+    }
+    else if (ability === 5) { // PORTÁLY
+        if (!GAME.portals) GAME.portals = [];
+        const nextColor = GAME.nextPortalColor || 'red';
+        GAME.portals.push({
+            x: p.x,
+            y: p.y,
+            color: nextColor,
+            id: Math.random()
+        });
+        GAME.nextPortalColor = nextColor === 'red' ? 'blue' : 'red';
+        if (GAME.portals.length > 2) {
+            GAME.portals.shift();
         }
     }
 }
@@ -6581,6 +6608,35 @@ function update(dt) {
     if (isNaN(p.x) || isNaN(p.y)) { p.x = 0; p.y = 0; }
     p.update(dt);
     if (isNaN(p.x) || isNaN(p.y)) { p.x = 0; p.y = 0; }
+
+    // Teleport logic
+    if (GAME.portals && GAME.portals.length === 2 && !p.dead) {
+        if (!p.lastTeleportTime) p.lastTeleportTime = 0;
+        if (now - p.lastTeleportTime > 1500) {
+            const p1 = GAME.portals[0];
+            const p2 = GAME.portals[1];
+            const dist1 = dist(p.x, p.y, p1.x, p1.y);
+            const dist2 = dist(p.x, p.y, p2.x, p2.y);
+            const portalRadius = 35;
+            const playerRadius = p.size || 15;
+            
+            if (dist1 < portalRadius + playerRadius) {
+                p.x = p2.x;
+                p.y = p2.y;
+                p.lastTeleportTime = now;
+                playSound('upgrade');
+                if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                GAME.entities.floatingTexts.push(new FloatingText(p.x, p.y - 25, "WOOSH", "#a5b4fc"));
+            } else if (dist2 < portalRadius + playerRadius) {
+                p.x = p1.x;
+                p.y = p1.y;
+                p.lastTeleportTime = now;
+                playSound('upgrade');
+                if (!GAME.entities.floatingTexts) GAME.entities.floatingTexts = [];
+                GAME.entities.floatingTexts.push(new FloatingText(p.x, p.y - 25, "WOOSH", "#a5b4fc"));
+            }
+        }
+    }
 
     if (NET.isMultiplayer && GAME.entities.tombstones && !p.dead) {
         GAME.entities.tombstones.forEach(t => {
@@ -6914,6 +6970,31 @@ function render() {
             if (GAME.entities.baits) GAME.entities.baits.forEach(b => { if (b) b.draw(ctx, { x: camX, y: camY }); });
             if (GAME.entities.tombstones) GAME.entities.tombstones.forEach(t => { if (t) t.draw(ctx, { x: camX, y: camY }); });
             if (GAME.entities.gems) GAME.entities.gems.forEach(g => { if (g) g.draw(ctx, { x: camX, y: camY }); });
+            
+            if (GAME.portals) {
+                GAME.portals.forEach(p => {
+                    if (!p) return;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.ellipse(p.x - camX, p.y - camY, 35, 15, 0, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color === 'red' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(59, 130, 246, 0.4)';
+                    ctx.fill();
+                    ctx.strokeStyle = p.color === 'red' ? '#ef4444' : '#3b82f6';
+                    ctx.lineWidth = 4;
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = ctx.strokeStyle;
+                    ctx.stroke();
+                    
+                    // inner glow
+                    ctx.beginPath();
+                    ctx.ellipse(p.x - camX, p.y - camY, 25, 10, 0, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.restore();
+                });
+            }
+
             if (GAME.entities.projectiles) GAME.entities.projectiles.forEach(p => { if (p) p.draw(ctx, { x: camX, y: camY }); });
             if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => { if (e) e.draw(ctx, { x: camX, y: camY }); });
 
