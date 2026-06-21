@@ -1434,7 +1434,8 @@ canvas {
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    overflow: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
     background: radial-gradient(circle at center, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0.85) 100%) !important;
     box-sizing: border-box !important;
   }
@@ -1613,12 +1614,12 @@ canvas {
   
   #menu-group-progression .menu-actions-grid button {
     display: flex !important;
-    flex-direction: row !important;
+    flex-direction: column !important;
     align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 6px !important;
-    padding: 8px 12px !important;
-    height: 38px !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 6px !important;
+    height: 60px !important;
     font-size: 0.75rem !important;
     font-weight: 800 !important;
     text-align: left !important;
@@ -1636,27 +1637,44 @@ canvas {
     font-size: 1rem !important;
   }
 
-  /* OSTATNÍ (Other) + Daily Gift: Top Right Horizontal Utility Bar */
-  #menu-group-other {
-    position: absolute !important;
+  #btn-hamburger {
+    display: flex !important;
     top: 15px !important;
     right: 15px !important;
-    width: auto !important; /* Fix 100% width inheritance */
-    z-index: 10 !important;
+  }
+  
+  /* OSTATNÍ (Other) + Daily Gift: Top Right Horizontal Utility Bar */
+  #menu-group-other {
+    display: none !important;
+    position: absolute !important;
+    top: 70px !important;
+    right: 15px !important;
+    width: auto !important;
+    background: rgba(15, 23, 42, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
+    z-index: 200 !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+  }
+  
+  #menu-group-other.show-hamburger {
+    display: block !important;
   }
   
   #menu-group-other .menu-actions-grid.secondary {
-    display: grid !important;
-    grid-template-columns: repeat(2, auto) !important;
-    align-items: center !important;
-    gap: 8px !important;
-    width: max-content !important; /* Ensure it wraps tightly */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 200px !important;
   }
   
   #btn-daily-gift {
     position: absolute !important;
     top: 15px !important;
-    right: 250px !important; /* Positioned perfectly to the left of the OSTATNÍ grid */
+    right: 75px !important;
     width: 42px !important;
     height: 42px !important;
     border-radius: 50% !important;

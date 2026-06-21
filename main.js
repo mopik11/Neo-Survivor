@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.474
+ * NEO SURVIVOR - Core Game Logic - v1.475
  */
 
 window.addEventListener('beforeunload', () => {
@@ -4518,7 +4518,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("=== NEO SURVIVOR v1.474 ===");
+            console.log("=== NEO SURVIVOR v1.475 ===");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -6097,6 +6097,14 @@ function init() {
             META.lastMoveTime = Date.now();
         }
     });
+
+    const btnHamburger = document.getElementById('btn-hamburger');
+    if (btnHamburger) {
+        btnHamburger.onclick = () => {
+            const menu = document.getElementById('menu-group-other');
+            if (menu) menu.classList.toggle('show-hamburger');
+        };
+    }
 
     const btnLeaderboard = document.getElementById('btn-leaderboard');
     if (btnLeaderboard) btnLeaderboard.onclick = () => {
