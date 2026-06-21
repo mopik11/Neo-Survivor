@@ -2,10 +2,10 @@
 <html lang="cs">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.486" />
+    <link rel="stylesheet" href="style.css?v=1.487" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -85,7 +85,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.486
+            NEO SURVIVOR v1.487
           </div>
         </div>
       </div>
@@ -95,11 +95,11 @@
           <h1 class="logo">NEO<span>SURVIVOR</span></h1>
           <p class="subtitle">KOSMICKÝ BOJ O PŘEŽITÍ</p>
           
-          <button id="btn-hamburger" class="btn-restart" style="display:none; position: absolute; top: 20px; right: 20px; width: 45px; height: 45px; border-radius: 8px; justify-content: center; align-items: center; font-size: 1.5rem; z-index: 200; padding: 0;">
+          <button id="btn-hamburger" class="btn-restart" style="display:none; position: absolute; top: max(20px, env(safe-area-inset-top)); right: max(20px, env(safe-area-inset-right)); width: 45px; height: 45px; border-radius: 8px; justify-content: center; align-items: center; font-size: 1.5rem; z-index: 200; padding: 0;">
             ☰
           </button>
           
-          <button id="btn-daily-gift" style="display:none; position: absolute; top: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); cursor: pointer; justify-content: center; align-items: center; font-size: 1.8rem; z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+          <button id="btn-daily-gift" style="display:none; position: absolute; top: max(20px, env(safe-area-inset-top)); right: max(20px, env(safe-area-inset-right)); width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); cursor: pointer; justify-content: center; align-items: center; font-size: 1.8rem; z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
             🎁
             <span id="daily-timer" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: #fbbf24; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.5); white-space: nowrap; pointer-events: none; opacity: 0.9;"></span>
           </button>
@@ -169,7 +169,7 @@
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
             <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-              © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.486
+              © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.487
             </div>
 
             <div id="menu-links" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; opacity: 0.6; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
@@ -592,6 +592,6 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script type="module" src="./main.js?v=1.486"></script>
+    <script type="module" src="./main.js?v=1.487"></script>
   </body>
 </html>
