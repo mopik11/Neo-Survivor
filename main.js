@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.522'
+    version: 'v1.495'
 };
 
 let achievementsInitialized = false;
@@ -4415,7 +4415,7 @@ function initSocket() {
     // Automatická detekce serveru (lokální vs produkční)
     const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? "http://localhost:3000"
-        : "http://34.66.74.34:3000";
+        : "http://34.66.74.34:3000/";
 
     try {
         NET.socket = io(SERVER_URL, {
