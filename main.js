@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.472
+ * NEO SURVIVOR - Core Game Logic - v1.473
  */
 
 window.addEventListener('beforeunload', () => {
@@ -4518,7 +4518,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("NEO SURVIVOR v1.472");
+            console.log("=== NEO SURVIVOR v1.473 ===");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));

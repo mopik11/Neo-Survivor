@@ -1635,6 +1635,7 @@ canvas {
     position: absolute !important;
     top: 15px !important;
     right: 15px !important;
+    width: auto !important; /* Fix 100% width inheritance */
     z-index: 10 !important;
   }
   
@@ -1643,6 +1644,7 @@ canvas {
     flex-direction: row !important;
     align-items: center !important;
     gap: 8px !important;
+    width: max-content !important; /* Ensure it wraps tightly */
   }
   
   #btn-daily-gift {
@@ -1665,8 +1667,11 @@ canvas {
   }
   
   #menu-group-other .menu-actions-grid.secondary button {
+    flex: 0 0 42px !important; /* Prevent flex stretching */
     width: 42px !important;
     height: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
     border-radius: 50% !important;
     padding: 0 !important;
     display: flex !important;
