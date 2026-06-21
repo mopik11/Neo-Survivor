@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.496'
+    version: 'v1.467'
 };
 
 let achievementsInitialized = false;
@@ -4415,7 +4415,7 @@ function initSocket() {
     // Automatická detekce serveru (lokální vs produkční)
     const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? "http://localhost:3000"
-        : " https://diffs-hammer-diamonds-assured.trycloudflare.com ";
+        : "https://diffs-hammer-diamonds-assured.trycloudflare.com";
 
     try {
         NET.socket = io(SERVER_URL, {
