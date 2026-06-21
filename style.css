@@ -1441,7 +1441,7 @@ canvas {
   
   #menu-modal .logo {
     position: absolute !important;
-    top: 12px !important;
+    top: 20px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     font-size: 1.8rem !important;
@@ -1455,7 +1455,7 @@ canvas {
   
   #menu-modal .subtitle {
     position: absolute !important;
-    top: 48px !important;
+    top: 56px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     font-size: 0.65rem !important;
@@ -1478,21 +1478,26 @@ canvas {
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     padding: 6px 12px !important;
     border-radius: 12px !important;
-    max-width: 250px !important;
     font-size: 0.75rem !important;
     color: #e2e8f0 !important;
     text-align: left !important;
     z-index: 10 !important;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    max-width: 180px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+    white-space: normal !important;
+  }
+  
+  #menu-player-stats .stat-sep {
+    display: none !important;
   }
   
   /* Active Players Badges */
   #menu-active-players {
     position: absolute !important;
-    top: 55px !important;
+    top: 85px !important;
     left: 15px !important;
     margin: 0 !important;
     background: rgba(99, 102, 241, 0.15) !important;
@@ -1608,6 +1613,7 @@ canvas {
   
   #menu-group-progression .menu-actions-grid button {
     display: flex !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: flex-start !important;
     gap: 6px !important;
@@ -1640,8 +1646,8 @@ canvas {
   }
   
   #menu-group-other .menu-actions-grid.secondary {
-    display: flex !important;
-    flex-direction: row !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, auto) !important;
     align-items: center !important;
     gap: 8px !important;
     width: max-content !important; /* Ensure it wraps tightly */
@@ -1650,7 +1656,7 @@ canvas {
   #btn-daily-gift {
     position: absolute !important;
     top: 15px !important;
-    right: 215px !important; /* Positioned perfectly to the left of the OSTATNÍ row */
+    right: 250px !important; /* Positioned perfectly to the left of the OSTATNÍ grid */
     width: 42px !important;
     height: 42px !important;
     border-radius: 50% !important;
@@ -1667,19 +1673,24 @@ canvas {
   }
   
   #menu-group-other .menu-actions-grid.secondary button {
-    flex: 0 0 42px !important; /* Prevent flex stretching */
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    max-width: 42px !important;
-    border-radius: 50% !important;
-    padding: 0 !important;
     display: flex !important;
-    justify-content: center !important;
+    flex-direction: row !important;
     align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    padding: 8px 12px !important;
+    height: 38px !important;
+    font-size: 0.75rem !important;
+    font-weight: 800 !important;
+    text-align: left !important;
+    border-radius: 8px !important;
     margin: 0 !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
     transition: all 0.2s ease !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: none !important;
   }
   
   #menu-group-other .menu-actions-grid.secondary button:active {
@@ -1687,12 +1698,8 @@ canvas {
   }
   
   #menu-group-other .menu-actions-grid.secondary button span:first-child {
-    font-size: 1.2rem !important;
+    font-size: 1rem !important;
     margin: 0 !important;
-  }
-  
-  #menu-group-other .menu-actions-grid.secondary button span:last-child {
-    display: none !important;
   }
 
   /* Version text */

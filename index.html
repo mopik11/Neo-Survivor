@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.473" />
+    <link rel="stylesheet" href="style.css?v=1.474" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -85,7 +85,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.473
+            NEO SURVIVOR v1.474
           </div>
         </div>
       </div>
@@ -101,8 +101,12 @@
           </button>
 
           <!-- Player Stats -->
-          <div id="menu-player-stats" class="player-stats-card" style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem; letter-spacing: 1px;">
-            <span data-i18n="Hráč:">Hráč:</span> <span id="display-player-name" style="color: var(--accent-color); font-weight: bold;">---</span> | <span data-i18n="Nej. Level:">Nej. Level:</span> <span id="display-max-level" style="color: var(--xp-color); font-weight: bold;">0</span> | Doge: <span id="display-doge" style="color: #fbbf24; font-weight: bold;">0</span>
+          <div id="menu-player-stats" class="player-stats-card" style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem; letter-spacing: 1px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
+            <div class="stat-item"><span data-i18n="Hráč:">Hráč:</span> <span id="display-player-name" style="color: var(--accent-color); font-weight: bold;">---</span></div>
+            <div class="stat-sep">|</div>
+            <div class="stat-item"><span data-i18n="Nej. Level:">Nej. Level:</span> <span id="display-max-level" style="color: var(--xp-color); font-weight: bold;">0</span></div>
+            <div class="stat-sep">|</div>
+            <div class="stat-item">Doge: <span id="display-doge" style="color: #fbbf24; font-weight: bold;">0</span></div>
           </div>
           <!-- Active Players -->
           <div id="menu-active-players" class="active-players-card" style="font-size: 0.75rem; color: #64748b; margin-top: -0.5rem; margin-bottom: 1.5rem; letter-spacing: 1px;">
@@ -146,7 +150,7 @@
           </div>
 
           <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-            © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.473
+            © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.474
           </div>
 
           <div id="menu-links" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; opacity: 0.6; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
@@ -569,6 +573,6 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script type="module" src="./main.js?v=1.473"></script>
+    <script type="module" src="./main.js?v=1.474"></script>
   </body>
 </html>
