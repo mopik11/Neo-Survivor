@@ -4528,7 +4528,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("=== NEO SURVIVOR v1.491 ===");
+            console.log("=== NEO SURVIVOR v1.492 ===");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -5926,6 +5926,7 @@ function init() {
     window.addEventListener('keydown', (e) => {
         if (e.key) GAME.input[e.key.toLowerCase()] = true;
         if (e.key === 'Escape') togglePause(false);
+        if (e.key.toLowerCase() === 'm') GAME.largeMap = !GAME.largeMap;
     });
     window.addEventListener('keyup', (e) => {
         if (e.key) GAME.input[e.key.toLowerCase()] = false;
@@ -7127,19 +7128,20 @@ function render() {
             }
         }
 
-        const mapSize = 150;
+        const isLargeMap = GAME.largeMap;
+        const mapSize = isLargeMap ? Math.min(GAME.canvas.width, GAME.canvas.height) * 0.8 : 150;
         const padding = 20;
-        const startX = GAME.canvas.width - mapSize - padding;
-        const startY = 80;
+        const startX = isLargeMap ? (GAME.canvas.width - mapSize) / 2 : GAME.canvas.width - mapSize - padding;
+        const startY = isLargeMap ? (GAME.canvas.height - mapSize) / 2 : 80;
 
         ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillStyle = isLargeMap ? 'rgba(0, 0, 0, 0.85)' : 'rgba(0, 0, 0, 0.6)';
         ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
         ctx.lineWidth = 2;
         ctx.fillRect(startX, startY, mapSize, mapSize);
         ctx.strokeRect(startX, startY, mapSize, mapSize);
 
-        const viewDist = 4000;
+        const viewDist = isLargeMap ? 15000 : 4000;
         const scale = mapSize / viewDist;
         const pCx = GAME.entities.player.x;
         const pCy = GAME.entities.player.y;
