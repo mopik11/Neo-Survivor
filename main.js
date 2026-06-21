@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.467'
+    version: 'v1.497'
 };
 
 let achievementsInitialized = false;
@@ -650,9 +650,9 @@ const GAME = {
 };
 
 const updateSpeedFactor = () => {
-    const isMobile = window.innerWidth < 850;
+    GAME.isMobile = window.innerWidth < 950 || window.innerHeight < 600 || ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
     GAME.speedFactor = 1.0;
-    GAME.zoom = isMobile ? 0.6 : 1.0;
+    GAME.zoom = GAME.isMobile ? 0.45 : 1.0;
     GAME.joystick.startX = 80;
     GAME.joystick.startY = window.innerHeight - 80;
     if (!GAME.joystick.active) {
@@ -5984,6 +5984,17 @@ function init() {
 
     GAME.canvas.addEventListener('mousedown', (e) => {
         if (!GAME.active || GAME.paused || !GAME.entities.player || GAME.entities.player.dead) return;
+        const isLargeMap = GAME.largeMap;
+        const padding = 15;
+        const mapSize = isLargeMap ? Math.min(GAME.canvas.width, GAME.canvas.height) * 0.8 : 150;
+        const startX = isLargeMap ? (GAME.canvas.width - mapSize) / 2 : GAME.canvas.width - mapSize - padding;
+        const startY = isLargeMap ? (GAME.canvas.height - mapSize) / 2 : 80;
+        
+        if (e.clientX >= startX && e.clientX <= startX + mapSize && e.clientY >= startY && e.clientY <= startY + mapSize) {
+            GAME.largeMap = !GAME.largeMap;
+            return;
+        }
+
         const rect = GAME.canvas.getBoundingClientRect();
         const sx = (e.clientX - rect.left) / GAME.zoom;
         const sy = (e.clientY - rect.top) / GAME.zoom;
@@ -6417,6 +6428,17 @@ function init() {
     GAME.canvas.addEventListener('touchstart', (e) => {
         if (!GAME.active || GAME.paused || !GAME.entities.player || GAME.entities.player.dead) return;
         const t = e.touches[0];
+        const isLargeMap = GAME.largeMap;
+        const padding = 15;
+        const mapSize = isLargeMap ? Math.min(GAME.canvas.width, GAME.canvas.height) * 0.8 : 150;
+        const startX = isLargeMap ? (GAME.canvas.width - mapSize) / 2 : GAME.canvas.width - mapSize - padding;
+        const startY = isLargeMap ? (GAME.canvas.height - mapSize) / 2 : 80;
+        
+        if (t.clientX >= startX && t.clientX <= startX + mapSize && t.clientY >= startY && t.clientY <= startY + mapSize) {
+            GAME.largeMap = !GAME.largeMap;
+            return;
+        }
+
         const rect = GAME.canvas.getBoundingClientRect();
         const sx = (t.clientX - rect.left) / GAME.zoom;
         const sy = (t.clientY - rect.top) / GAME.zoom;
@@ -7326,7 +7348,7 @@ function render() {
         }
     }
 
-    if (window.innerWidth < 850 && GAME.joystick) {
+    if (GAME.isMobile && GAME.joystick) {
         ctx.save(); const sx = GAME.joystick.startX, sy = GAME.joystick.startY, jcx = GAME.joystick.currentX, jcy = GAME.joystick.currentY;
         ctx.beginPath(); ctx.arc(sx, sy, 75, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 2; ctx.stroke();
         ctx.beginPath(); ctx.arc(jcx, jcy, 32, 0, Math.PI * 2); ctx.fillStyle = 'rgba(99, 102, 241, 0.5)'; ctx.shadowBlur = 20; ctx.shadowColor = '#6366f1'; ctx.fill(); ctx.restore();
