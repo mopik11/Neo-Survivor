@@ -1450,6 +1450,16 @@ canvas {
     margin-top: 2px !important;
   }
 
+  }
+}
+
+@keyframes rotatePhone {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(-90deg); }
+  100% { transform: rotate(-90deg); }
+}
+
+@media (max-width: 950px), (max-height: 550px) {
   /* BRAWL STARS MAIN MENU LAYOUT */
   #menu-modal {
     padding: 0 !important;
@@ -1478,10 +1488,10 @@ canvas {
   
   #menu-modal .logo {
     position: absolute !important;
-    top: 20px !important;
+    top: 30px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    font-size: 1.8rem !important;
+    font-size: 3rem !important;
     margin: 0 !important;
     text-align: center !important;
     width: auto !important;
@@ -1492,10 +1502,10 @@ canvas {
   
   #menu-modal .subtitle {
     position: absolute !important;
-    top: 56px !important;
+    top: 80px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    font-size: 0.65rem !important;
+    font-size: 0.8rem !important;
     margin: 0 !important;
     text-align: center !important;
     width: auto !important;
@@ -1771,11 +1781,4 @@ canvas {
   
   #menu-links {
     display: none !important;
-  }
 }
-
-@keyframes rotatePhone {
-  0% { transform: rotate(0deg); }
-  50% { transform: rotate(-90deg); }
-  100% { transform: rotate(-90deg); }
-}
