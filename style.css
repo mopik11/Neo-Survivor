@@ -1361,57 +1361,91 @@ canvas {
 @media screen and (max-height: 550px) {
   /* COMPACT OTHER MODALS */
   .modal-content:not(#menu-modal .modal-content) {
-    padding: 0.6rem !important;
+    padding: 10px !important;
     max-height: 98vh !important;
     border-radius: 12px !important;
   }
+  
+  .btn-close-x {
+    top: 5px !important;
+    right: 5px !important;
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 1.2rem !important;
+    line-height: 28px !important;
+  }
+
+  /* Specific settings modal optimizations */
+  #settings-modal .modal-body > div {
+    margin-bottom: 6px !important;
+  }
+  #settings-modal p {
+    font-size: 0.75rem !important;
+    margin-bottom: 5px !important;
+  }
+  #settings-modal .btn-restart {
+    padding: 6px 10px !important;
+    font-size: 0.75rem !important;
+    height: auto !important;
+    min-width: 0 !important;
+  }
+  #settings-modal .setting-item {
+    padding: 6px 10px !important;
+  }
+
+  /* Shared compact grids for Ships, Upgrades, Achievements */
   .upgrade-grid, .stats-grid, #ships-grid, #abilities-grid, #achievements-list {
     grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)) !important;
     gap: 4px !important;
   }
   .upgrade-card, .achievement-item, .stat-item {
-    padding: 0.4rem !important;
-    min-height: 50px !important;
+    padding: 6px !important;
+    min-height: auto !important;
   }
-  .upgrade-icon {
-    font-size: 1rem !important;
-    margin-bottom: 0 !important;
+  .upgrade-icon, .achievement-icon {
+    font-size: 1.1rem !important;
+    margin-bottom: 2px !important;
   }
-  .upgrade-card h3 {
+  .upgrade-card h3, .achievement-info h3 {
     font-size: 0.7rem !important;
     margin-bottom: 2px !important;
   }
-  .upgrade-card p {
+  .upgrade-card p, .achievement-info p {
     font-size: 0.55rem !important;
     margin-bottom: 2px !important;
+    line-height: 1.1 !important;
   }
-  .upgrade-card span.cost {
+  .upgrade-card span.cost, .btn-buy {
     font-size: 0.6rem !important;
     margin-top: 2px !important;
+    padding: 4px !important;
+  }
+  
+  /* Tutorial / Manual optimizations */
+  #tutorial-modal .modal-body > div {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+    gap: 8px !important;
+    padding-bottom: 10px !important;
   }
   .tutorial-card {
-    min-width: 130px !important;
-    padding: 0.5rem !important;
+    min-width: 0 !important;
+    padding: 8px !important;
+    border-radius: 8px !important;
   }
   .tutorial-card h3 {
     font-size: 0.75rem !important;
+    margin-bottom: 4px !important;
   }
-  .tutorial-card p {
-    font-size: 0.6rem !important;
+  .tutorial-card p, .tutorial-card ul, .tutorial-card li {
+    font-size: 0.65rem !important;
+    margin-bottom: 2px !important;
+    line-height: 1.2 !important;
   }
+  
   h2 {
-    font-size: 1rem !important;
-    margin-bottom: 0.3rem !important;
-    margin-top: 0.2rem !important;
-  }
-  .achievement-icon {
     font-size: 1.2rem !important;
-  }
-  .achievement-info h3 {
-    font-size: 0.75rem !important;
-  }
-  .achievement-info p {
-    font-size: 0.6rem !important;
+    margin-bottom: 8px !important;
+    margin-top: 2px !important;
   }
 
   /* BRAWL STARS MAIN MENU LAYOUT */
