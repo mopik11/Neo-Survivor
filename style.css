@@ -244,14 +244,22 @@ canvas {
   max-width: 650px;
   width: 90vw;
   max-height: 87vh;
-  overflow-y: auto;
   text-align: center;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(99, 102, 241, 0.4) transparent;
   transform: scale(0.94) translateY(24px);
   transition: transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
   position: relative;
   z-index: 2;
+}
+
+.modal-body {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.4) transparent;
+  padding-right: 5px;
 }
 
 .modal.active .modal-content {
@@ -1668,7 +1676,7 @@ canvas {
 
 @media screen and (max-height: 550px) {
   /* COMPACT OTHER MODALS */
-  .modal-content:not(#menu-modal .modal-content) {
+  .modal-content:not(.brawl-stars-menu) {
     padding: 12px 20px !important;
     max-height: 95vh !important;
     width: 85vw !important;
@@ -1780,7 +1788,7 @@ canvas {
     align-items: center !important;
   }
   
-  #menu-modal .modal-content {
+  .modal-content {
     width: 100vw !important;
     height: 100vh !important;
     max-height: 100vh !important;
@@ -1790,11 +1798,15 @@ canvas {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
+    overflow-y: hidden !important;
+    background: radial-gradient(circle at center, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0.85) 100%) !important;
+  }
+
+  /* Make sure modal bodies scroll properly on mobile */
+  .modal-body {
+    padding-bottom: 30px !important; /* give space at bottom for buttons */
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
-    background: radial-gradient(circle at center, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0.85) 100%) !important;
     box-sizing: border-box !important;
   }
   

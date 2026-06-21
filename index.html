@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.483" />
+    <link rel="stylesheet" href="style.css?v=1.484" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -85,7 +85,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.483
+            NEO SURVIVOR v1.484
           </div>
         </div>
       </div>
@@ -169,7 +169,7 @@
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
             <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-              © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.483
+              © 2026 mopik11, cenek | <span data-i18n="verze:">verze:</span> 1.484
             </div>
 
             <div id="menu-links" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; opacity: 0.6; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
@@ -249,11 +249,11 @@
                  </div>
             </div>
 
-            <div style="width: 100%; padding-top: 10px;">
-                <p style="color: #ef4444; font-size: 0.8rem; margin-bottom: 10px;" data-i18n="NEBEZPEČNÁ ZÓNA:">NEBEZPEČNÁ ZÓNA:</p>
-                <button id="btn-reset-progress" class="btn-restart" style="width: 100%; background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #fca5a5; white-space: normal; font-size: 1rem; padding: 0.8rem 1rem;" data-i18n="ODHLÁSIT SE A SMAZAT POSTUP">ODHLÁSIT SE A SMAZAT POSTUP</button>
             </div>
-
+          </div>
+          <div style="width: 100%; padding-top: 10px; margin-top: auto; padding-bottom: 10px; flex-shrink: 0;">
+              <p style="color: #ef4444; font-size: 0.8rem; margin-bottom: 10px;" data-i18n="NEBEZPEČNÁ ZÓNA:">NEBEZPEČNÁ ZÓNA:</p>
+              <button id="btn-reset-progress" class="btn-restart" style="width: 100%; background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #fca5a5; white-space: normal; font-size: 1rem; padding: 0.8rem 1rem;" data-i18n="ODHLÁSIT SE A SMAZAT POSTUP">ODHLÁSIT SE A SMAZAT POSTUP</button>
           </div>
         </div>
       </div>
@@ -292,10 +292,9 @@
                   <input type="text" id="input-join-id" placeholder="ZADEJ KÓD...">
                   <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart btn-join">PŘIPOJIT</button>
               </div>
-              
-              <button onclick="showHostModal()" class="btn-restart" style="width: 100%; background: #a855f7; margin-top: 10px;">ZALOŽIT NOVOU MÍSTNOST</button>
             </div>
           </div>
+          <button onclick="showHostModal()" class="btn-restart" style="width: 100%; background: #a855f7; margin-top: 15px; flex-shrink: 0;">ZALOŽIT NOVOU MÍSTNOST</button>
         </div>
       </div>
 
@@ -313,11 +312,11 @@
                 </div>
                 <button id="btn-copy-code" class="btn-restart" style="width: 100%; padding: 12px; font-size: 0.9rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">📋 KOPÍROVAT KÓD</button>
             </div>
-
-            <div class="menu-actions" style="width: 100%;">
-                <button id="btn-start-hosted" class="btn-restart" style="width: 100%; background: #10b981;">🚀 VSTOUPIT DO HRY</button>
-                <button onclick="document.getElementById('host-modal').classList.remove('active'); document.getElementById('multiplayer-modal').classList.add('active');" class="btn-restart" style="width: 100%; background: rgba(255,255,255,0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZRUŠIT</button>
-            </div>
+          </div>
+          
+          <div class="menu-actions" style="width: 100%; margin-top: auto; padding-top: 15px; flex-shrink: 0;">
+              <button id="btn-start-hosted" class="btn-restart" style="width: 100%; background: #10b981;">🚀 VSTOUPIT DO HRY</button>
+              <button onclick="document.getElementById('host-modal').classList.remove('active'); document.getElementById('multiplayer-modal').classList.add('active');" class="btn-restart" style="width: 100%; background: rgba(255,255,255,0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZRUŠIT</button>
           </div>
         </div>
       </div>
@@ -338,8 +337,8 @@
           <div class="modal-body">
             <h2 style="font-size: 3.5rem; color: var(--xp-color); text-shadow: 0 0 30px var(--xp-color);">LEVEL UP!</h2>
             <div id="upgrade-options" class="upgrade-grid"></div>
-            <button class="btn-restart" id="btn-random-upgrade" style="margin-top: 2rem; background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4);">🎲 NÁHODNÝ VÝBĚR</button>
           </div>
+          <button class="btn-restart" id="btn-random-upgrade" style="margin-top: auto; padding-top: 15px; flex-shrink: 0; background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4);">🎲 NÁHODNÝ VÝBĚR</button>
         </div>
       </div>
 
@@ -593,6 +592,6 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script type="module" src="./main.js?v=1.478"></script>
+    <script type="module" src="./main.js?v=1.484"></script>
   </body>
 </html>

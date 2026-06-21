@@ -4515,7 +4515,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("=== NEO SURVIVOR v1.483 ===");
+            console.log("=== NEO SURVIVOR v1.484 ===");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -5755,11 +5755,16 @@ function init() {
                     updateMusicVolume();
                     document.getElementById('display-max-level').innerText = META.maxLevel || 1;
                     updateCurrencyUI();
+                    checkAndShowRotateAnimation();
                 }
             });
         }
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('menu-modal').classList.add('active');
+
+        if (typeof checkAndShowRotateAnimation === 'function') {
+            checkAndShowRotateAnimation();
+        }
 
         GAME.loopStarted = true;
         requestAnimationFrame(loop);
@@ -5952,7 +5957,7 @@ function init() {
         };
     }
 
-    // Custom Dropdown Logic (v1.483)
+    // Custom Dropdown Logic (v1.484)
     const customDropdown = document.getElementById('custom-game-mode-dropdown');
     const dropdownTrigger = document.getElementById('game-mode-trigger');
     const dropdownOptions = document.getElementById('game-mode-options');
@@ -6004,8 +6009,11 @@ function init() {
     const portraitOverlay = document.getElementById('portrait-lock-overlay');
     function checkPortraitLock() {
         if (!portraitOverlay) return;
+        const loginModal = document.getElementById('login-modal');
+        const isLoginVisible = loginModal && loginModal.classList.contains('active');
+        
         const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (isMobileDevice && window.innerHeight > window.innerWidth) {
+        if (isMobileDevice && window.innerHeight > window.innerWidth && !isLoginVisible) {
             portraitOverlay.style.display = 'flex';
         } else {
             portraitOverlay.style.display = 'none';
@@ -6035,7 +6043,6 @@ function init() {
     }
 
     if (btnStart) btnStart.onclick = () => {
-        checkAndShowRotateAnimation();
         NET.isMultiplayer = false;
         tryFullscreen();
         AudioEngine.init(); AudioEngine.stopMenuMusic();
@@ -6055,7 +6062,6 @@ function init() {
 
     const btnMP = document.getElementById('btn-multiplayer');
     if (btnMP) btnMP.onclick = (e) => {
-        checkAndShowRotateAnimation();
         if (e) e.preventDefault();
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('multiplayer-modal').classList.add('active');
