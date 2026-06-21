@@ -1675,15 +1675,7 @@ canvas {
 }
 
 @media screen and (max-height: 550px) {
-  /* COMPACT OTHER MODALS */
-  .modal-content:not(.brawl-stars-menu) {
-    padding: 12px 20px !important;
-    max-height: 95vh !important;
-    width: 85vw !important;
-    max-width: 480px !important;
-    border-radius: 16px !important;
-  }
-  
+  /* Specific settings modal optimizations */
   .btn-close-x {
     top: 5px !important;
     right: 5px !important;
