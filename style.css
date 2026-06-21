@@ -1544,7 +1544,7 @@ canvas {
   margin-bottom: 0px;
 }
 
-/* Custom Dropdown Styling (v1.480) */
+/* Custom Dropdown Styling (v1.482) */
 .custom-dropdown {
   position: relative;
   width: 100%;
@@ -1966,8 +1966,26 @@ canvas {
 
   #btn-hamburger {
     display: flex !important;
+    position: absolute !important;
     top: 15px !important;
     right: 15px !important;
+    width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    background: rgba(99, 102, 241, 0.15) !important;
+    border: 1px solid rgba(99, 102, 241, 0.3) !important;
+    border-radius: 10px !important;
+    color: #fff !important;
+    justify-content: center !important;
+    align-items: center !important;
+    font-size: 1.5rem !important;
+    z-index: 1000 !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.2s ease !important;
+  }
+  
+  #btn-hamburger:active {
+    transform: scale(0.9) !important;
   }
   
   /* OSTATNÍ (Other) + Daily Gift: Top Right Horizontal Utility Bar */
@@ -2093,7 +2111,7 @@ canvas {
   }
 }
 
-/* Premium Settings Toggle Buttons (v1.480) - Solid Bright Colors for Maximum Distinction */
+/* Premium Settings Toggle Buttons (v1.482) - Solid Bright Colors for Maximum Distinction */
 .btn-setting-toggle {
   display: flex !important;
   flex-direction: column !important;
@@ -2142,7 +2160,7 @@ canvas {
   box-shadow: 0 0 15px rgba(99, 102, 241, 0.5) !important;
 }
 
-/* Premium Crates & Purchase Buttons Styling (v1.480) */
+/* Premium Crates & Purchase Buttons Styling (v1.482) */
 .crates-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2222,4 +2240,12 @@ canvas {
     font-size: 0.65rem !important;
     border-radius: 6px !important;
   }
+}
+
+/* Premium Feedback Form Glow Focus (v1.482) */
+#feedback-text:focus {
+  border-color: rgba(236, 72, 153, 0.5) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 0 30px rgba(236, 72, 153, 0.15), inset 0 2px 10px rgba(0,0,0,0.2) !important;
+  transform: translateY(-1px) !important;
 }
