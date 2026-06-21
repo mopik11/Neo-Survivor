@@ -4515,7 +4515,7 @@ function initSocket() {
 
         NET.socket.on('joined', (data) => {
             const { roomId, playerState } = data;
-            console.log("=== NEO SURVIVOR v1.482 ===");
+            console.log("=== NEO SURVIVOR v1.483 ===");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -5952,7 +5952,7 @@ function init() {
         };
     }
 
-    // Custom Dropdown Logic (v1.482)
+    // Custom Dropdown Logic (v1.483)
     const customDropdown = document.getElementById('custom-game-mode-dropdown');
     const dropdownTrigger = document.getElementById('game-mode-trigger');
     const dropdownOptions = document.getElementById('game-mode-options');

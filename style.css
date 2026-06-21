@@ -428,6 +428,25 @@ canvas {
   width: 100%;
 }
 
+#menu-player-stats {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  margin-bottom: 1rem;
+  letter-spacing: 1px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+}
+#menu-player-stats .stat-item-val {
+  display: inline-block;
+}
+#menu-player-stats .stat-sep {
+  color: #334155;
+  font-weight: bold;
+}
+
 .menu-group {
   display: flex;
   flex-direction: column;
@@ -1544,7 +1563,7 @@ canvas {
   margin-bottom: 0px;
 }
 
-/* Custom Dropdown Styling (v1.482) */
+/* Custom Dropdown Styling (v1.483) */
 .custom-dropdown {
   position: relative;
   width: 100%;
@@ -2111,7 +2130,7 @@ canvas {
   }
 }
 
-/* Premium Settings Toggle Buttons (v1.482) - Solid Bright Colors for Maximum Distinction */
+/* Premium Settings Toggle Buttons (v1.483) - Solid Bright Colors for Maximum Distinction */
 .btn-setting-toggle {
   display: flex !important;
   flex-direction: column !important;
@@ -2160,7 +2179,7 @@ canvas {
   box-shadow: 0 0 15px rgba(99, 102, 241, 0.5) !important;
 }
 
-/* Premium Crates & Purchase Buttons Styling (v1.482) */
+/* Premium Crates & Purchase Buttons Styling (v1.483) */
 .crates-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2242,7 +2261,7 @@ canvas {
   }
 }
 
-/* Premium Feedback Form Glow Focus (v1.482) */
+/* Premium Feedback Form Glow Focus (v1.483) */
 #feedback-text:focus {
   border-color: rgba(236, 72, 153, 0.5) !important;
   background: rgba(255, 255, 255, 0.06) !important;
