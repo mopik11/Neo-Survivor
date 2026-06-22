@@ -1,6 +1,6 @@
 {
   "name": "neo-survivor-server",
-  "version": "1.507",
+  "version": "1.509",
   "description": "Dedikovany server pro Neo Survivor",
   "main": "server.js",
   "scripts": {

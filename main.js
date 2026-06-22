@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.507'
+    version: 'v1.509'
 };
 
 let achievementsInitialized = false;
@@ -600,6 +600,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
+const GAME_VERSION = "v1.509";
 const GAME = {
     active: false,
     paused: false,
@@ -2474,7 +2475,7 @@ class Player {
                     pierce: this.shipType === 7 ? 9999 : this.pierceCount,
                     bounce: this.bounces,
                     isCrit: isCrit,
-                    isAssassin: this.shipType === 6,
+                    isAssassin: this.shipType === 6 || this.shipType === 2,
                     isSoundWave: this.shipType === 7,
                     type: 'default',
                     life: this.shipType === 7 ? 999999 : 200,
@@ -4757,7 +4758,7 @@ function initSocket() {
 
         NET.socket.on('enemyShoot', (data) => {
             const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, {
-                ownerId: 'remote', speed: data.speed, size: data.size, pierce: data.pierce,
+                ownerId: 'remote_enemy', speed: data.speed, size: data.size, pierce: data.pierce,
                 bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life
             });
             if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
@@ -7005,16 +7006,18 @@ function update(dt) {
                         }
 
                         if (NET.isMultiplayer) {
-                            GAME.netDamageBuffer[enemy.id] = (GAME.netDamageBuffer[enemy.id] || 0) + damage;
-                            
-                            GAME.netKnockbackBuffer = GAME.netKnockbackBuffer || {};
-                            GAME.netKnockbackBuffer[enemy.id] = GAME.netKnockbackBuffer[enemy.id] || {x:0, y:0};
-                            
-                            let kbForce = GAME.entities.player.knockbackForce || 6;
-                            if (proj.isSoundWave) kbForce *= 12;
-                            const kbAngle = Math.atan2(enemy.y - proj.y, enemy.x - proj.x);
-                            GAME.netKnockbackBuffer[enemy.id].x += Math.cos(kbAngle) * kbForce;
-                            GAME.netKnockbackBuffer[enemy.id].y += Math.sin(kbAngle) * kbForce;
+                            if (proj.ownerId === 'local') {
+                                GAME.netDamageBuffer[enemy.id] = (GAME.netDamageBuffer[enemy.id] || 0) + damage;
+                                
+                                GAME.netKnockbackBuffer = GAME.netKnockbackBuffer || {};
+                                GAME.netKnockbackBuffer[enemy.id] = GAME.netKnockbackBuffer[enemy.id] || {x:0, y:0};
+                                
+                                let kbForce = GAME.entities.player.knockbackForce || 6;
+                                if (proj.isSoundWave) kbForce *= 12;
+                                const kbAngle = Math.atan2(enemy.y - proj.y, enemy.x - proj.x);
+                                GAME.netKnockbackBuffer[enemy.id].x += Math.cos(kbAngle) * kbForce;
+                                GAME.netKnockbackBuffer[enemy.id].y += Math.sin(kbAngle) * kbForce;
+                            }
                         } else {
                             // Singleplayer aplikuje ihned
                             let kbForce = GAME.entities.player.knockbackForce || 6;

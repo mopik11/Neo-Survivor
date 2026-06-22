@@ -1426,7 +1426,7 @@ io.on('connection', (socket) => {
 
     socket.on('shoot', (projData) => {
         if (socket.roomId) {
-            socket.to(socket.roomId).emit('enemyShoot', projData);
+            socket.to(socket.roomId).emit('shoot', projData);
         }
     });
 
