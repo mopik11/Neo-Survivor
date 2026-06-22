@@ -1376,7 +1376,7 @@ io.on('connection', (socket) => {
         const p = socket.playerId;
         if (r && ROOMS[r] && ROOMS[r].players[p]) {
             // ZERO TRUST: Strict Whitelist for visual/non-critical properties only
-            const whitelist = ['x', 'y', 'rot', 'anim', 'hat', 'dead', 'hp', 'maxHp', 'flipX', 'aura', 'auraRange', 'auraLevel', 'fireTrail', 'kaktus', 'shipType', 'laserTargetsIds', 'orbitals'];
+            const whitelist = ['x', 'y', 'rot', 'anim', 'hat', 'dead', 'hp', 'maxHp', 'flipX', 'aura', 'auraRange', 'auraLevel', 'fireTrail', 'kaktus', 'shipType', 'laserTargetsIds', 'orbitals', 'portals'];
             whitelist.forEach(key => {
                 if (data[key] !== undefined) {
                     ROOMS[r].players[p][key] = data[key];

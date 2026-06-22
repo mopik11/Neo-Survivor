@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.503'
+    version: 'v1.505'
 };
 
 let achievementsInitialized = false;
@@ -1266,6 +1266,7 @@ class Projectile {
         this.pierce = stats.pierce || 1;
         this.bounce = stats.bounce || 0;
         this.isCrit = stats.isCrit || false;
+        this.isAssassin = stats.isAssassin || false;
 
         this.type = stats.type || 'default';
 
@@ -1316,6 +1317,23 @@ class Projectile {
                 ctx.beginPath();
                 ctx.moveTo(0, -this.radius);
                 ctx.lineTo(0, this.radius);
+                ctx.stroke();
+                ctx.restore();
+            } else if (this.isAssassin) {
+                ctx.save();
+                ctx.translate(this.x - cam.x, this.y - cam.y);
+                ctx.rotate((Date.now() % 500) / 500 * Math.PI * 2);
+                ctx.beginPath();
+                for (let i = 0; i < 4; i++) {
+                    ctx.lineTo(0, -this.radius * 2);
+                    ctx.lineTo(this.radius * 0.6, -this.radius * 0.6);
+                    ctx.rotate(Math.PI / 2);
+                }
+                ctx.closePath();
+                ctx.fillStyle = this.isCrit ? '#fbbf24' : '#cbd5e1';
+                ctx.fill();
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 1;
                 ctx.stroke();
                 ctx.restore();
             } else {
@@ -2402,7 +2420,7 @@ class Player {
         }
         if (!target) return;
 
-        if (this.shipType === 1) {
+        if (this.shipType === 1 || this.shipType === 6) {
             for (let i = 0; i < this.projectileCount; i++) {
                 const isCrit = Math.random() < this.critChance;
                 const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
@@ -2424,6 +2442,7 @@ class Player {
                     pierce: this.pierceCount,
                     bounce: this.bounces,
                     isCrit: isCrit,
+                    isAssassin: this.shipType === 6,
                     type: 'default',
                     life: 200,
                     speed: CONFIG.PROJECTILE_SPEED
@@ -4690,6 +4709,7 @@ function initSocket() {
                 newOthers[pId].kills = data.players[pId].kills || 0;
                 newOthers[pId].hp = data.players[pId].hp || 0;
                 newOthers[pId].maxHp = data.players[pId].maxHp || 100;
+                newOthers[pId].portals = data.players[pId].portals || [];
                 newOthers[pId].remoteMinions = data.players[pId].minions || [];
             }
             NET.others = newOthers;
@@ -4708,7 +4728,7 @@ function initSocket() {
             if (data.playerId === myPlayerId) return;
             const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, {
                 ownerId: data.playerId, speed: data.speed, size: data.size, pierce: data.pierce,
-                bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life
+                bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life, isAssassin: data.isAssassin
             });
             if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
         });
@@ -4923,6 +4943,7 @@ function syncPlayer() {
         fireTrail: GAME.entities.player.fireTrail,
         kaktus: GAME.entities.player.hasKaktus,
         shipType: GAME.entities.player.shipType,
+        portals: GAME.portals || [],
         laserTargetsIds: safeLaserTargets,
         name: savedUser,
         kills: GAME.kills || 0,
@@ -4951,7 +4972,7 @@ function syncShot(proj) {
         tx: proj.x + Math.cos(angle) * 100,
         ty: proj.y + Math.sin(angle) * 100,
         dmg: proj.damage, speed: speed, size: proj.radius, pierce: proj.pierce,
-        bounce: proj.bounce, isCrit: proj.isCrit, type: proj.type, 
+        bounce: proj.bounce, isCrit: proj.isCrit, type: proj.type, isAssassin: proj.isAssassin,
         life: (proj.life === Infinity) ? 999999 : proj.life,
         playerId: myPlayerId
     });
@@ -7054,6 +7075,27 @@ function render() {
 
 
         if (GAME.active && GAME.entities) {
+            if (NET.isMultiplayer && NET.others) {
+                Object.values(NET.others).forEach(op => {
+                    if (op.portals) {
+                        op.portals.forEach(p => {
+                            if (!p) return;
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.ellipse(p.x - camX, p.y - camY, 35, 15, 0, 0, Math.PI * 2);
+                            ctx.fillStyle = p.color === 'red' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(59, 130, 246, 0.4)';
+                            ctx.fill();
+                            ctx.strokeStyle = p.color === 'red' ? '#ef4444' : '#3b82f6';
+                            ctx.lineWidth = 4;
+                            ctx.shadowBlur = 20;
+                            ctx.shadowColor = ctx.strokeStyle;
+                            ctx.stroke();
+                            ctx.restore();
+                        });
+                    }
+                });
+            }
+
             if (GAME.entities.fire) GAME.entities.fire.forEach(f => { if (f) f.draw(ctx, { x: camX, y: camY }); });
             if (GAME.entities.meteorites) GAME.entities.meteorites.forEach(m => { if (m) m.draw(ctx, { x: camX, y: camY }); });
 
