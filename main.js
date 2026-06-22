@@ -3799,6 +3799,9 @@ function showSkillTreeMenu() {
     switchMusic('menu');
     const currencyEl = document.getElementById('meta-currency');
     if (currencyEl) currencyEl.innerText = formatNumber(META.currency);
+    
+    // Zobrazeni obchodu pod stromem
+    renderInventoryCrates();
 
     const canvas = document.getElementById('skill-tree-canvas');
     const svgLines = document.getElementById('skill-tree-lines');
@@ -8022,3 +8025,30 @@ window.addEventListener('beforeunload', () => {
 });
 
 init();
+
+window.toggleTreeFullscreen = function() {
+    const wrapper = document.getElementById('skill-tree-wrapper');
+    const btn = document.getElementById('btn-fullscreen-tree');
+    if (!wrapper || !btn) return;
+    
+    if (wrapper.classList.contains('fullscreen-active')) {
+        wrapper.classList.remove('fullscreen-active');
+        wrapper.style.position = 'relative';
+        wrapper.style.width = '100%';
+        wrapper.style.height = '350px';
+        wrapper.style.zIndex = '1';
+        btn.innerHTML = '🔍 ZVĚTŠIT';
+    } else {
+        wrapper.classList.add('fullscreen-active');
+        wrapper.style.position = 'fixed';
+        wrapper.style.top = '0';
+        wrapper.style.left = '0';
+        wrapper.style.width = '100vw';
+        wrapper.style.height = '100vh';
+        wrapper.style.zIndex = '999999';
+        btn.innerHTML = '✖ ZAVŘÍT';
+    }
+    // Re-center after toggle
+    wrapper.scrollLeft = 1000 - wrapper.clientWidth / 2;
+    wrapper.scrollTop = 1000 - wrapper.clientHeight / 2;
+};
