@@ -2221,8 +2221,9 @@ canvas {
 }
 
 .crate-card {
-  padding: 1.5rem !important;
-  min-height: 160px;
+  padding: 1.2rem 1rem !important;
+  min-height: auto !important;
+  height: auto !important;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -2369,5 +2370,15 @@ canvas {
 }
 .preview-mode #skill-tree-lines line {
   stroke-width: 12px !important;
+}
+
+/* Escape containing block transform/filter constraints when tree is fullscreen */
+body.fullscreen-tree-active #meta-modal .modal-content {
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  contain: none !important;
+  position: static !important;
+  overflow: visible !important;
 }
 

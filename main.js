@@ -26,6 +26,34 @@ window.showCustomAlert = function (msg) {
 
 window.closeModal = function() {
     document.querySelectorAll('.modal:not(#menu-modal)').forEach(m => m.classList.remove('active'));
+    
+    // Clean up fullscreen tree state if the main modal is closed
+    document.body.classList.remove('fullscreen-tree-active');
+    const wrapper = document.getElementById('skill-tree-wrapper');
+    if (wrapper && wrapper.classList.contains('fullscreen-active')) {
+        const btn = document.getElementById('btn-fullscreen-tree');
+        const canvas = document.getElementById('skill-tree-canvas');
+        wrapper.classList.remove('fullscreen-active');
+        wrapper.classList.add('preview-mode');
+        wrapper.style.position = 'relative';
+        wrapper.style.width = '100%';
+        wrapper.style.height = '220px';
+        wrapper.style.zIndex = '1';
+        wrapper.style.overflow = 'hidden';
+        wrapper.style.marginTop = '0px';
+        if (canvas) {
+            canvas.style.position = 'absolute';
+            canvas.style.left = '50%';
+            canvas.style.top = '50%';
+            canvas.style.transform = 'translate(-50%, -50%) scale(0.18)';
+            canvas.style.transformOrigin = 'center center';
+        }
+        if (btn) {
+            btn.style.display = 'none';
+            btn.innerHTML = '🔍 ZVĚTŠIT';
+        }
+    }
+
     // Pokud nejsme ve hře a žádný jiný modál není aktivní (kromě login), vrátíme se do menu
     if (!GAME.active && !document.getElementById('login-modal').classList.contains('active')) {
         const menu = document.getElementById('menu-modal');
@@ -348,7 +376,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.521'
+    version: window.GAME_VERSION || '1.523'
 };
 
 let achievementsInitialized = false;
@@ -648,7 +676,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.521";
+const GAME_VERSION = window.GAME_VERSION || "1.523";
 const GAME = {
     active: false,
     paused: false,
@@ -8049,6 +8077,7 @@ window.toggleTreeFullscreen = function() {
     if (wrapper.classList.contains('fullscreen-active')) {
         wrapper.classList.remove('fullscreen-active');
         wrapper.classList.add('preview-mode');
+        document.body.classList.remove('fullscreen-tree-active');
         
         wrapper.style.position = 'relative';
         wrapper.style.width = '100%';
@@ -8068,6 +8097,7 @@ window.toggleTreeFullscreen = function() {
     } else {
         wrapper.classList.remove('preview-mode');
         wrapper.classList.add('fullscreen-active');
+        document.body.classList.add('fullscreen-tree-active');
         
         wrapper.style.position = 'fixed';
         wrapper.style.top = '0';
