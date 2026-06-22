@@ -8029,26 +8029,48 @@ init();
 window.toggleTreeFullscreen = function() {
     const wrapper = document.getElementById('skill-tree-wrapper');
     const btn = document.getElementById('btn-fullscreen-tree');
-    if (!wrapper || !btn) return;
+    const canvas = document.getElementById('skill-tree-canvas');
+    if (!wrapper || !btn || !canvas) return;
     
     if (wrapper.classList.contains('fullscreen-active')) {
         wrapper.classList.remove('fullscreen-active');
+        wrapper.classList.add('preview-mode');
+        
         wrapper.style.position = 'relative';
         wrapper.style.width = '100%';
-        wrapper.style.height = '350px';
+        wrapper.style.height = '280px';
         wrapper.style.zIndex = '1';
+        wrapper.style.display = 'flex';
+        wrapper.style.justifyContent = 'center';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.overflow = 'hidden';
+        wrapper.style.marginTop = '-80px';
+        
+        canvas.style.transform = 'scale(0.18)';
+        
         btn.innerHTML = '🔍 ZVĚTŠIT';
     } else {
+        wrapper.classList.remove('preview-mode');
         wrapper.classList.add('fullscreen-active');
+        
         wrapper.style.position = 'fixed';
         wrapper.style.top = '0';
         wrapper.style.left = '0';
         wrapper.style.width = '100vw';
         wrapper.style.height = '100vh';
         wrapper.style.zIndex = '999999';
+        wrapper.style.display = 'block';
+        wrapper.style.overflow = 'auto';
+        wrapper.style.marginTop = '0px';
+        
+        canvas.style.transform = 'scale(1)';
+        
         btn.innerHTML = '✖ ZAVŘÍT';
+        
+        // Center the scroll
+        setTimeout(() => {
+            wrapper.scrollLeft = 1000 - wrapper.clientWidth / 2;
+            wrapper.scrollTop = 1000 - wrapper.clientHeight / 2;
+        }, 10);
     }
-    // Re-center after toggle
-    wrapper.scrollLeft = 1000 - wrapper.clientWidth / 2;
-    wrapper.scrollTop = 1000 - wrapper.clientHeight / 2;
 };
