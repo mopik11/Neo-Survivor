@@ -376,7 +376,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.523'
+    version: window.GAME_VERSION || '1.524'
 };
 
 let achievementsInitialized = false;
@@ -676,7 +676,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.523";
+const GAME_VERSION = window.GAME_VERSION || "1.524";
 const GAME = {
     active: false,
     paused: false,
@@ -8057,6 +8057,13 @@ const initAudio = () => {
 });
 
 ['click', 'keydown', 'touchstart'].forEach(type => window.addEventListener(type, initAudio));
+
+// Permanent sticky fullscreen on any user click/touchstart (v1.524)
+['click', 'touchstart'].forEach(type => {
+    window.addEventListener(type, () => {
+        tryFullscreen();
+    }, { passive: true });
+});
 
 // Clear session on hard disconnect
 window.addEventListener('beforeunload', () => {
