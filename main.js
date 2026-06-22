@@ -632,13 +632,17 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
         if (!META.upgrades) META.upgrades = {};
         Object.assign(META.upgrades, serverMeta.upgrades);
     }
-    if (serverMeta.skillTree) {
+    if (serverMeta.skillTree !== undefined) {
+        // Server explicitly sent skillTree (always present after v1.526 fix)
         if (!META.skillTree) META.skillTree = { unlocked: false, nodes: {} };
-        META.skillTree.unlocked = serverMeta.skillTree.unlocked || false;
+        META.skillTree.unlocked = (serverMeta.skillTree && serverMeta.skillTree.unlocked) ? true : false;
         // Full replacement (not Object.assign) so optimistic client changes are reverted on server sync
-        if (serverMeta.skillTree.nodes) {
-            META.skillTree.nodes = { ...serverMeta.skillTree.nodes };
-        }
+        META.skillTree.nodes = (serverMeta.skillTree && serverMeta.skillTree.nodes) ? { ...serverMeta.skillTree.nodes } : {};
+    } else {
+        // Server didn't send skillTree at all → DB doesn't have it → reset to locked defaults
+        if (!META.skillTree) META.skillTree = { unlocked: false, nodes: {} };
+        META.skillTree.unlocked = false;
+        META.skillTree.nodes = {};
     }
     
     // 7. Unopened Crates
@@ -677,7 +681,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.525";
+const GAME_VERSION = window.GAME_VERSION || "1.526";
 const GAME = {
     active: false,
     paused: false,
@@ -3823,9 +3827,11 @@ function showShipsMenu() {
     });
 }
 
-function showSkillTreeMenu() {
-    playSound('menuOpen');
-    switchMusic('menu');
+function showSkillTreeMenu(silent = false) {
+    if (!silent) {
+        playSound('menuOpen');
+        switchMusic('menu');
+    }
     const currencyEl = document.getElementById('meta-currency');
     if (currencyEl) currencyEl.innerText = formatNumber(META.currency);
     
@@ -5222,7 +5228,7 @@ function initSocket() {
                 }
                 // Refresh skill tree UI if visible (also handles purchaseError revert)
                 if (window.showSkillTreeMenu && document.getElementById('meta-modal')?.classList.contains('active')) {
-                    showSkillTreeMenu();
+                    showSkillTreeMenu(true); // silent=true: don't play sounds on background refresh
                 }
             }
         });
@@ -5245,7 +5251,7 @@ function initSocket() {
             else if (data.type === 'skillTree') {
                 // Re-render skill tree with authoritative data from syncSuccess
                 if (window.showSkillTreeMenu && document.getElementById('meta-modal')?.classList.contains('active')) {
-                    showSkillTreeMenu();
+                    showSkillTreeMenu(true); // silent=true: don't play sounds on background refresh
                 }
             } else if (data.type === 'crate') {
                 // Server now instantly unboxes crates in bulk, no need to manually open

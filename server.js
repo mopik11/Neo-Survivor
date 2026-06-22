@@ -953,6 +953,7 @@ io.on('connection', (socket) => {
                 }
             } else if (data.type === 'skillTree') {
                 if (!meta.skillTree) meta.skillTree = { unlocked: false, nodes: {} };
+                if (!meta.skillTree.nodes) meta.skillTree.nodes = {};
                 
                 if (data.id === 'vstupne') {
                     if (!meta.skillTree.unlocked) {
@@ -960,7 +961,15 @@ io.on('connection', (socket) => {
                         if (row.currency >= cost) {
                             meta.skillTree.unlocked = true;
                             success = true;
+                        } else {
+                            console.log(`[PURCHASE] Vstupne FAIL for "${user}": not enough currency (${row.currency} < 500)`);
                         }
+                    } else {
+                        // Already unlocked: return current state as success (not error)
+                        console.log(`[PURCHASE] Vstupne already unlocked for "${user}", returning syncSuccess`);
+                        socket.emit('syncSuccess', { meta: meta });
+                        socket.emit('purchaseSuccess', { type: data.type, id: data.id });
+                        return;
                     }
                 } else {
                     const nodeData = SKILL_TREE_DATA[data.id];
@@ -975,8 +984,14 @@ io.on('connection', (socket) => {
                             if (row.currency >= cost) {
                                 meta.skillTree.nodes[data.id] = level + 1;
                                 success = true;
+                            } else {
+                                console.log(`[PURCHASE] Node "${data.id}" FAIL for "${user}": not enough currency (${row.currency} < ${cost})`);
                             }
+                        } else {
+                            console.log(`[PURCHASE] Node "${data.id}" FAIL for "${user}": reqMet=${reqMet} (unlocked=${isUnlocked}, req=${req}, reqLevel=${req ? meta.skillTree.nodes[req] : 'n/a'}), level=${level}/${nodeData.maxLevel}`);
                         }
+                    } else {
+                        console.log(`[PURCHASE] Unknown skillTree node "${data.id}" for "${user}"`);
                     }
                 }
             } else if (data.type === 'crate') {
@@ -1036,6 +1051,7 @@ io.on('connection', (socket) => {
                 selectedLanguage: 'cs',
                 achievements: {},
                 claimedAchievements: {},
+                skillTree: { unlocked: false, nodes: {} },
                 stats: { totalBossKills: 0, totalDogecoins: 0, totalGames: 0, totalRandomPicks: 0, totalPlayTime: 0 }
             };
 
@@ -1235,6 +1251,11 @@ io.on('connection', (socket) => {
                 // Ships/abilities: union (once unlocked, always unlocked - merge server + client)
                 merged.ships     = Object.assign({}, serverMeta.ships    || { 1: true }, merged.ships    || {});
                 merged.abilities = Object.assign({}, serverMeta.abilities || { 1: true }, merged.abilities || {});
+                
+                // SKILL TREE: Always initialize so old accounts without skillTree in DB get it in syncSuccess
+                // (skillTree.unlocked and nodes are SERVER-AUTHORITATIVE - only set by purchase handler)
+                if (!merged.skillTree) merged.skillTree = { unlocked: false, nodes: {} };
+                if (!merged.skillTree.nodes) merged.skillTree.nodes = {};
                 
                 // NOTE: selectedShip, selectedAbility, autoSelect, autoUpgrade, settings
                 // are already correctly set from client data above (lines 1117-1122)
