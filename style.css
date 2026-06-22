@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
 
 :root {
   --bg-color: #020617;
@@ -2273,7 +2273,7 @@ canvas {
 
 @media (max-width: 950px), (max-height: 550px) {
   .crates-grid {
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)) !important;
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 8px !important;
   }
   
