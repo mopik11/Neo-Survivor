@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.501'
+    version: 'v1.502'
 };
 
 let achievementsInitialized = false;
@@ -652,7 +652,7 @@ const GAME = {
 const updateSpeedFactor = () => {
     GAME.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     GAME.speedFactor = 1.0;
-    GAME.zoom = GAME.isMobile ? 0.45 : 1.3;
+    GAME.zoom = GAME.isMobile ? 0.45 : 1.15;
     GAME.joystick.startX = 80;
     GAME.joystick.startY = window.innerHeight - 80;
     if (!GAME.joystick.active) {
