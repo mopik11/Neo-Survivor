@@ -242,11 +242,20 @@ const SKILL_TREE_DATA = {
     'qol_3': { id: 'qol_3', branch: 5, name: '💀 HARD MODE', desc: 'Více nepřátel, více HP, více mincí a XP!', maxLevel: 1, baseCost: 2000, costMultiplier: 1.0, baseValue: 1, valueMultiplier: 0, requires: 'qol_2' }
 };
 
+function getSkillTreeBonus(nodeId) {
+    if (!META.skillTree) return 0;
+    const level = META.skillTree.nodes[nodeId] || 0;
+    if (level === 0) return 0;
+    const node = SKILL_TREE_DATA[nodeId];
+    if (!node) return 0;
+    return node.baseValue + (level - 1) * node.valueMultiplier;
+}
+
 const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
     ENEMY_BASE_HEALTH: 20,
-    ENEMY_BASE_SPEED: 3.2, // Reduced further from 3.8 for solo to match 60Hz vs 50Hz server pace and user feedback
+    ENEMY_BASE_SPEED: 3.2, 
     PROJECTILE_SPEED: 11,
     SPAWN_INTERVAL: 800,
     SPAWN_RADIUS: 700,
@@ -3191,7 +3200,7 @@ function applyUpgrade(id, record = true) {
             case 'growth': p.maxHp += Math.floor(p.maxHp * 0.1); p.hp = p.maxHp; break;
             case 'possession_plus': p.maxPossessions += 2; break;
             case 'shotgun_shells': p.shotgunShellsLevel = (p.shotgunShellsLevel || 0) + 1; break;
-            case 'shotgun_back': p.shotgunBackLevel = (p.shotgunBackLevel || 0) + 1; break;
+            case 'shotgun_back': p.shotgunBackLevel = (p.shotgunBackLevel || 1) + 1; break;
             case 'necro_health': p.necroHealthLevel = (p.necroHealthLevel || 0) + 1; break;
             case 'necro_speed': p.necroSpeedLevel = (p.necroSpeedLevel || 0) + 1; break;
             case 'necro_good_alien': p.necroAlienLevel = (p.necroAlienLevel || 0) + 1; break;
@@ -4022,16 +4031,11 @@ function showNodeDetails(id, data, isVstupne) {
         };
     }
 }
-function showInventoryMenu() {
-    playSound('menuOpen');
-    switchMusic('menu');
-    const menu = document.getElementById('inventory-modal');
-    if (menu) menu.classList.add('active');
-    
+function renderInventoryCrates() {
     const container = document.getElementById('inventory-options');
     if (!container) return;
     
-    const currencyEl = document.getElementById('inventory-currency');
+    const currencyEl = document.getElementById('meta-currency');
     if (currencyEl) currencyEl.innerText = formatNumber(META.currency);
 
     container.innerHTML = '';
@@ -4074,7 +4078,7 @@ function showInventoryMenu() {
                     const total = META.unopenedCrates[type.id] || 0;
                     if (total > 0) {
                         META.unopenedCrates[type.id] = 0;
-                        showInventoryMenu(); // Refresh UI
+                        renderInventoryCrates(); // Refresh UI
                         openCrate(type.id, total);
                     }
                 };
@@ -4132,7 +4136,7 @@ function showInventoryMenu() {
                     if (!META.unopenedCrates) META.unopenedCrates = { basic:0, premium:0, legendary:0 };
                     META.unopenedCrates[type.id] = (META.unopenedCrates[type.id] || 0) + count;
                     playSound('upgrade');
-                    showInventoryMenu();
+                    renderInventoryCrates();
                 }
 
                 if (!NET.socket) initSocket();
