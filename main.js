@@ -8052,7 +8052,7 @@ window.toggleTreeFullscreen = function() {
         
         wrapper.style.position = 'relative';
         wrapper.style.width = '100%';
-        wrapper.style.height = '280px';
+        wrapper.style.height = '220px';
         wrapper.style.zIndex = '1';
         wrapper.style.overflow = 'hidden';
         wrapper.style.marginTop = '0px';
@@ -8063,6 +8063,7 @@ window.toggleTreeFullscreen = function() {
         canvas.style.transform = 'translate(-50%, -50%) scale(0.18)';
         canvas.style.transformOrigin = 'center center';
         
+        btn.style.display = 'none';
         btn.innerHTML = '🔍 ZVĚTŠIT';
     } else {
         wrapper.classList.remove('preview-mode');
@@ -8083,6 +8084,7 @@ window.toggleTreeFullscreen = function() {
         canvas.style.transform = 'translate(0, 0) scale(1)';
         canvas.style.transformOrigin = 'top left';
         
+        btn.style.display = 'block';
         btn.innerHTML = '✖ ZAVŘÍT';
         
         // Center the scroll

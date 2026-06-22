@@ -325,6 +325,10 @@
       <div id="meta-modal" class="modal">
         <div class="modal-content" style="padding: 0; width: 95vw !important; height: 90vh !important; max-width: 1200px !important; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px;">
           <button class="btn-close-x" onclick="closeModal()" style="z-index: 100; right: 15px; top: 15px;">×</button>
+          
+          <!-- Fullscreen Close Button for the Skill Tree (Fixed viewport position) -->
+          <button id="btn-fullscreen-tree" onclick="toggleTreeFullscreen()" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 10000000; background: rgba(239, 68, 68, 0.95); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 12px 24px; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-size: 1rem; letter-spacing: 1px; transition: all 0.2s ease;">✖ ZAVŘÍT</button>
+
           <div class="modal-body" style="flex: 1; min-height: 0; display: block; overflow-y: auto; padding: 0; padding-bottom: 100px; position: relative;">
             
             <div style="position: sticky; top: 0; left: 0; width: 100%; z-index: 50; background: linear-gradient(to bottom, rgba(15,23,42,1) 50%, rgba(15,23,42,0) 100%); padding: 15px 20px 30px; pointer-events: none; display: flex; flex-direction: column; align-items: flex-start;">
@@ -332,15 +336,13 @@
                 <div class="stat-chip" style="margin-top:5px; display:inline-flex; pointer-events: auto; background: rgba(0,0,0,0.8); border: 1px solid #10b981;">DOGECOIN: <span id="meta-currency">0</span></div>
             </div>
 
-            <div id="skill-tree-wrapper" class="preview-mode" style="width: 100%; height: 280px; overflow: hidden; position: relative; background: radial-gradient(circle at center, #1a1a2e 0%, #0d0d1a 100%); flex-shrink: 0; border-bottom: 2px solid rgba(255, 255, 255, 0.1); cursor: pointer;" onclick="if(this.classList.contains('preview-mode')) toggleTreeFullscreen();">
-                <div id="tree-preview-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 200; pointer-events: none;">
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2.5rem; background: rgba(99, 102, 241, 0.85); border-radius: 50%; width: 70px; height: 70px; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 20px rgba(99, 102, 241, 0.6); border: 2px solid rgba(255,255,255,0.2);">🔍</div>
-                    <div style="position: absolute; bottom: 15px; right: 15px; background: rgba(16, 185, 129, 0.9); color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 5px;">
-                        <span>🔍</span> ZVĚTŠIT MAPU
+            <div id="skill-tree-wrapper" class="preview-mode" style="width: 100%; height: 220px; overflow: hidden; position: relative; background: radial-gradient(circle at center, #1a1a2e 0%, #0d0d1a 100%); flex-shrink: 0; border-bottom: 2px solid rgba(255, 255, 255, 0.1); cursor: pointer;" onclick="if(this.classList.contains('preview-mode')) toggleTreeFullscreen();">
+                <div id="tree-preview-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 200; pointer-events: none;">
+                    <!-- Lupa in the bottom right corner as a premium badge -->
+                    <div style="position: absolute; bottom: 15px; right: 15px; background: rgba(99, 102, 241, 0.95); color: white; padding: 8px 16px; border-radius: 12px; font-size: 0.85rem; font-weight: 800; letter-spacing: 1px; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 6px 15px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 1.1rem;">🔍</span> ZVĚTŠIT MAPU
                     </div>
                 </div>
-                
-                <button id="btn-fullscreen-tree" onclick="toggleTreeFullscreen()" style="display: none;">🔍 KLIKNI PRO ZVĚTŠENÍ MAPY</button>
                 
                 <div id="skill-tree-canvas" style="position: absolute; width: 2000px; height: 2000px; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.18); transform-origin: center center;">
                     <svg id="skill-tree-lines" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></svg>

@@ -2349,5 +2349,25 @@ canvas {
     height: 90vh !important;
     max-height: 90vh !important;
   }
+  #meta-modal .modal-body {
+    padding-bottom: 120px !important;
+  }
+}
+
+/* Make preview map nodes and lines clearer when scaled down */
+.preview-mode .skill-node {
+  width: 90px !important;
+  height: 90px !important;
+  border-width: 6px !important;
+}
+.preview-mode .skill-node .node-icon {
+  font-size: 2.2rem !important;
+  margin-bottom: 4px !important;
+}
+.preview-mode .skill-node .node-label {
+  font-size: 1.1rem !important;
+}
+.preview-mode #skill-tree-lines line {
+  stroke-width: 12px !important;
 }
 
