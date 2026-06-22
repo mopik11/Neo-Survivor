@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.499'
+    version: 'v1.501'
 };
 
 let achievementsInitialized = false;
@@ -652,7 +652,7 @@ const GAME = {
 const updateSpeedFactor = () => {
     GAME.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     GAME.speedFactor = 1.0;
-    GAME.zoom = GAME.isMobile ? 0.45 : 0.75;
+    GAME.zoom = GAME.isMobile ? 0.45 : 1.3;
     GAME.joystick.startX = 80;
     GAME.joystick.startY = window.innerHeight - 80;
     if (!GAME.joystick.active) {
@@ -2559,7 +2559,7 @@ class Player {
 
         if (displayName) {
             ctx.fillStyle = this.isLocal ? '#818cf8' : '#fb7185';
-            ctx.font = 'bold 12px Outfit, sans-serif';
+            ctx.font = GAME.isMobile ? 'bold 18px Outfit, sans-serif' : 'bold 12px Outfit, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
             const yOffset = hat ? 40 : 15;
@@ -4891,7 +4891,7 @@ function syncPlayer() {
         safeLaserTargets = GAME.entities.player.laserTargets.map(chain => chain.map(e => e ? e.id : null).filter(id => id));
     }
 
-    const savedUser = localStorage.getItem('neoSurvivor_user') || "Hráč";
+    const savedUser = META.playerName || localStorage.getItem('neoSurvivor_user') || "Hráč";
 
     const now = Date.now();
     if (now - GAME.lastNetSync < 50) return; // Throttle to 20Hz
@@ -4989,8 +4989,8 @@ window.joinCloudServer = (roomName) => {
     NET.socket.emit('joinRoom', { 
         roomId: roomName.trim().toUpperCase(), 
         playerId: myPlayerId,
-        username: localStorage.getItem('neoSurvivor_user'),
-        name: localStorage.getItem('neoSurvivor_user')
+        username: META.playerName || localStorage.getItem('neoSurvivor_user'),
+        name: META.playerName || localStorage.getItem('neoSurvivor_user')
     });
 };
 
