@@ -3814,21 +3814,26 @@ function showSkillTreeMenu() {
     // Custom specific positions for each node to match the drawing vibe
     const POSITIONS = {
         'vstupne': { x: CENTER_X, y: CENTER_Y },
+        // Branch 1: Gain (Bottom Right)
         'gain_1': { x: CENTER_X + 150, y: CENTER_Y + 150 },
         'gain_2': { x: CENTER_X + 250, y: CENTER_Y + 250 },
-        'gain_3': { x: CENTER_X + 350, y: CENTER_Y + 300 },
-        'speed_1': { x: CENTER_X, y: CENTER_Y + 180 },
-        'speed_2': { x: CENTER_X - 50, y: CENTER_Y + 300 },
-        'speed_3': { x: CENTER_X + 50, y: CENTER_Y + 420 },
-        'health_1': { x: CENTER_X - 180, y: CENTER_Y },
-        'health_2': { x: CENTER_X - 300, y: CENTER_Y - 50 },
-        'health_3': { x: CENTER_X - 420, y: CENTER_Y + 50 },
-        'dmg_1': { x: CENTER_X, y: CENTER_Y - 180 },
-        'dmg_2': { x: CENTER_X - 80, y: CENTER_Y - 300 },
-        'dmg_3': { x: CENTER_X + 80, y: CENTER_Y - 400 },
-        'qol_1': { x: CENTER_X + 150, y: CENTER_Y - 150 },
-        'qol_2': { x: CENTER_X + 280, y: CENTER_Y - 200 },
-        'qol_3': { x: CENTER_X + 400, y: CENTER_Y - 300 }
+        'gain_3': { x: CENTER_X + 350, y: CENTER_Y + 150 },
+        // Branch 2: Speed (Bottom Left)
+        'speed_1': { x: CENTER_X - 150, y: CENTER_Y + 150 },
+        'speed_2': { x: CENTER_X - 250, y: CENTER_Y + 250 },
+        'speed_3': { x: CENTER_X - 150, y: CENTER_Y + 350 },
+        // Branch 3: Health (Left)
+        'health_1': { x: CENTER_X - 200, y: CENTER_Y },
+        'health_2': { x: CENTER_X - 350, y: CENTER_Y - 50 },
+        'health_3': { x: CENTER_X - 350, y: CENTER_Y + 50 },
+        // Branch 4: Damage (Up)
+        'dmg_1': { x: CENTER_X, y: CENTER_Y - 200 },
+        'dmg_2': { x: CENTER_X - 100, y: CENTER_Y - 350 },
+        'dmg_3': { x: CENTER_X + 100, y: CENTER_Y - 350 },
+        // Branch 5: QoL (Right)
+        'qol_1': { x: CENTER_X + 200, y: CENTER_Y },
+        'qol_2': { x: CENTER_X + 350, y: CENTER_Y - 50 },
+        'qol_3': { x: CENTER_X + 500, y: CENTER_Y + 50 }
     };
 
     const drawLine = (fromNode, toNode, isUnlocked) => {
