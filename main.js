@@ -2169,6 +2169,10 @@ class Player {
         this.appliedUpgrades = [];
 
         this.shipType = META.selectedShip || 1;
+        if (this.shipType === 6) {
+            this.speed *= 2.0;
+        }
+        this.lastMoveTime = Date.now();
         this.wallRangeBonus = 0;
         this.wallWidthBonus = 0;
         this.laserRangeBonus = 0;
@@ -2321,6 +2325,7 @@ class Player {
         }
 
         if (dx !== 0 || dy !== 0) {
+            this.lastMoveTime = Date.now();
             const angle = Math.atan2(dy, dx);
             let nextX = this.x + Math.cos(angle) * this.speed * GAME.speedFactor;
             let nextY = this.y + Math.sin(angle) * this.speed * GAME.speedFactor;
@@ -2353,7 +2358,13 @@ class Player {
             this.addXp(1); this.lastXpGen = now;
         }
 
-        if (this.shipType !== 2 && now - this.lastFired > this.fireRate) {
+        let currentFireRate = this.fireRate;
+        if (this.shipType === 6) {
+            const standingSecs = Math.min(5, (now - (this.lastMoveTime || now)) / 1000);
+            currentFireRate = this.fireRate / (1 + standingSecs * 0.8);
+        }
+
+        if (this.shipType !== 2 && now - this.lastFired > currentFireRate) {
             this.attack();
             this.lastFired = now;
         }
@@ -3483,7 +3494,8 @@ function showShipsMenu() {
         { id: 2, name: 'Laserová Loď', desc: 'Automatický paprsek, nestřílí', cost: 500, icon: '🩸' },
         { id: 3, name: 'Drtivá Zeď', desc: 'Průrazná vlna bez základní palby.', cost: 1000, icon: '🌊' },
         { id: 4, name: 'Brokovnice', desc: 'Střílí 3-5 střel najednou.', cost: 1500, icon: '💥' },
-        { id: 5, name: 'Nekromancer', desc: 'Místo útoku vyvolává vlastní armádu minionů.', cost: 2000, icon: '💀' }
+        { id: 5, name: 'Nekromancer', desc: 'Místo útoku vyvolává vlastní armádu minionů.', cost: 2000, icon: '💀' },
+        { id: 6, name: 'Assassin', desc: 'Dvojnásobná rychlost pohybu. Při stání zrychluje střelbu.', cost: 2500, icon: '🥷' }
     ];
 
     ships.forEach(item => {
@@ -4776,7 +4788,7 @@ function initSocket() {
 
             // Track stats
             incrementStat('totalGames');
-            const shipTypes = ['Explorer', 'Laser', 'Defender', 'Shotgun', 'Necro'];
+            const shipTypes = ['Explorer', 'Laser', 'Defender', 'Shotgun', 'Necro', 'Assassin'];
             incrementStat('totalGames' + shipTypes[(META.upgrades.ship || 1) - 1]);
     
             updateUI();
@@ -5428,6 +5440,7 @@ function init() {
             "🚀 FLOTILA LODÍ": "🚀 SHIP FLEET",
             "🚀 Průzkumník:": "🚀 Explorer:",
             "Průzkumník": "Explorer",
+            "Assassin": "Assassin",
             "Základní vyvážená loď.": "Basic balanced ship.",
             "⚡ Laserový křižník:": "⚡ Laser Cruiser:",
             "Střílí zničující lasery na více cílů.": "Shoots devastating lasers at multiple targets.",
