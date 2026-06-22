@@ -4058,6 +4058,7 @@ function renderInventoryCrates() {
 
     if (hasRewards) {
         const rewardSection = document.createElement('div');
+        rewardSection.style.marginBottom = '30px';
         rewardSection.innerHTML = `<h2 style="color: #10b981; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(16,185,129,0.2); padding-bottom: 5px;">🎁 ${window.T('ZÍSKANÉ BEDNY')}</h2>`;
         const rewardGrid = document.createElement('div');
         rewardGrid.className = 'menu-actions-grid';
@@ -4100,6 +4101,7 @@ function renderInventoryCrates() {
 
     // 3. VESMÍRNÉ BEDNY (CRATES)
     const cratesSection = document.createElement('div');
+    cratesSection.style.marginBottom = '30px';
     cratesSection.innerHTML = `<h2 style="color: #fbbf24; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(251,191,36,0.2); padding-bottom: 5px;">📦 ${window.T('VESMÍRNÉ BEDNY')}</h2>`;
     const cratesGrid = document.createElement('div');
     cratesGrid.className = 'crates-grid';
@@ -4161,6 +4163,7 @@ function renderInventoryCrates() {
 
     // 4. SBÍRKA EMOJI & ČEPIC
     const collectionSection = document.createElement('div');
+    collectionSection.style.marginBottom = '30px';
     collectionSection.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(16,185,129,0.2); margin-bottom: 15px; padding-bottom: 5px;">
             <div style="display:flex; flex-direction:column; align-items: flex-start;">
