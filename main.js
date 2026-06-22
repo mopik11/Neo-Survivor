@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.509'
+    version: 'v1.510'
 };
 
 let achievementsInitialized = false;
@@ -392,6 +392,10 @@ const EMOJIS = [
     { id: 'hat_crown', name: '👑 Koruna', icon: '👑', rarity: 'legendary', price: 1000, isHat: true, type: 'crown' },
     { id: 'hat_wizard', name: '🧙 Mág', icon: '🧙', rarity: 'legendary', price: 1200, isHat: true, type: 'wizard' },
     { id: 'hat_ninja', name: '🥷 Ninja', icon: '🥷', rarity: 'legendary', price: 1500, isHat: true, type: 'ninja' },
+    // PETS
+    { id: 'pet_magnet', name: '🧲 Magnetický Dron', icon: '🧲', rarity: 'rare', price: 1000, isPet: true, type: 'magnet' },
+    { id: 'pet_laser', name: '🔦 Bojový Dron', icon: '🔦', rarity: 'epic', price: 2500, isPet: true, type: 'laser' },
+    { id: 'pet_healer', name: '⚕️ Léčivý Dron', icon: '⚕️', rarity: 'legendary', price: 5000, isPet: true, type: 'healer' },
     // EXTRÉMNÍ LEGENDÁRKA
     { id: 'ultra_rare', name: '💎 Diamant', icon: '💎', rarity: 'legendary', price: 20000, chance: 1 }
 ];
@@ -600,7 +604,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = "v1.509";
+const GAME_VERSION = "v1.510";
 const GAME = {
     active: false,
     paused: false,
@@ -1269,6 +1273,7 @@ class Projectile {
         this.isCrit = stats.isCrit || false;
         this.isAssassin = stats.isAssassin || false;
         this.isSoundWave = stats.isSoundWave || false;
+        this.knockbackMult = stats.knockbackMult || 1.0;
 
         this.type = stats.type || 'default';
 
@@ -1608,8 +1613,8 @@ class Boss {
         this.lastMinionCheck = Date.now();
         this.lastHpDrain = Date.now();
 
-        // Pro Skokana (Boss 7)
-        if (this.type === 7) {
+        // Pro Skokana (Boss 6)
+        if (this.type === 6) {
             this.jumpState = 'WALKING';
             this.jumpProgress = 0;
             this.lastJump = Date.now();
@@ -2229,15 +2234,114 @@ class Player {
 
         this.laserTargets = [];
         this.laserTargetsIds = [];
+
+        this.ultimateCooldown = 20000;
+        this.lastUltimateTime = 0;
+        this.ultimateDuration = 0;
+        this.ultimateActive = false;
+    }
+    
+    tryUseUltimate() {
+        if (!this.isLocal || this.dead) return;
+        const now = Date.now();
+        if (now - this.lastUltimateTime < this.ultimateCooldown) return;
+        
+        this.lastUltimateTime = now;
+        this.ultimateActive = true;
+        
+        if (this.shipType === 2) { // Ninja - Dash a neviditelnost
+            this.ultimateDuration = 2000;
+            const angle = Math.atan2(GAME.mouse.y - GAME.canvas.height / 2, GAME.mouse.x - GAME.canvas.width / 2);
+            this.x += Math.cos(angle) * 400;
+            this.y += Math.sin(angle) * 400;
+            if (!GAME.entities.particles) GAME.entities.particles = [];
+            for (let i = 0; i < 30; i++) GAME.entities.particles.push(new Particle(this.x, this.y, '#333333', Math.random()*20));
+        } else if (this.shipType === 6) { // Assassin - Větrná smršť
+            this.ultimateDuration = 500;
+            for (let i = 0; i < 32; i++) {
+                const a = (i / 32) * Math.PI * 2;
+                const proj = new Projectile(this.x, this.y, this.x + Math.cos(a)*100, this.y + Math.sin(a)*100, this.damage * 5, {
+                    size: this.projSize + 10, pierce: 9999, bounce: 0, isCrit: true, isAssassin: true, life: 100, speed: CONFIG.PROJECTILE_SPEED * 1.5
+                });
+                if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
+                if (NET.isMultiplayer) syncShot(proj);
+            }
+        } else if (this.shipType === 7) { // Zvukař - Bass Drop
+            this.ultimateDuration = 500;
+            if (!GAME.entities.particles) GAME.entities.particles = [];
+            for (let i = 0; i < 50; i++) GAME.entities.particles.push(new Particle(this.x, this.y, '#a78bfa', Math.random()*15));
+            if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => {
+                if (dist(this.x, this.y, e.x, e.y) < 600 && !e.possessed) {
+                    e.hp -= this.damage * 20;
+                    if (NET.isMultiplayer) {
+                        GAME.netDamageBuffer[e.id] = (GAME.netDamageBuffer[e.id] || 0) + this.damage * 20;
+                        GAME.netKnockbackBuffer = GAME.netKnockbackBuffer || {};
+                        GAME.netKnockbackBuffer[e.id] = GAME.netKnockbackBuffer[e.id] || {x:0, y:0};
+                        const kbAngle = Math.atan2(e.y - this.y, e.x - this.x);
+                        GAME.netKnockbackBuffer[e.id].x += Math.cos(kbAngle) * 150;
+                        GAME.netKnockbackBuffer[e.id].y += Math.sin(kbAngle) * 150;
+                    } else {
+                        const kbAngle = Math.atan2(e.y - this.y, e.x - this.x);
+                        e.knockback.x += Math.cos(kbAngle) * 150;
+                        e.knockback.y += Math.sin(kbAngle) * 150;
+                    }
+                }
+            });
+            shakeScreen(20);
+        } else if (this.shipType === 5) { // Nekromant - Oživení bosse
+            this.ultimateDuration = 500;
+            if (!GAME.entities.minions) GAME.entities.minions = [];
+            const boss = new FriendlyMinion(this.x, this.y, this.damage * 5, this);
+            boss.radius = 40;
+            boss.maxLife = 10000;
+            boss.color = '#10b981';
+            boss.isBoss = true;
+            GAME.entities.minions.push(boss);
+        } else if (this.shipType === 8) { // Brawler - Nesmrtelnost
+            this.ultimateDuration = 5000;
+        } else { // Základní - Overdrive
+            this.ultimateDuration = 5000;
+        }
+        
+        if (NET.isMultiplayer) {
+            NET.socket.emit('useAbility', { type: 'ultimate', shipType: this.shipType, x: this.x, y: this.y, id: myPlayerId });
+        }
     }
     update(dt) {
         if (this.dead) return;
 
         // Meta Upgrades: Regeneration
-        const regenVal = (META.upgrades.regen || 0) * 0.1;
+        let regenVal = (META.upgrades.regen || 0) * 0.1;
+        if (META.selectedPet === 'pet_healer') regenVal += 2.0; // Pet healer regenerates HP fast
+
         if (regenVal > 0 && this.hp < this.maxHp) {
             this.hp = Math.min(this.maxHp, this.hp + regenVal / 60);
         }
+
+        // Pet Laser (Epic)
+        if (META.selectedPet === 'pet_laser' && this.isLocal) {
+            const now = Date.now();
+            if (!this.lastPetLaser) this.lastPetLaser = now;
+            if (now - this.lastPetLaser > 1000) { // Fires every 1 second
+                this.lastPetLaser = now;
+                const enemies = GAME.entities.enemies || [];
+                let closest = null;
+                let minDist = 300; // Range of laser
+                enemies.forEach(e => {
+                    const d = dist(this.x, this.y, e.x, e.y);
+                    if (d < minDist) { minDist = d; closest = e; }
+                });
+                if (closest) {
+                    const angle = Math.atan2(closest.y - this.y, closest.x - this.x);
+                    if (!GAME.entities.projectiles) GAME.entities.projectiles = [];
+                    const px = this.x - GAME.camera.x - 40; // Pet approx offset
+                    const py = this.y - GAME.camera.y - 20;
+                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, closest.x, closest.y, this.damage * 0.5, { speed: 800, color: '#facc15', size: 4, type: 'pet_laser' }));
+                    AudioEngine.play('shoot', { volume: 0.3 });
+                }
+            }
+        }
+
 
         // Apply armor to damage taken elsewhere in the code
         // We'll search for where hp is subtracted and apply reduction there.
@@ -2517,6 +2621,27 @@ class Player {
             if (NET.isMultiplayer) syncShot(wall);
         }
 
+        if (this.shipType === 8) { // Brawler
+            const isCrit = Math.random() < this.critChance;
+            const finalDamage = (isCrit ? this.damage * this.critMultiplier : this.damage) * 0.5;
+            const baseAngle = Math.atan2(target.y - this.y, target.x - this.x);
+
+            const proj = new Projectile(this.x, this.y, this.x + Math.cos(baseAngle) * 500, this.y + Math.sin(baseAngle) * 500, finalDamage, {
+                size: this.projSize + 80,
+                pierce: Infinity,
+                bounce: 0,
+                isCrit: isCrit,
+                isSoundWave: true,
+                type: 'default',
+                life: 60,
+                speed: CONFIG.PROJECTILE_SPEED * 1.5,
+                knockbackMult: 3.0
+            });
+            if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
+            if (NET.isMultiplayer) syncShot(proj);
+        }
+
+
         if (this.shipType === 4) { // Brokovnice
             const baseAngle = Math.atan2(target.y - this.y, target.x - this.x);
             const pellets = 4 + this.projectileCount;
@@ -2620,6 +2745,26 @@ class Player {
 
         const displayName = this.isLocal ? META.playerName : this.remoteName;
         const hat = this.isLocal ? (META.upgrades.hat || null) : this.remoteHat;
+        const pet = this.isLocal ? (META.selectedPet || null) : this.remotePet;
+
+        if (pet) {
+            const petEmoji = EMOJIS.find(e => e.id === pet);
+            if (petEmoji) {
+                const px = this.x - cam.x - 40;
+                const py = this.y - cam.y - 20 + Math.sin(Date.now() / 200) * 10;
+                ctx.save();
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.filter = 'drop-shadow(0px 0px 5px rgba(255,255,255,0.5))';
+                if (this.isLocal && this.flipX) {
+                    ctx.translate(px, py); ctx.scale(-1, 1); ctx.fillText(petEmoji.icon, 0, 0);
+                } else {
+                    ctx.fillText(petEmoji.icon, px, py);
+                }
+                ctx.restore();
+            }
+        }
 
         if (displayName) {
             ctx.fillStyle = this.isLocal ? '#818cf8' : '#fb7185';
@@ -2806,6 +2951,12 @@ function updateUI() {
     }
     const p = GAME.entities.player;
     if (!p) return;
+
+    if (GAME.isMobile) {
+        const mUltBtn = document.getElementById('mobile-ultimate');
+        if (mUltBtn) mUltBtn.style.display = 'flex';
+    }
+
     const xpStr = `LVL ${p.level}`;
     if (document.getElementById('level-display').innerText !== xpStr) document.getElementById('level-display').innerText = xpStr;
     document.getElementById('xp-bar-fill').style.width = `${(p.xp / p.nextLevelXp) * 100}%`;
@@ -2814,6 +2965,22 @@ function updateUI() {
     const sRatio = Math.min(1, (Date.now() - GAME.lastSniperTime) / getAbilityCooldown());
     const sBar = document.getElementById('sniper-bar');
     if (sBar) sBar.style.width = `${sRatio * 100}%`;
+
+    const ultRatio = Math.min(1, (Date.now() - p.lastUltimateTime) / (p.ultimateCooldown || 20000));
+    const ultBar = document.getElementById('ultimate-bar-fill');
+    const ultText = document.getElementById('ultimate-ready-text');
+    if (ultBar) {
+        ultBar.style.width = `${ultRatio * 100}%`;
+        if (ultRatio >= 1) {
+            ultBar.style.background = '#d946ef';
+            ultBar.style.boxShadow = '0 0 10px #d946ef';
+            if (ultText) ultText.style.opacity = '1';
+        } else {
+            ultBar.style.background = '#a855f7';
+            ultBar.style.boxShadow = 'none';
+            if (ultText) ultText.style.opacity = '0';
+        }
+    }
 
     const ultIcon = document.getElementById('ultimate-icon');
     if (ultIcon) {
@@ -3746,7 +3913,8 @@ function showMetaMenu() {
     const crateTypes = [
         { id: 'basic', name: window.T('📦 OBYČEJNÁ'), cost: 150, color: 'rgba(148, 163, 184, 0.1)', border: '#94a3b8' },
         { id: 'premium', name: window.T('💎 PRÉMIOVÁ'), cost: 1000, color: 'rgba(99, 102, 241, 0.1)', border: '#6366f1' },
-        { id: 'legendary', name: window.T('👑 LEGENDÁRNÍ'), cost: 5000, color: 'rgba(251, 191, 36, 0.1)', border: '#fbbf24' }
+        { id: 'legendary', name: window.T('👑 LEGENDÁRNÍ'), cost: 5000, color: 'rgba(251, 191, 36, 0.1)', border: '#fbbf24' },
+        { id: 'pet', name: window.T('🥚 VAJÍČKO (PET)'), cost: 2500, color: 'rgba(34, 197, 94, 0.1)', border: '#22c55e' }
     ];
 
     crateTypes.forEach(type => {
@@ -3823,7 +3991,7 @@ function showMetaMenu() {
             card.className = 'upgrade-card';
             card.style.minHeight = 'auto';
             card.style.padding = '12px';
-            const isEquipped = META.upgrades.hat === emoji.id;
+            const isEquipped = (emoji.isPet && META.selectedPet === emoji.id) || (!emoji.isPet && META.upgrades.hat === emoji.id);
             if (isEquipped) card.style.borderColor = '#fbbf24';
             card.innerHTML = `
                 <div style="font-size: 1.8rem;">${emoji.icon}</div>
@@ -3839,8 +4007,13 @@ function showMetaMenu() {
             if (btnEquip) {
                 btnEquip.onclick = (e) => {
                     e.stopPropagation();
-                    if (isEquipped) META.upgrades.hat = null;
-                    else META.upgrades.hat = emoji.id;
+                    if (emoji.isPet) {
+                        if (META.selectedPet === emoji.id) META.selectedPet = null;
+                        else META.selectedPet = emoji.id;
+                    } else {
+                        if (META.upgrades.hat === emoji.id) META.upgrades.hat = null;
+                        else META.upgrades.hat = emoji.id;
+                    }
                     saveMeta();
                     showMetaMenu();
                 };
@@ -3918,7 +4091,8 @@ function startCrateAnimation(winner, crateType = 'basic') {
     const crateData = {
         'basic': { name: window.T('OBYČEJNÁ BEDNA'), icon: '📦', color: '#94a3b8', glow: 'rgba(148, 163, 184, 0.3)', bg: '#0f172a' },
         'premium': { name: window.T('PRÉMIOVÁ BEDNA'), icon: '💎', color: '#6366f1', glow: 'rgba(99, 102, 241, 0.5)', bg: '#060b1a' },
-        'legendary': { name: window.T('LEGENDÁRNÍ BEDNA'), icon: '👑', color: '#fbbf24', glow: 'rgba(251, 191, 36, 0.6)', bg: '#1a1404' }
+        'legendary': { name: window.T('LEGENDÁRNÍ BEDNA'), icon: '👑', color: '#fbbf24', glow: 'rgba(251, 191, 36, 0.6)', bg: '#1a1404' },
+        'pet': { name: window.T('VAJÍČKO (PET)'), icon: '🥚', color: '#22c55e', glow: 'rgba(34, 197, 94, 0.6)', bg: '#022c22' }
     }[crateType];
 
     const isMobile = window.innerWidth <= 768;
@@ -4737,6 +4911,7 @@ function initSocket() {
                 newOthers[pId].targetY = data.players[pId].y;
                 newOthers[pId].dead = data.players[pId].dead;
                 newOthers[pId].remoteHat = data.players[pId].hat;
+                newOthers[pId].remotePet = data.players[pId].pet;
                 newOthers[pId].aura = data.players[pId].aura;
                 newOthers[pId].auraRange = data.players[pId].auraRange;
                 newOthers[pId].orbitals = data.players[pId].orbitals || 0;
@@ -4768,7 +4943,7 @@ function initSocket() {
             if (data.playerId === myPlayerId) return;
             const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, {
                 ownerId: data.playerId, speed: data.speed, size: data.size, pierce: data.pierce,
-                bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life, isAssassin: data.isAssassin, isSoundWave: data.isSoundWave
+                bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life, isAssassin: data.isAssassin, isSoundWave: data.isSoundWave, knockbackMult: data.knockbackMult
             });
             if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
         });
@@ -4975,6 +5150,7 @@ function syncPlayer() {
         hp: GAME.entities.player.hp,
         maxHp: GAME.entities.player.maxHp,
         hat: META.upgrades.hat,
+        pet: META.selectedPet,
         dead: GAME.entities.player.dead,
         level: GAME.entities.player.level,
         aura: GAME.entities.player.aura,
@@ -5016,7 +5192,7 @@ function syncShot(proj) {
         tx: proj.x + Math.cos(angle) * 100,
         ty: proj.y + Math.sin(angle) * 100,
         dmg: proj.damage, speed: speed, size: proj.radius, pierce: proj.pierce,
-        bounce: proj.bounce, isCrit: proj.isCrit, type: proj.type, isAssassin: proj.isAssassin, isSoundWave: proj.isSoundWave,
+        bounce: proj.bounce, isCrit: proj.isCrit, type: proj.type, isAssassin: proj.isAssassin, isSoundWave: proj.isSoundWave, knockbackMult: proj.knockbackMult,
         life: (proj.life === Infinity) ? 999999 : proj.life,
         playerId: myPlayerId
     });
@@ -6058,6 +6234,7 @@ function init() {
 
     window.addEventListener('keydown', (e) => {
         if (e.key) GAME.input[e.key.toLowerCase()] = true;
+        if (e.key === ' ') { GAME.input[' '] = true; if(GAME.entities.player) GAME.entities.player.tryUseUltimate(); }
         if (e.key === 'Escape') togglePause(false);
         if (e.key.toLowerCase() === 'm') GAME.largeMap = !GAME.largeMap;
     });
@@ -6087,6 +6264,17 @@ function init() {
         }
     });
 
+    const mUltBtn = document.getElementById('mobile-ultimate');
+    if (mUltBtn) {
+        mUltBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (GAME.entities.player) GAME.entities.player.tryUseUltimate();
+        }, { passive: false });
+        mUltBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            if (GAME.entities.player) GAME.entities.player.tryUseUltimate();
+        });
+    }
 
     setInterval(() => { if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume(); }, 500);
 
@@ -6760,6 +6948,34 @@ function update(dt) {
         GAME.lastMeteorSpawn = now;
     }
 
+    // UI Cooldown animation
+    if (GAME.entities.player && !GAME.entities.player.dead) {
+        const p = GAME.entities.player;
+        const sRatio = Math.min(1, (now - GAME.lastSniperTime) / getAbilityCooldown());
+        const sBar = document.getElementById('sniper-bar');
+        if (sBar) sBar.style.width = `${sRatio * 100}%`;
+        
+        const ultRatio = Math.min(1, (now - p.lastUltimateTime) / (p.ultimateCooldown || 20000));
+        const ultBar = document.getElementById('ultimate-bar-fill');
+        const ultText = document.getElementById('ultimate-ready-text');
+        if (ultBar) {
+            ultBar.style.width = `${ultRatio * 100}%`;
+            if (ultRatio >= 1) {
+                if (ultBar.style.background !== 'rgb(217, 70, 239)') { // #d946ef
+                    ultBar.style.background = '#d946ef';
+                    ultBar.style.boxShadow = '0 0 10px #d946ef';
+                    if (ultText) ultText.style.opacity = '1';
+                }
+            } else {
+                if (ultBar.style.background !== 'rgb(168, 85, 247)') { // #a855f7
+                    ultBar.style.background = '#a855f7';
+                    ultBar.style.boxShadow = 'none';
+                    if (ultText) ultText.style.opacity = '0';
+                }
+            }
+        }
+    }
+
     const p = GAME.entities.player;
     if (isNaN(p.x) || isNaN(p.y)) { p.x = 0; p.y = 0; }
     p.update(dt);
@@ -6859,6 +7075,7 @@ function update(dt) {
                             NET.socket.emit('enemyHit', { id: e.id, damage: 99999 });
                         } else {
                             if (t.hp !== undefined) {
+                                if (t.ultimateActive && (t.shipType === 2 || t.shipType === 8)) return;
                                 let dmg = (e.damage || (e.isBoss ? 2 : 0.5)) * (t.shield || 1);
                                 if (t.isLocal) {
                                     const armorRed = (META.upgrades.armor || 0) * 0.02;
@@ -6936,6 +7153,7 @@ function update(dt) {
             if (proj.isEnemy) {
                 alivePlayers.forEach(pl => {
                     if (dist(proj.x, proj.y, pl.x, pl.y) < proj.radius + pl.radius) {
+                        if (pl.ultimateActive && (pl.shipType === 2 || pl.shipType === 8)) return;
                         let dmg = proj.damage * (pl.shield || 1);
                         if (pl.isLocal) {
                             const armorRed = (META.upgrades.armor || 0) * 0.02;
@@ -7014,6 +7232,7 @@ function update(dt) {
                                 
                                 let kbForce = GAME.entities.player.knockbackForce || 6;
                                 if (proj.isSoundWave) kbForce *= 12;
+                                if (proj.knockbackMult) kbForce *= proj.knockbackMult;
                                 const kbAngle = Math.atan2(enemy.y - proj.y, enemy.x - proj.x);
                                 GAME.netKnockbackBuffer[enemy.id].x += Math.cos(kbAngle) * kbForce;
                                 GAME.netKnockbackBuffer[enemy.id].y += Math.sin(kbAngle) * kbForce;
@@ -7022,6 +7241,7 @@ function update(dt) {
                             // Singleplayer aplikuje ihned
                             let kbForce = GAME.entities.player.knockbackForce || 6;
                             if (proj.isSoundWave) kbForce *= 12;
+                            if (proj.knockbackMult) kbForce *= proj.knockbackMult;
                             const kbAngle = Math.atan2(enemy.y - proj.y, enemy.x - proj.x);
                             enemy.knockback.x = Math.cos(kbAngle) * kbForce;
                             enemy.knockback.y = Math.sin(kbAngle) * kbForce;

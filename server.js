@@ -302,6 +302,9 @@ const EMOJIS = [
     { id: 'hat_crown', rarity: 'legendary', price: 1000 },
     { id: 'hat_wizard', rarity: 'legendary', price: 1200 },
     { id: 'hat_ninja', rarity: 'legendary', price: 1500 },
+    { id: 'pet_magnet', rarity: 'rare', price: 1000 },
+    { id: 'pet_laser', rarity: 'epic', price: 2500 },
+    { id: 'pet_healer', rarity: 'legendary', price: 5000 },
     { id: 'ultra_rare', rarity: 'legendary', price: 20000, chance: 1 }
 ];
 
@@ -309,6 +312,15 @@ const REWARD_NORMAL_KILL = 1;
 const REWARD_BOSS_KILL = 500;
 
 function generateLoot(crateType) {
+    if (crateType === 'pet') {
+        const roll = Math.random() * 100;
+        let rarity = 'rare';
+        if (roll < 10) rarity = 'legendary';
+        else if (roll < 30) rarity = 'epic';
+        const possible = EMOJIS.filter(e => e.id.startsWith('pet_') && e.rarity === rarity);
+        if (possible.length > 0) return possible[Math.floor(Math.random() * possible.length)];
+    }
+
     const roll = Math.random() * 100;
     const diamond = EMOJIS.find(e => e.id === 'ultra_rare');
     if (diamond && roll < (diamond.chance || 0.1)) return diamond;
@@ -1376,7 +1388,7 @@ io.on('connection', (socket) => {
         const p = socket.playerId;
         if (r && ROOMS[r] && ROOMS[r].players[p]) {
             // ZERO TRUST: Strict Whitelist for visual/non-critical properties only
-            const whitelist = ['x', 'y', 'rot', 'anim', 'hat', 'dead', 'hp', 'maxHp', 'flipX', 'aura', 'auraRange', 'auraLevel', 'fireTrail', 'kaktus', 'shipType', 'laserTargetsIds', 'orbitals', 'portals'];
+            const whitelist = ['x', 'y', 'rot', 'anim', 'hat', 'pet', 'name', 'kills', 'dead', 'hp', 'maxHp', 'flipX', 'aura', 'auraRange', 'auraLevel', 'fireTrail', 'kaktus', 'shipType', 'laserTargetsIds', 'orbitals', 'portals'];
             whitelist.forEach(key => {
                 if (data[key] !== undefined) {
                     ROOMS[r].players[p][key] = data[key];
