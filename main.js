@@ -2234,79 +2234,8 @@ class Player {
 
         this.laserTargets = [];
         this.laserTargetsIds = [];
-
-        this.ultimateCooldown = 20000;
-        this.lastUltimateTime = 0;
-        this.ultimateDuration = 0;
-        this.ultimateActive = false;
-    }
     
-    tryUseUltimate() {
-        if (!this.isLocal || this.dead) return;
-        const now = Date.now();
-        if (now - this.lastUltimateTime < this.ultimateCooldown) return;
-        
-        this.lastUltimateTime = now;
-        this.ultimateActive = true;
-        
-        if (this.shipType === 2) { // Ninja - Dash a neviditelnost
-            this.ultimateDuration = 2000;
-            const angle = Math.atan2(GAME.mouse.y - GAME.canvas.height / 2, GAME.mouse.x - GAME.canvas.width / 2);
-            this.x += Math.cos(angle) * 400;
-            this.y += Math.sin(angle) * 400;
-            if (!GAME.entities.particles) GAME.entities.particles = [];
-            for (let i = 0; i < 30; i++) GAME.entities.particles.push(new Particle(this.x, this.y, '#333333', Math.random()*20));
-        } else if (this.shipType === 6) { // Assassin - Větrná smršť
-            this.ultimateDuration = 500;
-            for (let i = 0; i < 32; i++) {
-                const a = (i / 32) * Math.PI * 2;
-                const proj = new Projectile(this.x, this.y, this.x + Math.cos(a)*100, this.y + Math.sin(a)*100, this.damage * 5, {
-                    size: this.projSize + 10, pierce: 9999, bounce: 0, isCrit: true, isAssassin: true, life: 100, speed: CONFIG.PROJECTILE_SPEED * 1.5
-                });
-                if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
-                if (NET.isMultiplayer) syncShot(proj);
-            }
-        } else if (this.shipType === 7) { // Zvukař - Bass Drop
-            this.ultimateDuration = 500;
-            if (!GAME.entities.particles) GAME.entities.particles = [];
-            for (let i = 0; i < 50; i++) GAME.entities.particles.push(new Particle(this.x, this.y, '#a78bfa', Math.random()*15));
-            if (GAME.entities.enemies) GAME.entities.enemies.forEach(e => {
-                if (dist(this.x, this.y, e.x, e.y) < 600 && !e.possessed) {
-                    e.hp -= this.damage * 20;
-                    if (NET.isMultiplayer) {
-                        GAME.netDamageBuffer[e.id] = (GAME.netDamageBuffer[e.id] || 0) + this.damage * 20;
-                        GAME.netKnockbackBuffer = GAME.netKnockbackBuffer || {};
-                        GAME.netKnockbackBuffer[e.id] = GAME.netKnockbackBuffer[e.id] || {x:0, y:0};
-                        const kbAngle = Math.atan2(e.y - this.y, e.x - this.x);
-                        GAME.netKnockbackBuffer[e.id].x += Math.cos(kbAngle) * 150;
-                        GAME.netKnockbackBuffer[e.id].y += Math.sin(kbAngle) * 150;
-                    } else {
-                        const kbAngle = Math.atan2(e.y - this.y, e.x - this.x);
-                        e.knockback.x += Math.cos(kbAngle) * 150;
-                        e.knockback.y += Math.sin(kbAngle) * 150;
-                    }
-                }
-            });
-            shakeScreen(20);
-        } else if (this.shipType === 5) { // Nekromant - Oživení bosse
-            this.ultimateDuration = 500;
-            if (!GAME.entities.minions) GAME.entities.minions = [];
-            const boss = new FriendlyMinion(this.x, this.y, this.damage * 5, this);
-            boss.radius = 40;
-            boss.maxLife = 10000;
-            boss.color = '#10b981';
-            boss.isBoss = true;
-            GAME.entities.minions.push(boss);
-        } else if (this.shipType === 8) { // Brawler - Nesmrtelnost
-            this.ultimateDuration = 5000;
-        } else { // Základní - Overdrive
-            this.ultimateDuration = 5000;
-        }
-        
-        if (NET.isMultiplayer) {
-            NET.socket.emit('useAbility', { type: 'ultimate', shipType: this.shipType, x: this.x, y: this.y, id: myPlayerId });
-        }
-    }
+
     update(dt) {
         if (this.dead) return;
 
@@ -2952,10 +2881,7 @@ function updateUI() {
     const p = GAME.entities.player;
     if (!p) return;
 
-    if (GAME.isMobile) {
-        const mUltBtn = document.getElementById('mobile-ultimate');
-        if (mUltBtn) mUltBtn.style.display = 'flex';
-    }
+
 
     const xpStr = `LVL ${p.level}`;
     if (document.getElementById('level-display').innerText !== xpStr) document.getElementById('level-display').innerText = xpStr;
@@ -2966,21 +2892,7 @@ function updateUI() {
     const sBar = document.getElementById('sniper-bar');
     if (sBar) sBar.style.width = `${sRatio * 100}%`;
 
-    const ultRatio = Math.min(1, (Date.now() - p.lastUltimateTime) / (p.ultimateCooldown || 20000));
-    const ultBar = document.getElementById('ultimate-bar-fill');
-    const ultText = document.getElementById('ultimate-ready-text');
-    if (ultBar) {
-        ultBar.style.width = `${ultRatio * 100}%`;
-        if (ultRatio >= 1) {
-            ultBar.style.background = '#d946ef';
-            ultBar.style.boxShadow = '0 0 10px #d946ef';
-            if (ultText) ultText.style.opacity = '1';
-        } else {
-            ultBar.style.background = '#a855f7';
-            ultBar.style.boxShadow = 'none';
-            if (ultText) ultText.style.opacity = '0';
-        }
-    }
+
 
     const ultIcon = document.getElementById('ultimate-icon');
     if (ultIcon) {
@@ -4897,7 +4809,9 @@ function initSocket() {
                 GAME.entities.tombstones = data.tombstones.map(t => new Tombstone(t.x, t.y, t.id, t.playerId, t.reviveProgress));
             } else { GAME.entities.tombstones = []; }
 
-            GAME.entities.obstacles = [];
+            if (data.envObjects) {
+                GAME.entities.envObjects = data.envObjects.map(o => ({...o}));
+            } else { GAME.entities.envObjects = []; }
 
             const newOthers = {};
             for (let pId in data.players) {
@@ -6234,7 +6148,7 @@ function init() {
 
     window.addEventListener('keydown', (e) => {
         if (e.key) GAME.input[e.key.toLowerCase()] = true;
-        if (e.key === ' ') { GAME.input[' '] = true; if(GAME.entities.player) GAME.entities.player.tryUseUltimate(); }
+        if (e.key === ' ') { GAME.input[' '] = true; }
         if (e.key === 'Escape') togglePause(false);
         if (e.key.toLowerCase() === 'm') GAME.largeMap = !GAME.largeMap;
     });
@@ -6954,32 +6868,40 @@ function update(dt) {
         const sRatio = Math.min(1, (now - GAME.lastSniperTime) / getAbilityCooldown());
         const sBar = document.getElementById('sniper-bar');
         if (sBar) sBar.style.width = `${sRatio * 100}%`;
-        
-        const ultRatio = Math.min(1, (now - p.lastUltimateTime) / (p.ultimateCooldown || 20000));
-        const ultBar = document.getElementById('ultimate-bar-fill');
-        const ultText = document.getElementById('ultimate-ready-text');
-        if (ultBar) {
-            ultBar.style.width = `${ultRatio * 100}%`;
-            if (ultRatio >= 1) {
-                if (ultBar.style.background !== 'rgb(217, 70, 239)') { // #d946ef
-                    ultBar.style.background = '#d946ef';
-                    ultBar.style.boxShadow = '0 0 10px #d946ef';
-                    if (ultText) ultText.style.opacity = '1';
-                }
-            } else {
-                if (ultBar.style.background !== 'rgb(168, 85, 247)') { // #a855f7
-                    ultBar.style.background = '#a855f7';
-                    ultBar.style.boxShadow = 'none';
-                    if (ultText) ultText.style.opacity = '0';
-                }
-            }
-        }
     }
 
     const p = GAME.entities.player;
     if (isNaN(p.x) || isNaN(p.y)) { p.x = 0; p.y = 0; }
     p.update(dt);
     if (isNaN(p.x) || isNaN(p.y)) { p.x = 0; p.y = 0; }
+
+    // Anomaly Gravity Logic
+    if (GAME.entities.envObjects) {
+        GAME.entities.envObjects.forEach(envObj => {
+            if (envObj.type === 'anomaly') {
+                const maxDist = envObj.radius * 3;
+                const d = dist(p.x, p.y, envObj.x, envObj.y);
+                if (d < maxDist) {
+                    const pullForce = (maxDist - d) / maxDist * 3;
+                    const angle = Math.atan2(envObj.y - p.y, envObj.x - p.x);
+                    p.x += Math.cos(angle) * pullForce;
+                    p.y += Math.sin(angle) * pullForce;
+                }
+                
+                if (GAME.entities.enemies) {
+                    GAME.entities.enemies.forEach(enemy => {
+                        const ed = dist(enemy.x, enemy.y, envObj.x, envObj.y);
+                        if (ed < maxDist) {
+                            const ePull = (maxDist - ed) / maxDist * 3;
+                            const eAngle = Math.atan2(envObj.y - enemy.y, envObj.x - enemy.x);
+                            enemy.x += Math.cos(eAngle) * ePull;
+                            enemy.y += Math.sin(eAngle) * ePull;
+                        }
+                    });
+                }
+            }
+        });
+    }
 
     // Teleport logic
     if (GAME.portals && GAME.portals.length === 2 && !p.dead) {
@@ -7075,7 +6997,7 @@ function update(dt) {
                             NET.socket.emit('enemyHit', { id: e.id, damage: 99999 });
                         } else {
                             if (t.hp !== undefined) {
-                                if (t.ultimateActive && (t.shipType === 2 || t.shipType === 8)) return;
+
                                 let dmg = (e.damage || (e.isBoss ? 2 : 0.5)) * (t.shield || 1);
                                 if (t.isLocal) {
                                     const armorRed = (META.upgrades.armor || 0) * 0.02;
@@ -7153,7 +7075,7 @@ function update(dt) {
             if (proj.isEnemy) {
                 alivePlayers.forEach(pl => {
                     if (dist(proj.x, proj.y, pl.x, pl.y) < proj.radius + pl.radius) {
-                        if (pl.ultimateActive && (pl.shipType === 2 || pl.shipType === 8)) return;
+
                         let dmg = proj.damage * (pl.shield || 1);
                         if (pl.isLocal) {
                             const armorRed = (META.upgrades.armor || 0) * 0.02;
@@ -7175,6 +7097,41 @@ function update(dt) {
                     }
                 });
             } else {
+                // Brawler reflection logic
+                if (proj.isSoundWave && proj.ownerId === 'local') {
+                    for (let ep = GAME.entities.projectiles.length - 1; ep >= 0; ep--) {
+                        const enemyProj = GAME.entities.projectiles[ep];
+                        if (enemyProj && enemyProj.isEnemy && dist(proj.x, proj.y, enemyProj.x, enemyProj.y) < proj.radius + enemyProj.radius) {
+                            enemyProj.isEnemy = false;
+                            enemyProj.ownerId = 'local';
+                            enemyProj.color = '#3b82f6';
+                            enemyProj.vx = -enemyProj.vx * 1.5;
+                            enemyProj.vy = -enemyProj.vy * 1.5;
+                            if (NET.isMultiplayer) syncShot(enemyProj); 
+                        }
+                    }
+                }
+
+                // Asteroid hit logic
+                if (GAME.entities.envObjects) {
+                    GAME.entities.envObjects.forEach(envObj => {
+                        if (envObj.type === 'asteroid' && dist(proj.x, proj.y, envObj.x, envObj.y) < proj.radius + envObj.radius) {
+                            envObj.hp -= proj.damage;
+                            if (envObj.hp <= 0 && !envObj.dead) {
+                                envObj.dead = true;
+                                if (NET.isMultiplayer) {
+                                    NET.socket.emit('asteroidDestroyed', { id: envObj.id });
+                                } else {
+                                    if (Math.random() < 0.2) GAME.entities.baits.push(new Bait(envObj.x, envObj.y, 20));
+                                    else GAME.entities.gems.push(new Gem(envObj.x, envObj.y, 50, 'purple'));
+                                    envObj.life = 0; // mark for removal if singleplayer
+                                }
+                            }
+                            if (proj.pierce !== Infinity && proj.bounce <= 0) proj.life = 0;
+                        }
+                    });
+                }
+
                 enemies.forEach((enemy) => {
                     let hitDist = 0;
                     let d = 0;
@@ -7380,6 +7337,51 @@ function render() {
             if (GAME.entities.baits) GAME.entities.baits.forEach(b => { if (b) b.draw(ctx, { x: camX, y: camY }); });
             if (GAME.entities.tombstones) GAME.entities.tombstones.forEach(t => { if (t) t.draw(ctx, { x: camX, y: camY }); });
             if (GAME.entities.gems) GAME.entities.gems.forEach(g => { if (g) g.draw(ctx, { x: camX, y: camY }); });
+            
+            // Draw envObjects (Asteroids and Black holes)
+            if (GAME.entities.envObjects) GAME.entities.envObjects.forEach(o => {
+                if (!o) return;
+                ctx.save();
+                ctx.translate(o.x - camX, o.y - camY);
+                if (o.type === 'asteroid') {
+                    ctx.fillStyle = '#475569';
+                    ctx.strokeStyle = '#334155';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    // simple rock shape
+                    for (let i = 0; i < 8; i++) {
+                        const a = (i / 8) * Math.PI * 2;
+                        const r = o.radius * (0.8 + Math.sin(parseInt(o.id, 36) + i)*0.2);
+                        if (i === 0) ctx.moveTo(Math.cos(a)*r, Math.sin(a)*r);
+                        else ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+                    }
+                    ctx.closePath();
+                    ctx.fill(); ctx.stroke();
+                    // draw HP bar if damaged
+                    if (o.hp < o.maxHp) {
+                        ctx.fillStyle = 'red'; ctx.fillRect(-o.radius/2, -o.radius - 10, o.radius, 4);
+                        ctx.fillStyle = 'lime'; ctx.fillRect(-o.radius/2, -o.radius - 10, o.radius * (o.hp / o.maxHp), 4);
+                    }
+                } else if (o.type === 'anomaly') {
+                    ctx.fillStyle = 'black';
+                    ctx.shadowBlur = 40;
+                    ctx.shadowColor = '#d946ef';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, o.radius * (0.8 + 0.2*Math.sin(Date.now()/200)), 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    // gravity lines
+                    ctx.strokeStyle = 'rgba(217, 70, 239, 0.5)';
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < 5; i++) {
+                        const a = (i/5) * Math.PI * 2 + Date.now()/1000;
+                        const r1 = o.radius * 1.5;
+                        const r2 = o.radius * 3;
+                        ctx.beginPath(); ctx.moveTo(Math.cos(a)*r1, Math.sin(a)*r1); ctx.lineTo(Math.cos(a)*r2, Math.sin(a)*r2); ctx.stroke();
+                    }
+                }
+                ctx.restore();
+            });
             
             if (GAME.portals) {
                 GAME.portals.forEach(p => {

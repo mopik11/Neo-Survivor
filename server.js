@@ -1326,7 +1326,8 @@ io.on('connection', (socket) => {
                 cleanupTimer: null,
                 frozenUntil: 0, // Logika pro zamrznutí času
                 tombstones: [],
-                obstacles: [],
+
+                envObjects: [], // Asteroids and anomalies
                 lastBossLevelSpawned: 0,
                 isSolo: data.isSolo || false,
                 dogeEarned: {},
@@ -1455,6 +1456,24 @@ io.on('connection', (socket) => {
                 });
             } else if (data.type === 'medic') {
                 // Léčivá aura zapnuta - klient posílá heal eventy
+            }
+        }
+    });
+
+    socket.on('asteroidDestroyed', (data) => {
+        const r = socket.roomId;
+        if (r && ROOMS[r]) {
+            const idx = ROOMS[r].envObjects.findIndex(o => o.id === data.id);
+            if (idx !== -1) {
+                const obj = ROOMS[r].envObjects[idx];
+                ROOMS[r].envObjects.splice(idx, 1);
+                
+                // Spawn gems or bait
+                if (Math.random() < 0.2) {
+                    ROOMS[r].baits.push({ id: Math.random().toString(36).substr(2, 9), x: obj.x, y: obj.y, hp: 20, maxHp: 20 });
+                } else {
+                    ROOMS[r].gems.push({ id: Math.random().toString(36).substr(2, 9), x: obj.x, y: obj.y, value: 50, color: 'purple' });
+                }
             }
         }
     });
@@ -1779,14 +1798,30 @@ setInterval(() => {
                     prepTime: 0
                 });
 
-                // Náhodné generování meteorů (překážek)
-                if (Math.random() < 0.1 && room.obstacles.length < 30) {
-                    room.obstacles.push({
+                // Náhodné generování asteroidů a černých děr
+                if (Math.random() < 0.1 && room.envObjects.length < 30) {
+                    const isAnomaly = Math.random() < 0.1;
+                    room.envObjects.push({
                         id: Math.random().toString(36).substr(2, 9),
-                        x: pivot.x + (Math.random() - 0.5) * 1500,
-                        y: pivot.y + (Math.random() - 0.5) * 1500,
-                        radius: 40 + Math.random() * 60
+                        type: isAnomaly ? 'anomaly' : 'asteroid',
+                        x: pivot.x + (Math.random() - 0.5) * 2000,
+                        y: pivot.y + (Math.random() - 0.5) * 2000,
+                        radius: isAnomaly ? 100 : 40 + Math.random() * 40,
+                        hp: isAnomaly ? 999999 : 50,
+                        maxHp: isAnomaly ? 999999 : 50,
+                        life: isAnomaly ? 10 : 9999 // anomaly lives for 10 seconds
                     });
+                }
+            }
+
+            // Update envObjects life
+            for (let i = room.envObjects.length - 1; i >= 0; i--) {
+                const envObj = room.envObjects[i];
+                if (envObj.type === 'anomaly') {
+                    envObj.life -= 1/20;
+                    if (envObj.life <= 0) {
+                        room.envObjects.splice(i, 1);
+                    }
                 }
             }
 
@@ -1798,7 +1833,7 @@ setInterval(() => {
                     gems: room.gems,
                     baits: room.baits,
                     tombstones: room.tombstones,
-                    obstacles: room.obstacles,
+                    envObjects: room.envObjects,
                     time: room.time,
                     roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp },
                     frozen: true
@@ -1821,7 +1856,7 @@ setInterval(() => {
                         let nextX = enemy.x + Math.cos(angle) * speed;
                         let nextY = enemy.y + Math.sin(angle) * speed;
 
-                        room.obstacles.forEach(obs => {
+                        room.envObjects.forEach(obs => {
                             if (dist(nextX, nextY, obs.x, obs.y) < 15 + obs.radius) {
                                 const pushAngle = Math.atan2(nextY - obs.y, nextX - obs.x);
                                 nextX = obs.x + Math.cos(pushAngle) * (15 + obs.radius);
@@ -1884,7 +1919,7 @@ setInterval(() => {
                     enemy.knockback.x *= 0.8;
                     enemy.knockback.y *= 0.8;
 
-                    room.obstacles.forEach(obs => {
+                    room.envObjects.forEach(obs => {
                         if (dist(nextX, nextY, obs.x, obs.y) < 15 + obs.radius) {
                             const pushAngle = Math.atan2(nextY - obs.y, nextX - obs.x);
                             nextX = obs.x + Math.cos(pushAngle) * (15 + obs.radius);
@@ -1994,7 +2029,7 @@ setInterval(() => {
                 gems: room.gems,
                 baits: room.baits,
                 tombstones: room.tombstones,
-                obstacles: room.obstacles,
+                envObjects: room.envObjects,
                 time: room.time,
                 roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp },
                 frozen: false
