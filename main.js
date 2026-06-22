@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.505'
+    version: 'v1.506'
 };
 
 let achievementsInitialized = false;
@@ -1267,6 +1267,7 @@ class Projectile {
         this.bounce = stats.bounce || 0;
         this.isCrit = stats.isCrit || false;
         this.isAssassin = stats.isAssassin || false;
+        this.isSoundWave = stats.isSoundWave || false;
 
         this.type = stats.type || 'default';
 
@@ -1334,6 +1335,24 @@ class Projectile {
                 ctx.fill();
                 ctx.strokeStyle = '#475569';
                 ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.restore();
+            } else if (this.isSoundWave) {
+                ctx.save();
+                ctx.translate(this.x - cam.x, this.y - cam.y);
+                ctx.rotate(Math.atan2(this.vy, this.vx)); 
+                ctx.font = this.isCrit ? 'bold 30px Arial' : '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const notes = ['🎵', '🎶', '🔊', '🎼'];
+                const note = notes[Math.floor((this.life * 13) % notes.length)] || '🎵';
+                ctx.fillText(note, 0, 0);
+
+                ctx.beginPath();
+                const waveOffset = (Date.now() % 400) / 400 * 15;
+                ctx.arc(-20 - waveOffset, 0, 10 + waveOffset, -Math.PI / 3, Math.PI / 3);
+                ctx.strokeStyle = `rgba(167, 139, 250, ${1 - waveOffset/15})`;
+                ctx.lineWidth = 2;
                 ctx.stroke();
                 ctx.restore();
             } else {
@@ -2420,10 +2439,11 @@ class Player {
         }
         if (!target) return;
 
-        if (this.shipType === 1 || this.shipType === 6) {
+        if (this.shipType === 1 || this.shipType === 6 || this.shipType === 7) {
             for (let i = 0; i < this.projectileCount; i++) {
                 const isCrit = Math.random() < this.critChance;
-                const finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
+                let finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
+                if (this.shipType === 7) finalDamage *= 0.2;
 
                 // Rovnoměrný rozptyl pro více projektilů
                 let spread = 0;
@@ -2443,8 +2463,9 @@ class Player {
                     bounce: this.bounces,
                     isCrit: isCrit,
                     isAssassin: this.shipType === 6,
+                    isSoundWave: this.shipType === 7,
                     type: 'default',
-                    life: 200,
+                    life: this.shipType === 7 ? 999999 : 200,
                     speed: CONFIG.PROJECTILE_SPEED
                 });
                 if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
@@ -3514,7 +3535,8 @@ function showShipsMenu() {
         { id: 3, name: 'Drtivá Zeď', desc: 'Průrazná vlna bez základní palby.', cost: 1000, icon: '🌊' },
         { id: 4, name: 'Brokovnice', desc: 'Střílí 3-5 střel najednou.', cost: 1500, icon: '💥' },
         { id: 5, name: 'Nekromancer', desc: 'Místo útoku vyvolává vlastní armádu minionů.', cost: 2000, icon: '💀' },
-        { id: 6, name: 'Assassin', desc: 'Dvojnásobná rychlost pohybu. Při stání zrychluje střelbu.', cost: 2500, icon: '🥷' }
+        { id: 6, name: 'Assassin', desc: 'Dvojnásobná rychlost pohybu. Při stání zrychluje střelbu.', cost: 2500, icon: '🥷' },
+        { id: 7, name: 'Zvukař', desc: 'Nekonečný dolet, masivní odhoz, ale slabší poškození.', cost: 3000, icon: '🎧' }
     ];
 
     ships.forEach(item => {
@@ -4728,7 +4750,7 @@ function initSocket() {
             if (data.playerId === myPlayerId) return;
             const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, {
                 ownerId: data.playerId, speed: data.speed, size: data.size, pierce: data.pierce,
-                bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life, isAssassin: data.isAssassin
+                bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life, isAssassin: data.isAssassin, isSoundWave: data.isSoundWave
             });
             if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
         });
@@ -4808,7 +4830,7 @@ function initSocket() {
 
             // Track stats
             incrementStat('totalGames');
-            const shipTypes = ['Explorer', 'Laser', 'Defender', 'Shotgun', 'Necro', 'Assassin'];
+            const shipTypes = ['Explorer', 'Laser', 'Defender', 'Shotgun', 'Necro', 'Assassin', 'Soundman'];
             incrementStat('totalGames' + shipTypes[(META.upgrades.ship || 1) - 1]);
     
             updateUI();
@@ -4972,7 +4994,7 @@ function syncShot(proj) {
         tx: proj.x + Math.cos(angle) * 100,
         ty: proj.y + Math.sin(angle) * 100,
         dmg: proj.damage, speed: speed, size: proj.radius, pierce: proj.pierce,
-        bounce: proj.bounce, isCrit: proj.isCrit, type: proj.type, isAssassin: proj.isAssassin,
+        bounce: proj.bounce, isCrit: proj.isCrit, type: proj.type, isAssassin: proj.isAssassin, isSoundWave: proj.isSoundWave,
         life: (proj.life === Infinity) ? 999999 : proj.life,
         playerId: myPlayerId
     });
@@ -5462,6 +5484,7 @@ function init() {
             "🚀 Průzkumník:": "🚀 Explorer:",
             "Průzkumník": "Explorer",
             "Assassin": "Assassin",
+            "Zvukař": "Soundman",
             "Základní vyvážená loď.": "Basic balanced ship.",
             "⚡ Laserový křižník:": "⚡ Laser Cruiser:",
             "Střílí zničující lasery na více cílů.": "Shoots devastating lasers at multiple targets.",
@@ -6965,7 +6988,8 @@ function update(dt) {
                         }
 
                         // APPLY KNOCKBACK
-                        const kbForce = GAME.entities.player.knockbackForce || 6;
+                        let kbForce = GAME.entities.player.knockbackForce || 6;
+                        if (proj.isSoundWave) kbForce *= 6;
                         const kbAngle = Math.atan2(enemy.y - proj.y, enemy.x - proj.x);
                         enemy.knockback.x = Math.cos(kbAngle) * kbForce;
                         enemy.knockback.y = Math.sin(kbAngle) * kbForce;
