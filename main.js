@@ -2234,7 +2234,7 @@ class Player {
 
         this.laserTargets = [];
         this.laserTargetsIds = [];
-    
+    }
 
     update(dt) {
         if (this.dead) return;
