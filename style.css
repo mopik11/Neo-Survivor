@@ -2313,3 +2313,41 @@ canvas {
 .skill-node .node-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; color: #cbd5e1; }
 @keyframes pulse-node { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
 
+/* Fullscreen active tree overlay and button styling overrides */
+#btn-fullscreen-tree {
+  display: none;
+}
+.fullscreen-active #btn-fullscreen-tree {
+  display: block !important;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000000;
+  background: rgba(239, 68, 68, 0.95) !important;
+  color: white !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  padding: 12px 24px !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+  font-size: 1rem !important;
+  letter-spacing: 1px !important;
+  transition: all 0.2s ease !important;
+}
+.fullscreen-active #btn-fullscreen-tree:hover {
+  background: #ef4444 !important;
+  transform: scale(1.05) !important;
+}
+.fullscreen-active #tree-preview-overlay {
+  display: none !important;
+}
+
+/* Fix mobile/landscape height clipping on meta-modal */
+@media (max-width: 950px), (max-height: 550px) {
+  #meta-modal .modal-content {
+    height: 90vh !important;
+    max-height: 90vh !important;
+  }
+}
+
