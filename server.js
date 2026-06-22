@@ -1487,6 +1487,20 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('batchEnemyKnockback', (data) => {
+        const r = socket.roomId;
+        if (!r || !ROOMS[r] || !data) return;
+        const room = ROOMS[r];
+        for (let id in data) {
+            const enemy = room.enemies.find(e => e.id === id);
+            if (enemy) {
+                enemy.knockback = enemy.knockback || {x:0, y:0};
+                enemy.knockback.x += data[id].x;
+                enemy.knockback.y += data[id].y;
+            }
+        }
+    });
+
     socket.on('gemPickup', (gemId) => {
         handleSingleGem(socket, gemId);
     });
@@ -1714,12 +1728,12 @@ setInterval(() => {
                 let speedMod = 1;
 
                 const rnd = Math.random();
-                if (room.level >= 3 && rnd < 0.15) type = 2; // Střelec
-                else if (room.level >= 4 && rnd < 0.10) type = 4; // Zloděj
-                else if (room.level >= 5 && rnd < 0.12) type = 3; // Kamikadze
-                else if (room.level >= 6 && rnd < 0.08) type = 5; // Support
+                if (room.level >= 2 && rnd < 0.2) type = 2; // Shooter
+                else if (room.level >= 3 && rnd < 0.1) type = 3; // Kamikadze
+                else if (room.level >= 4 && rnd < 0.15) type = 4; // Goblin
+                else if (room.level >= 5 && rnd < 0.05) type = 5; // Support
                 else if (room.level >= 8 && rnd < 0.08) type = 6; // Skokan
-                else if (room.level >= 10 && rnd < 0.12) type = 7; // Sebevrah
+                else if (room.level >= 10 && rnd < 0.08) type = 7; // Sebevrah
                 else if (room.level >= 12 && rnd < 0.1) type = 8; // Štítonoš
 
                 const hasBoss = room.enemies.some(e => e.isBoss);
@@ -1730,6 +1744,7 @@ setInterval(() => {
                     isBoss = true;
                     hp = (CONFIG.ENEMY_BASE_HEALTH * mod) * 150; // 150x HP
                     type = room.nextBossType || Math.floor(Math.random() * 7) + 1;
+                    if (type === 7) type = 8; // Preskocime Sebevraha (7) a dame Stitonose (8)
                     speedMod = 2; // 2x Speed for Boss
                     room.lastBossLevelSpawned = room.level;
                     room.nextBossType = null;
@@ -1845,13 +1860,17 @@ setInterval(() => {
                         else speedMult = 0.7; // Skokan walking speed
                     }
                     if (enemy.type === 7) speedMult = 1.6; // Sebevrah
-                    if (enemy.type === 8) speedMult = 0.7; // Štítonoš
+                    if (enemy.type === 8) speedMult = 0.4; // Štítonoš
 
                     const enemyMod = enemy.mod || 1;
                     const speed = (CONFIG.ENEMY_BASE_SPEED + (enemyMod * 0.15)) * speedMult;
+                    
+                    enemy.knockback = enemy.knockback || {x:0, y:0};
 
-                    let nextX = enemy.x + Math.cos(angle) * speed;
-                    let nextY = enemy.y + Math.sin(angle) * speed;
+                    let nextX = enemy.x + Math.cos(angle) * speed + enemy.knockback.x;
+                    let nextY = enemy.y + Math.sin(angle) * speed + enemy.knockback.y;
+                    enemy.knockback.x *= 0.8;
+                    enemy.knockback.y *= 0.8;
 
                     room.obstacles.forEach(obs => {
                         if (dist(nextX, nextY, obs.x, obs.y) < 15 + obs.radius) {

@@ -1703,9 +1703,9 @@ class Boss {
                 players.forEach(p => { p.hp -= 2; });
                 this.lastHpDrain = Date.now();
             }
-        } else if (this.type === 6) { // Štítonoš - dává rezistenci (logika je v takeDamage)
+        } else if (this.type === 8) { // Štítonoš - dává rezistenci (logika je v takeDamage)
             // Jen se hýbe
-        } else if (this.type === 7) { // Skokan - skáče a nechává meteority
+        } else if (this.type === 6) { // Skokan - skáče a nechává meteority
             if (this.jumpState === 'WALKING') {
                 if (Date.now() - this.lastJump > 3000) {
                     this.jumpState = 'JUMPING';
@@ -1716,7 +1716,7 @@ class Boss {
             } else {
                 this.jumpProgress += 0.02 * GAME.speedFactor;
                 this.x = this.jumpStart.x + (this.jumpTarget.x - this.jumpStart.x) * this.jumpProgress;
-                this.y = this.jumpStart.y + (this.jumpTarget.y - this.jumpStart.y) * this.jumpProgress - Math.sin(this.jumpProgress * Math.PI) * 200;
+                this.y = this.jumpStart.y + (this.jumpTarget.y - this.jumpStart.y) * this.jumpProgress; // ARC JE V DRAW
                 
                 if (this.jumpProgress >= 1) {
                     this.jumpState = 'WALKING';
@@ -1737,11 +1737,15 @@ class Boss {
 
     draw(ctx, cam) {
         const ratio = this.hp / this.maxHp;
-        const colors = { 1: '#ef4444', 2: '#f43f5e', 3: '#f97316', 4: '#eab308', 5: '#0ea5e9', 6: '#94a3b8', 7: '#10b981' };
+        const colors = { 1: '#ef4444', 2: '#f43f5e', 3: '#f97316', 4: '#eab308', 5: '#0ea5e9', 6: '#10b981', 8: '#94a3b8' };
         const color = colors[this.type] || '#ef4444';
 
         ctx.save();
-        ctx.translate(this.x - cam.x, this.y - cam.y);
+        let renderY = this.y;
+        if (this.type === 6 && this.jumpState === 'JUMPING' && this.jumpProgress !== undefined) {
+            renderY -= Math.sin(this.jumpProgress * Math.PI) * 200;
+        }
+        ctx.translate(this.x - cam.x, renderY - cam.y);
         
         // Vzhled podle typu příslušníka (Scaled 3x)
         if (this.type === 1) { // Dron
@@ -1787,7 +1791,7 @@ class Boss {
             ctx.globalAlpha = 1.0;
             ctx.shadowBlur = 60; ctx.shadowColor = color; ctx.fillStyle = color;
             ctx.beginPath(); ctx.arc(0, 0, 54, 0, Math.PI * 2); ctx.fill();
-        } else if (this.type === 6) { // Štítonoš (Enemy Type 8 logic)
+        } else if (this.type === 8) { // Štítonoš (Enemy Type 8 logic)
             const players = getAllAlivePlayers();
             let target = { x: 0, y: 0 };
             if (players.length > 0) {
@@ -1805,9 +1809,9 @@ class Boss {
             ctx.beginPath(); ctx.arc(0, 0, 45, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = '#fff'; ctx.lineWidth = 12;
             ctx.beginPath(); ctx.arc(0, 0, 66, -Math.PI / 2, Math.PI / 2); ctx.stroke();
-        } else if (this.type === 7) { // Skokan (Enemy Type 6 logic)
+        } else if (this.type === 6) { // Skokan (Enemy Type 6 logic)
             if (this.jumpState === 'JUMPING') {
-                const s = 1 + Math.sin(Date.now() / 50) * 0.2;
+                const s = 1 + Math.sin((this.jumpProgress || 0) * Math.PI) * 0.2;
                 ctx.scale(s, s);
             }
             ctx.shadowBlur = 50; ctx.shadowColor = color; ctx.fillStyle = color;
@@ -2451,7 +2455,7 @@ class Player {
             for (let i = 0; i < this.projectileCount; i++) {
                 const isCrit = Math.random() < this.critChance;
                 let finalDamage = isCrit ? this.damage * this.critMultiplier : this.damage;
-                if (this.shipType === 7) finalDamage *= 0.2;
+                if (this.shipType === 7) finalDamage *= 0.1;
 
                 // Rovnoměrný rozptyl pro více projektilů
                 let spread = 0;
@@ -2748,8 +2752,9 @@ function spawnEnemy() {
     const bossAlreadySpawned = GAME.lastBossLevelSpawned === pivot.level;
     
     if (isBossLevel && !bossAlreadySpawned && !hasBoss) {
-        const bossType = GAME.nextBossType || Math.floor(Math.random() * 7) + 1;
-        const bossNames = { 1: 'Dron', 2: 'Kostka', 3: 'Kamikadze', 4: 'Goblin', 5: 'Support', 6: 'Štítonoš', 7: 'Skokan' };
+        let bossType = GAME.nextBossType || Math.floor(Math.random() * 7) + 1;
+        if (bossType === 7) bossType = 8; // Preskocime Sebevraha (7) a dame Stitonose (8)
+        const bossNames = { 1: 'Dron', 2: 'Kostka', 3: 'Kamikadze', 4: 'Goblin', 5: 'Support', 6: 'Skokan', 8: 'Štítonoš' };
         enemy = new Boss(x, y, mod, undefined, bossType);
         const bName = bossNames[bossType] || 'Boss';
         GAME.entities.enemies.push(enemy);
@@ -4683,6 +4688,10 @@ function initSocket() {
                 e.targetX = he.x; e.targetY = he.y;
                 e.hp = he.hp; e.maxHp = he.maxHp;
                 e.possessed = he.possessed;
+                if (he.jumpState) {
+                    e.jumpState = he.jumpState;
+                    e.jumpProgress = he.jumpProgress;
+                }
                 return e;
             });
 
@@ -4984,6 +4993,10 @@ function syncPlayer() {
     if (Object.keys(GAME.netDamageBuffer).length > 0) {
         NET.socket.emit('batchEnemyHit', GAME.netDamageBuffer);
         GAME.netDamageBuffer = {};
+    }
+    if (Object.keys(GAME.netKnockbackBuffer || {}).length > 0) {
+        NET.socket.emit('batchEnemyKnockback', GAME.netKnockbackBuffer);
+        GAME.netKnockbackBuffer = {};
     }
 
     // Flush gem buffer (v1.418)
@@ -6993,14 +7006,24 @@ function update(dt) {
 
                         if (NET.isMultiplayer) {
                             GAME.netDamageBuffer[enemy.id] = (GAME.netDamageBuffer[enemy.id] || 0) + damage;
+                            
+                            GAME.netKnockbackBuffer = GAME.netKnockbackBuffer || {};
+                            GAME.netKnockbackBuffer[enemy.id] = GAME.netKnockbackBuffer[enemy.id] || {x:0, y:0};
+                            
+                            let kbForce = GAME.entities.player.knockbackForce || 6;
+                            if (proj.isSoundWave) kbForce *= 12;
+                            const kbAngle = Math.atan2(enemy.y - proj.y, enemy.x - proj.x);
+                            GAME.netKnockbackBuffer[enemy.id].x += Math.cos(kbAngle) * kbForce;
+                            GAME.netKnockbackBuffer[enemy.id].y += Math.sin(kbAngle) * kbForce;
+                        } else {
+                            // Singleplayer aplikuje ihned
+                            let kbForce = GAME.entities.player.knockbackForce || 6;
+                            if (proj.isSoundWave) kbForce *= 12;
+                            const kbAngle = Math.atan2(enemy.y - proj.y, enemy.x - proj.x);
+                            enemy.knockback.x = Math.cos(kbAngle) * kbForce;
+                            enemy.knockback.y = Math.sin(kbAngle) * kbForce;
                         }
 
-                        // APPLY KNOCKBACK
-                        let kbForce = GAME.entities.player.knockbackForce || 6;
-                        if (proj.isSoundWave) kbForce *= 12;
-                        const kbAngle = Math.atan2(enemy.y - proj.y, enemy.x - proj.x);
-                        enemy.knockback.x = Math.cos(kbAngle) * kbForce;
-                        enemy.knockback.y = Math.sin(kbAngle) * kbForce;
 
                         if (proj.bounce > 0) {
                             const validTargets = enemies.filter(e => e !== enemy && !proj.hitEnemies.has(e));
