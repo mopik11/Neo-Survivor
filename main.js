@@ -635,8 +635,9 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     if (serverMeta.skillTree) {
         if (!META.skillTree) META.skillTree = { unlocked: false, nodes: {} };
         META.skillTree.unlocked = serverMeta.skillTree.unlocked || false;
+        // Full replacement (not Object.assign) so optimistic client changes are reverted on server sync
         if (serverMeta.skillTree.nodes) {
-            Object.assign(META.skillTree.nodes, serverMeta.skillTree.nodes);
+            META.skillTree.nodes = { ...serverMeta.skillTree.nodes };
         }
     }
     
@@ -676,7 +677,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.524";
+const GAME_VERSION = window.GAME_VERSION || "1.525";
 const GAME = {
     active: false,
     paused: false,
@@ -4002,10 +4003,10 @@ function showNodeDetails(id, data, isVstupne) {
                     META.currency -= 500;
                     META.skillTree.unlocked = true;
                     playSound('upgrade');
-                    saveMetaForce();
+                    // NOTE: Do NOT call saveMetaForce() here — it would create a competing syncAccount
+                    // that races against purchaseSuccess/syncSuccess and may revert currency.
                     if (NET.socket) NET.socket.emit('purchase', { type: 'skillTree', id: 'vstupne', token: NET.sessionToken });
                     showSkillTreeMenu();
-                    closeModal(); // Close detail popup
                 }
             };
         }
@@ -4037,27 +4038,31 @@ function showNodeDetails(id, data, isVstupne) {
                     META.currency -= cost;
                     META.skillTree.nodes[id] = level + 1;
                     playSound('upgrade');
-                    saveMetaForce();
+                    // NOTE: Do NOT call saveMetaForce() here — it would create a competing syncAccount
+                    // that races against purchaseSuccess/syncSuccess and may revert currency or double-deduct.
                     if (NET.socket) NET.socket.emit('purchase', { type: 'skillTree', id: id, token: NET.sessionToken });
                     showSkillTreeMenu();
-                    closeModal();
                 }
             };
         }
     }
 
-    // Vytvoříme jednoduchý popup modal pro detail
+    // Vytvoříme popup modal pro detail uzlu
     const detailModal = document.createElement('div');
     detailModal.className = 'modal active';
     detailModal.id = 'temp-node-detail';
+    detailModal.style.zIndex = '9999999';
     detailModal.innerHTML = `
-        <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div class="modal-content" style="max-width: 420px; text-align: center; padding: 2rem;">
             <button class="btn-close-x" onclick="document.getElementById('temp-node-detail').remove()">×</button>
-            <div class="modal-body">
-                <h2 style="font-size: 1.8rem; margin-bottom: 10px;">${title}</h2>
-                <p style="font-size: 1rem; color: #94a3b8; margin-bottom: 20px;">${desc}</p>
-                <div style="font-size: 1.2rem; font-weight: bold; color: #fbbf24; margin-bottom: 20px;">${costText}</div>
-                ${canAfford ? `<button class="btn-primary" id="btn-node-buy" style="width: 100%; background: linear-gradient(135deg, #10b981, #059669);">${actionText}</button>` : ''}
+            <div class="modal-body" style="gap: 0;">
+                <h2 style="font-size: 1.6rem; margin-bottom: 8px; color: #e2e8f0;">${title}</h2>
+                <p style="font-size: 0.95rem; color: #94a3b8; margin-bottom: 16px; line-height: 1.5;">${desc}</p>
+                <div style="font-size: 1.3rem; font-weight: 800; color: #fbbf24; margin-bottom: 20px; padding: 8px 16px; background: rgba(251,191,36,0.1); border-radius: 8px; border: 1px solid rgba(251,191,36,0.3);">${costText}</div>
+                ${canAfford
+                    ? `<button class="btn-restart" id="btn-node-buy" style="width: 100%; background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 6px 20px rgba(16,185,129,0.4);">${actionText}</button>`
+                    : `<div style="padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px; font-size: 0.85rem; color: #64748b; border: 1px solid rgba(255,255,255,0.08);">Nelze zakoupit</div>`
+                }
             </div>
         </div>
     `;
@@ -4066,7 +4071,8 @@ function showNodeDetails(id, data, isVstupne) {
     if (canAfford) {
         document.getElementById('btn-node-buy').onclick = () => {
             action();
-            document.getElementById('temp-node-detail').remove();
+            const el = document.getElementById('temp-node-detail');
+            if (el) el.remove();
         };
     }
 }
@@ -5208,14 +5214,15 @@ function initSocket() {
                 if (window.updateSettingUI) window.updateSettingUI();
                 checkAchievements(true);
                 achievementsInitialized = true;
-                if (window.showMetaMenu && document.getElementById('meta-modal').classList.contains('active')) {
-                    showMetaMenu();
-                }
                 if (window.showShipsMenu && document.getElementById('ships-modal').classList.contains('active')) {
                     showShipsMenu();
                 }
                 if (window.showAchievementsMenu && document.getElementById('achievements-modal').classList.contains('active')) {
                     showAchievementsMenu();
+                }
+                // Refresh skill tree UI if visible (also handles purchaseError revert)
+                if (window.showSkillTreeMenu && document.getElementById('meta-modal')?.classList.contains('active')) {
+                    showSkillTreeMenu();
                 }
             }
         });
@@ -5235,7 +5242,12 @@ function initSocket() {
             updateCurrencyUI();
             if (data.type === 'ship' || data.type === 'ability') showShipsMenu();
             else if (data.type === 'stat') showMetaMenu();
-            else if (data.type === 'crate') {
+            else if (data.type === 'skillTree') {
+                // Re-render skill tree with authoritative data from syncSuccess
+                if (window.showSkillTreeMenu && document.getElementById('meta-modal')?.classList.contains('active')) {
+                    showSkillTreeMenu();
+                }
+            } else if (data.type === 'crate') {
                 // Server now instantly unboxes crates in bulk, no need to manually open
             }
         });
