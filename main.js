@@ -215,6 +215,33 @@ window.showCustomConfirm = function (msg, onConfirm) {
     }
 };
 
+const SKILL_TREE_DATA = {
+    // Větev 1: Gain
+    'gain_1': { id: 'gain_1', branch: 1, name: '💰 Více Dogecoinů', desc: 'Zvýší drop rate mincí.', maxLevel: 5, baseCost: 100, costMultiplier: 1.5, baseValue: 0.1, valueMultiplier: 0.1, requires: null },
+    'gain_2': { id: 'gain_2', branch: 1, name: '📈 XP Boost', desc: 'Zvyšuje získávané XP.', maxLevel: 5, baseCost: 200, costMultiplier: 1.5, baseValue: 0.1, valueMultiplier: 0.1, requires: 'gain_1' },
+    'gain_3': { id: 'gain_3', branch: 1, name: '🎁 Šťastlivec', desc: 'Vyšší šance na drop beden.', maxLevel: 3, baseCost: 500, costMultiplier: 2.0, baseValue: 0.05, valueMultiplier: 0.05, requires: 'gain_2' },
+    
+    // Větev 2: Pohyb
+    'speed_1': { id: 'speed_1', branch: 2, name: '👟 Rychlé nohy', desc: 'Zvyšuje rychlost pohybu lodě.', maxLevel: 5, baseCost: 100, costMultiplier: 1.5, baseValue: 0.05, valueMultiplier: 0.05, requires: null },
+    'speed_2': { id: 'speed_2', branch: 2, name: '🔥 Kadence', desc: 'Zvyšuje rychlost střelby.', maxLevel: 5, baseCost: 200, costMultiplier: 1.5, baseValue: 0.05, valueMultiplier: 0.05, requires: 'speed_1' },
+    'speed_3': { id: 'speed_3', branch: 2, name: '🚀 Rychlé střely', desc: 'Zvyšuje rychlost letu projektilů.', maxLevel: 3, baseCost: 500, costMultiplier: 2.0, baseValue: 0.1, valueMultiplier: 0.1, requires: 'speed_2' },
+
+    // Větev 3: Zdraví
+    'health_1': { id: 'health_1', branch: 3, name: '❤️ Životy', desc: 'Zvýší maximální zdraví.', maxLevel: 5, baseCost: 100, costMultiplier: 1.5, baseValue: 10, valueMultiplier: 10, requires: null },
+    'health_2': { id: 'health_2', branch: 3, name: '💊 Regenerace', desc: 'Automaticky obnovuje zdraví.', maxLevel: 5, baseCost: 200, costMultiplier: 1.5, baseValue: 0.1, valueMultiplier: 0.1, requires: 'health_1' },
+    'health_3': { id: 'health_3', branch: 3, name: '🛡️ Pancíř', desc: 'Snižuje příchozí poškození.', maxLevel: 3, baseCost: 500, costMultiplier: 2.0, baseValue: 0.05, valueMultiplier: 0.05, requires: 'health_2' },
+
+    // Větev 4: Poškození
+    'dmg_1': { id: 'dmg_1', branch: 4, name: '⚔️ Hrubá síla', desc: 'Zvyšuje základní poškození střel.', maxLevel: 5, baseCost: 100, costMultiplier: 1.5, baseValue: 0.1, valueMultiplier: 0.1, requires: null },
+    'dmg_2': { id: 'dmg_2', branch: 4, name: '🎯 Přesnost', desc: 'Zvyšuje šanci na kritický zásah.', maxLevel: 5, baseCost: 200, costMultiplier: 1.5, baseValue: 0.05, valueMultiplier: 0.05, requires: 'dmg_1' },
+    'dmg_3': { id: 'dmg_3', branch: 4, name: '💥 Destrukce', desc: 'Zvyšuje poškození kritických zásahů.', maxLevel: 3, baseCost: 500, costMultiplier: 2.0, baseValue: 0.2, valueMultiplier: 0.2, requires: 'dmg_2' },
+
+    // Větev 5: QoL
+    'qol_1': { id: 'qol_1', branch: 5, name: '🧲 Silnější Magnet', desc: 'Zvýší rozsah sběru zkušeností.', maxLevel: 5, baseCost: 100, costMultiplier: 1.5, baseValue: 0.1, valueMultiplier: 0.1, requires: null },
+    'qol_2': { id: 'qol_2', branch: 5, name: '🎵 Synthwave', desc: 'Odemkne nový hudební track pro boj.', maxLevel: 1, baseCost: 1000, costMultiplier: 1.0, baseValue: 1, valueMultiplier: 0, requires: 'qol_1' },
+    'qol_3': { id: 'qol_3', branch: 5, name: '💀 HARD MODE', desc: 'Více nepřátel, více HP, více mincí a XP!', maxLevel: 1, baseCost: 2000, costMultiplier: 1.0, baseValue: 1, valueMultiplier: 0, requires: 'qol_2' }
+};
+
 const CONFIG = {
     PLAYER_BASE_SPEED: 4.5,
     PLAYER_BASE_HEALTH: 120,
@@ -507,6 +534,7 @@ const loadMeta = () => {
     console.log('[LOADMETA] Nastavuji výchozí hodnoty (data přijdou ze serveru po přihlášení)');
     if (!META.settings) META.settings = { musicMenu: true, musicGame: true, sfx: true };
     if (!META.upgrades) META.upgrades = { hp: 0, speed: 0, luck: 0, regen: 0, armor: 0, hat: null };
+    if (!META.skillTree) META.skillTree = { unlocked: false, nodes: {} };
     if (!META.ships) META.ships = { 1: true, 2: false, 3: false, 4: false, 5: false };
     if (!META.abilities) META.abilities = { 1: true, 2: false, 3: false, 4: false };
     if (!META.achievements) META.achievements = {};
@@ -562,10 +590,17 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     // 5. Inventory
     if (serverMeta.inventory) META.inventory = serverMeta.inventory;
     
-    // 6. Upgrades
+    // 6. Upgrades & Skill Tree
     if (serverMeta.upgrades) {
         if (!META.upgrades) META.upgrades = {};
         Object.assign(META.upgrades, serverMeta.upgrades);
+    }
+    if (serverMeta.skillTree) {
+        if (!META.skillTree) META.skillTree = { unlocked: false, nodes: {} };
+        META.skillTree.unlocked = serverMeta.skillTree.unlocked || false;
+        if (serverMeta.skillTree.nodes) {
+            Object.assign(META.skillTree.nodes, serverMeta.skillTree.nodes);
+        }
     }
     
     // 7. Unopened Crates
@@ -926,8 +961,17 @@ const AudioEngine = {
         };
 
         let step = 0;
-        const bassNotes = [55, 55, 62, 49, 55, 55, 73, 65, 55, 55, 62, 49, 55, 55, 82, 98];
-        const melodyNotes = [110, 0, 165, 0, 110, 0, 220, 196, 110, 0, 165, 0, 110, 220, 330, 440];
+        const isSynthwave = getSkillTreeBonus('qol_2') >= 1;
+        
+        let bassNotes = [55, 55, 62, 49, 55, 55, 73, 65, 55, 55, 62, 49, 55, 55, 82, 98];
+        let melodyNotes = [110, 0, 165, 0, 110, 0, 220, 196, 110, 0, 165, 0, 110, 220, 330, 440];
+        let intervalTime = 150;
+
+        if (isSynthwave) {
+            bassNotes = [36, 36, 36, 36, 43, 43, 43, 43, 41, 41, 41, 41, 36, 36, 36, 36];
+            melodyNotes = [293.66, 0, 329.63, 0, 392.00, 0, 329.63, 0, 440.00, 0, 392.00, 0, 329.63, 293.66, 0, 0];
+            intervalTime = 130;
+        }
 
         if (this.musicInterval) clearInterval(this.musicInterval);
         this.musicInterval = setInterval(() => {
@@ -937,11 +981,11 @@ const AudioEngine = {
                 if (step % 2 === 0) playSynth(now, 60, 0.08, 0.2, 'sine');
                 playNoise(now, 0.02, 0.15);
                 if (step % 2 === 1) playNoise(now, 0.008, 0.05);
-                if (step % 16 >= 8 && Math.random() > 0.4) playSynth(now, melodyNotes[step % 16] * 2, 0.015, 0.3, 'triangle');
+                if (step % 16 >= 8 && Math.random() > 0.4) playSynth(now, melodyNotes[step % 16] * (isSynthwave ? 1 : 2), 0.015, 0.3, isSynthwave ? 'square' : 'triangle');
                 if (Math.random() > 0.95) playSynth(now, 1000 + Math.random() * 2000, 0.005, 1.0, 'sine');
                 step++;
             }
-        }, 150);
+        }, intervalTime);
     }
 };
 
@@ -1841,6 +1885,13 @@ class Enemy {
         this.rotation = Math.random() * Math.PI * 2;
         this.maxHp = CONFIG.ENEMY_BASE_HEALTH * level;
         this.speed = CONFIG.ENEMY_BASE_SPEED + (level * 0.15);
+        
+        // HARD MODE (qol_3)
+        const isHardMode = getSkillTreeBonus('qol_3') >= 1;
+        if (isHardMode) {
+            this.maxHp *= 1.5;
+            this.speed *= 1.2;
+        }
 
         if (this.type === 2) {
             this.maxHp *= 0.5;
@@ -2168,16 +2219,21 @@ class Enemy {
 class Player {
     constructor(isLocal = true) {
         this.x = 0; this.y = 0; this.radius = 22; this.isLocal = isLocal;
-        this.maxHp = CONFIG.PLAYER_BASE_HEALTH + (isLocal ? (META.upgrades.hp * 10) : 0);
+        // SKILL TREE STATS
+        this.maxHp = CONFIG.PLAYER_BASE_HEALTH + (isLocal ? getSkillTreeBonus('health_1') : 0);
         this.hp = this.maxHp;
-        this.speed = CONFIG.PLAYER_BASE_SPEED * (isLocal ? (1 + (META.upgrades.speed * 0.02)) : 1);
-        this.damage = 10; this.projectileCount = 1; this.fireRate = 1000;
-        this.magnetRange = 150; this.shield = 1.0; this.regen = 0;
+        this.speed = CONFIG.PLAYER_BASE_SPEED * (isLocal ? (1 + getSkillTreeBonus('speed_1')) : 1);
+        this.damage = 10 * (isLocal ? (1 + getSkillTreeBonus('dmg_1')) : 1);
+        this.projectileCount = 1; 
+        this.fireRate = 1000 / (isLocal ? (1 + getSkillTreeBonus('speed_2')) : 1);
+        this.projSpeed = CONFIG.PROJECTILE_SPEED * (isLocal ? (1 + getSkillTreeBonus('speed_3')) : 1);
+        this.magnetRange = 150 * (isLocal ? (1 + getSkillTreeBonus('qol_1')) : 1);
+        this.shield = 1.0; this.regen = 0;
         this.xpGenInterval = 0; this.lastXpGen = 0; this.ultraMagnet = false;
         this.pierceCount = 1; this.projSize = 6;
 
-        this.critChance = 0;
-        this.critMultiplier = 3;
+        this.critChance = 0 + (isLocal ? getSkillTreeBonus('dmg_2') : 0);
+        this.critMultiplier = 3 + (isLocal ? getSkillTreeBonus('dmg_3') : 0);
         this.maxPossessions = 10;
         this.wallWidthBonus = 0;
         this.wallRangeBonus = 0;
@@ -2191,7 +2247,7 @@ class Player {
         this.lastBait = 0;
         this.laserTargets = [];
 
-        this.luckFactor = 1.0 + (isLocal ? (META.upgrades.luck * 0.05) : 0);
+        this.luckFactor = 1.0 + (isLocal ? getSkillTreeBonus('gain_2') : 0);
         this.orbitals = 0; this.knockbackForce = 6; this.xpMultiplier = 1.0;
         this.lifestealChance = 0;
         this.aura = false; this.auraRange = 150;
@@ -2240,7 +2296,7 @@ class Player {
         if (this.dead) return;
 
         // Meta Upgrades: Regeneration
-        let regenVal = (META.upgrades.regen || 0) * 0.1;
+        let regenVal = getSkillTreeBonus('health_2');
         if (META.selectedPet === 'pet_healer') regenVal += 2.0; // Pet healer regenerates HP fast
 
         if (regenVal > 0 && this.hp < this.maxHp) {
@@ -2512,7 +2568,7 @@ class Player {
                     isSoundWave: this.shipType === 7,
                     type: 'default',
                     life: this.shipType === 7 ? 999999 : 200,
-                    speed: CONFIG.PROJECTILE_SPEED * (this.shipType === 7 ? 1.5 : 1)
+                    speed: this.projSpeed * (this.shipType === 7 ? 1.5 : 1)
                 });
                 if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
                 if (NET.isMultiplayer) syncShot(proj);
@@ -2544,7 +2600,7 @@ class Player {
                 isCrit: isCrit,
                 type: 'wall',
                 life: 15 * (1 + this.wallRangeBonus),
-                speed: CONFIG.PROJECTILE_SPEED
+                speed: this.projSpeed
             });
             if (GAME.entities.projectiles) GAME.entities.projectiles.push(wall);
             if (NET.isMultiplayer) syncShot(wall);
@@ -2563,7 +2619,7 @@ class Player {
                 isSoundWave: true,
                 type: 'default',
                 life: 60,
-                speed: CONFIG.PROJECTILE_SPEED * 1.5,
+                speed: this.projSpeed * 1.5,
                 knockbackMult: 3.0
             });
             if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
@@ -2595,7 +2651,7 @@ class Player {
                         isCrit: isCrit,
                         type: 'default',
                         life: 60 + (Math.random() * 20), // Lepší dostřel
-                        speed: CONFIG.PROJECTILE_SPEED * (1.1 + Math.random() * 0.3)
+                        speed: this.projSpeed * (1.1 + Math.random() * 0.3)
                     });
                     if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
                     if (NET.isMultiplayer) syncShot(proj);
@@ -2804,6 +2860,10 @@ function spawnEnemy() {
     const hasBoss = GAME.entities.enemies && GAME.entities.enemies.some(e => e.isBoss);
     let interval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + GAME.time / 60));
     if (hasBoss) interval *= 2; 
+
+    // HARD MODE (qol_3)
+    const isHardMode = getSkillTreeBonus('qol_3') >= 1;
+    if (isHardMode) interval *= 0.7; 
 
     // Early Boss Warning logic (1 level before)
     if (!NET.isMultiplayer && pivot.level > 0 && pivot.level % 5 === 4 && GAME.lastWarnedLevel !== pivot.level) {
@@ -3144,7 +3204,16 @@ function applyUpgrade(id, record = true) {
     if (GAME.isBossRewardActive) {
         console.log("[GAME] Boss reward selected, scheduling crate notification in 5s...");
         setTimeout(() => {
-            showCrateNotification("OBYČEJNÁ BEDNA", "📦");
+            if (!META.unopenedCrates) META.unopenedCrates = { basic: 0, premium: 0, legendary: 0 };
+            const gain3Chance = getSkillTreeBonus('gain_3'); // 0.05 per level, max 0.15
+            if (Math.random() < gain3Chance) {
+                META.unopenedCrates['premium'] = (META.unopenedCrates['premium'] || 0) + 1;
+                showCrateNotification("PREMIUM BEDNA", "🎁");
+            } else {
+                META.unopenedCrates['basic'] = (META.unopenedCrates['basic'] || 0) + 1;
+                showCrateNotification("OBYČEJNÁ BEDNA", "📦");
+            }
+            saveMetaForce();
         }, 5000);
         GAME.isBossRewardActive = false;
     }
@@ -3715,15 +3784,256 @@ function showShipsMenu() {
         abilitiesGrid.appendChild(card);
     });
 }
-function showMetaMenu() {
+
+function showSkillTreeMenu() {
     playSound('menuOpen');
     switchMusic('menu');
-    const menu = document.getElementById('meta-modal');
+    const currencyEl = document.getElementById('meta-currency');
+    if (currencyEl) currencyEl.innerText = formatNumber(META.currency);
+
+    const canvas = document.getElementById('skill-tree-canvas');
+    const svgLines = document.getElementById('skill-tree-lines');
+    const nodesContainer = document.getElementById('skill-tree-nodes');
+    if (!canvas || !svgLines || !nodesContainer) return;
+
+    svgLines.innerHTML = '';
+    nodesContainer.innerHTML = '';
+
+    const CENTER_X = 1000;
+    const CENTER_Y = 1000;
+    
+    // Custom specific positions for each node to match the drawing vibe
+    const POSITIONS = {
+        'vstupne': { x: CENTER_X, y: CENTER_Y },
+        'gain_1': { x: CENTER_X + 150, y: CENTER_Y + 150 },
+        'gain_2': { x: CENTER_X + 250, y: CENTER_Y + 250 },
+        'gain_3': { x: CENTER_X + 350, y: CENTER_Y + 300 },
+        'speed_1': { x: CENTER_X, y: CENTER_Y + 180 },
+        'speed_2': { x: CENTER_X - 50, y: CENTER_Y + 300 },
+        'speed_3': { x: CENTER_X + 50, y: CENTER_Y + 420 },
+        'health_1': { x: CENTER_X - 180, y: CENTER_Y },
+        'health_2': { x: CENTER_X - 300, y: CENTER_Y - 50 },
+        'health_3': { x: CENTER_X - 420, y: CENTER_Y + 50 },
+        'dmg_1': { x: CENTER_X, y: CENTER_Y - 180 },
+        'dmg_2': { x: CENTER_X - 80, y: CENTER_Y - 300 },
+        'dmg_3': { x: CENTER_X + 80, y: CENTER_Y - 400 },
+        'qol_1': { x: CENTER_X + 150, y: CENTER_Y - 150 },
+        'qol_2': { x: CENTER_X + 280, y: CENTER_Y - 200 },
+        'qol_3': { x: CENTER_X + 400, y: CENTER_Y - 300 }
+    };
+
+    const drawLine = (fromNode, toNode, isUnlocked) => {
+        const from = POSITIONS[fromNode];
+        const to = POSITIONS[toNode];
+        if (!from || !to) return;
+        
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', from.x);
+        line.setAttribute('y1', from.y);
+        line.setAttribute('x2', to.x);
+        line.setAttribute('y2', to.y);
+        line.setAttribute('stroke', isUnlocked ? '#8b5cf6' : 'rgba(255,255,255,0.1)');
+        line.setAttribute('stroke-width', isUnlocked ? '4' : '2');
+        if (isUnlocked) {
+            line.setAttribute('filter', 'drop-shadow(0 0 5px #8b5cf6)');
+        }
+        svgLines.appendChild(line);
+    };
+
+    const renderNode = (id, data, isVstupne = false) => {
+        const pos = POSITIONS[id];
+        if (!pos) return;
+        
+        let level = 0;
+        let isUnlocked = false;
+        let canUnlock = false;
+
+        if (isVstupne) {
+            isUnlocked = META.skillTree.unlocked;
+            canUnlock = !isUnlocked;
+        } else {
+            level = META.skillTree.nodes[id] || 0;
+            isUnlocked = level > 0;
+            const req = data.requires;
+            canUnlock = META.skillTree.unlocked && (!req || (META.skillTree.nodes[req] || 0) > 0);
+        }
+
+        const node = document.createElement('div');
+        node.className = `skill-node ${isUnlocked ? 'unlocked' : (canUnlock ? 'available' : 'locked')}`;
+        node.style.left = pos.x + 'px';
+        node.style.top = pos.y + 'px';
+        
+        if (isVstupne) {
+            node.innerHTML = `
+                <div class="node-icon" style="font-size: 2rem;">${isUnlocked ? '🌟' : '🔒'}</div>
+                <div class="node-label">VSTUPNE</div>
+            `;
+        } else {
+            node.innerHTML = `
+                <div class="node-icon">${data.name.split(' ')[0]}</div>
+                <div class="node-label">${level}/${data.maxLevel}</div>
+            `;
+        }
+
+        node.onclick = (e) => {
+            e.stopPropagation();
+            showNodeDetails(id, data, isVstupne);
+        };
+        nodesContainer.appendChild(node);
+    };
+
+    // Draw lines
+    const nodesArray = Object.values(SKILL_TREE_DATA);
+    nodesArray.forEach(data => {
+        const req = data.requires || 'vstupne';
+        const isUnlocked = META.skillTree.nodes[data.id] > 0 || (req === 'vstupne' && META.skillTree.unlocked);
+        drawLine(req, data.id, isUnlocked);
+    });
+
+    // Render nodes
+    renderNode('vstupne', null, true);
+    nodesArray.forEach(data => renderNode(data.id, data));
+    
+    // Initial center
+    const wrapper = document.getElementById('skill-tree-wrapper');
+    wrapper.scrollLeft = CENTER_X - wrapper.clientWidth / 2;
+    wrapper.scrollTop = CENTER_Y - wrapper.clientHeight / 2;
+
+    // Mouse Panning Logic
+    let isDown = false;
+    let startX;
+    let startY;
+    let scrollLeft;
+    let scrollTop;
+
+    wrapper.onmousedown = (e) => {
+        isDown = true;
+        wrapper.style.cursor = 'grabbing';
+        startX = e.pageX - wrapper.offsetLeft;
+        startY = e.pageY - wrapper.offsetTop;
+        scrollLeft = wrapper.scrollLeft;
+        scrollTop = wrapper.scrollTop;
+    };
+    wrapper.onmouseleave = () => {
+        isDown = false;
+        wrapper.style.cursor = 'grab';
+    };
+    wrapper.onmouseup = () => {
+        isDown = false;
+        wrapper.style.cursor = 'grab';
+    };
+    wrapper.onmousemove = (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - wrapper.offsetLeft;
+        const y = e.pageY - wrapper.offsetTop;
+        const walkX = (x - startX) * 1.5;
+        const walkY = (y - startY) * 1.5;
+        wrapper.scrollLeft = scrollLeft - walkX;
+        wrapper.scrollTop = scrollTop - walkY;
+    };
+    wrapper.style.cursor = 'grab';
+}
+
+function showNodeDetails(id, data, isVstupne) {
+    let title, desc, costText, canAfford, actionText, action;
+    const isUnlocked = META.skillTree.unlocked;
+    
+    if (isVstupne) {
+        title = "VSTUPNE (Základní Odemčení)";
+        desc = "Odemkne přístup ke Stromu dovedností.";
+        if (isUnlocked) {
+            costText = "JIŽ ODEMČENO";
+            canAfford = false;
+        } else {
+            costText = "500 DOGE";
+            canAfford = META.currency >= 500;
+            actionText = "ODEMKNOUT";
+            action = () => {
+                if (META.currency >= 500) {
+                    META.currency -= 500;
+                    META.skillTree.unlocked = true;
+                    playSound('upgrade');
+                    saveMetaForce();
+                    if (NET.socket) NET.socket.emit('purchase', { type: 'skillTree', id: 'vstupne', token: NET.sessionToken });
+                    showSkillTreeMenu();
+                    closeModal(); // Close detail popup
+                }
+            };
+        }
+    } else {
+        const level = META.skillTree.nodes[id] || 0;
+        const req = data.requires;
+        const reqMet = isUnlocked && (!req || (META.skillTree.nodes[req] || 0) > 0);
+        
+        title = data.name;
+        desc = data.desc + `<br><br><span style="color:#a78bfa">Level: ${level} / ${data.maxLevel}</span>`;
+        if (level > 0) {
+            const currentBonus = (data.baseValue + (level - 1) * data.valueMultiplier);
+            desc += `<br><span style="color:#10b981">Aktuální bonus: +${Math.round(currentBonus * 100)}%</span>`;
+        }
+        
+        if (!reqMet) {
+            costText = "UZAMČENO";
+            canAfford = false;
+        } else if (level >= data.maxLevel) {
+            costText = "MAX LEVEL";
+            canAfford = false;
+        } else {
+            const cost = Math.floor(data.baseCost * Math.pow(data.costMultiplier, level));
+            costText = `${formatNumber(cost)} DOGE`;
+            canAfford = META.currency >= cost;
+            actionText = "KOUPIT LEVEL";
+            action = () => {
+                if (META.currency >= cost) {
+                    META.currency -= cost;
+                    META.skillTree.nodes[id] = level + 1;
+                    playSound('upgrade');
+                    saveMetaForce();
+                    if (NET.socket) NET.socket.emit('purchase', { type: 'skillTree', id: id, token: NET.sessionToken });
+                    showSkillTreeMenu();
+                    closeModal();
+                }
+            };
+        }
+    }
+
+    // Vytvoříme jednoduchý popup modal pro detail
+    const detailModal = document.createElement('div');
+    detailModal.className = 'modal active';
+    detailModal.id = 'temp-node-detail';
+    detailModal.innerHTML = `
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <button class="btn-close-x" onclick="document.getElementById('temp-node-detail').remove()">×</button>
+            <div class="modal-body">
+                <h2 style="font-size: 1.8rem; margin-bottom: 10px;">${title}</h2>
+                <p style="font-size: 1rem; color: #94a3b8; margin-bottom: 20px;">${desc}</p>
+                <div style="font-size: 1.2rem; font-weight: bold; color: #fbbf24; margin-bottom: 20px;">${costText}</div>
+                ${canAfford ? `<button class="btn-primary" id="btn-node-buy" style="width: 100%; background: linear-gradient(135deg, #10b981, #059669);">${actionText}</button>` : ''}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(detailModal);
+    
+    if (canAfford) {
+        document.getElementById('btn-node-buy').onclick = () => {
+            action();
+            document.getElementById('temp-node-detail').remove();
+        };
+    }
+}
+function showInventoryMenu() {
+    playSound('menuOpen');
+    switchMusic('menu');
+    const menu = document.getElementById('inventory-modal');
     if (menu) menu.classList.add('active');
     
-    const container = document.getElementById('meta-options');
+    const container = document.getElementById('inventory-options');
     if (!container) return;
-    updateCurrencyUI();
+    
+    const currencyEl = document.getElementById('inventory-currency');
+    if (currencyEl) currencyEl.innerText = formatNumber(META.currency);
+
     container.innerHTML = '';
     container.style.display = 'flex';
     container.style.flexDirection = 'column';
@@ -3764,7 +4074,7 @@ function showMetaMenu() {
                     const total = META.unopenedCrates[type.id] || 0;
                     if (total > 0) {
                         META.unopenedCrates[type.id] = 0;
-                        showMetaMenu(); // Refresh UI
+                        showInventoryMenu(); // Refresh UI
                         openCrate(type.id, total);
                     }
                 };
@@ -3774,46 +4084,7 @@ function showMetaMenu() {
         container.appendChild(rewardSection);
     }
 
-    // 2. ZÁKLADNÍ VYLEPŠENÍ
-    const upgradesSection = document.createElement('div');
-    upgradesSection.innerHTML = `<h2 style="color: #6366f1; text-align: left; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(99,102,241,0.2); padding-bottom: 5px;">🚀 ${window.T('ZÁKLADNÍ STATY')}</h2>`;
-    const upgradesGrid = document.createElement('div');
-    upgradesGrid.className = 'menu-actions-grid';
-    upgradesSection.appendChild(upgradesGrid);
 
-    const stats = [
-        { id: 'hp', name: '❤️ Extra HP', desc: 'Počáteční HP +10', cost: 10, val: META.upgrades.hp },
-        { id: 'speed', name: '👟 Rychlost', desc: 'Pohyb +2%', cost: 15, val: META.upgrades.speed },
-        { id: 'luck', name: '🍀 Štěstí', desc: 'XP násobič +0.05', cost: 25, val: META.upgrades.luck },
-        { id: 'regen', name: '💊 Regenerace', desc: 'HP/s +0.1', cost: 40, val: META.upgrades.regen || 0 },
-        { id: 'armor', name: '🛡️ Štít', desc: 'Redukce poškození +2%', cost: 50, val: META.upgrades.armor || 0 }
-    ];
-
-    stats.forEach(item => {
-        const card = document.createElement('div'); card.className = 'upgrade-card';
-        const cost = Math.floor(item.cost * (1 + (item.val || 0) * 0.5));
-        card.innerHTML = `<h3>${window.T(item.name)}</h3><p>${window.T(item.desc)}</p><span class="cost">${formatNumber(cost)} DOGE</span>`;
-        card.onclick = () => {
-            // OPTIMISTIC UI: Update locally first for instant feedback
-            const currentVal = META.upgrades[item.id] || 0;
-            const cost = Math.floor(item.cost * (1 + currentVal * 0.5));
-            
-            if (META.currency >= cost) {
-                META.currency -= cost;
-                META.upgrades[item.id] = currentVal + 1;
-                playSound('upgrade');
-                showMetaMenu(); // Refresh UI immediately
-            }
-
-            // AUTHORITATIVE REQUEST: Server will confirm or revert via syncSuccess/purchaseError
-            if (!NET.socket) initSocket();
-            if (NET.socket) {
-                NET.socket.emit('purchase', { type: 'stat', id: item.id, token: NET.sessionToken });
-            }
-        };
-        upgradesGrid.appendChild(card);
-    });
-    container.appendChild(upgradesSection);
 
     // 3. VESMÍRNÉ BEDNY (CRATES)
     const cratesSection = document.createElement('div');
@@ -3861,7 +4132,7 @@ function showMetaMenu() {
                     if (!META.unopenedCrates) META.unopenedCrates = { basic:0, premium:0, legendary:0 };
                     META.unopenedCrates[type.id] = (META.unopenedCrates[type.id] || 0) + count;
                     playSound('upgrade');
-                    showMetaMenu();
+                    showInventoryMenu();
                 }
 
                 if (!NET.socket) initSocket();
@@ -3927,7 +4198,7 @@ function showMetaMenu() {
                         else META.upgrades.hat = emoji.id;
                     }
                     saveMeta();
-                    showMetaMenu();
+                    showInventoryMenu();
                 };
             }
             card.querySelector('.btn-sell').onclick = (e) => {
@@ -6345,11 +6616,17 @@ function init() {
     const btnMeta = document.getElementById('btn-meta-menu');
     if (btnMeta) btnMeta.onclick = () => { 
         if (!NET.socket) initSocket();
-        showMetaMenu(); 
+        showSkillTreeMenu(); 
         document.getElementById('meta-modal').classList.add('active'); 
     };
     const btnCloseMeta = document.getElementById('btn-close-meta');
     if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
+
+    const btnInventory = document.getElementById('btn-inventory-menu');
+    if (btnInventory) btnInventory.onclick = () => {
+        if (!NET.socket) initSocket();
+        showInventoryMenu();
+    };
 
     // Achievements Button Listener (Moved up for reliability)
     const btnAch = document.getElementById('btn-achievements');
@@ -7000,7 +7277,7 @@ function update(dt) {
 
                                 let dmg = (e.damage || (e.isBoss ? 2 : 0.5)) * (t.shield || 1);
                                 if (t.isLocal) {
-                                    const armorRed = (META.upgrades.armor || 0) * 0.02;
+                                    const armorRed = getSkillTreeBonus('health_3');
                                     dmg *= (1 - armorRed);
                                 }
                                 t.hp -= dmg;
@@ -7078,7 +7355,7 @@ function update(dt) {
 
                         let dmg = proj.damage * (pl.shield || 1);
                         if (pl.isLocal) {
-                            const armorRed = (META.upgrades.armor || 0) * 0.02;
+                            const armorRed = getSkillTreeBonus('health_3');
                             dmg *= (1 - armorRed);
                         }
                         pl.hp -= dmg;
@@ -7274,10 +7551,14 @@ function update(dt) {
                         incrementStat('totalMagnets');
                     } else {
                         // Normal gem
-                        p.addXp(10);
+                        const isHardMode = getSkillTreeBonus('qol_3') >= 1;
+                        const xpMult = isHardMode ? 2 : 1;
+                        p.addXp(10 * xpMult);
                         incrementStat('totalGemsCollected');
                     }
-                    GAME.coinsCollected++;
+                    const isHardMode = getSkillTreeBonus('qol_3') >= 1;
+                    const baseCoinGain = 1 + getSkillTreeBonus('gain_1');
+                    GAME.coinsCollected += baseCoinGain * (isHardMode ? 2 : 1);
                     playSound('coin');
                 }
                 GAME.entities.gems.splice(i, 1);

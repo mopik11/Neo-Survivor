@@ -228,6 +228,33 @@ const PRICES = {
     crates: { basic: 150, premium: 1000, legendary: 5000 }
 };
 
+const SKILL_TREE_DATA = {
+    // Větev 1: Gain
+    'gain_1': { id: 'gain_1', branch: 1, name: '💰 Více Dogecoinů', desc: 'Zvýší drop rate mincí.', maxLevel: 5, baseCost: 100, costMultiplier: 1.5, baseValue: 0.1, valueMultiplier: 0.1, requires: null },
+    'gain_2': { id: 'gain_2', branch: 1, name: '📈 XP Boost', desc: 'Zvyšuje získávané XP.', maxLevel: 5, baseCost: 200, costMultiplier: 1.5, baseValue: 0.1, valueMultiplier: 0.1, requires: 'gain_1' },
+    'gain_3': { id: 'gain_3', branch: 1, name: '🎁 Šťastlivec', desc: 'Vyšší šance na drop beden.', maxLevel: 3, baseCost: 500, costMultiplier: 2.0, baseValue: 0.05, valueMultiplier: 0.05, requires: 'gain_2' },
+    
+    // Větev 2: Pohyb
+    'speed_1': { id: 'speed_1', branch: 2, name: '👟 Rychlé nohy', desc: 'Zvyšuje rychlost pohybu lodě.', maxLevel: 5, baseCost: 100, costMultiplier: 1.5, baseValue: 0.05, valueMultiplier: 0.05, requires: null },
+    'speed_2': { id: 'speed_2', branch: 2, name: '🔥 Kadence', desc: 'Zvyšuje rychlost střelby.', maxLevel: 5, baseCost: 200, costMultiplier: 1.5, baseValue: 0.05, valueMultiplier: 0.05, requires: 'speed_1' },
+    'speed_3': { id: 'speed_3', branch: 2, name: '🚀 Rychlé střely', desc: 'Zvyšuje rychlost letu projektilů.', maxLevel: 3, baseCost: 500, costMultiplier: 2.0, baseValue: 0.1, valueMultiplier: 0.1, requires: 'speed_2' },
+
+    // Větev 3: Zdraví
+    'health_1': { id: 'health_1', branch: 3, name: '❤️ Životy', desc: 'Zvýší maximální zdraví.', maxLevel: 5, baseCost: 100, costMultiplier: 1.5, baseValue: 10, valueMultiplier: 10, requires: null },
+    'health_2': { id: 'health_2', branch: 3, name: '💊 Regenerace', desc: 'Automaticky obnovuje zdraví.', maxLevel: 5, baseCost: 200, costMultiplier: 1.5, baseValue: 0.1, valueMultiplier: 0.1, requires: 'health_1' },
+    'health_3': { id: 'health_3', branch: 3, name: '🛡️ Pancíř', desc: 'Snižuje příchozí poškození.', maxLevel: 3, baseCost: 500, costMultiplier: 2.0, baseValue: 0.05, valueMultiplier: 0.05, requires: 'health_2' },
+
+    // Větev 4: Poškození
+    'dmg_1': { id: 'dmg_1', branch: 4, name: '⚔️ Hrubá síla', desc: 'Zvyšuje základní poškození střel.', maxLevel: 5, baseCost: 100, costMultiplier: 1.5, baseValue: 0.1, valueMultiplier: 0.1, requires: null },
+    'dmg_2': { id: 'dmg_2', branch: 4, name: '🎯 Přesnost', desc: 'Zvyšuje šanci na kritický zásah.', maxLevel: 5, baseCost: 200, costMultiplier: 1.5, baseValue: 0.05, valueMultiplier: 0.05, requires: 'dmg_1' },
+    'dmg_3': { id: 'dmg_3', branch: 4, name: '💥 Destrukce', desc: 'Zvyšuje poškození kritických zásahů.', maxLevel: 3, baseCost: 500, costMultiplier: 2.0, baseValue: 0.2, valueMultiplier: 0.2, requires: 'dmg_2' },
+
+    // Větev 5: QoL
+    'qol_1': { id: 'qol_1', branch: 5, name: '🧲 Silnější Magnet', desc: 'Zvýší rozsah sběru zkušeností.', maxLevel: 5, baseCost: 100, costMultiplier: 1.5, baseValue: 0.1, valueMultiplier: 0.1, requires: null },
+    'qol_2': { id: 'qol_2', branch: 5, name: '🎵 Synthwave', desc: 'Odemkne nový hudební track pro boj.', maxLevel: 1, baseCost: 1000, costMultiplier: 1.0, baseValue: 1, valueMultiplier: 0, requires: 'qol_1' },
+    'qol_3': { id: 'qol_3', branch: 5, name: '💀 HARD MODE', desc: 'Více nepřátel, více HP, více mincí a XP!', maxLevel: 1, baseCost: 2000, costMultiplier: 1.0, baseValue: 1, valueMultiplier: 0, requires: 'qol_2' }
+};
+
 const EMOJIS = [
     { id: 'soap', rarity: 'common', price: 20 },
     { id: 'money', rarity: 'rare', price: 100 },
@@ -923,6 +950,34 @@ io.on('connection', (socket) => {
                 if (row.currency >= cost) {
                     meta.upgrades[data.id] = currentVal + 1;
                     success = true;
+                }
+            } else if (data.type === 'skillTree') {
+                if (!meta.skillTree) meta.skillTree = { unlocked: false, nodes: {} };
+                
+                if (data.id === 'vstupne') {
+                    if (!meta.skillTree.unlocked) {
+                        cost = 500;
+                        if (row.currency >= cost) {
+                            meta.skillTree.unlocked = true;
+                            success = true;
+                        }
+                    }
+                } else {
+                    const nodeData = SKILL_TREE_DATA[data.id];
+                    if (nodeData) {
+                        const isUnlocked = meta.skillTree.unlocked;
+                        const req = nodeData.requires;
+                        const reqMet = isUnlocked && (!req || (meta.skillTree.nodes[req] || 0) > 0);
+                        const level = meta.skillTree.nodes[data.id] || 0;
+                        
+                        if (reqMet && level < nodeData.maxLevel) {
+                            cost = Math.floor(nodeData.baseCost * Math.pow(nodeData.costMultiplier, level));
+                            if (row.currency >= cost) {
+                                meta.skillTree.nodes[data.id] = level + 1;
+                                success = true;
+                            }
+                        }
+                    }
                 }
             } else if (data.type === 'crate') {
                 const baseCost = (PRICES.crates && PRICES.crates[data.id]) || 0;

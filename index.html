@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.467
+            NEO SURVIVOR v1.513
           </div>
         </div>
       </div>
@@ -151,7 +151,8 @@
               <h3 class="menu-group-title">POSTUP</h3>
               <div class="menu-actions-grid">
                 <button class="btn-restart btn-sub" id="btn-ships-menu" style="background: rgba(16, 185, 129, 0.15);"><span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span></button>
-                <button class="btn-restart btn-sub" id="btn-meta-menu" style="background: rgba(255, 255, 255, 0.05);"><span>🧬</span> <span data-i18n="VYLEPŠENÍ">VYLEPŠENÍ</span></button>
+                <button class="btn-restart btn-sub" id="btn-meta-menu" style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); border-color: #a78bfa;"><span>🌌</span> <span>SKILL TREE</span></button>
+                <button class="btn-restart btn-sub" id="btn-inventory-menu" style="background: rgba(236, 72, 153, 0.15);"><span>📦</span> <span>INVENTÁŘ</span></button>
                 <button class="btn-restart btn-sub" id="btn-leaderboard" style="background: rgba(245, 158, 11, 0.15);"><span>🏆</span> <span data-i18n="ŽEBŘÍČEK">ŽEBŘÍČEK</span></button>
                 <button class="btn-restart btn-sub" id="btn-achievements" style="background: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24 !important;"><span>🌟</span> <span data-i18n="ÚSPĚCHY">ÚSPĚCHY</span></button>
               </div>
@@ -171,7 +172,7 @@
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
             <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-              © 2026 coded by: <b>mopik</b>, designed by <b>cenek</b> | <span data-i18n="verze:">verze:</span> 1.511
+              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> 1.513
             </div>
 
             <div id="menu-links" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; opacity: 0.6; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
@@ -323,11 +324,31 @@
 
       <div id="meta-modal" class="modal">
         <div class="modal-content">
+          <button class="btn-close-x" onclick="closeModal()" style="z-index: 100;">×</button>
+          <div class="modal-body" style="height: 100%; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
+            <div style="position: absolute; top: 10px; left: 10px; z-index: 10;">
+                <h2 style="font-size: 2rem; margin: 0; text-shadow: 0 0 10px #000;">SKILL TREE</h2>
+                <div class="stat-chip" style="margin-top:5px; display:inline-flex;">DOGECOIN: <span id="meta-currency">0</span></div>
+            </div>
+            <div id="unopened-crates-container" style="position: absolute; top: 10px; right: 60px; z-index: 10; display: flex; gap: 10px;"></div>
+            
+            <div id="skill-tree-wrapper" style="flex: 1; width: 100%; height: 100%; overflow: auto; position: relative; background: radial-gradient(circle at center, #1a1a2e 0%, #0d0d1a 100%); touch-action: pan-x pan-y;">
+                <div id="skill-tree-canvas" style="position: relative; width: 2000px; height: 2000px; transform-origin: center center;">
+                    <svg id="skill-tree-lines" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></svg>
+                    <div id="skill-tree-nodes" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+                </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="inventory-modal" class="modal">
+        <div class="modal-content">
           <button class="btn-close-x" onclick="closeModal()">×</button>
           <div class="modal-body">
-            <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">VYLEPŠENÍ</h2>
-            <div class="stat-chip" style="margin-bottom:20px; display:inline-flex;">DOGECOIN: <span id="meta-currency">0</span></div>
-            <div id="meta-options" class="upgrade-grid"></div>
+            <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">INVENTÁŘ</h2>
+            <div class="stat-chip" style="margin-bottom:20px; display:inline-flex;">DOGECOIN: <span id="inventory-currency">0</span></div>
+            <div id="inventory-options" class="upgrade-grid"></div>
           </div>
         </div>
       </div>
