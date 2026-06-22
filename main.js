@@ -312,7 +312,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: 'v1.506'
+    version: 'v1.507'
 };
 
 let achievementsInitialized = false;
@@ -1341,18 +1341,26 @@ class Projectile {
                 ctx.save();
                 ctx.translate(this.x - cam.x, this.y - cam.y);
                 ctx.rotate(Math.atan2(this.vy, this.vx)); 
-                ctx.font = this.isCrit ? 'bold 30px Arial' : '20px Arial';
+                ctx.font = this.isCrit ? 'bold ' + (this.radius * 0.8) + 'px Arial' : (this.radius * 0.6) + 'px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 const notes = ['🎵', '🎶', '🔊', '🎼'];
                 const note = notes[Math.floor((this.life * 13) % notes.length)] || '🎵';
                 ctx.fillText(note, 0, 0);
 
+                if (this.radius > 30) {
+                    ctx.fillText(notes[(Math.floor(this.life * 13) + 1) % notes.length] || '🎶', 0, -this.radius * 0.5);
+                    ctx.fillText(notes[(Math.floor(this.life * 13) + 2) % notes.length] || '🎵', 0, this.radius * 0.5);
+                }
+
                 ctx.beginPath();
-                const waveOffset = (Date.now() % 400) / 400 * 15;
-                ctx.arc(-20 - waveOffset, 0, 10 + waveOffset, -Math.PI / 3, Math.PI / 3);
-                ctx.strokeStyle = `rgba(167, 139, 250, ${1 - waveOffset/15})`;
-                ctx.lineWidth = 2;
+                const waveOffset = (Date.now() % 600) / 600 * this.radius;
+                for(let w = 0; w < 3; w++) {
+                    let wOff = (waveOffset + w * (this.radius / 3)) % this.radius;
+                    ctx.arc(-this.radius * 0.5 + wOff, 0, this.radius * 0.5 + wOff, -Math.PI / 2.5, Math.PI / 2.5);
+                }
+                ctx.strokeStyle = `rgba(167, 139, 250, 0.8)`;
+                ctx.lineWidth = 4;
                 ctx.stroke();
                 ctx.restore();
             } else {
@@ -2458,15 +2466,15 @@ class Player {
                 const ty = this.y + Math.sin(shootAngle) * 500;
 
                 const proj = new Projectile(this.x, this.y, tx, ty, finalDamage, {
-                    size: this.projSize,
-                    pierce: this.pierceCount,
+                    size: this.shipType === 7 ? this.projSize + 50 : this.projSize,
+                    pierce: this.shipType === 7 ? 9999 : this.pierceCount,
                     bounce: this.bounces,
                     isCrit: isCrit,
                     isAssassin: this.shipType === 6,
                     isSoundWave: this.shipType === 7,
                     type: 'default',
                     life: this.shipType === 7 ? 999999 : 200,
-                    speed: CONFIG.PROJECTILE_SPEED
+                    speed: CONFIG.PROJECTILE_SPEED * (this.shipType === 7 ? 1.5 : 1)
                 });
                 if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
                 if (NET.isMultiplayer) syncShot(proj);
@@ -6989,7 +6997,7 @@ function update(dt) {
 
                         // APPLY KNOCKBACK
                         let kbForce = GAME.entities.player.knockbackForce || 6;
-                        if (proj.isSoundWave) kbForce *= 6;
+                        if (proj.isSoundWave) kbForce *= 12;
                         const kbAngle = Math.atan2(enemy.y - proj.y, enemy.x - proj.x);
                         enemy.knockback.x = Math.cos(kbAngle) * kbForce;
                         enemy.knockback.y = Math.sin(kbAngle) * kbForce;
