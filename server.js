@@ -1288,6 +1288,12 @@ io.on('connection', (socket) => {
                 // Server-authoritative fields (client cannot fake these)
                 merged.inventory       = serverMeta.inventory || [];
                 merged.upgrades        = serverMeta.upgrades  || { hp:0, speed:0, luck:0, regen:0, armor:0 };
+                if (meta.upgrades && meta.upgrades.hat !== undefined) {
+                    merged.upgrades.hat = meta.upgrades.hat;
+                }
+                if (meta.selectedPet !== undefined) {
+                    merged.selectedPet = meta.selectedPet;
+                }
                 merged.unopenedCrates  = serverMeta.unopenedCrates || { basic: 0, premium: 0, legendary: 0 };
                 merged.maxLevel        = Math.max(serverMeta.maxLevel || 1, (row ? row.max_level : 1) || 1);
                 

@@ -378,7 +378,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.534'
+    version: window.GAME_VERSION || '1.535'
 };
 
 let achievementsInitialized = false;
@@ -694,7 +694,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.534";
+const GAME_VERSION = window.GAME_VERSION || "1.535";
 const GAME = {
     active: false,
     paused: false,
@@ -4426,7 +4426,7 @@ function renderInventoryCrates() {
     });
     container.appendChild(cratesSection);
 
-    // 4. SBÍRKA PETŮ A SBÍRKA EMOJI (ODDĚLENÉ SBÍRKY v1.534)
+    // 4. SBÍRKA PETŮ A SBÍRKA EMOJI (ODDĚLENÉ SBÍRKY v1.535)
     if (!META.inventory) META.inventory = [];
     const petItems = META.inventory.filter(inv => {
         const emoji = EMOJIS.find(x => x.id === inv.id);
@@ -4510,7 +4510,7 @@ function renderInventoryCrates() {
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(16,185,129,0.2); margin-bottom: 15px; padding-bottom: 5px;">
             <div style="display:flex; flex-direction:column; align-items: flex-start;">
                 <h2 style="color: #10b981; text-align: left; margin:0; font-size: 1.2rem;">✨ ${window.T('TVÁ SBÍRKA EMOJI A ČEPIC')}</h2>
-                <div style="font-size: 0.7rem; color: #64748b; font-weight: bold; margin-top: 2px;">${window.T('Celková hodnota:')} <span style="color: #fbbf24;">${formatNumberFull(META.inventory.reduce((sum, inv) => sum + (EMOJIS.find(e => e.id === inv.id)?.price || 0) * inv.count, 0))} DOGE</span></div>
+                <div style="font-size: 0.7rem; color: #64748b; font-weight: bold; margin-top: 2px;">${window.T('Celková hodnota:')} <span style="color: #fbbf24;">${formatNumberFull(emojiItems.reduce((sum, inv) => sum + (EMOJIS.find(e => e.id === inv.id)?.price || 0) * inv.count, 0))} DOGE</span></div>
             </div>
             ${emojiItems.length > 0 ? `<button id="btn-sell-all" style="padding: 5px 12px; font-size: 0.7rem; border-radius: 8px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); cursor:pointer; font-weight:bold;">${window.T('PRODAT VŠE')}</button>` : ''}
         </div>
