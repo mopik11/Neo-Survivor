@@ -378,7 +378,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.533'
+    version: window.GAME_VERSION || '1.534'
 };
 
 let achievementsInitialized = false;
@@ -694,7 +694,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.533";
+const GAME_VERSION = window.GAME_VERSION || "1.534";
 const GAME = {
     active: false,
     paused: false,
@@ -4426,7 +4426,7 @@ function renderInventoryCrates() {
     });
     container.appendChild(cratesSection);
 
-    // 4. SBÍRKA PETŮ A SBÍRKA EMOJI (ODDĚLENÉ SBÍRKY v1.533)
+    // 4. SBÍRKA PETŮ A SBÍRKA EMOJI (ODDĚLENÉ SBÍRKY v1.534)
     if (!META.inventory) META.inventory = [];
     const petItems = META.inventory.filter(inv => {
         const emoji = EMOJIS.find(x => x.id === inv.id);
@@ -4561,13 +4561,6 @@ function renderInventoryCrates() {
         });
     }
     container.appendChild(collectionSection);
-
-    if (petItems.length === 0 && emojiItems.length === 0) {
-        container.innerHTML = '';
-        const emptySection = document.createElement('div');
-        emptySection.innerHTML = `<p style="color: #475569; padding: 40px; text-align: center;">${window.T('Zatím nemáš žádná emoji ani pety. Otevři bednu!')}</p>`;
-        container.appendChild(emptySection);
-    }
 
     const btnSellAll = document.getElementById('btn-sell-all');
     if (btnSellAll) {
