@@ -376,7 +376,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.529'
+    version: window.GAME_VERSION || '1.531'
 };
 
 let achievementsInitialized = false;
@@ -692,7 +692,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.529";
+const GAME_VERSION = window.GAME_VERSION || "1.531";
 const GAME = {
     active: false,
     paused: false,
@@ -3838,6 +3838,87 @@ function showShipsMenu() {
     });
 }
 
+function showPlayerProfile(p) {
+    const lang = (p.selectedLanguage || 'cs').toUpperCase();
+    document.getElementById('player-profile-lang').innerHTML = `<span style="font-size: 1.5rem; vertical-align: middle; margin-right: 5px;">${lang === 'CS' ? '🇨🇿' : '🇬🇧'}</span> ${lang}`;
+    
+    document.getElementById('player-profile-name').innerText = p.name;
+    document.getElementById('player-profile-level').innerText = p.level;
+    document.getElementById('player-profile-doge').innerText = formatNumberFull(p.currency);
+
+    const ships = [
+        { id: 1, name: 'Průzkumník', icon: '🚀' },
+        { id: 2, name: 'Laserová Loď', icon: '🩸' },
+        { id: 3, name: 'Drtivá Zeď', icon: '🌊' },
+        { id: 4, name: 'Brokovnice', icon: '💥' },
+        { id: 5, name: 'Nekromancer', icon: '💀' },
+        { id: 6, name: 'Assassin', icon: '🥷' },
+        { id: 7, name: 'Zvukař', icon: '🎧' }
+    ];
+    const ship = ships.find(s => s.id === parseInt(p.selectedShip)) || ships[0];
+    document.getElementById('player-profile-ship-icon').innerText = ship.icon;
+    document.getElementById('player-profile-ship-name').innerText = window.T(ship.name);
+
+    const abilities = [
+        { id: 1, name: 'Odstřelovač', icon: '🎯' },
+        { id: 2, name: 'Zastavení času', icon: '⏳' },
+        { id: 3, name: 'Posednutí', icon: '👻' },
+        { id: 4, name: 'Léčivá aura', icon: '⚕️' },
+        { id: 5, name: 'Portály', icon: '🌀' }
+    ];
+    const ability = abilities.find(a => a.id === parseInt(p.selectedAbility)) || abilities[0];
+    document.getElementById('player-profile-ability-icon').innerText = ability.icon;
+    document.getElementById('player-profile-ability-name').innerText = window.T(ability.name);
+
+    const skillsContainer = document.getElementById('player-profile-skills');
+    skillsContainer.innerHTML = '';
+    let hasSkills = false;
+    if (p.skillTree && p.skillTree.nodes) {
+        for (const [nodeId, level] of Object.entries(p.skillTree.nodes)) {
+            if (level > 0) {
+                hasSkills = true;
+                const nodeInfo = SKILL_TREE_DATA[nodeId];
+                const name = nodeInfo ? nodeInfo.name : nodeId;
+                const item = document.createElement('div');
+                item.style.cssText = "background: rgba(255,255,255,0.05); padding: 5px 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;";
+                item.innerHTML = `
+                    <span>${window.T(name)}</span>
+                    <span style="color:#fbbf24; font-weight:bold;">Lvl ${level}</span>
+                `;
+                skillsContainer.appendChild(item);
+            }
+        }
+    }
+    if (!hasSkills) {
+        skillsContainer.innerHTML = `<div style="grid-column: span 2; text-align: center; color: gray; padding: 10px 0;">${window.T('Žádná zakoupená vylepšení')}</div>`;
+    }
+
+    const achContainer = document.getElementById('player-profile-achievements');
+    achContainer.innerHTML = '';
+    ACHIEVEMENTS.forEach(ach => {
+        const isUnlocked = (p.achievements && p.achievements[ach.id]) || (p.claimedAchievements && p.claimedAchievements[ach.id]);
+        const badge = document.createElement('div');
+        badge.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            background: ${isUnlocked ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.03)'};
+            color: ${isUnlocked ? '#34d399' : '#64748b'};
+            border: 1px solid ${isUnlocked ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.05)'};
+            opacity: ${isUnlocked ? 1 : 0.4};
+        `;
+        badge.title = `${window.T(ach.name)}: ${window.T(ach.desc)}`;
+        badge.innerHTML = `<span>${ach.icon}</span> <span>${window.T(ach.name)}</span>`;
+        achContainer.appendChild(badge);
+    });
+
+    document.getElementById('player-profile-modal').classList.add('active');
+}
+
 function showSkillTreeMenu(silent = false) {
     if (!silent) {
         playSound('menuOpen');
@@ -5005,6 +5086,9 @@ function initSocket() {
                     <span class="lb-status" style="background: ${isOnline ? '#10b981' : '#ef4444'}; box-shadow: 0 0 6px ${isOnline ? '#10b981' : 'transparent'};"></span>
                     <span class="lb-level">LVL ${p.level}</span>
                 `;
+                row.onclick = () => {
+                    showPlayerProfile(p);
+                };
                 list.appendChild(row);
             });
         });
@@ -6176,7 +6260,27 @@ function init() {
             "MÁLO DOGE - ZAVŘÍT": "OUT OF DOGE - CLOSE",
             "Out of Service": "Out of Service",
             "Server je momentálně nedostupný nebo došlo k odpojení. Zkontroluj prosím své internetové připojení.": "The server is currently unavailable or disconnected. Please check your internet connection.",
-            "Zkusit znovu": "Try Again"
+            "Zkusit znovu": "Try Again",
+            "VYBRANÁ LOĎ": "SELECTED SHIP",
+            "VYBRANÁ SCHOPNOST": "SELECTED ABILITY",
+            "STROM VYLEPŠENÍ": "UPGRADE TREE",
+            "ODEMČENÉ ÚSPĚCHY": "UNLOCKED ACHIEVEMENTS",
+            "Žádná zakoupená vylepšení": "No upgrades purchased",
+            "INFORMACE O HRÁČI": "PLAYER INFO",
+            "Průzkumník": "Explorer",
+            "Laserová Loď": "Laser Ship",
+            "Drtivá Zeď": "Crushing Wall",
+            "Brokovnice": "Shotgun",
+            "Nekromancer": "Necromancer",
+            "Assassin": "Assassin",
+            "Zvukař": "Soundman",
+            "Odstřelovač": "Sniper",
+            "Zastavení času": "Time Stop",
+            "Posednutí": "Possession",
+            "Léčivá aura": "Healing Aura",
+            "Portály": "Portals",
+            "NEJ LEVEL": "MAX LEVEL",
+            "Dogecoiny:": "Dogecoins:"
         }
     };
 

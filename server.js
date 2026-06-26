@@ -169,7 +169,7 @@ function dist(x1, y1, x2, y2) {
 }
 
 function broadcastLeaderboard() {
-    db.all(`SELECT username as name, max_level as level FROM accounts ORDER BY max_level DESC`, [], (err, rows) => {
+    db.all(`SELECT username as name, max_level as level, currency, meta FROM accounts ORDER BY max_level DESC`, [], (err, rows) => {
         if (!err && rows) {
             const onlineUsers = new Set();
             for (const [id, socket] of io.sockets.sockets) {
@@ -178,10 +178,32 @@ function broadcastLeaderboard() {
                 }
             }
             
-            rows.forEach(row => {
-                row.online = onlineUsers.has(row.name);
+            const sanitizedRows = rows.map(row => {
+                let metaObj = {};
+                if (row.meta) {
+                    try {
+                        metaObj = JSON.parse(Security.decrypt(row.meta));
+                    } catch(e) {
+                        try {
+                            metaObj = JSON.parse(row.meta);
+                        } catch(e2) {}
+                    }
+                }
+                
+                return {
+                    name: row.name,
+                    level: row.level || 1,
+                    currency: row.currency || 0,
+                    online: onlineUsers.has(row.name),
+                    selectedShip: metaObj.selectedShip || 1,
+                    selectedAbility: metaObj.selectedAbility || 1,
+                    selectedLanguage: metaObj.selectedLanguage || 'cs',
+                    skillTree: metaObj.skillTree || { unlocked: false, nodes: {} },
+                    achievements: metaObj.achievements || {},
+                    claimedAchievements: metaObj.claimedAchievements || {}
+                };
             });
-            io.emit('leaderboardData', rows);
+            io.emit('leaderboardData', sanitizedRows);
         }
     });
 }
