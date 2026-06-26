@@ -41,6 +41,8 @@ window.closeModal = function() {
         wrapper.style.zIndex = '1';
         wrapper.style.overflow = 'hidden';
         wrapper.style.marginTop = '0px';
+        wrapper.scrollLeft = 0;
+        wrapper.scrollTop = 0;
         if (canvas) {
             canvas.style.position = 'absolute';
             canvas.style.left = '50%';
@@ -376,7 +378,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.531'
+    version: window.GAME_VERSION || '1.532'
 };
 
 let achievementsInitialized = false;
@@ -692,7 +694,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.531";
+const GAME_VERSION = window.GAME_VERSION || "1.532";
 const GAME = {
     active: false,
     paused: false,
@@ -8237,6 +8239,8 @@ window.toggleTreeFullscreen = function() {
         wrapper.style.zIndex = '1';
         wrapper.style.overflow = 'hidden';
         wrapper.style.marginTop = '0px';
+        wrapper.scrollLeft = 0;
+        wrapper.scrollTop = 0;
         
         canvas.style.position = 'absolute';
         canvas.style.left = '50%';
