@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.535" />
+    <link rel="stylesheet" href="style.css?v=1.536" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.535
+            NEO SURVIVOR v1.536
           </div>
         </div>
       </div>
@@ -172,7 +172,7 @@
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
             <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.535</span>
+              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.536</span>
             </div>
 
             <div id="menu-links" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; opacity: 0.6; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
@@ -254,35 +254,35 @@
         </div>
       </div>
 
-      <!-- PET UPGRADE / MERGE SUB-MODAL (v1.535) -->
+      <!-- PET UPGRADE / MERGE SUB-MODAL (v1.536) -->
       <div id="pet-detail-modal" class="modal" style="z-index: 1000020;">
-        <div class="modal-content" style="max-width: 450px; background: linear-gradient(160deg, rgba(30, 40, 60, 0.98) 0%, rgba(15, 20, 35, 0.99) 100%); border-radius: 28px; border: 1px solid rgba(255, 255, 255, 0.12);">
+        <div class="modal-content" style="max-width: 450px; background: linear-gradient(160deg, rgba(30, 40, 60, 0.98) 0%, rgba(15, 20, 35, 0.99) 100%); border-radius: 28px; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 15px 35px rgba(0,0,0,0.5);">
           <button class="btn-close-x" onclick="document.getElementById('pet-detail-modal').classList.remove('active')">×</button>
-          <div class="modal-body" style="padding: 10px; color: #fff; text-align: center;">
-            <div id="pet-detail-icon" style="font-size: 3.5rem; margin-bottom: 10px;">🤖</div>
-            <h2 id="pet-detail-name" style="font-size: 2.0rem; color: #fbbf24; margin: 5px 0; text-shadow: 0 0 15px rgba(251, 191, 36, 0.3);">Dron</h2>
-            <div id="pet-detail-level" style="font-size: 1rem; color: #a5b4fc; font-weight: bold; margin-bottom: 15px;">Level 1</div>
+          <div class="modal-body" style="padding: 15px 10px; color: #fff; text-align: center;">
+            <div id="pet-detail-icon" style="font-size: 3.8rem; margin-bottom: 12px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.25)); display: inline-block; animation: floatPet 3s ease-in-out infinite;">🤖</div>
+            <h2 id="pet-detail-name" style="font-size: 2.2rem; color: #fbbf24; margin: 5px 0; font-family: 'Outfit', sans-serif; font-weight: 800; text-shadow: 0 0 15px rgba(251, 191, 36, 0.3);">Dron</h2>
+            <div id="pet-detail-level" style="font-size: 1rem; color: #a5b4fc; font-weight: 800; margin-bottom: 18px; letter-spacing: 1px; text-transform: uppercase;">Level 1</div>
             
-            <div style="background: rgba(0,0,0,0.25); border-radius: 14px; padding: 15px; border: 1px solid rgba(255,255,255,0.04); margin-bottom: 20px; text-align: left;">
-                <h4 style="margin: 0 0 5px 0; color: #94a3b8; font-size: 0.75rem; text-transform: uppercase;" data-i18n="INFO O SCHOPNOSTI">INFO O SCHOPNOSTI</h4>
-                <p id="pet-detail-desc" style="font-size: 0.9rem; margin: 0; line-height: 1.4; color: #e2e8f0;"></p>
-                <div id="pet-detail-stats" style="margin-top: 10px; font-size: 0.85rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
-                        <span style="color: #94a3b8;" data-i18n="Aktuální bonus:">Aktuální bonus:</span>
-                        <span id="pet-stat-current" style="color: #10b981; font-weight:bold;">+50% dosah</span>
+            <div style="background: rgba(0,0,0,0.3); border-radius: 18px; padding: 18px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 22px; text-align: left; box-shadow: inset 0 2px 10px rgba(0,0,0,0.35);">
+                <h4 style="margin: 0 0 8px 0; color: #94a3b8; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;" data-i18n="INFO O SCHOPNOSTI">INFO O SCHOPNOSTI</h4>
+                <p id="pet-detail-desc" style="font-size: 0.9rem; margin: 0; line-height: 1.5; color: #cbd5e1; font-weight: 550;"></p>
+                <div id="pet-detail-stats" style="margin-top: 12px; font-size: 0.85rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                        <span style="color: #94a3b8; font-weight: bold;" data-i18n="Aktuální bonus:">Aktuální bonus:</span>
+                        <span id="pet-stat-current" style="color: #10b981; font-weight: 800;">+50% dosah</span>
                     </div>
                     <div style="display:flex; justify-content:space-between;">
-                        <span style="color: #94a3b8;" data-i18n="Příští level:">Příští level:</span>
-                        <span id="pet-stat-next" style="color: #a78bfa; font-weight:bold;">+65% dosah</span>
+                        <span style="color: #94a3b8; font-weight: bold;" data-i18n="Příští level:">Příští level:</span>
+                        <span id="pet-stat-next" style="color: #a78bfa; font-weight: 800;">+65% dosah</span>
                     </div>
                 </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
-                <button id="btn-pet-upgrade" class="btn-restart" style="width: 100%; padding: 12px; font-size: 0.9rem; margin: 0;">
-                    <span data-i18n="UPGRADOVAT ZA:">UPGRADOVAT ZA:</span> <span id="pet-upgrade-cost">1 000</span> DOGE
+            <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+                <button id="btn-pet-upgrade" style="width: 100%; padding: 14px; font-size: 0.9rem; font-weight: 800; border-radius: 16px; border: none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; cursor: pointer; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(16,185,129,0.35); transition: transform 0.2s, filter 0.2s; outline: none;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'" onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='none'">
+                    <span data-i18n="UPGRADOVAT ZA:">UPGRADOVAT ZA</span> &nbsp;<span id="pet-upgrade-cost" style="color: #fbbf24; font-weight: 900;">1 000</span>&nbsp; DOGE
                 </button>
-                <button id="btn-pet-merge" class="btn-restart secondary" style="width: 100%; padding: 12px; font-size: 0.9rem; margin: 0;">
+                <button id="btn-pet-merge" style="width: 100%; padding: 14px; font-size: 0.9rem; font-weight: 800; border-radius: 16px; border: none; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #fff; cursor: pointer; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(99,102,241,0.35); transition: transform 0.2s, filter 0.2s; outline: none;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'" onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='none'">
                     <span data-i18n="SLOUČIT 2 PETY (MERGE)">SLOUČIT 2 PETY (MERGE)</span>
                 </button>
             </div>
@@ -638,6 +638,11 @@
         </button>
 
         <style>
+            @keyframes floatPet {
+                0% { transform: translateY(0px); }
+                50% { transform: translateY(-8px); }
+                100% { transform: translateY(0px); }
+            }
             @keyframes float {
                 0% { transform: translateY(0px); }
                 50% { transform: translateY(-15px); }
@@ -716,7 +721,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>window.GAME_VERSION = '1.535';</script>
-    <script type="module" src="./main.js?v=1.535"></script>
+    <script>window.GAME_VERSION = '1.536';</script>
+    <script type="module" src="./main.js?v=1.536"></script>
   </body>
 </html>

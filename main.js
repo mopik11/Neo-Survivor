@@ -378,7 +378,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.535'
+    version: window.GAME_VERSION || '1.536'
 };
 
 let achievementsInitialized = false;
@@ -640,6 +640,13 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     // 5. Inventory
     if (serverMeta.inventory) META.inventory = serverMeta.inventory;
     
+    // 5B. Pets and Pet Levels (v1.536)
+    if (serverMeta.selectedPet !== undefined) META.selectedPet = serverMeta.selectedPet;
+    if (serverMeta.petLevels) {
+        if (!META.petLevels) META.petLevels = {};
+        Object.assign(META.petLevels, serverMeta.petLevels);
+    }
+    
     // 6. Upgrades & Skill Tree
     if (serverMeta.upgrades) {
         if (!META.upgrades) META.upgrades = {};
@@ -694,7 +701,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.535";
+const GAME_VERSION = window.GAME_VERSION || "1.536";
 const GAME = {
     active: false,
     paused: false,
@@ -4426,7 +4433,7 @@ function renderInventoryCrates() {
     });
     container.appendChild(cratesSection);
 
-    // 4. SBÍRKA PETŮ A SBÍRKA EMOJI (ODDĚLENÉ SBÍRKY v1.535)
+    // 4. SBÍRKA PETŮ A SBÍRKA EMOJI (ODDĚLENÉ SBÍRKY v1.536)
     if (!META.inventory) META.inventory = [];
     const petItems = META.inventory.filter(inv => {
         const emoji = EMOJIS.find(x => x.id === inv.id);
