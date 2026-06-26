@@ -784,7 +784,7 @@ io.on('connection', (socket) => {
             meta.inventory.forEach(inv => {
                 const emoji = EMOJIS.find(e => e.id === inv.id);
                 if (!emoji) return;
-                const isEquipped = (meta.upgrades && meta.upgrades.hat === emoji.id);
+                const isEquipped = (meta.upgrades && meta.upgrades.hat === emoji.id) || (meta.selectedPet === emoji.id);
                 if (isEquipped) {
                     newInventory.push(inv);
                 } else {

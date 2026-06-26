@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.528
+ * NEO SURVIVOR - Core Game Logic - v1.529
  */
 
 window.addEventListener('beforeunload', () => {
@@ -37,7 +37,7 @@ window.closeModal = function() {
         wrapper.classList.add('preview-mode');
         wrapper.style.position = 'relative';
         wrapper.style.width = '100%';
-        wrapper.style.height = '340px';
+        wrapper.style.height = '400px';
         wrapper.style.zIndex = '1';
         wrapper.style.overflow = 'hidden';
         wrapper.style.marginTop = '0px';
@@ -45,7 +45,7 @@ window.closeModal = function() {
             canvas.style.position = 'absolute';
             canvas.style.left = '50%';
             canvas.style.top = '50%';
-            canvas.style.transform = 'translate(-50%, -50%) scale(0.24)';
+            canvas.style.transform = 'translate(-50%, -50%) scale(0.38)';
             canvas.style.transformOrigin = 'center center';
         }
         if (btn) {
@@ -376,7 +376,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.528'
+    version: window.GAME_VERSION || '1.529'
 };
 
 let achievementsInitialized = false;
@@ -681,7 +681,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.528";
+const GAME_VERSION = window.GAME_VERSION || "1.529";
 const GAME = {
     active: false,
     paused: false,
@@ -4268,15 +4268,27 @@ function renderInventoryCrates() {
     }
     container.appendChild(collectionSection);
 
-    if (META.inventory && META.inventory.length > 0) {
         const btnSellAll = document.getElementById('btn-sell-all');
         if (btnSellAll) {
             btnSellAll.onclick = (e) => {
                 e.preventDefault(); e.stopPropagation();
-                window.showCustomConfirm(window.T("Opravdu chceš prodat všechna neaktivní emoji?"), () => sellAllEmojis());
+                let totalGain = 0;
+                META.inventory.forEach(inv => {
+                    const emoji = EMOJIS.find(e => e.id === inv.id);
+                    if (!emoji) return;
+                    const isEquipped = (emoji.isPet && META.selectedPet === emoji.id) || (!emoji.isPet && META.upgrades.hat === emoji.id);
+                    if (!isEquipped) {
+                        totalGain += emoji.price * inv.count;
+                    }
+                });
+                if (totalGain <= 0) {
+                    window.showCustomAlert(window.T("Nemáš žádná neaktivní emoji k prodeji!"));
+                    return;
+                }
+                const confirmMsg = window.T("Opravdu chceš prodat všechna neaktivní emoji za {gain} DOGE?").replace("{gain}", formatNumber(totalGain));
+                window.showCustomConfirm(confirmMsg, () => sellAllEmojis());
             };
         }
-    }
 }
 
 function getRarityColor(rarity) {
@@ -4749,7 +4761,7 @@ function sellAllEmojis() {
         META.inventory.forEach(inv => {
             const emoji = EMOJIS.find(e => e.id === inv.id);
             if (!emoji) return;
-            const isEquipped = (emoji.id === META.upgrades.hat);
+            const isEquipped = (emoji.isPet && META.selectedPet === emoji.id) || (!emoji.isPet && META.upgrades.hat === emoji.id);
             if (isEquipped) newInventory.push(inv);
             else totalGain += emoji.price * inv.count;
         });
@@ -5990,7 +6002,7 @@ function init() {
             "SUNDAT": "UNEQUIP",
             "NASADIT": "EQUIP",
             "PRODAT": "SELL",
-            "Opravdu chceš prodat všechna neaktivní emoji?": "Do you really want to sell all inactive emojis?",
+            "Opravdu chceš prodat všechna neaktivní emoji za {gain} DOGE?": "Do you really want to sell all inactive emojis for {gain} DOGE?",
             "AUTOMATIZACE:": "AUTOMATION:",
             "Auto-výběr vylepšení": "Auto-select upgrades",
             "Celková hodnota:": "Total Value:",
@@ -6043,7 +6055,7 @@ function init() {
             "ZVUKY A HUDBA:": "SOUNDS & MUSIC:",
             "AUTOMATIZACE:": "AUTOMATION:",
             "Auto-výběr vylepšení": "Auto-select upgrades",
-            "Opravdu chceš prodat všechna neaktivní emoji?": "Do you really want to sell all inactive emojis?",
+            "Opravdu chceš prodat všechna neaktivní emoji za {gain} DOGE?": "Do you really want to sell all inactive emojis for {gain} DOGE?",
             "🚀 ZÁKLADNÍ STATY": "🚀 BASE STATS",
             "❤️ Extra HP": "❤️ Extra HP",
             "Počáteční HP +10": "Starting HP +10",
@@ -8106,7 +8118,7 @@ window.toggleTreeFullscreen = function() {
         
         wrapper.style.position = 'relative';
         wrapper.style.width = '100%';
-        wrapper.style.height = '340px';
+        wrapper.style.height = '400px';
         wrapper.style.zIndex = '1';
         wrapper.style.overflow = 'hidden';
         wrapper.style.marginTop = '0px';
@@ -8114,7 +8126,7 @@ window.toggleTreeFullscreen = function() {
         canvas.style.position = 'absolute';
         canvas.style.left = '50%';
         canvas.style.top = '50%';
-        canvas.style.transform = 'translate(-50%, -50%) scale(0.24)';
+        canvas.style.transform = 'translate(-50%, -50%) scale(0.38)';
         canvas.style.transformOrigin = 'center center';
         
         btn.style.display = 'none';
