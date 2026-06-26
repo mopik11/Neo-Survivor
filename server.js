@@ -1982,10 +1982,21 @@ setInterval(() => {
                         let nextY = enemy.y + Math.sin(angle) * speed;
 
                         room.envObjects.forEach(obs => {
-                            if (dist(nextX, nextY, obs.x, obs.y) < 15 + obs.radius) {
-                                const pushAngle = Math.atan2(nextY - obs.y, nextX - obs.x);
-                                nextX = obs.x + Math.cos(pushAngle) * (15 + obs.radius);
-                                nextY = obs.y + Math.sin(pushAngle) * (15 + obs.radius);
+                            if (obs.type === 'anomaly') {
+                                const maxDist = obs.radius * 3;
+                                const d = dist(nextX, nextY, obs.x, obs.y);
+                                if (d < maxDist) {
+                                    const pullForce = (maxDist - d) / maxDist * 3;
+                                    const pullAngle = Math.atan2(obs.y - nextY, obs.x - nextX);
+                                    nextX += Math.cos(pullAngle) * pullForce;
+                                    nextY += Math.sin(pullAngle) * pullForce;
+                                }
+                            } else {
+                                if (dist(nextX, nextY, obs.x, obs.y) < 15 + obs.radius) {
+                                    const pushAngle = Math.atan2(nextY - obs.y, nextX - obs.x);
+                                    nextX = obs.x + Math.cos(pushAngle) * (15 + obs.radius);
+                                    nextY = obs.y + Math.sin(pushAngle) * (15 + obs.radius);
+                                }
                             }
                         });
 
@@ -2045,10 +2056,21 @@ setInterval(() => {
                     enemy.knockback.y *= 0.8;
 
                     room.envObjects.forEach(obs => {
-                        if (dist(nextX, nextY, obs.x, obs.y) < 15 + obs.radius) {
-                            const pushAngle = Math.atan2(nextY - obs.y, nextX - obs.x);
-                            nextX = obs.x + Math.cos(pushAngle) * (15 + obs.radius);
-                            nextY = obs.y + Math.sin(pushAngle) * (15 + obs.radius);
+                        if (obs.type === 'anomaly') {
+                            const maxDist = obs.radius * 3;
+                            const d = dist(nextX, nextY, obs.x, obs.y);
+                            if (d < maxDist) {
+                                const pullForce = (maxDist - d) / maxDist * 3;
+                                const pullAngle = Math.atan2(obs.y - nextY, obs.x - nextX);
+                                nextX += Math.cos(pullAngle) * pullForce;
+                                nextY += Math.sin(pullAngle) * pullForce;
+                            }
+                        } else {
+                            if (dist(nextX, nextY, obs.x, obs.y) < 15 + obs.radius) {
+                                const pushAngle = Math.atan2(nextY - obs.y, nextX - obs.x);
+                                nextX = obs.x + Math.cos(pushAngle) * (15 + obs.radius);
+                                nextY = obs.y + Math.sin(pushAngle) * (15 + obs.radius);
+                            }
                         }
                     });
 
