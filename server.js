@@ -807,7 +807,7 @@ io.on('connection', (socket) => {
                 const emoji = EMOJIS.find(e => e.id === inv.id);
                 if (!emoji) return;
                 const isEquipped = (meta.upgrades && meta.upgrades.hat === emoji.id) || (meta.selectedPet === emoji.id);
-                if (isEquipped) {
+                if (isEquipped || emoji.isPet) {
                     newInventory.push(inv);
                 } else {
                     totalGain += emoji.price * (inv.count || 1);
@@ -1031,6 +1031,27 @@ io.on('connection', (socket) => {
                         if (invItem) invItem.count++; else meta.inventory.push({ id: item.id, count: 1 });
                     }
                     socket.emit('crateResults', { results: results, type: data.id, bulk: true });
+                    success = true;
+                }
+            } else if (data.type === 'petUpgrade') {
+                const invItem = meta.inventory && meta.inventory.find(i => i.id === data.id);
+                if (invItem) {
+                    if (!meta.petLevels) meta.petLevels = {};
+                    const currentLevel = meta.petLevels[data.id] || 1;
+                    cost = currentLevel * 1000;
+                    if (row.currency >= cost) {
+                        meta.petLevels[data.id] = currentLevel + 1;
+                        success = true;
+                    }
+                }
+            } else if (data.type === 'petMerge') {
+                const invItem = meta.inventory && meta.inventory.find(i => i.id === data.id);
+                if (invItem && invItem.count >= 2) {
+                    if (!meta.petLevels) meta.petLevels = {};
+                    const currentLevel = meta.petLevels[data.id] || 1;
+                    invItem.count--;
+                    meta.petLevels[data.id] = currentLevel + 1;
+                    cost = 0;
                     success = true;
                 }
             }

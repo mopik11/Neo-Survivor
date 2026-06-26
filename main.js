@@ -378,7 +378,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.532'
+    version: window.GAME_VERSION || '1.533'
 };
 
 let achievementsInitialized = false;
@@ -694,7 +694,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.532";
+const GAME_VERSION = window.GAME_VERSION || "1.533";
 const GAME = {
     active: false,
     paused: false,
@@ -2282,7 +2282,12 @@ class Player {
         this.projectileCount = 1; 
         this.fireRate = 1000 / (isLocal ? (1 + getSkillTreeBonus('speed_2')) : 1);
         this.projSpeed = CONFIG.PROJECTILE_SPEED * (isLocal ? (1 + getSkillTreeBonus('speed_3')) : 1);
-        this.magnetRange = 150 * (isLocal ? (1 + getSkillTreeBonus('qol_1')) : 1);
+        let magnetMult = 1.0;
+        if (isLocal && META.selectedPet === 'pet_magnet') {
+            const petLvl = (META.petLevels && META.petLevels['pet_magnet']) || 1;
+            magnetMult += petLvl * 0.15;
+        }
+        this.magnetRange = 150 * (isLocal ? (1 + getSkillTreeBonus('qol_1')) : 1) * magnetMult;
         this.shield = 1.0; this.regen = 0;
         this.xpGenInterval = 0; this.lastXpGen = 0; this.ultraMagnet = false;
         this.pierceCount = 1; this.projSize = 6;
@@ -2352,7 +2357,10 @@ class Player {
 
         // Meta Upgrades: Regeneration
         let regenVal = getSkillTreeBonus('health_2');
-        if (META.selectedPet === 'pet_healer') regenVal += 2.0; // Pet healer regenerates HP fast
+        if (META.selectedPet === 'pet_healer') {
+            const petLvl = (META.petLevels && META.petLevels['pet_healer']) || 1;
+            regenVal += petLvl * 0.5; // 0.5 HP per second per pet level
+        }
 
         if (regenVal > 0 && this.hp < this.maxHp) {
             this.hp = Math.min(this.maxHp, this.hp + regenVal / 60);
@@ -2362,11 +2370,13 @@ class Player {
         if (META.selectedPet === 'pet_laser' && this.isLocal) {
             const now = Date.now();
             if (!this.lastPetLaser) this.lastPetLaser = now;
-            if (now - this.lastPetLaser > 1000) { // Fires every 1 second
+            const petLvl = (META.petLevels && META.petLevels['pet_laser']) || 1;
+            const laserInterval = Math.max(400, 1200 - petLvl * 100); // Firing interval scales with level (1.1s down to 0.4s)
+            if (now - this.lastPetLaser > laserInterval) {
                 this.lastPetLaser = now;
                 const enemies = GAME.entities.enemies || [];
                 let closest = null;
-                let minDist = 300; // Range of laser
+                let minDist = 300 + petLvl * 10; // Range of laser increases with level
                 enemies.forEach(e => {
                     const d = dist(this.x, this.y, e.x, e.y);
                     if (d < minDist) { minDist = d; closest = e; }
@@ -2374,9 +2384,11 @@ class Player {
                 if (closest) {
                     const angle = Math.atan2(closest.y - this.y, closest.x - this.x);
                     if (!GAME.entities.projectiles) GAME.entities.projectiles = [];
-                    const px = this.x - GAME.camera.x - 40; // Pet approx offset
+                    const px = this.x - GAME.camera.x - 40;
                     const py = this.y - GAME.camera.y - 20;
-                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, closest.x, closest.y, this.damage * 0.5, { speed: 800, color: '#facc15', size: 4, type: 'pet_laser' }));
+                    // Laser damage scales with pet level and player base damage
+                    const laserDmg = this.damage * (0.4 + petLvl * 0.1);
+                    GAME.entities.projectiles.push(new Projectile(this.x, this.y, closest.x, closest.y, laserDmg, { speed: 800, color: '#facc15', size: 4, type: 'pet_laser' }));
                     AudioEngine.play('shoot', { volume: 0.3 });
                 }
             }
@@ -3842,7 +3854,7 @@ function showShipsMenu() {
 
 function showPlayerProfile(p) {
     const lang = (p.selectedLanguage || 'cs').toUpperCase();
-    document.getElementById('player-profile-lang').innerHTML = `<span style="font-size: 1.5rem; vertical-align: middle; margin-right: 5px;">${lang === 'CS' ? '🇨🇿' : '🇬🇧'}</span> ${lang}`;
+    document.getElementById('player-profile-lang').innerText = lang;
     
     document.getElementById('player-profile-name').innerText = p.name;
     document.getElementById('player-profile-level').innerText = p.level;
@@ -4176,6 +4188,125 @@ function showNodeDetails(id, data, isVstupne) {
         };
     }
 }
+function openPetDetails(emoji, count) {
+    if (!emoji) return;
+    const lvl = (META.petLevels && META.petLevels[emoji.id]) || 1;
+    
+    const iconEl = document.getElementById('pet-detail-icon');
+    if (iconEl) iconEl.innerText = emoji.icon;
+    
+    const nameEl = document.getElementById('pet-detail-name');
+    if (nameEl) {
+        nameEl.innerText = window.T(emoji.name);
+        nameEl.setAttribute('data-pet-id', emoji.id);
+    }
+    
+    const levelEl = document.getElementById('pet-detail-level');
+    if (levelEl) levelEl.innerText = "Level " + lvl;
+    
+    let descText = "";
+    let currentBonusText = "";
+    let nextBonusText = "";
+    
+    if (emoji.id === 'pet_magnet') {
+        descText = window.T("Magnetický Dron ti pomáhá sbírat zkušenostní gemy z větší vzdálenosti během hry.");
+        const dosahText = META.selectedLanguage === 'en' ? 'range' : 'dosah';
+        currentBonusText = `+${lvl * 15}% ${dosahText}`;
+        nextBonusText = `+${(lvl + 1) * 15}% ${dosahText}`;
+    } else if (emoji.id === 'pet_laser') {
+        descText = window.T("Bojový Dron střílí automaticky lasery na nejbližší nepřátele v tvé blízkosti.");
+        const shootEvery = META.selectedLanguage === 'en' ? 'shooting every' : 'střelba každých';
+        currentBonusText = `Lvl ${lvl} - ${shootEvery} ${Math.max(0.4, (1.2 - lvl * 0.1)).toFixed(1)}s`;
+        nextBonusText = `Lvl ${lvl + 1} - ${shootEvery} ${Math.max(0.4, (1.2 - (lvl + 1) * 0.1)).toFixed(1)}s`;
+    } else if (emoji.id === 'pet_healer') {
+        descText = window.T("Léčivý Dron ti postupně automaticky doplňuje zdraví lodi za sekundu.");
+        currentBonusText = `+${(lvl * 0.5).toFixed(1)} HP / s`;
+        nextBonusText = `+${((lvl + 1) * 0.5).toFixed(1)} HP / s`;
+    }
+    
+    const descEl = document.getElementById('pet-detail-desc');
+    if (descEl) descEl.innerText = descText;
+    
+    const curEl = document.getElementById('pet-stat-current');
+    if (curEl) curEl.innerText = currentBonusText;
+    
+    const nxtEl = document.getElementById('pet-stat-next');
+    if (nxtEl) nxtEl.innerText = nextBonusText;
+    
+    const upgradeCost = lvl * 1000;
+    const costEl = document.getElementById('pet-upgrade-cost');
+    if (costEl) costEl.innerText = formatNumberFull(upgradeCost);
+    
+    const btnUpgrade = document.getElementById('btn-pet-upgrade');
+    if (btnUpgrade) {
+        const canAfford = META.currency >= upgradeCost;
+        if (canAfford) {
+            btnUpgrade.classList.remove('disabled');
+            btnUpgrade.style.opacity = '1';
+            btnUpgrade.style.cursor = 'pointer';
+        } else {
+            btnUpgrade.classList.add('disabled');
+            btnUpgrade.style.opacity = '0.5';
+            btnUpgrade.style.cursor = 'not-allowed';
+        }
+        btnUpgrade.onclick = (e) => {
+            e.preventDefault();
+            if (META.currency >= upgradeCost) {
+                META.currency -= upgradeCost;
+                if (!META.petLevels) META.petLevels = {};
+                META.petLevels[emoji.id] = lvl + 1;
+                updateCurrencyUI();
+                renderInventoryCrates();
+                playSound('upgrade');
+                if (NET.socket && NET.socket.connected) {
+                    NET.socket.emit('purchase', { type: 'petUpgrade', id: emoji.id, token: NET.sessionToken });
+                }
+            } else {
+                window.showCustomAlert(window.T("Nedostatek Dogecoinů!"));
+            }
+        };
+    }
+    
+    const btnMerge = document.getElementById('btn-pet-merge');
+    if (btnMerge) {
+        if (count >= 2) {
+            btnMerge.innerText = window.T("SLOUČIT 2 PETY (FREE)");
+            btnMerge.classList.remove('disabled');
+            btnMerge.style.opacity = '1';
+            btnMerge.style.cursor = 'pointer';
+            btnMerge.onclick = (e) => {
+                e.preventDefault();
+                window.showCustomConfirm(window.T("Chceš sloučit 2 stejné pety a získat +1 level zdarma?"), () => {
+                    const invItem = META.inventory.find(i => i.id === emoji.id);
+                    if (invItem && invItem.count >= 2) {
+                        invItem.count--;
+                        if (!META.petLevels) META.petLevels = {};
+                        META.petLevels[emoji.id] = lvl + 1;
+                        renderInventoryCrates();
+                        playSound('upgrade');
+                        if (NET.socket && NET.socket.connected) {
+                            NET.socket.emit('purchase', { type: 'petMerge', id: emoji.id, token: NET.sessionToken });
+                        }
+                    }
+                });
+            };
+        } else {
+            btnMerge.innerText = window.T("POTŘEBUJEŠ 2 PETY");
+            btnMerge.classList.add('disabled');
+            btnMerge.style.opacity = '0.5';
+            btnMerge.style.cursor = 'not-allowed';
+            btnMerge.onclick = (e) => {
+                e.preventDefault();
+                window.showCustomAlert(window.T("Nemáš dostatek stejných petů ke sloučení!"));
+            };
+        }
+    }
+    
+    const modal = document.getElementById('pet-detail-modal');
+    if (modal) modal.classList.add('active');
+}
+window.openPetDetails = openPetDetails;
+
 function renderInventoryCrates() {
     const container = document.getElementById('inventory-options');
     if (!container) return;
@@ -4220,7 +4351,6 @@ function renderInventoryCrates() {
                     <button class="btn-restart" style="background: ${type.border}; color: #000; font-size: 0.8rem; padding: 10px; border: none; width: 100%;">${window.T('OTEVŘÍT')}</button>
                 `;
                 card.querySelector('button').onclick = () => {
-                    // OPTIMISTIC UI: Decrement locally for instant feedback
                     const total = META.unopenedCrates[type.id] || 0;
                     if (total > 0) {
                         META.unopenedCrates[type.id] = 0;
@@ -4233,8 +4363,6 @@ function renderInventoryCrates() {
         });
         container.appendChild(rewardSection);
     }
-
-
 
     // 3. VESMÍRNÉ BEDNY (CRATES)
     const cratesSection = document.createElement('div');
@@ -4298,16 +4426,93 @@ function renderInventoryCrates() {
     });
     container.appendChild(cratesSection);
 
-    // 4. SBÍRKA EMOJI & ČEPIC
+    // 4. SBÍRKA PETŮ A SBÍRKA EMOJI (ODDĚLENÉ SBÍRKY v1.533)
+    if (!META.inventory) META.inventory = [];
+    const petItems = META.inventory.filter(inv => {
+        const emoji = EMOJIS.find(x => x.id === inv.id);
+        return emoji && emoji.isPet;
+    });
+    const emojiItems = META.inventory.filter(inv => {
+        const emoji = EMOJIS.find(x => x.id === inv.id);
+        return emoji && !emoji.isPet;
+    });
+
+    // 4A. SEKCE PETI / DRONI
+    if (petItems.length > 0) {
+        const petsSection = document.createElement('div');
+        petsSection.style.marginBottom = '30px';
+        petsSection.innerHTML = `
+            <div style="border-bottom: 1px solid rgba(99,102,241,0.2); margin-bottom: 15px; padding-bottom: 5px; text-align: left;">
+                <h2 style="color: #6366f1; margin:0; font-size: 1.2rem;">🤖 ${window.T('TVOJI PETI A DRONI')}</h2>
+                <div style="font-size: 0.65rem; color: #64748b; margin-top: 2px;">${window.T('Klikni na peta pro Upgrade & Merge')}</div>
+            </div>
+        `;
+        const petsGrid = document.createElement('div');
+        petsGrid.style.display = 'grid';
+        petsGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(110px, 1fr))';
+        petsGrid.style.gap = '10px';
+        petsSection.appendChild(petsGrid);
+
+        petItems.forEach(inv => {
+            const emoji = EMOJIS.find(e => e.id === inv.id);
+            if (!emoji) return;
+            const lvl = (META.petLevels && META.petLevels[emoji.id]) || 1;
+            const card = document.createElement('div');
+            card.className = 'upgrade-card';
+            card.style.minHeight = 'auto';
+            card.style.padding = '12px';
+            card.style.cursor = 'pointer';
+            
+            const isEquipped = META.selectedPet === emoji.id;
+            if (isEquipped) card.style.borderColor = '#fbbf24';
+            
+            card.innerHTML = `
+                <div style="font-size: 1.8rem;">${emoji.icon}</div>
+                <div style="font-size: 0.75rem; font-weight: bold; margin-top:5px; color: #f8fafc;">${window.T(emoji.name)}</div>
+                <div style="font-size: 0.65rem; color: #a5b4fc; font-weight: bold; margin-top: 2px;">Lvl ${lvl}</div>
+                <div style="font-size: 0.65rem; color: #94a3b8">x${inv.count}</div>
+                <div style="font-size: 0.6rem; color: ${getRarityColor(emoji.rarity)}; font-weight: bold; margin-bottom: 8px;">${emoji.rarity.toUpperCase()}</div>
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                    <button class="btn-equip" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: ${isEquipped ? '#fbbf24' : 'rgba(255,255,255,0.1)'}; color: ${isEquipped ? '#000' : '#fff'}; border: none; cursor:pointer;">${isEquipped ? window.T('SUNDAT') : window.T('NASADIT')}</button>
+                    <button class="btn-sell" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); cursor:pointer;">${window.T('PRODAT')} (${formatNumberFull(emoji.price)})</button>
+                </div>
+            `;
+            
+            card.onclick = (e) => {
+                if (e.target.tagName !== 'BUTTON') {
+                    openPetDetails(emoji, inv.count);
+                }
+            };
+
+            const btnEquip = card.querySelector('.btn-equip');
+            btnEquip.onclick = (e) => {
+                e.stopPropagation();
+                if (META.selectedPet === emoji.id) META.selectedPet = null;
+                else META.selectedPet = emoji.id;
+                saveMeta();
+                renderInventoryCrates();
+            };
+
+            card.querySelector('.btn-sell').onclick = (e) => {
+                e.stopPropagation();
+                sellEmoji(inv.id);
+            };
+
+            petsGrid.appendChild(card);
+        });
+        container.appendChild(petsSection);
+    }
+
+    // 4B. SEKCE EMOJI A ČEPICE
     const collectionSection = document.createElement('div');
     collectionSection.style.marginBottom = '30px';
     collectionSection.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(16,185,129,0.2); margin-bottom: 15px; padding-bottom: 5px;">
             <div style="display:flex; flex-direction:column; align-items: flex-start;">
-                <h2 style="color: #10b981; text-align: left; margin:0; font-size: 1.2rem;">✨ ${window.T('TVÁ SBÍRKA')}</h2>
+                <h2 style="color: #10b981; text-align: left; margin:0; font-size: 1.2rem;">✨ ${window.T('TVÁ SBÍRKA EMOJI A ČEPIC')}</h2>
                 <div style="font-size: 0.7rem; color: #64748b; font-weight: bold; margin-top: 2px;">${window.T('Celková hodnota:')} <span style="color: #fbbf24;">${formatNumberFull(META.inventory.reduce((sum, inv) => sum + (EMOJIS.find(e => e.id === inv.id)?.price || 0) * inv.count, 0))} DOGE</span></div>
             </div>
-            ${META.inventory.length > 0 ? `<button id="btn-sell-all" style="padding: 5px 12px; font-size: 0.7rem; border-radius: 8px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); cursor:pointer; font-weight:bold;">${window.T('PRODAT VŠE')}</button>` : ''}
+            ${emojiItems.length > 0 ? `<button id="btn-sell-all" style="padding: 5px 12px; font-size: 0.7rem; border-radius: 8px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); cursor:pointer; font-weight:bold;">${window.T('PRODAT VŠE')}</button>` : ''}
         </div>
     `;
     const collectionGrid = document.createElement('div');
@@ -4316,17 +4521,17 @@ function renderInventoryCrates() {
     collectionGrid.style.gap = '10px';
     collectionSection.appendChild(collectionGrid);
 
-    if (!META.inventory || META.inventory.length === 0) {
-        collectionGrid.innerHTML = `<p style="color: #475569; grid-column: 1/-1; padding: 20px;">${window.T('Zatím nemáš žádná emoji. Otevři bednu!')}</p>`;
+    if (emojiItems.length === 0) {
+        collectionGrid.innerHTML = `<p style="color: #475569; grid-column: 1/-1; padding: 20px;">${window.T('Žádná emoji ani čepice ve sbírce.')}</p>`;
     } else {
-        META.inventory.forEach(inv => {
+        emojiItems.forEach(inv => {
             const emoji = EMOJIS.find(e => e.id === inv.id);
             if (!emoji) return;
             const card = document.createElement('div');
             card.className = 'upgrade-card';
             card.style.minHeight = 'auto';
             card.style.padding = '12px';
-            const isEquipped = (emoji.isPet && META.selectedPet === emoji.id) || (!emoji.isPet && META.upgrades.hat === emoji.id);
+            const isEquipped = META.upgrades.hat === emoji.id;
             if (isEquipped) card.style.borderColor = '#fbbf24';
             card.innerHTML = `
                 <div style="font-size: 1.8rem;">${emoji.icon}</div>
@@ -4342,15 +4547,10 @@ function renderInventoryCrates() {
             if (btnEquip) {
                 btnEquip.onclick = (e) => {
                     e.stopPropagation();
-                    if (emoji.isPet) {
-                        if (META.selectedPet === emoji.id) META.selectedPet = null;
-                        else META.selectedPet = emoji.id;
-                    } else {
-                        if (META.upgrades.hat === emoji.id) META.upgrades.hat = null;
-                        else META.upgrades.hat = emoji.id;
-                    }
+                    if (META.upgrades.hat === emoji.id) META.upgrades.hat = null;
+                    else META.upgrades.hat = emoji.id;
                     saveMeta();
-                    showInventoryMenu();
+                    renderInventoryCrates();
                 };
             }
             card.querySelector('.btn-sell').onclick = (e) => {
@@ -4362,28 +4562,53 @@ function renderInventoryCrates() {
     }
     container.appendChild(collectionSection);
 
-        const btnSellAll = document.getElementById('btn-sell-all');
-        if (btnSellAll) {
-            btnSellAll.onclick = (e) => {
-                e.preventDefault(); e.stopPropagation();
-                let totalGain = 0;
-                META.inventory.forEach(inv => {
-                    const emoji = EMOJIS.find(e => e.id === inv.id);
-                    if (!emoji) return;
-                    const isEquipped = (emoji.isPet && META.selectedPet === emoji.id) || (!emoji.isPet && META.upgrades.hat === emoji.id);
-                    if (!isEquipped) {
-                        totalGain += emoji.price * inv.count;
-                    }
-                });
-                if (totalGain <= 0) {
-                    window.showCustomAlert(window.T("Nemáš žádná neaktivní emoji k prodeji!"));
-                    return;
+    if (petItems.length === 0 && emojiItems.length === 0) {
+        container.innerHTML = '';
+        const emptySection = document.createElement('div');
+        emptySection.innerHTML = `<p style="color: #475569; padding: 40px; text-align: center;">${window.T('Zatím nemáš žádná emoji ani pety. Otevři bednu!')}</p>`;
+        container.appendChild(emptySection);
+    }
+
+    const btnSellAll = document.getElementById('btn-sell-all');
+    if (btnSellAll) {
+        btnSellAll.onclick = (e) => {
+            e.preventDefault(); e.stopPropagation();
+            let totalGain = 0;
+            emojiItems.forEach(inv => {
+                const emoji = EMOJIS.find(e => e.id === inv.id);
+                if (!emoji) return;
+                const isEquipped = META.upgrades.hat === emoji.id;
+                if (!isEquipped) {
+                    totalGain += emoji.price * inv.count;
                 }
-                const confirmMsg = window.T("Opravdu chceš prodat všechna neaktivní emoji za {gain} DOGE?").replace("{gain}", formatNumberFull(totalGain));
-                window.showCustomConfirm(confirmMsg, () => sellAllEmojis());
-            };
+            });
+            if (totalGain <= 0) {
+                window.showCustomAlert(window.T("Nemáš žádná neaktivní emoji k prodeji!"));
+                return;
+            }
+            const confirmMsg = window.T("Opravdu chceš prodat všechna neaktivní emoji za {gain} DOGE?").replace("{gain}", formatNumberFull(totalGain));
+            window.showCustomConfirm(confirmMsg, () => sellAllEmojis());
+        };
+    }
+
+    // Reactive Refresh for active details modal
+    const activeModal = document.getElementById('pet-detail-modal');
+    if (activeModal && activeModal.classList.contains('active')) {
+        const nameEl = document.getElementById('pet-detail-name');
+        const activePetId = nameEl ? nameEl.getAttribute('data-pet-id') : null;
+        if (activePetId) {
+            const petEmoji = EMOJIS.find(e => e.id === activePetId);
+            const invItem = META.inventory.find(i => i.id === activePetId);
+            if (petEmoji && invItem) {
+                openPetDetails(petEmoji, invItem.count);
+            } else {
+                activeModal.classList.remove('active');
+            }
         }
+    }
 }
+window.showInventoryMenu = renderInventoryCrates;
+window.showMetaMenu = showSkillTreeMenu;
 
 function getRarityColor(rarity) {
     switch(rarity) {
@@ -5364,6 +5589,8 @@ function initSocket() {
                 }
             } else if (data.type === 'crate') {
                 // Server now instantly unboxes crates in bulk, no need to manually open
+            } else if (data.type === 'petUpgrade' || data.type === 'petMerge') {
+                renderInventoryCrates();
             }
         });
 
@@ -6282,7 +6509,24 @@ function init() {
             "Léčivá aura": "Healing Aura",
             "Portály": "Portals",
             "NEJ LEVEL": "MAX LEVEL",
-            "Dogecoiny:": "Dogecoins:"
+            "Dogecoiny:": "Dogecoins:",
+            "TVOJI PETI A DRONI": "YOUR PETS & DRONES",
+            "Klikni na peta pro Upgrade & Merge": "Click a pet for Upgrade & Merge",
+            "Žádná emoji ani čepice ve sbírce.": "No emojis or hats in collection.",
+            "Zatím nemáš žádná emoji ani pety. Otevři bednu!": "No emojis or pets yet. Open a crate!",
+            "TVÁ SBÍRKA EMOJI A ČEPIC": "YOUR EMOJI & HAT COLLECTION",
+            "SLOUČIT 2 PETY (MERGE)": "MERGE 2 PETS",
+            "SLOUČIT 2 PETY (FREE)": "MERGE 2 PETS (FREE)",
+            "POTŘEBUJEŠ 2 PETY": "NEED 2 PETS",
+            "Chceš sloučit 2 stejné pety a získat +1 level zdarma?": "Do you want to merge 2 identical pets to get +1 level for free?",
+            "INFO O SCHOPNOSTI": "ABILITY INFO",
+            "Aktuální bonus:": "Current bonus:",
+            "Příští level:": "Next level:",
+            "UPGRADOVAT ZA:": "UPGRADE FOR:",
+            "Magnetický Dron ti pomáhá sbírat zkušenostní gemy z větší vzdálenosti během hry.": "Magnet drone helps you collect experience gems from a further distance.",
+            "Bojový Dron střílí automaticky lasery na nejbližší nepřátele v tvé blízkosti.": "Combat drone fires lasers automatically at nearby enemies.",
+            "Léčivý Dron ti postupně automaticky doplňuje zdraví lodi za sekundu.": "Healing drone automatically restores HP per second.",
+            "dosah": "range"
         }
     };
 
