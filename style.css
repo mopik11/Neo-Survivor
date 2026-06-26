@@ -2347,11 +2347,11 @@ canvas {
 /* Fix mobile/landscape height clipping on meta-modal */
 @media (max-width: 950px), (max-height: 550px) {
   #meta-modal .modal-content {
-    height: 90vh !important;
-    max-height: 90vh !important;
+    height: 90dvh !important;
+    max-height: 90dvh !important;
   }
   #meta-modal .modal-body {
-    padding-bottom: 120px !important;
+    padding-bottom: 180px !important;
   }
 }
 

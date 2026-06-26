@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.524" />
+    <link rel="stylesheet" href="style.css?v=1.527" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.526
+            NEO SURVIVOR v1.527
           </div>
         </div>
       </div>
@@ -172,7 +172,7 @@
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
             <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.524</span>
+              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.527</span>
             </div>
 
             <div id="menu-links" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; opacity: 0.6; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
@@ -323,20 +323,20 @@
       </div>
 
       <div id="meta-modal" class="modal">
-        <div class="modal-content" style="padding: 0; width: 95vw !important; height: 90vh !important; max-width: 1200px !important; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px;">
+        <div class="modal-content" style="padding: 0; width: 95vw !important; height: 90dvh !important; max-width: 700px !important; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px;">
           <button class="btn-close-x" onclick="closeModal()" style="z-index: 100; right: 15px; top: 15px;">×</button>
           
           <!-- Fullscreen Close Button for the Skill Tree (Fixed viewport position) -->
           <button id="btn-fullscreen-tree" onclick="toggleTreeFullscreen()" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 10000000; background: rgba(239, 68, 68, 0.95); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 12px 24px; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-size: 1rem; letter-spacing: 1px; transition: all 0.2s ease;">✖ ZAVŘÍT</button>
 
-          <div class="modal-body" style="flex: 1; min-height: 0; display: block; overflow-y: auto; padding: 0; padding-bottom: 100px; position: relative;">
+          <div class="modal-body" style="flex: 1; min-height: 0; display: block; overflow-y: auto; padding: 0; padding-bottom: 180px; position: relative;">
             
             <div style="position: sticky; top: 0; left: 0; width: 100%; z-index: 50; background: linear-gradient(to bottom, rgba(15,23,42,1) 50%, rgba(15,23,42,0) 100%); padding: 15px 20px 30px; pointer-events: none; display: flex; flex-direction: column; align-items: flex-start;">
                 <h2 style="font-size: 2rem; margin: 0; text-shadow: 0 0 10px #000; color: #10b981;">SKILL TREE</h2>
                 <div class="stat-chip" style="margin-top:5px; display:inline-flex; pointer-events: auto; background: rgba(0,0,0,0.8); border: 1px solid #10b981;">DOGECOIN: <span id="meta-currency">0</span></div>
             </div>
 
-            <div id="skill-tree-wrapper" class="preview-mode" style="width: 100%; height: 220px; overflow: hidden; position: relative; background: radial-gradient(circle at center, #1a1a2e 0%, #0d0d1a 100%); flex-shrink: 0; border-bottom: 2px solid rgba(255, 255, 255, 0.1); cursor: pointer;" onclick="if(this.classList.contains('preview-mode')) toggleTreeFullscreen();">
+            <div id="skill-tree-wrapper" class="preview-mode" style="width: 100%; height: 340px; overflow: hidden; position: relative; background: radial-gradient(circle at center, #1a1a2e 0%, #0d0d1a 100%); flex-shrink: 0; border-bottom: 2px solid rgba(255, 255, 255, 0.1); cursor: pointer;" onclick="if(this.classList.contains('preview-mode')) toggleTreeFullscreen();">
                 <div id="tree-preview-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 200; pointer-events: none;">
                     <!-- Lupa in the bottom right corner as a premium badge -->
                     <div style="position: absolute; bottom: 15px; right: 15px; background: rgba(99, 102, 241, 0.95); color: white; padding: 8px 16px; border-radius: 12px; font-size: 0.85rem; font-weight: 800; letter-spacing: 1px; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 6px 15px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 6px;">
@@ -344,7 +344,7 @@
                     </div>
                 </div>
                 
-                <div id="skill-tree-canvas" style="position: absolute; width: 2000px; height: 2000px; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.18); transform-origin: center center;">
+                <div id="skill-tree-canvas" style="position: absolute; width: 2000px; height: 2000px; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.24); transform-origin: center center;">
                     <svg id="skill-tree-lines" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></svg>
                     <div id="skill-tree-nodes" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
                 </div>
@@ -352,7 +352,7 @@
 
             <div id="unopened-crates-container" style="display: none;"></div>
 
-            <div style="padding: 20px; background: rgba(15, 23, 42, 0.95); padding-bottom: 100px;">
+            <div style="padding: 20px; background: rgba(15, 23, 42, 0.95); padding-bottom: 150px;">
                 <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.5rem; text-align: left; color: #fbbf24;">📦 OBCHOD A INVENTÁŘ</h3>
                 <div id="inventory-options" style="display: block;"></div>
             </div>
@@ -628,7 +628,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>window.GAME_VERSION = '1.524';</script>
-    <script type="module" src="./main.js?v=1.524"></script>
+    <script>window.GAME_VERSION = '1.527';</script>
+    <script type="module" src="./main.js?v=1.527"></script>
   </body>
 </html>
