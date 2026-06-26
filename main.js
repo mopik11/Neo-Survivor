@@ -521,13 +521,24 @@ const formatNumber = (num) => {
     return sign + parseFloat(formatted) + suffixes[i];
 };
 
+const formatNumberFull = (num) => {
+    const val = Math.abs(num || 0);
+    const sign = (num || 0) < 0 ? "-" : "";
+    return sign + val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+};
+
 const updateCurrencyUI = () => {
     const formatted = formatNumber(META.currency);
-    const elements = ['display-doge', 'ships-currency', 'meta-currency'];
-    elements.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerText = formatted;
-    });
+    const full = formatNumberFull(META.currency);
+    
+    const displayDoge = document.getElementById('display-doge');
+    if (displayDoge) displayDoge.innerText = formatted;
+    
+    const shipsCurrency = document.getElementById('ships-currency');
+    if (shipsCurrency) shipsCurrency.innerText = full;
+    
+    const metaCurrency = document.getElementById('meta-currency');
+    if (metaCurrency) metaCurrency.innerText = full;
 };
 
 const saveMetaLocalOnly = () => {
@@ -3399,7 +3410,7 @@ function showAchievementUnlocked(name) {
         <div>
             <div style="font-size: 0.7rem; color: #fbbf24; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">${window.T('ÚSPĚCH!')}</div>
             <div style="font-size: 1rem; font-weight: 800;">${window.T(name)}</div>
-            ${reward > 0 ? `<div style="font-size: 0.8rem; color: #10b981; font-weight: 800;">+${reward} DOGE</div>` : ''}
+            ${reward > 0 ? `<div style="font-size: 0.8rem; color: #10b981; font-weight: 800;">+${formatNumberFull(reward)} DOGE</div>` : ''}
         </div>
     `;
     
@@ -3461,7 +3472,7 @@ function showCurrencyNotification(amount, source = "") {
         <div style="background: rgba(15, 23, 42, 0.9); border: 2px solid #fbbf24; padding: 20px 40px; border-radius: 20px; box-shadow: 0 0 50px rgba(251, 191, 36, 0.4); backdrop-filter: blur(10px);">
             <div style="color: #fbbf24; font-weight: 900; font-size: 1.5rem; letter-spacing: 2px; margin-bottom: 5px;">${title}</div>
             <div style="color: #fff; font-size: 2rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <span style="font-size: 1.5rem;">🪙</span> +${amount} DOGE
+                <span style="font-size: 1.5rem;">🪙</span> +${formatNumberFull(amount)} DOGE
             </div>
             ${source ? `<div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px; text-transform: uppercase;">${translatedSource}</div>` : ''}
         </div>
@@ -3509,9 +3520,9 @@ function showAchievementsMenu() {
 
         let claimButton = '';
         if (isUnlocked && !isClaimed) {
-            claimButton = `<button class="btn-restart" style="padding: 8px 15px; font-size: 0.75rem; background: #10b981; margin: 0; min-width: 120px;" onclick="window.claimAchievement('${ach.id}')">${window.T('VYDĚLAT:')} ${ach.reward} DOGE</button>`;
+            claimButton = `<button class="btn-restart" style="padding: 8px 15px; font-size: 0.75rem; background: #10b981; margin: 0; min-width: 120px;" onclick="window.claimAchievement('${ach.id}')">${window.T('VYDĚLAT:')} ${formatNumberFull(ach.reward)} DOGE</button>`;
         } else if (isClaimed) {
-            claimButton = `<div style="color: #64748b; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; white-space: nowrap;">${window.T('VYDĚLÁNO')}<br>${ach.reward} DOGE</div>`;
+            claimButton = `<div style="color: #64748b; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; white-space: nowrap;">${window.T('VYDĚLÁNO')}<br>${formatNumberFull(ach.reward)} DOGE</div>`;
         } else {
             claimButton = `<div style="color: #334155; font-size: 1.5rem;">🌑</div>`;
         }
@@ -3584,7 +3595,7 @@ function gameOver() {
 
     if (statsLevel) statsLevel.innerText = GAME.entities.player.level;
     if (statsKills) statsKills.innerText = GAME.kills;
-    if (statsCoins) statsCoins.innerText = GAME.dogeGained;
+    if (statsCoins) statsCoins.innerText = formatNumberFull(GAME.dogeGained);
     
     const playTime = Math.floor((Date.now() - (GAME.startTime || Date.now())) / 1000);
     const mins = Math.floor(playTime / 60);
@@ -3753,7 +3764,7 @@ function showShipsMenu() {
             <div class="upgrade-icon">${item.icon}</div>
             <h3>${window.T(item.name)}</h3>
             <p>${window.T(item.desc)}</p>
-            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? window.T('VYBRÁNO') : (owned ? window.T('VLASTNĚNO (Klikni)') : formatNumber(item.cost) + ' DOGE')}</span>
+            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? window.T('VYBRÁNO') : (owned ? window.T('VLASTNĚNO (Klikni)') : formatNumberFull(item.cost) + ' DOGE')}</span>
         `;
         card.onclick = () => {
             if (owned) {
@@ -3799,7 +3810,7 @@ function showShipsMenu() {
             <div class="upgrade-icon">${item.icon}</div>
             <h3>${window.T(item.name)}</h3>
             <p>${window.T(item.desc)}</p>
-            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? window.T('VYBRÁNO') : (owned ? window.T('VLASTNĚNO (Klikni)') : formatNumber(item.cost) + ' DOGE')}</span>
+            <span class="cost" style="margin-top:10px; display:inline-block">${selected ? window.T('VYBRÁNO') : (owned ? window.T('VLASTNĚNO (Klikni)') : formatNumberFull(item.cost) + ' DOGE')}</span>
         `;
         card.onclick = () => {
             if (owned) {
@@ -3833,7 +3844,7 @@ function showSkillTreeMenu(silent = false) {
         switchMusic('menu');
     }
     const currencyEl = document.getElementById('meta-currency');
-    if (currencyEl) currencyEl.innerText = formatNumber(META.currency);
+    if (currencyEl) currencyEl.innerText = formatNumberFull(META.currency);
     
     // Zobrazeni obchodu pod stromem
     renderInventoryCrates();
@@ -4036,7 +4047,7 @@ function showNodeDetails(id, data, isVstupne) {
             canAfford = false;
         } else {
             const cost = Math.floor(data.baseCost * Math.pow(data.costMultiplier, level));
-            costText = `${formatNumber(cost)} DOGE`;
+            costText = `${formatNumberFull(cost)} DOGE`;
             canAfford = META.currency >= cost;
             actionText = "KOUPIT LEVEL";
             action = () => {
@@ -4087,7 +4098,7 @@ function renderInventoryCrates() {
     if (!container) return;
     
     const currencyEl = document.getElementById('meta-currency');
-    if (currencyEl) currencyEl.innerText = formatNumber(META.currency);
+    if (currencyEl) currencyEl.innerText = formatNumberFull(META.currency);
 
     container.innerHTML = '';
     container.style.display = 'flex';
@@ -4167,7 +4178,7 @@ function renderInventoryCrates() {
 
         card.innerHTML = `
             <h3 style="margin-bottom: 2px;">${window.T(type.name)}</h3>
-            <div style="font-size: 0.65rem; color: #fbbf24; font-weight: 800; margin-bottom: 12px; opacity: 0.8;">${formatNumber(type.cost)} DOGE / ks</div>
+            <div style="font-size: 0.65rem; color: #fbbf24; font-weight: 800; margin-bottom: 12px; opacity: 0.8;">${formatNumberFull(type.cost)} DOGE / ks</div>
             
             <div class="crate-multipliers" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 5px;">
                 ${[1, 2, 5, 10].map(count => {
@@ -4211,7 +4222,7 @@ function renderInventoryCrates() {
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(16,185,129,0.2); margin-bottom: 15px; padding-bottom: 5px;">
             <div style="display:flex; flex-direction:column; align-items: flex-start;">
                 <h2 style="color: #10b981; text-align: left; margin:0; font-size: 1.2rem;">✨ ${window.T('TVÁ SBÍRKA')}</h2>
-                <div style="font-size: 0.7rem; color: #64748b; font-weight: bold; margin-top: 2px;">${window.T('Celková hodnota:')} <span style="color: #fbbf24;">${formatNumber(META.inventory.reduce((sum, inv) => sum + (EMOJIS.find(e => e.id === inv.id)?.price || 0) * inv.count, 0))} DOGE</span></div>
+                <div style="font-size: 0.7rem; color: #64748b; font-weight: bold; margin-top: 2px;">${window.T('Celková hodnota:')} <span style="color: #fbbf24;">${formatNumberFull(META.inventory.reduce((sum, inv) => sum + (EMOJIS.find(e => e.id === inv.id)?.price || 0) * inv.count, 0))} DOGE</span></div>
             </div>
             ${META.inventory.length > 0 ? `<button id="btn-sell-all" style="padding: 5px 12px; font-size: 0.7rem; border-radius: 8px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); cursor:pointer; font-weight:bold;">${window.T('PRODAT VŠE')}</button>` : ''}
         </div>
@@ -4241,7 +4252,7 @@ function renderInventoryCrates() {
                 <div style="font-size: 0.6rem; color: ${getRarityColor(emoji.rarity)}; font-weight: bold; margin-bottom: 5px;">${emoji.rarity.toUpperCase()}</div>
                 <div style="display:flex; flex-direction:column; gap:5px;">
                     <button class="btn-equip" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: ${isEquipped ? '#fbbf24' : 'rgba(255,255,255,0.1)'}; color: ${isEquipped ? '#000' : '#fff'}; border: none; cursor:pointer;">${isEquipped ? window.T('SUNDAT') : window.T('NASADIT')}</button>
-                    <button class="btn-sell" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); cursor:pointer;">${window.T('PRODAT')} (${formatNumber(emoji.price)})</button>
+                    <button class="btn-sell" style="padding: 4px; font-size: 0.6rem; border-radius: 6px; background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); cursor:pointer;">${window.T('PRODAT')} (${formatNumberFull(emoji.price)})</button>
                 </div>
             `;
             const btnEquip = card.querySelector('.btn-equip');
@@ -4285,7 +4296,7 @@ function renderInventoryCrates() {
                     window.showCustomAlert(window.T("Nemáš žádná neaktivní emoji k prodeji!"));
                     return;
                 }
-                const confirmMsg = window.T("Opravdu chceš prodat všechna neaktivní emoji za {gain} DOGE?").replace("{gain}", formatNumber(totalGain));
+                const confirmMsg = window.T("Opravdu chceš prodat všechna neaktivní emoji za {gain} DOGE?").replace("{gain}", formatNumberFull(totalGain));
                 window.showCustomConfirm(confirmMsg, () => sellAllEmojis());
             };
         }
@@ -4647,7 +4658,7 @@ function showBatchSummary() {
 
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 <button id="btn-batch-collect" class="btn-restart" style="width: 100%; background: #10b981; color: #fff; font-weight: 800; padding: 15px;">PONECHAT VŠE VE SBÍRCE</button>
-                <button id="btn-batch-sell" class="btn-restart" style="width: 100%; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 15px;">PRODAT CELOU VÁRKU (+${totalValue} DOGE)</button>
+                <button id="btn-batch-sell" class="btn-restart" style="width: 100%; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 15px;">PRODAT CELOU VÁRKU (+${formatNumberFull(totalValue)} DOGE)</button>
             </div>
         </div>
     `;
@@ -4717,7 +4728,7 @@ function sellEmoji(id) {
     // Floating text effect in menu
     const menuModal = document.getElementById('meta-modal');
     const floating = document.createElement('div');
-    floating.innerText = `+${emoji.price} DOGE`;
+    floating.innerText = `+${formatNumberFull(emoji.price)} DOGE`;
     floating.style.position = 'absolute';
     floating.style.top = '50%';
     floating.style.left = '50%';
