@@ -2346,10 +2346,6 @@ canvas {
 
 /* Fix mobile/landscape height clipping on meta-modal */
 @media (max-width: 950px), (max-height: 550px) {
-  #meta-modal .modal-content {
-    height: 90dvh !important;
-    max-height: 90dvh !important;
-  }
   #meta-modal .modal-body {
     padding-bottom: 180px !important;
   }
@@ -2381,4 +2377,20 @@ body.fullscreen-tree-active #meta-modal .modal-content {
   position: static !important;
   overflow: visible !important;
 }
+
+/* Skill Tree Meta Modal layout stability and scroll fixes (v1.528) */
+#meta-modal .modal-content {
+  height: 90vh !important;
+  height: 90dvh !important;
+  max-height: 90vh !important;
+  max-height: 90dvh !important;
+}
+
+#meta-modal .modal-body {
+  height: 100% !important;
+  max-height: 100% !important;
+  flex: 1;
+  min-height: 0;
+}
+
 

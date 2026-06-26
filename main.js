@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.503
+ * NEO SURVIVOR - Core Game Logic - v1.528
  */
 
 window.addEventListener('beforeunload', () => {
@@ -37,7 +37,7 @@ window.closeModal = function() {
         wrapper.classList.add('preview-mode');
         wrapper.style.position = 'relative';
         wrapper.style.width = '100%';
-        wrapper.style.height = '220px';
+        wrapper.style.height = '340px';
         wrapper.style.zIndex = '1';
         wrapper.style.overflow = 'hidden';
         wrapper.style.marginTop = '0px';
@@ -45,7 +45,7 @@ window.closeModal = function() {
             canvas.style.position = 'absolute';
             canvas.style.left = '50%';
             canvas.style.top = '50%';
-            canvas.style.transform = 'translate(-50%, -50%) scale(0.18)';
+            canvas.style.transform = 'translate(-50%, -50%) scale(0.24)';
             canvas.style.transformOrigin = 'center center';
         }
         if (btn) {
@@ -376,7 +376,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.527'
+    version: window.GAME_VERSION || '1.528'
 };
 
 let achievementsInitialized = false;
@@ -681,7 +681,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.527";
+const GAME_VERSION = window.GAME_VERSION || "1.528";
 const GAME = {
     active: false,
     paused: false,
