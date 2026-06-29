@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.549" />
+    <link rel="stylesheet" href="style.css?v=1.551" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -475,6 +475,11 @@
                     <div id="market-sell-cost" style="font-size: 0.75rem; color: #fbbf24;">Zisk 500 Doge</div>
                   </button>
                 </div>
+                
+                <div style="margin-top: 15px; font-size: 0.95rem; color: #94a3b8; display: flex; justify-content: space-around; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                  <div>Tvoje SP: <span id="market-display-sp-modal" style="color: #a855f7; font-weight: bold; font-size: 1.1rem;">0</span></div>
+                  <div>Tvoje Doge: <span id="market-display-doge-modal" style="color: #fbbf24; font-weight: bold; font-size: 1.1rem;">0</span></div>
+                </div>
             </div>
 
             <div id="unopened-crates-container" style="display: none;"></div>
@@ -760,7 +765,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>window.GAME_VERSION = '1.549';</script>
-    <script type="module" src="./main.js?v=1.549"></script>
+    <script>window.GAME_VERSION = '1.551';</script>
+    <script type="module" src="./main.js?v=1.551"></script>
   </body>
 </html>

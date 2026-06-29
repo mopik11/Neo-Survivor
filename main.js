@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.549
+ * NEO SURVIVOR - Core Game Logic - v1.551
  */
 
 window.addEventListener('beforeunload', () => {
@@ -5964,7 +5964,7 @@ function handleAuth(isLogin) {
                 document.getElementById('display-doge').innerText = formatNumber(META.currency || 0);
                 const displaySp = document.getElementById('display-sp');
                 if (displaySp) displaySp.innerText = formatNumber(META.skillPoints || 0);
-                if (window.updateMarketUI) updateMarketUI();
+                if (window.updateMarketUI) window.updateMarketUI();
                 
                 if (META.selectedLanguage) window.setLanguage(META.selectedLanguage);
                 if (window.updateSettingUI) window.updateSettingUI();
@@ -7147,6 +7147,7 @@ function init() {
     if (btnMeta) btnMeta.onclick = () => { 
         if (!NET.socket) initSocket();
         showSkillTreeMenu(); 
+        if (window.updateMarketUI) window.updateMarketUI();
         document.getElementById('meta-modal').classList.add('active'); 
         if (window.drawMarketChart) setTimeout(window.drawMarketChart, 100);
     };
@@ -7167,8 +7168,10 @@ function init() {
     };
 
     window.updateMarketUI = () => {
-        // Obsolete function from old modal, but kept for safety if called elsewhere.
-        // The SP display in menu-player-stats handles SP display now.
+        const dogeEl = document.getElementById('market-display-doge-modal');
+        const spEl = document.getElementById('market-display-sp-modal');
+        if (dogeEl) dogeEl.innerText = formatNumberFull(META.currency || 0);
+        if (spEl) spEl.innerText = formatNumberFull(META.skillPoints || 0);
     };
     
     window.drawMarketChart = () => {
@@ -7179,21 +7182,29 @@ function init() {
         
         if (history.length < 2) return;
         
-        const min = Math.min(...history) * 0.95;
-        const max = Math.max(...history) * 1.05;
-        const range = max - min || 1;
+        // Zrušení předchozí animace, aby se nepřekrývaly při rychlém klikání
+        if (window.marketChartAnimationId) {
+            cancelAnimationFrame(window.marketChartAnimationId);
+        }
         
-        const stepX = canvas.width / (history.length - 1);
+        const padding = 8; // Odsazení, aby se tečka neořízla
+        const drawWidth = canvas.width - padding * 2;
+        const drawHeight = canvas.height - padding * 2;
         
-        // Setup animation
+        const min = Math.min(...history);
+        const max = Math.max(...history);
+        // Přidáme malou rezervu nahoru a dolů
+        const range = (max - min) * 1.1 || 1;
+        const bottom = min - (max - min) * 0.05;
+        
+        const stepX = drawWidth / (history.length - 1);
+        
         let progress = 0;
-        const duration = 1000; // 1 sekunda animace
+        const duration = 800; // 0.8 sekundy
         const startTime = performance.now();
         
         function animate(time) {
             progress = Math.min(1, (time - startTime) / duration);
-            
-            // Easing (easeOutCubic)
             const easeProgress = 1 - Math.pow(1 - progress, 3);
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -7203,23 +7214,28 @@ function init() {
             
             if (currentPoints.length > 0) {
                 ctx.beginPath();
-                ctx.moveTo(0, canvas.height - ((currentPoints[0] - min) / range) * canvas.height);
+                const startY = padding + drawHeight - ((currentPoints[0] - bottom) / range) * drawHeight;
+                ctx.moveTo(padding, startY);
+                
+                let lastX = padding;
+                let lastY = startY;
                 
                 for (let i = 1; i < currentPoints.length; i++) {
-                    const x = i * stepX;
-                    // Interpolate the last point if we are between points
-                    let y = canvas.height - ((currentPoints[i] - min) / range) * canvas.height;
+                    const x = padding + i * stepX;
+                    let y = padding + drawHeight - ((currentPoints[i] - bottom) / range) * drawHeight;
                     
                     if (i === currentPoints.length - 1 && progress < 1) {
                         const exactIndex = (history.length - 1) * easeProgress;
                         const remainder = exactIndex - Math.floor(exactIndex);
                         if (i < history.length - 1) {
-                           const nextY = canvas.height - ((history[i+1] - min) / range) * canvas.height;
+                           const nextY = padding + drawHeight - ((history[i+1] - bottom) / range) * drawHeight;
                            y = y + (nextY - y) * remainder;
                         }
                     }
                     
                     ctx.lineTo(x, y);
+                    lastX = x;
+                    lastY = y;
                 }
                 
                 ctx.strokeStyle = '#a855f7';
@@ -7228,8 +7244,8 @@ function init() {
                 ctx.stroke();
                 
                 // Draw fill
-                ctx.lineTo((currentPoints.length - 1) * stepX, canvas.height);
-                ctx.lineTo(0, canvas.height);
+                ctx.lineTo(lastX, canvas.height);
+                ctx.lineTo(padding, canvas.height);
                 ctx.closePath();
                 
                 const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -7240,23 +7256,23 @@ function init() {
             }
             
             if (progress < 1) {
-                requestAnimationFrame(animate);
+                window.marketChartAnimationId = requestAnimationFrame(animate);
             } else {
-                // Nakreslíme finální "tečku" na konci grafu
-                const lastX = canvas.width;
-                const lastY = canvas.height - ((history[history.length - 1] - min) / range) * canvas.height;
+                // Finální tečka přesně na posledním bodě (s ohledem na padding)
+                const finalX = padding + drawWidth;
+                const finalY = padding + drawHeight - ((history[history.length - 1] - bottom) / range) * drawHeight;
                 ctx.beginPath();
-                ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
+                ctx.arc(finalX, finalY, 4, 0, Math.PI * 2);
                 ctx.fillStyle = '#fbbf24';
-                ctx.fill();
                 ctx.shadowColor = '#fbbf24';
                 ctx.shadowBlur = 10;
+                ctx.fill();
                 ctx.fill();
                 ctx.shadowBlur = 0; // reset
             }
         }
         
-        requestAnimationFrame(animate);
+        window.marketChartAnimationId = requestAnimationFrame(animate);
     };
 
     const btnInventory = document.getElementById('btn-inventory-menu');
