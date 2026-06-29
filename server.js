@@ -607,7 +607,7 @@ io.on('connection', (socket) => {
                 meta.currency = (meta.currency || 0) + amount;
                 const encryptedMeta = Security.encrypt(JSON.stringify(meta));
                 
-                db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encryptedMeta, lowTarget], () => {
+                db.run(`UPDATE accounts SET meta = ?, currency = ? WHERE username = ?`, [encryptedMeta, meta.currency, lowTarget], () => {
                     socket.emit('adminResponse', { msg: `Úspěch: ${lowTarget} dostal ${amount} Doge. (Nyní má ${meta.currency})`, color: "lime" });
                 });
             });
