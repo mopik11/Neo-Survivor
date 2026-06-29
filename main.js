@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.546
+ * NEO SURVIVOR - Core Game Logic - v1.547
  */
 
 window.addEventListener('beforeunload', () => {
@@ -4158,12 +4158,11 @@ function showNodeDetails(id, data, isVstupne) {
             costText = "JIŽ ODEMČENO";
             canAfford = false;
         } else {
-            costText = "500 DOGE";
-            canAfford = META.currency >= 500;
+            costText = "ZDARMA";
+            canAfford = true;
             actionText = "ODEMKNOUT";
             action = () => {
-                if (META.currency >= 500) {
-                    META.currency -= 500;
+                if (true) {
                     META.skillTree.unlocked = true;
                     playSound('upgrade');
                     // NOTE: Do NOT call saveMetaForce() here — it would create a competing syncAccount
@@ -4193,12 +4192,12 @@ function showNodeDetails(id, data, isVstupne) {
             canAfford = false;
         } else {
             const cost = Math.floor(data.baseCost * Math.pow(data.costMultiplier, level));
-            costText = `${formatNumberFull(cost)} DOGE`;
-            canAfford = META.currency >= cost;
+            costText = `${formatNumberFull(cost)} SP`;
+            canAfford = (META.skillPoints || 0) >= cost;
             actionText = "KOUPIT LEVEL";
             action = () => {
-                if (META.currency >= cost) {
-                    META.currency -= cost;
+                if ((META.skillPoints || 0) >= cost) {
+                    META.skillPoints -= cost;
                     META.skillTree.nodes[id] = level + 1;
                     playSound('upgrade');
                     // NOTE: Do NOT call saveMetaForce() here — it would create a competing syncAccount
@@ -5726,6 +5725,36 @@ function initSocket() {
             }
         });
 
+        // MARKET UPDATE
+        NET.socket.on('marketUpdate', (data) => {
+            if (data && data.price !== undefined) {
+                const oldPrice = window.marketCurrentPrice || 500;
+                window.marketCurrentPrice = data.price;
+                const priceEl = document.getElementById('market-current-price');
+                const trendEl = document.getElementById('market-trend');
+                if (priceEl) priceEl.innerText = data.price;
+                
+                if (trendEl) {
+                    if (data.price > oldPrice) {
+                        trendEl.innerText = 'Cena stoupá ↗';
+                        trendEl.style.color = '#10b981';
+                    } else if (data.price < oldPrice) {
+                        trendEl.innerText = 'Cena klesá ↘';
+                        trendEl.style.color = '#ef4444';
+                    } else {
+                        trendEl.innerText = 'Cena stabilní →';
+                        trendEl.style.color = '#94a3b8';
+                    }
+                }
+                
+                const buyEl = document.getElementById('market-buy-cost');
+                if (buyEl) buyEl.innerText = `Za ${data.price} Doge`;
+                
+                const sellEl = document.getElementById('market-sell-cost');
+                if (sellEl) sellEl.innerText = `Zisk ${data.price} Doge`;
+            }
+        });
+
         NET.socket.on('explosion', (data) => {
             // Nuke or Kamikadze explosion
             if (GAME.entities.fire) {
@@ -5928,6 +5957,9 @@ function handleAuth(isLogin) {
                 document.getElementById('display-player-name').innerText = META.playerName;
                 document.getElementById('display-max-level').innerText = META.maxLevel || 1;
                 document.getElementById('display-doge').innerText = formatNumber(META.currency || 0);
+                const displaySp = document.getElementById('display-sp');
+                if (displaySp) displaySp.innerText = formatNumber(META.skillPoints || 0);
+                if (window.updateMarketUI) updateMarketUI();
                 
                 if (META.selectedLanguage) window.setLanguage(META.selectedLanguage);
                 if (window.updateSettingUI) window.updateSettingUI();
@@ -7114,6 +7146,36 @@ function init() {
     };
     const btnCloseMeta = document.getElementById('btn-close-meta');
     if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
+
+    // --- BURZA ---
+    const btnMarket = document.getElementById('btn-market');
+    if (btnMarket) btnMarket.onclick = () => {
+        if (!NET.socket) initSocket();
+        updateMarketUI();
+        document.getElementById('market-modal').classList.add('active');
+    };
+    
+    const btnCloseMarket = document.getElementById('market-close');
+    if (btnCloseMarket) btnCloseMarket.onclick = () => document.getElementById('market-modal').classList.remove('active');
+    
+    const btnMarketBuy = document.getElementById('btn-market-buy');
+    if (btnMarketBuy) btnMarketBuy.onclick = () => {
+        if (!NET.socket) initSocket();
+        NET.socket.emit('marketBuy', { token: NET.sessionToken });
+    };
+
+    const btnMarketSell = document.getElementById('btn-market-sell');
+    if (btnMarketSell) btnMarketSell.onclick = () => {
+        if (!NET.socket) initSocket();
+        NET.socket.emit('marketSell', { token: NET.sessionToken });
+    };
+
+    window.updateMarketUI = () => {
+        const dogeEl = document.getElementById('market-display-doge-modal');
+        const spEl = document.getElementById('market-display-sp-modal');
+        if (dogeEl) dogeEl.innerText = formatNumberFull(META.currency || 0);
+        if (spEl) spEl.innerText = formatNumberFull(META.skillPoints || 0);
+    };
 
     const btnInventory = document.getElementById('btn-inventory-menu');
     if (btnInventory) btnInventory.onclick = () => {

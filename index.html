@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.546" />
+    <link rel="stylesheet" href="style.css?v=1.547" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -113,6 +113,8 @@
             <div class="stat-item-val"><span data-i18n="Nej. Level:">Nej. Level:</span> <span id="display-max-level" style="color: var(--xp-color); font-weight: bold;">0</span></div>
             <span class="stat-sep">|</span>
             <div class="stat-item-val">Doge: <span id="display-doge" style="color: #fbbf24; font-weight: bold;">0</span></div>
+            <span class="stat-sep">|</span>
+            <div class="stat-item-val">SP: <span id="display-sp" style="color: #a855f7; font-weight: bold;">0</span></div>
           </div>
           <!-- Active Players -->
           <div id="menu-active-players" class="active-players-card" style="font-size: 0.75rem; color: #64748b; margin-top: -0.5rem; margin-bottom: 1.5rem; letter-spacing: 1px;">
@@ -152,6 +154,7 @@
               <div class="menu-actions-grid">
                 <button class="btn-restart btn-sub modern-glass-btn" id="btn-ships-menu"><span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span></button>
                 <button class="btn-restart btn-sub modern-glass-btn special-glow" id="btn-meta-menu"><span>🌌</span> <span>SKILL TREE</span></button>
+                <button class="btn-restart btn-sub modern-glass-btn" id="btn-market" style="background: rgba(56, 189, 248, 0.15) !important;"><span>📈</span> <span>BURZA</span></button>
 
                 <button class="btn-restart btn-sub modern-glass-btn" id="btn-leaderboard"><span>🏆</span> <span data-i18n="ŽEBŘÍČEK">ŽEBŘÍČEK</span></button>
                 <button class="btn-restart btn-sub modern-glass-btn" id="btn-achievements"><span>🌟</span> <span data-i18n="ÚSPĚCHY">ÚSPĚCHY</span></button>
@@ -406,6 +409,44 @@
           <div class="menu-actions" style="width: 100%; margin-top: auto; padding-top: 15px; flex-shrink: 0;">
               <button id="btn-start-hosted" class="btn-restart" style="width: 100%; background: #10b981;">🚀 VSTOUPIT DO HRY</button>
               <button onclick="document.getElementById('host-modal').classList.remove('active'); document.getElementById('multiplayer-modal').classList.add('active');" class="btn-restart" style="width: 100%; background: rgba(255,255,255,0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZRUŠIT</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MARKET MODAL (v1.547) -->
+      <div id="market-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+          <button class="modal-close" id="market-close">✕</button>
+          <h2>📈 MEZIGALAKTICKÁ BURZA</h2>
+          <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">
+            Obchoduj s Dogecoiny a Skill Pointy (SP). Kurz se dynamicky mění podle toho, jak hráči nakupují a prodávají.
+          </div>
+          
+          <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
+            <div style="font-size: 0.8rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 2px;">Aktuální Kurz</div>
+            <div style="display: flex; justify-content: center; align-items: baseline; gap: 10px; margin-top: 10px;">
+              <span style="font-size: 2rem; font-weight: 800; color: #a855f7;">1 SP</span>
+              <span style="font-size: 1.5rem; color: #64748b;">=</span>
+              <span id="market-current-price" style="font-size: 2.5rem; font-weight: 900; color: #fbbf24;">500</span>
+              <span style="font-size: 1.5rem; color: #fbbf24;">Doge</span>
+            </div>
+            <div id="market-trend" style="font-size: 0.9rem; margin-top: 5px; color: #10b981;">(Nahrávám data...)</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; gap: 15px;">
+            <button id="btn-market-buy" class="btn-restart modern-glass-btn" style="flex: 1; padding: 15px; background: rgba(16, 185, 129, 0.15) !important; border-color: rgba(16, 185, 129, 0.4) !important;">
+              <div style="font-size: 1.2rem; font-weight: 800;">KOUPIT 1 SP</div>
+              <div id="market-buy-cost" style="font-size: 0.8rem; color: #fbbf24;">Za 500 Doge</div>
+            </button>
+            <button id="btn-market-sell" class="btn-restart modern-glass-btn" style="flex: 1; padding: 15px; background: rgba(239, 68, 68, 0.15) !important; border-color: rgba(239, 68, 68, 0.4) !important;">
+              <div style="font-size: 1.2rem; font-weight: 800;">PRODAT 1 SP</div>
+              <div id="market-sell-cost" style="font-size: 0.8rem; color: #fbbf24;">Zisk 500 Doge</div>
+            </button>
+          </div>
+          
+          <div style="margin-top: 20px; font-size: 0.85rem; color: #94a3b8; display: flex; justify-content: space-around;">
+            <div>Tvoje SP: <span id="market-display-sp-modal" style="color: #a855f7; font-weight: bold;">0</span></div>
+            <div>Tvoje Doge: <span id="market-display-doge-modal" style="color: #fbbf24; font-weight: bold;">0</span></div>
           </div>
         </div>
       </div>
@@ -721,7 +762,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>window.GAME_VERSION = '1.546';</script>
-    <script type="module" src="./main.js?v=1.546"></script>
+    <script>window.GAME_VERSION = '1.547';</script>
+    <script type="module" src="./main.js?v=1.547"></script>
   </body>
 </html>

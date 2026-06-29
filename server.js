@@ -198,6 +198,7 @@ function broadcastLeaderboard() {
                     selectedShip: metaObj.selectedShip || 1,
                     selectedAbility: metaObj.selectedAbility || 1,
                     selectedLanguage: metaObj.selectedLanguage || 'cs',
+                    skillPoints: metaObj.skillPoints || 0,
                     skillTree: metaObj.skillTree || { unlocked: false, nodes: {} },
                     achievements: metaObj.achievements || {},
                     claimedAchievements: metaObj.claimedAchievements || {}
@@ -235,6 +236,26 @@ function broadcastServerStats() {
     });
 }
 setInterval(broadcastServerStats, 5000);
+
+// --- MARKET MANAGER (v1.547) ---
+const MarketManager = {
+    currentPrice: 500,
+    
+    updatePrice(amount) {
+        this.currentPrice += amount;
+        if (this.currentPrice < 10) this.currentPrice = 10;
+        io.emit('marketUpdate', { price: this.currentPrice });
+    },
+    
+    fluctuate() {
+        // Random fluctuation between -5 and +5 Doge
+        const change = Math.floor(Math.random() * 11) - 5;
+        this.updatePrice(change);
+    }
+};
+
+// Fluktuace každých 30 vteřin pro simulaci živého trhu
+setInterval(() => MarketManager.fluctuate(), 30000);
 
 // --- AUTHORITATIVE ECONOMY SYSTEM (v1.402.3) ---
 const PRICES = {
@@ -423,6 +444,12 @@ function killEnemy(room, enemyId, rewardTarget = null) {
     if (rewardTarget) {
         if (enemy.isBoss) {
             rewardPlayer(rewardTarget, REWARD_BOSS_KILL);
+            
+            // Odměna 5 SP za Bosse všem v místnosti
+            Object.values(room.players).forEach(p_lb => {
+                p_lb.pendingSkillPoints = (p_lb.pendingSkillPoints || 0) + 5;
+            });
+            
             // Better crates for higher levels
             let crateType = 'basic';
             if (room.level >= 30) crateType = 'legendary';
@@ -463,26 +490,38 @@ function flushPlayerRewards(socket) {
 
     const player = ROOMS[r].players[p];
     const amount = player.pendingRewards || 0;
-    if (amount <= 0 || !player.username) {
+    const spAmount = player.pendingSkillPoints || 0;
+    
+    if (amount <= 0 && spAmount <= 0) return;
+    if (!player.username) {
         player.pendingRewards = 0;
+        player.pendingSkillPoints = 0;
         return;
     }
 
     player.pendingRewards = 0;
+    player.pendingSkillPoints = 0;
 
-    // ATOMIC UPDATE: Use SQL increment to prevent race conditions
+    // ATOMIC UPDATE: Use SQL increment for currency, and safely update meta for SP
     db.run(`UPDATE accounts SET currency = currency + ? WHERE username = ?`, [amount, player.username], (err) => {
         if (!err) {
             db.get(`SELECT currency, meta FROM accounts WHERE username = ?`, [player.username], (err, row) => {
                 if (row) {
-                    socket.emit('currencyUpdated', { amount: row.currency });
-                    
-                    // Also update the meta blob in background to keep it in sync (for legacy reasons)
                     let meta;
-                    try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = {}; }
-                    meta.currency = row.currency;
+                    try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
+                    
+                    meta.currency = row.currency; // legacy sync
+                    
+                    if (spAmount > 0) {
+                        if (typeof meta.skillPoints === 'undefined') meta.skillPoints = 0;
+                        meta.skillPoints += spAmount;
+                    }
+                    
                     const encrypted = Security.encrypt(JSON.stringify(meta));
-                    db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, player.username]);
+                    db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, player.username], () => {
+                        socket.emit('currencyUpdated', { amount: row.currency });
+                        if (spAmount > 0) socket.emit('syncSuccess', { meta: meta });
+                    });
                 }
             });
         }
@@ -1030,6 +1069,72 @@ io.on('connection', (socket) => {
             });
         });
     });
+    // --- MARKET HANDLERS (v1.547) ---
+    socket.on('marketBuy', (data) => {
+        const user = socket.authenticatedUser;
+        if (!user || data.token !== socket.sessionToken) return;
+
+        db.get(`SELECT currency, meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+            if (err || !row) return;
+            let meta;
+            try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
+            if (!meta) return;
+
+            const price = MarketManager.currentPrice;
+            if (row.currency >= price) {
+                // Nakoupit 1 SP
+                if (typeof meta.skillPoints === 'undefined') meta.skillPoints = 0;
+                meta.skillPoints += 1;
+                
+                db.run(`UPDATE accounts SET currency = currency - ?, meta = ? WHERE username = ?`, 
+                    [price, Security.encrypt(JSON.stringify(meta)), user], 
+                    (err) => {
+                        if (!err) {
+                            MarketManager.updatePrice(15); // Nákup zvedne cenu
+                            socket.emit('syncSuccess', { meta: meta });
+                            socket.emit('currencyUpdated', { amount: row.currency - price });
+                            socket.emit('purchaseSuccess', { type: 'market', id: 'buy' });
+                        }
+                    }
+                );
+            } else {
+                socket.emit('systemMessage', { text: 'Nedostatek Dogecoinů na nákup SP!', type: 'error' });
+            }
+        });
+    });
+
+    socket.on('marketSell', (data) => {
+        const user = socket.authenticatedUser;
+        if (!user || data.token !== socket.sessionToken) return;
+
+        db.get(`SELECT currency, meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+            if (err || !row) return;
+            let meta;
+            try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
+            if (!meta) return;
+
+            const price = MarketManager.currentPrice;
+            if (meta.skillPoints && meta.skillPoints >= 1) {
+                // Prodat 1 SP
+                meta.skillPoints -= 1;
+                
+                db.run(`UPDATE accounts SET currency = currency + ?, meta = ? WHERE username = ?`, 
+                    [price, Security.encrypt(JSON.stringify(meta)), user], 
+                    (err) => {
+                        if (!err) {
+                            MarketManager.updatePrice(-10); // Prodej sníží cenu
+                            socket.emit('syncSuccess', { meta: meta });
+                            socket.emit('currencyUpdated', { amount: row.currency + price });
+                            socket.emit('purchaseSuccess', { type: 'market', id: 'sell' });
+                        }
+                    }
+                );
+            } else {
+                socket.emit('systemMessage', { text: 'Nemáš žádné Skill Pointy k prodeji!', type: 'error' });
+            }
+        });
+    });
+
     socket.on('purchase', (data) => {
         const user = socket.authenticatedUser;
         if (!user) {
@@ -1079,16 +1184,13 @@ io.on('connection', (socket) => {
             } else if (data.type === 'skillTree') {
                 if (!meta.skillTree) meta.skillTree = { unlocked: false, nodes: {} };
                 if (!meta.skillTree.nodes) meta.skillTree.nodes = {};
+                if (typeof meta.skillPoints === 'undefined') meta.skillPoints = 0;
                 
                 if (data.id === 'vstupne') {
                     if (!meta.skillTree.unlocked) {
-                        cost = 500;
-                        if (row.currency >= cost) {
-                            meta.skillTree.unlocked = true;
-                            success = true;
-                        } else {
-                            console.log(`[PURCHASE] Vstupne FAIL for "${user}": not enough currency (${row.currency} < 500)`);
-                        }
+                        cost = 0; // Vstupní poplatek zrušen nebo je v SP
+                        meta.skillTree.unlocked = true;
+                        success = true;
                     } else {
                         // Already unlocked: return current state as success (not error)
                         console.log(`[PURCHASE] Vstupne already unlocked for "${user}", returning syncSuccess`);
@@ -1106,11 +1208,15 @@ io.on('connection', (socket) => {
                         
                         if (reqMet && level < nodeData.maxLevel) {
                             cost = Math.floor(nodeData.baseCost * Math.pow(nodeData.costMultiplier, level));
-                            if (row.currency >= cost) {
+                            
+                            // SKILL POINTS LOGIC
+                            if (meta.skillPoints >= cost) {
+                                meta.skillPoints -= cost; // Odejteme Skill Pointy
                                 meta.skillTree.nodes[data.id] = level + 1;
                                 success = true;
+                                cost = 0; // Nastavíme cost na 0, aby se neodečítaly Dogecoiny
                             } else {
-                                console.log(`[PURCHASE] Node "${data.id}" FAIL for "${user}": not enough currency (${row.currency} < ${cost})`);
+                                console.log(`[PURCHASE] Node "${data.id}" FAIL for "${user}": not enough SP (${meta.skillPoints} < ${cost})`);
                             }
                         } else {
                             console.log(`[PURCHASE] Node "${data.id}" FAIL for "${user}": reqMet=${reqMet} (unlocked=${isUnlocked}, req=${req}, reqLevel=${req ? meta.skillTree.nodes[req] : 'n/a'}), level=${level}/${nodeData.maxLevel}`);
@@ -1421,6 +1527,7 @@ io.on('connection', (socket) => {
                         if (err) return socket.emit('syncError', "DB Error in syncAccount: " + err.message);
                         // Sync success - Return the AUTHORITATIVE merged meta to the client
                         socket.emit('syncSuccess', { meta: merged });
+                        socket.emit('marketUpdate', { price: MarketManager.currentPrice });
                     });
             };
 
@@ -1842,6 +1949,11 @@ io.on('connection', (socket) => {
                 room.xp -= room.nextLevelXp;
                 room.nextLevelXp = Math.floor(room.nextLevelXp * 1.25);
                 room.readyCount = 0;
+
+                // Award SP to all players
+                Object.values(room.players).forEach(p_lb => {
+                    p_lb.pendingSkillPoints = (p_lb.pendingSkillPoints || 0) + 1;
+                });
 
                 // Flush rewards on Level Up
                 flushPlayerRewards(socket);
