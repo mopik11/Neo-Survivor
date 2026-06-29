@@ -240,11 +240,16 @@ setInterval(broadcastServerStats, 5000);
 // --- MARKET MANAGER (v1.547) ---
 const MarketManager = {
     currentPrice: 500,
+    history: Array(20).fill(500), // Keep last 20 prices for the chart
     
     updatePrice(amount) {
         this.currentPrice += amount;
         if (this.currentPrice < 10) this.currentPrice = 10;
-        io.emit('marketUpdate', { price: this.currentPrice });
+        
+        this.history.push(this.currentPrice);
+        if (this.history.length > 20) this.history.shift();
+        
+        io.emit('marketUpdate', { price: this.currentPrice, history: this.history });
     },
     
     fluctuate() {
@@ -1527,7 +1532,7 @@ io.on('connection', (socket) => {
                         if (err) return socket.emit('syncError', "DB Error in syncAccount: " + err.message);
                         // Sync success - Return the AUTHORITATIVE merged meta to the client
                         socket.emit('syncSuccess', { meta: merged });
-                        socket.emit('marketUpdate', { price: MarketManager.currentPrice });
+                        socket.emit('marketUpdate', { price: MarketManager.currentPrice, history: MarketManager.history });
                     });
             };
 

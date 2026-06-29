@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.547
+ * NEO SURVIVOR - Core Game Logic - v1.548
  */
 
 window.addEventListener('beforeunload', () => {
@@ -5730,6 +5730,9 @@ function initSocket() {
             if (data && data.price !== undefined) {
                 const oldPrice = window.marketCurrentPrice || 500;
                 window.marketCurrentPrice = data.price;
+                if (data.history) window.marketHistory = data.history;
+                else if (!window.marketHistory) window.marketHistory = Array(20).fill(500);
+                
                 const priceEl = document.getElementById('market-current-price');
                 const trendEl = document.getElementById('market-trend');
                 if (priceEl) priceEl.innerText = data.price;
@@ -5752,6 +5755,8 @@ function initSocket() {
                 
                 const sellEl = document.getElementById('market-sell-cost');
                 if (sellEl) sellEl.innerText = `Zisk ${data.price} Doge`;
+                
+                if (window.drawMarketChart) window.drawMarketChart();
             }
         });
 
@@ -7143,21 +7148,12 @@ function init() {
         if (!NET.socket) initSocket();
         showSkillTreeMenu(); 
         document.getElementById('meta-modal').classList.add('active'); 
+        if (window.drawMarketChart) setTimeout(window.drawMarketChart, 100);
     };
     const btnCloseMeta = document.getElementById('btn-close-meta');
     if (btnCloseMeta) btnCloseMeta.onclick = () => document.getElementById('meta-modal').classList.remove('active');
 
     // --- BURZA ---
-    const btnMarket = document.getElementById('btn-market');
-    if (btnMarket) btnMarket.onclick = () => {
-        if (!NET.socket) initSocket();
-        updateMarketUI();
-        document.getElementById('market-modal').classList.add('active');
-    };
-    
-    const btnCloseMarket = document.getElementById('market-close');
-    if (btnCloseMarket) btnCloseMarket.onclick = () => document.getElementById('market-modal').classList.remove('active');
-    
     const btnMarketBuy = document.getElementById('btn-market-buy');
     if (btnMarketBuy) btnMarketBuy.onclick = () => {
         if (!NET.socket) initSocket();
@@ -7171,10 +7167,50 @@ function init() {
     };
 
     window.updateMarketUI = () => {
-        const dogeEl = document.getElementById('market-display-doge-modal');
-        const spEl = document.getElementById('market-display-sp-modal');
-        if (dogeEl) dogeEl.innerText = formatNumberFull(META.currency || 0);
-        if (spEl) spEl.innerText = formatNumberFull(META.skillPoints || 0);
+        // Obsolete function from old modal, but kept for safety if called elsewhere.
+        // The SP display in menu-player-stats handles SP display now.
+    };
+    
+    window.drawMarketChart = () => {
+        const canvas = document.getElementById('market-chart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const history = window.marketHistory || Array(20).fill(500);
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        if (history.length < 2) return;
+        
+        const min = Math.min(...history) * 0.95;
+        const max = Math.max(...history) * 1.05;
+        const range = max - min || 1;
+        
+        const stepX = canvas.width / (history.length - 1);
+        
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height - ((history[0] - min) / range) * canvas.height);
+        
+        for (let i = 1; i < history.length; i++) {
+            const x = i * stepX;
+            const y = canvas.height - ((history[i] - min) / range) * canvas.height;
+            ctx.lineTo(x, y);
+        }
+        
+        ctx.strokeStyle = '#a855f7';
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+        
+        // Fill area
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.lineTo(0, canvas.height);
+        ctx.closePath();
+        
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, 'rgba(168, 85, 247, 0.4)');
+        gradient.addColorStop(1, 'rgba(168, 85, 247, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fill();
     };
 
     const btnInventory = document.getElementById('btn-inventory-menu');
