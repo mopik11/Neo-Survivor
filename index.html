@@ -442,7 +442,10 @@
 
             <!-- BURZA (v1.548) -->
             <div style="padding: 20px; background: rgba(15, 23, 42, 0.95); border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
-                <h3 style="margin-top: 0; margin-bottom: 10px; font-size: 1.5rem; text-align: left; color: #a855f7;">📈 MEZIGALAKTICKÁ BURZA</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="margin: 0; font-size: 1.5rem; text-align: left; color: #a855f7;">📈 MEZIGALAKTICKÁ BURZA</h3>
+                    <div class="stat-chip" style="background: rgba(0,0,0,0.8); border: 1px solid #a855f7; color: #a855f7; font-weight: bold;">SP: <span id="market-display-sp-modal">0</span></div>
+                </div>
                 <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 15px; text-align: left;">
                   Obchoduj s Dogecoiny a Skill Pointy (SP). Kurz se dynamicky mění.
                 </div>
@@ -474,11 +477,6 @@
                     <div style="font-size: 1rem; font-weight: 800;">PRODAT 1 SP</div>
                     <div id="market-sell-cost" style="font-size: 0.75rem; color: #fbbf24;">Zisk 500 Doge</div>
                   </button>
-                </div>
-                
-                <div style="margin-top: 15px; font-size: 0.95rem; color: #94a3b8; display: flex; justify-content: space-around; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                  <div>Tvoje SP: <span id="market-display-sp-modal" style="color: #a855f7; font-weight: bold; font-size: 1.1rem;">0</span></div>
-                  <div>Tvoje Doge: <span id="market-display-doge-modal" style="color: #fbbf24; font-weight: bold; font-size: 1.1rem;">0</span></div>
                 </div>
             </div>
 

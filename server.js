@@ -253,14 +253,16 @@ const MarketManager = {
     },
     
     fluctuate() {
-        // Random fluctuation between -5 and +5 Doge
-        const change = Math.floor(Math.random() * 11) - 5;
+        // Zvýšená fluktuace pro živější trh: základní změna +- 20, plus až +- 3% z aktuální ceny
+        const flatChange = Math.floor(Math.random() * 41) - 20;
+        const percentChange = Math.floor(this.currentPrice * ((Math.random() * 0.06) - 0.03));
+        const change = flatChange + percentChange;
         this.updatePrice(change);
     }
 };
 
-// Fluktuace každých 30 vteřin pro simulaci živého trhu
-setInterval(() => MarketManager.fluctuate(), 30000);
+// Fluktuace každých 10 vteřin pro mnohem živější simulaci
+setInterval(() => MarketManager.fluctuate(), 10000);
 
 // --- AUTHORITATIVE ECONOMY SYSTEM (v1.402.3) ---
 const PRICES = {

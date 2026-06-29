@@ -7168,9 +7168,7 @@ function init() {
     };
 
     window.updateMarketUI = () => {
-        const dogeEl = document.getElementById('market-display-doge-modal');
         const spEl = document.getElementById('market-display-sp-modal');
-        if (dogeEl) dogeEl.innerText = formatNumberFull(META.currency || 0);
         if (spEl) spEl.innerText = formatNumberFull(META.skillPoints || 0);
     };
     
