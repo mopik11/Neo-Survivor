@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.543" />
+    <link rel="stylesheet" href="style.css?v=1.544" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.543
+            NEO SURVIVOR v1.544
           </div>
         </div>
       </div>
@@ -150,21 +150,21 @@
             <div class="menu-group" id="menu-group-progression">
               <h3 class="menu-group-title">POSTUP</h3>
               <div class="menu-actions-grid">
-                <button class="btn-restart btn-sub" id="btn-ships-menu" style="background: rgba(16, 185, 129, 0.15);"><span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span></button>
-                <button class="btn-restart btn-sub" id="btn-meta-menu" style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); border-color: #a78bfa;"><span>🌌</span> <span>SKILL TREE</span></button>
+                <button class="btn-restart btn-sub modern-glass-btn" id="btn-ships-menu"><span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span></button>
+                <button class="btn-restart btn-sub modern-glass-btn special-glow" id="btn-meta-menu"><span>🌌</span> <span>SKILL TREE</span></button>
 
-                <button class="btn-restart btn-sub" id="btn-leaderboard" style="background: rgba(245, 158, 11, 0.15);"><span>🏆</span> <span data-i18n="ŽEBŘÍČEK">ŽEBŘÍČEK</span></button>
-                <button class="btn-restart btn-sub" id="btn-achievements" style="background: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24 !important;"><span>🌟</span> <span data-i18n="ÚSPĚCHY">ÚSPĚCHY</span></button>
+                <button class="btn-restart btn-sub modern-glass-btn" id="btn-leaderboard"><span>🏆</span> <span data-i18n="ŽEBŘÍČEK">ŽEBŘÍČEK</span></button>
+                <button class="btn-restart btn-sub modern-glass-btn" id="btn-achievements"><span>🌟</span> <span data-i18n="ÚSPĚCHY">ÚSPĚCHY</span></button>
               </div>
             </div>
 
             <div class="menu-group" id="menu-group-other">
               <h3 class="menu-group-title">OSTATNÍ</h3>
               <div class="menu-actions-grid secondary">
-                <button class="btn-restart btn-mini" id="btn-tutorial" style="background: rgba(56, 189, 248, 0.1);"><span>📖</span> <span data-i18n="NÁVOD">NÁVOD</span></button>
-                <button class="btn-restart btn-mini" id="btn-feedback" style="background: rgba(236, 72, 153, 0.1);"><span>💬</span> <span data-i18n="FEEDBACK">FEEDBACK</span></button>
-                <button class="btn-restart btn-mini" id="btn-settings" style="background: rgba(148, 163, 184, 0.1);"><span>⚙️</span> <span data-i18n="NASTAVENÍ">NASTAVENÍ</span></button>
-                <button class="btn-restart btn-mini btn-quit" id="btn-main-quit"><span>🚪</span> <span data-i18n="ODHLÁSIT">ODHLÁSIT</span></button>
+                <button class="btn-restart btn-mini modern-glass-btn" id="btn-tutorial"><span>📖</span> <span data-i18n="NÁVOD">NÁVOD</span></button>
+                <button class="btn-restart btn-mini modern-glass-btn" id="btn-feedback"><span>💬</span> <span data-i18n="FEEDBACK">FEEDBACK</span></button>
+                <button class="btn-restart btn-mini modern-glass-btn" id="btn-settings"><span>⚙️</span> <span data-i18n="NASTAVENÍ">NASTAVENÍ</span></button>
+                <button class="btn-restart btn-mini modern-glass-btn btn-quit" id="btn-main-quit"><span>🚪</span> <span data-i18n="ODHLÁSIT">ODHLÁSIT</span></button>
               </div>
             </div>
           </div>
@@ -172,7 +172,7 @@
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
             <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.543</span>
+              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.544</span>
             </div>
 
             <div id="menu-links" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; opacity: 0.6; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
@@ -721,7 +721,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>window.GAME_VERSION = '1.537';</script>
-    <script type="module" src="./main.js?v=1.537"></script>
+    <script>window.GAME_VERSION = '1.544';</script>
+    <script type="module" src="./main.js?v=1.544"></script>
   </body>
 </html>
