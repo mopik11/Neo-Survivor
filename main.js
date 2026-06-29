@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.545
+ * NEO SURVIVOR - Core Game Logic - v1.546
  */
 
 window.addEventListener('beforeunload', () => {
