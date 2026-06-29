@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.537
+ * NEO SURVIVOR - Core Game Logic - v1.539
  */
 
 window.addEventListener('beforeunload', () => {
@@ -22,6 +22,50 @@ window.showCustomAlert = function (msg) {
     } else {
         console.warn("Custom alert:", msg);
     }
+};
+
+window.showAdminAnnouncement = function (msg) {
+    const ann = document.createElement('div');
+    ann.style.position = 'fixed';
+    ann.style.top = '15%';
+    ann.style.left = '50%';
+    ann.style.transform = 'translate(-50%, -50%)';
+    ann.style.background = 'rgba(220, 38, 38, 0.9)';
+    ann.style.color = '#fff';
+    ann.style.padding = '20px 40px';
+    ann.style.borderRadius = '12px';
+    ann.style.fontSize = '32px';
+    ann.style.fontWeight = '900';
+    ann.style.boxShadow = '0 0 40px rgba(220, 38, 38, 0.9)';
+    ann.style.zIndex = '9999999';
+    ann.style.textAlign = 'center';
+    ann.style.textTransform = 'uppercase';
+    ann.style.pointerEvents = 'none';
+    ann.style.animation = 'announcementPop 0.5s ease-out forwards';
+    ann.innerText = msg;
+    
+    if (!document.getElementById('admin-ann-styles')) {
+        const style = document.createElement('style');
+        style.id = 'admin-ann-styles';
+        style.innerHTML = `
+            @keyframes announcementPop {
+                0% { opacity: 0; transform: translate(-50%, -100%) scale(0.5); }
+                80% { transform: translate(-50%, -40%) scale(1.1); }
+                100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            }
+            @keyframes announcementFadeOut {
+                0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                100% { opacity: 0; transform: translate(-50%, -100%) scale(0.5); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    document.body.appendChild(ann);
+    setTimeout(() => {
+        ann.style.animation = 'announcementFadeOut 0.5s ease-in forwards';
+        setTimeout(() => ann.remove(), 500);
+    }, 5000);
 };
 
 window.closeModal = function() {
@@ -5285,6 +5329,10 @@ function initSocket() {
         // Game Event Listeners - MOVED OUTSIDE of 'connect' callback to prevent duplicate listeners on reconnect (v1.416)
         NET.socket.on('chatMessage', (data) => {
             if (window.addChatMessage) window.addChatMessage(data.user, data.text);
+        });
+
+        NET.socket.on('adminAnnouncement', (data) => {
+            if (window.showAdminAnnouncement) window.showAdminAnnouncement(data.text);
         });
 
         NET.socket.on('leaderboardData', (data) => {

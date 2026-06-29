@@ -636,6 +636,12 @@ io.on('connection', (socket) => {
                 });
             });
         }
+        else if (cmd === 'announce') {
+            const text = args.slice(1).join(' ');
+            if (!text) return socket.emit('adminResponse', { msg: "Použití: announce <text>", color: "yellow" });
+            io.emit('adminAnnouncement', { text: text });
+            socket.emit('adminResponse', { msg: `Oznámení odesláno všem hráčům.`, color: "lime" });
+        }
         else if (cmd === 'stats') {
             if (target) {
                 db.get(`SELECT username, max_level, meta FROM accounts WHERE username = ?`, [target], (err, row) => {
