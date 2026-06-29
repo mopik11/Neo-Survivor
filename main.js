@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.551
+ * NEO SURVIVOR - Core Game Logic - v1.552
  */
 
 window.addEventListener('beforeunload', () => {
@@ -650,8 +650,9 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
 
     // CLOUD-ONLY: Server is fully authoritative for ALL fields
 
-    // 1. Currency
+    // 1. Currency & Skill Points
     if (serverMeta.currency !== undefined) META.currency = serverMeta.currency;
+    if (serverMeta.skillPoints !== undefined) META.skillPoints = serverMeta.skillPoints;
     
     // 2. Max Level
     if (serverMeta.maxLevel !== undefined) {
@@ -7180,97 +7181,60 @@ function init() {
         
         if (history.length < 2) return;
         
-        // Zrušení předchozí animace, aby se nepřekrývaly při rychlém klikání
-        if (window.marketChartAnimationId) {
-            cancelAnimationFrame(window.marketChartAnimationId);
-        }
-        
         const padding = 8; // Odsazení, aby se tečka neořízla
         const drawWidth = canvas.width - padding * 2;
         const drawHeight = canvas.height - padding * 2;
         
         const min = Math.min(...history);
         const max = Math.max(...history);
-        // Přidáme malou rezervu nahoru a dolů
         const range = (max - min) * 1.1 || 1;
         const bottom = min - (max - min) * 0.05;
         
         const stepX = drawWidth / (history.length - 1);
         
-        let progress = 0;
-        const duration = 800; // 0.8 sekundy
-        const startTime = performance.now();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        function animate(time) {
-            progress = Math.min(1, (time - startTime) / duration);
-            const easeProgress = 1 - Math.pow(1 - progress, 3);
+        ctx.beginPath();
+        const startY = padding + drawHeight - ((history[0] - bottom) / range) * drawHeight;
+        ctx.moveTo(padding, startY);
+        
+        let lastX = padding;
+        let lastY = startY;
+        
+        for (let i = 1; i < history.length; i++) {
+            const x = padding + i * stepX;
+            const y = padding + drawHeight - ((history[i] - bottom) / range) * drawHeight;
             
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            const pointsToDraw = Math.max(2, Math.floor(history.length * easeProgress));
-            const currentPoints = history.slice(0, pointsToDraw);
-            
-            if (currentPoints.length > 0) {
-                ctx.beginPath();
-                const startY = padding + drawHeight - ((currentPoints[0] - bottom) / range) * drawHeight;
-                ctx.moveTo(padding, startY);
-                
-                let lastX = padding;
-                let lastY = startY;
-                
-                for (let i = 1; i < currentPoints.length; i++) {
-                    const x = padding + i * stepX;
-                    let y = padding + drawHeight - ((currentPoints[i] - bottom) / range) * drawHeight;
-                    
-                    if (i === currentPoints.length - 1 && progress < 1) {
-                        const exactIndex = (history.length - 1) * easeProgress;
-                        const remainder = exactIndex - Math.floor(exactIndex);
-                        if (i < history.length - 1) {
-                           const nextY = padding + drawHeight - ((history[i+1] - bottom) / range) * drawHeight;
-                           y = y + (nextY - y) * remainder;
-                        }
-                    }
-                    
-                    ctx.lineTo(x, y);
-                    lastX = x;
-                    lastY = y;
-                }
-                
-                ctx.strokeStyle = '#a855f7';
-                ctx.lineWidth = 3;
-                ctx.lineJoin = 'round';
-                ctx.stroke();
-                
-                // Draw fill
-                ctx.lineTo(lastX, canvas.height);
-                ctx.lineTo(padding, canvas.height);
-                ctx.closePath();
-                
-                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                gradient.addColorStop(0, 'rgba(168, 85, 247, 0.5)');
-                gradient.addColorStop(1, 'rgba(168, 85, 247, 0)');
-                ctx.fillStyle = gradient;
-                ctx.fill();
-            }
-            
-            if (progress < 1) {
-                window.marketChartAnimationId = requestAnimationFrame(animate);
-            } else {
-                // Finální tečka přesně na posledním bodě (s ohledem na padding)
-                const finalX = padding + drawWidth;
-                const finalY = padding + drawHeight - ((history[history.length - 1] - bottom) / range) * drawHeight;
-                ctx.beginPath();
-                ctx.arc(finalX, finalY, 4, 0, Math.PI * 2);
-                ctx.fillStyle = '#fbbf24';
-                ctx.shadowColor = '#fbbf24';
-                ctx.shadowBlur = 10;
-                ctx.fill();
-                ctx.fill();
-                ctx.shadowBlur = 0; // reset
-            }
+            ctx.lineTo(x, y);
+            lastX = x;
+            lastY = y;
         }
         
-        window.marketChartAnimationId = requestAnimationFrame(animate);
+        ctx.strokeStyle = '#a855f7';
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+        
+        // Draw fill
+        ctx.lineTo(lastX, canvas.height);
+        ctx.lineTo(padding, canvas.height);
+        ctx.closePath();
+        
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, 'rgba(168, 85, 247, 0.5)');
+        gradient.addColorStop(1, 'rgba(168, 85, 247, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        
+        // Finální tečka přesně na posledním bodě
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#fbbf24';
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.fill();
+        ctx.shadowBlur = 0; // reset
     };
 
     const btnInventory = document.getElementById('btn-inventory-menu');
