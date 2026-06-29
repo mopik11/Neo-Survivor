@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.548
+ * NEO SURVIVOR - Core Game Logic - v1.549
  */
 
 window.addEventListener('beforeunload', () => {
@@ -7177,8 +7177,6 @@ function init() {
         const ctx = canvas.getContext('2d');
         const history = window.marketHistory || Array(20).fill(500);
         
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
         if (history.length < 2) return;
         
         const min = Math.min(...history) * 0.95;
@@ -7187,30 +7185,78 @@ function init() {
         
         const stepX = canvas.width / (history.length - 1);
         
-        ctx.beginPath();
-        ctx.moveTo(0, canvas.height - ((history[0] - min) / range) * canvas.height);
+        // Setup animation
+        let progress = 0;
+        const duration = 1000; // 1 sekunda animace
+        const startTime = performance.now();
         
-        for (let i = 1; i < history.length; i++) {
-            const x = i * stepX;
-            const y = canvas.height - ((history[i] - min) / range) * canvas.height;
-            ctx.lineTo(x, y);
+        function animate(time) {
+            progress = Math.min(1, (time - startTime) / duration);
+            
+            // Easing (easeOutCubic)
+            const easeProgress = 1 - Math.pow(1 - progress, 3);
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const pointsToDraw = Math.max(2, Math.floor(history.length * easeProgress));
+            const currentPoints = history.slice(0, pointsToDraw);
+            
+            if (currentPoints.length > 0) {
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height - ((currentPoints[0] - min) / range) * canvas.height);
+                
+                for (let i = 1; i < currentPoints.length; i++) {
+                    const x = i * stepX;
+                    // Interpolate the last point if we are between points
+                    let y = canvas.height - ((currentPoints[i] - min) / range) * canvas.height;
+                    
+                    if (i === currentPoints.length - 1 && progress < 1) {
+                        const exactIndex = (history.length - 1) * easeProgress;
+                        const remainder = exactIndex - Math.floor(exactIndex);
+                        if (i < history.length - 1) {
+                           const nextY = canvas.height - ((history[i+1] - min) / range) * canvas.height;
+                           y = y + (nextY - y) * remainder;
+                        }
+                    }
+                    
+                    ctx.lineTo(x, y);
+                }
+                
+                ctx.strokeStyle = '#a855f7';
+                ctx.lineWidth = 3;
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+                
+                // Draw fill
+                ctx.lineTo((currentPoints.length - 1) * stepX, canvas.height);
+                ctx.lineTo(0, canvas.height);
+                ctx.closePath();
+                
+                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient.addColorStop(0, 'rgba(168, 85, 247, 0.5)');
+                gradient.addColorStop(1, 'rgba(168, 85, 247, 0)');
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Nakreslíme finální "tečku" na konci grafu
+                const lastX = canvas.width;
+                const lastY = canvas.height - ((history[history.length - 1] - min) / range) * canvas.height;
+                ctx.beginPath();
+                ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#fbbf24';
+                ctx.fill();
+                ctx.shadowColor = '#fbbf24';
+                ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.shadowBlur = 0; // reset
+            }
         }
         
-        ctx.strokeStyle = '#a855f7';
-        ctx.lineWidth = 3;
-        ctx.lineJoin = 'round';
-        ctx.stroke();
-        
-        // Fill area
-        ctx.lineTo(canvas.width, canvas.height);
-        ctx.lineTo(0, canvas.height);
-        ctx.closePath();
-        
-        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, 'rgba(168, 85, 247, 0.4)');
-        gradient.addColorStop(1, 'rgba(168, 85, 247, 0)');
-        ctx.fillStyle = gradient;
-        ctx.fill();
+        requestAnimationFrame(animate);
     };
 
     const btnInventory = document.getElementById('btn-inventory-menu');
