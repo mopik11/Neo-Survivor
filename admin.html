@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo Survivor | Admin Terminal</title>
+    <meta name="description" content="Secure administrative terminal for Neo Survivor server management and player moderation.">
+    <meta name="theme-color" content="#09090b">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #09090b;
+            --bg-panel: rgba(24, 24, 27, 0.7);
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --accent: #f43f5e;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(244, 63, 94, 0.08) 0%, transparent 50%);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        h2 { 
+            color: var(--accent); 
+            margin-bottom: 24px; 
+            text-align: center; 
+            font-weight: 800;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(244, 63, 94, 0.4);
+        }
+        
+        .screen { display: none; width: 100%; max-width: 480px; animation: fadeIn 0.4s ease-out forwards; }
+        .screen.active { display: flex; flex-direction: column; }
+
+        .box { 
+            background: var(--bg-panel); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border); 
+            padding: 40px; 
+            border-radius: 20px; 
+            text-align: center; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .box:hover { box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.15); }
+        
+        input {
+            background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); color: var(--text);
+            padding: 14px 18px; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; 
+            font-size: 15px; outline: none; border-radius: 12px; width: 100%; transition: all 0.2s ease;
+        }
+
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); background: rgba(0, 0, 0, 0.6); }
+        input::placeholder { color: #475569; }
+
+        button {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover)); 
+            border: none; color: white; padding: 12px 20px; width: 100%; font-weight: 600; 
+            cursor: pointer; border-radius: 12px; font-size: 14px; letter-spacing: 1px;
+            margin-top: 10px; transition: all 0.2s ease; box-shadow: 0 10px 20px -10px var(--primary);
+        }
+
+        button:hover { transform: translateY(-2px); box-shadow: 0 15px 25px -10px var(--primary); filter: brightness(1.1); }
+        button:active { transform: translateY(1px); }
+
+        .error-msg { color: #ef4444; margin-top: 16px; min-height: 20px; font-size: 14px; font-weight: 600; }
+        
+        /* Dashboard layout expansion - OPRAVENO NA PLNÁ ŠÍŘKA OBRAZOVKY (95vw) */
+        #screen-3 { height: 92vh; justify-content: flex-start; max-width: 95vw; }
+
+        .terminal-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+        .status-dot { width: 10px; height: 10px; background-color: var(--primary); border-radius: 50%; box-shadow: 0 0 10px var(--primary); animation: pulse 2s infinite; }
+
+        #console-output {
+            flex: 1; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--border); 
+            padding: 15px; overflow-y: auto; white-space: pre-wrap; border-radius: 12px; 
+            margin-bottom: 15px; font-family: 'JetBrains Mono', monospace; font-size: 14px; 
+            line-height: 1.4; text-align: left; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .controls { display: flex; gap: 12px; align-items: center; background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border); }
+        .controls span { color: var(--primary); font-weight: 800; font-size: 18px; padding-left: 5px; font-family: 'JetBrains Mono', monospace; }
+        .controls input { margin-bottom: 0; border: none; background: transparent; box-shadow: none; flex: 1; padding: 8px; }
+        .controls button { width: auto; margin-top: 0; padding: 10px 24px; box-shadow: none; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+    </style>
+</head>
+<body>
+
+    <div id="screen-1" class="screen active">
+        <div class="box">
+            <h2>⚡ System Login</h2>
+            <input type="text" id="user-input" placeholder="Přihlašovací jméno" autocomplete="off" spellcheck="false">
+            <input type="password" id="pass-input" placeholder="Heslo">
+            <button id="btn-login">AUTORIZOVAT</button>
+            <div id="err-1" class="error-msg"></div>
+        </div>
+    </div>
+
+    <div id="screen-2" class="screen">
+        <div class="box">
+            <h2>🔐 2FA Ověření</h2>
+            <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 14px;">Zkontroluj serverové logy pro jednorázový PIN.</p>
+            <input type="text" id="pin-input" placeholder="######" autocomplete="off" style="text-align: center; font-weight: bold; font-size: 24px; letter-spacing: 12px; padding-left: 24px;">
+            <button id="btn-verify">POTVRDIT PIN</button>
+            <div id="err-2" class="error-msg"></div>
+        </div>
+    </div>
+
+    <!-- TŘÍSLOUPCOVÝ DASHBOARD LAYOUT (Rozšířeno na 95vw) -->
+    <div id="screen-3" class="screen">
+        <div class="box" style="height: 100%; display: flex; flex-direction: row; padding: 15px; gap: 20px; background: transparent; border: none; box-shadow: none;">
+            
+            <!-- LEVÝ PANEL: MÍSTNOSTI A BURZA -->
+            <!-- Omezení max-width aby střední panel dostal více místa -->
+            <div style="flex: 1; min-width: 250px; max-width: 320px; background: var(--bg-panel); backdrop-filter: blur(16px); border-radius: 16px; border: 1px solid var(--border); padding: 15px; display: flex; flex-direction: column;">
+                <h3 style="color: var(--primary); text-transform: uppercase; font-size: 13px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <span>🌐 Aktivní místnosti</span>
+                    <button onclick="sendCommandRaw('rooms')" style="width: auto; padding: 4px 8px; margin: 0; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); box-shadow: none;">↻</button>
+                </h3>
+                <div id="rooms-output" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
+                
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 15px 0;">
+                
+                <h3 style="color: #a855f7; text-transform: uppercase; font-size: 13px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <span>📈 Burza (SP)</span>
+                </h3>
+                <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
+                        <span style="color: #94a3b8; font-size: 12px;">Aktuální cena SP:</span>
+                        <strong id="admin-sp-price" style="color: #fbbf24; font-size: 14px;">Čekání...</strong>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="number" id="input-sp-price" placeholder="Nová cena" style="margin-bottom: 0; padding: 8px; font-size: 12px;" />
+                        <button onclick="setMarketPrice()" style="margin-top: 0; padding: 8px 12px; background: #a855f7; font-size: 12px; width: auto; font-weight: bold;">SET</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STŘEDNÍ PANEL: TERMINÁL A STATS -->
+            <div style="flex: 2; background: var(--bg-panel); backdrop-filter: blur(16px); border-radius: 16px; border: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column;">
+                <div class="terminal-header">
+                    <div class="status-dot"></div>
+                    <h2 style="margin: 0; text-shadow: none; color: var(--text); font-size: 1.1rem;">Neo Survivor <span style="color: var(--text-muted); font-weight: 400; font-size: 0.9rem;">| Admin Terminal</span></h2>
+                </div>
+                <div id="console-output"></div>
+                <div class="controls">
+                    <span>❯</span>
+                    <input type="text" id="cmd-input" placeholder="např. 'stats dev1' nebo 'unlock_all dev1'" autocomplete="off" spellcheck="false">
+                    <button id="btn-send">EXECUTE</button>
+                </div>
+            </div>
+
+            <!-- PRAVÝ PANEL: ŽEBŘÍČEK -->
+            <!-- Omezení max-width aby střední panel dostal více místa -->
+            <div style="flex: 1; min-width: 250px; max-width: 320px; background: var(--bg-panel); backdrop-filter: blur(16px); border-radius: 16px; border: 1px solid var(--border); padding: 15px; display: flex; flex-direction: column;">
+                <h3 style="color: #fbbf24; text-transform: uppercase; font-size: 13px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <span>🏆 Žebříček</span>
+                    <button onclick="sendCommandRaw('stats')" style="width: auto; padding: 4px 8px; margin: 0; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); box-shadow: none;">↻</button>
+                </h3>
+                <div id="leaderboard-output" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Set dynamic URL instead of hardcoded
+        const SERVER_URL = window.location.origin; 
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io(SERVER_URL, {
+            transports: ['websocket'],
+            extraHeaders: { "ngrok-skip-browser-warning": "true" }
+        });
+
+        function showScreen(num) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-' + num).classList.add('active');
+        }
+
+        function log(msg, color = "#e2e8f0") {
+            const out = document.getElementById('console-output');
+            const div = document.createElement('div');
+            div.style.color = color;
+            
+            if (msg.startsWith('>')) div.innerHTML = `<strong style="color: #64748b;">></strong> ${msg.substring(1)}`;
+            else if (msg.startsWith('$')) div.innerHTML = `<strong style="color: var(--primary);">$</strong> ${msg.substring(1)}`;
+            else div.innerText = msg;
+            
+            div.style.marginBottom = "4px";
+            out.appendChild(div);
+            out.scrollTop = out.scrollHeight;
+        }
+
+        function editProp(username, prop, currentVal) {
+            const newVal = prompt(`Nastavit novou hodnotu pro '${prop}' hráče ${username}:`, currentVal);
+            if (newVal !== null && newVal !== "") {
+                document.getElementById('cmd-input').value = `set ${username} ${prop} ${newVal}`;
+                sendCommand();
+                setTimeout(() => { socket.emit('adminCommand', { cmd: `stats ${username}` }); }, 300);
+            }
+        }
+        
+        function setMarketPrice() {
+            const val = document.getElementById('input-sp-price').value;
+            if (val) {
+                document.getElementById('cmd-input').value = `set_price ${val}`;
+                sendCommand();
+                document.getElementById('input-sp-price').value = '';
+            }
+        }
+
+        function renderStatsTable(data) {
+            const out = document.getElementById('console-output');
+            const container = document.createElement('div');
+            container.style.background = 'rgba(15, 23, 42, 0.8)';
+            container.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+            container.style.borderRadius = '8px';
+            container.style.padding = '12px 18px';
+            container.style.marginBottom = '10px';
+            container.style.marginTop = '8px';
+            
+            container.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 12px;">
+                    <strong style="color: var(--primary); font-size: 1.1rem; font-family: 'Inter', sans-serif;">📊 ${data.username}</strong>
+                    <button onclick="document.getElementById('cmd-input').value = 'unlock_all ${data.username}'; sendCommand(); setTimeout(() => { socket.emit('adminCommand', { cmd: 'stats ${data.username}' }); }, 300);" style="width: auto; padding: 6px 12px; margin: 0; font-size: 11px; background: rgba(244,63,94,0.15); border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; box-shadow: none; font-weight: bold; cursor: pointer;">🔓 UNLOCK ALL</button>
+                </div>
+            `;
+            
+            const table = document.createElement('table');
+            table.style.width = '100%';
+            table.style.borderCollapse = 'collapse';
+            table.style.color = '#e2e8f0';
+            table.style.fontSize = '14px';
+            
+            const meta = data.meta || {};
+            const statsObj = meta.stats || {};
+            
+            const rows = [
+                { label: 'Max Level', value: data.level, prop: 'maxLevel' },
+                { label: 'DogeCoins', value: meta.currency || 0, prop: 'currency' },
+                { label: 'Total Boss Kills', value: statsObj.totalBossKills || 0, prop: 'stats.totalBossKills' },
+                { label: 'Total Games Played', value: statsObj.totalGames || 0, prop: 'stats.totalGames' }
+            ];
+            
+            rows.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #94a3b8; font-family: 'Inter', sans-serif;">${r.label}</td>
+                    <td style="padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: bold; color: white;">${r.value}</td>
+                    <td style="padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: right; width: 40px;">
+                        <span style="cursor: pointer; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" title="Upravit hodnotu" onclick="editProp('${data.username}', '${r.prop}', '${r.value}')">✏️</span>
+                    </td>
+                `;
+                table.appendChild(tr);
+            });
+            container.appendChild(table);
+            
+            const rawToggle = document.createElement('div');
+            rawToggle.innerHTML = `<span style="color: #64748b; font-size: 12px; cursor: pointer; text-decoration: underline;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">Zobrazit RAW meta data</span><div style="display:none; background: rgba(0,0,0,0.5); padding: 12px; border-radius: 8px; margin-top: 10px; font-size: 11px; max-height: 150px; overflow-y: auto; color: #cbd5e1;">${JSON.stringify(meta, null, 2)}</div>`;
+            rawToggle.style.marginTop = '12px';
+            container.appendChild(rawToggle);
+            
+            out.appendChild(container);
+            out.scrollTop = out.scrollHeight;
+        }
+
+        function renderRooms(data) {
+            const out = document.getElementById('rooms-output');
+            out.innerHTML = '';
+            if (data.length === 0) {
+                out.innerHTML = '<div style="color: #64748b; text-align: center; margin-top: 20px; font-size: 12px;">Žádné aktivní místnosti</div>';
+                return;
+            }
+            data.forEach(r => {
+                const div = document.createElement('div');
+                div.style.background = 'rgba(0,0,0,0.3)'; div.style.padding = '10px';
+                div.style.borderRadius = '8px'; div.style.border = '1px solid rgba(255,255,255,0.05)';
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <strong style="color: white; font-size: 13px;">ID: ${r.id}</strong>
+                        <span style="color: var(--primary); font-size: 12px; font-weight: bold;">Lvl ${r.level}</span>
+                    </div>
+                    <div style="color: #94a3b8; font-size: 11px;">Hráčů v lobby: <strong style="color: white;">${r.players}</strong></div>
+                `;
+                out.appendChild(div);
+            });
+        }
+
+        function renderLeaderboard(data) {
+            const out = document.getElementById('leaderboard-output');
+            out.innerHTML = '';
+            if (data.length === 0) {
+                out.innerHTML = '<div style="color: #64748b; text-align: center; margin-top: 20px; font-size: 12px;">Žádní hráči v databázi</div>';
+                return;
+            }
+            data.forEach((p, i) => {
+                const div = document.createElement('div');
+                div.style.background = i < 3 ? 'rgba(251, 191, 36, 0.08)' : 'rgba(0,0,0,0.3)';
+                div.style.padding = '8px 10px';
+                div.style.borderRadius = '8px';
+                div.style.border = i < 3 ? '1px solid rgba(251, 191, 36, 0.2)' : '1px solid rgba(255,255,255,0.05)';
+                div.style.display = 'flex'; div.style.justifyContent = 'space-between'; div.style.alignItems = 'center';
+                div.style.cursor = 'pointer'; div.title = 'Zobrazit staty hráče';
+                div.onclick = () => { document.getElementById('cmd-input').value = `stats ${p.username}`; sendCommand(); };
+                
+                div.innerHTML = `
+                    <div style="font-size: 13px;">
+                        <span style="color: ${i<3 ? '#fbbf24' : '#94a3b8'}; width: 22px; display: inline-block;">#${i+1}</span>
+                        <strong style="color: white;">${p.username}</strong>
+                    </div>
+                    <div style="color: var(--primary); font-weight: bold; font-size: 12px;">Lvl ${p.max_level}</div>
+                `;
+                out.appendChild(div);
+            });
+        }
+
+        socket.on('connect', () => { console.log("Spojení navázáno."); });
+        socket.on('adminAuthError', (msg) => { document.getElementById('err-1').innerText = msg; document.getElementById('err-2').innerText = msg; });
+        
+        socket.on('marketUpdate', (data) => {
+            const el = document.getElementById('admin-sp-price');
+            if (el) el.innerText = data.price + " Doge";
+        });
+
+        socket.on('adminAuthStep', (data) => {
+            document.getElementById('err-1').innerText = ""; document.getElementById('err-2').innerText = "";
+            if (data.step === 2) showScreen(2);
+            if (data.step === 3) {
+                showScreen(3);
+                log("===================================================", "#334155");
+                log(" SPOJENÍ ZABEZPEČENO. VÍTEJTE V ADMIN TERMINÁLU. ", "var(--primary)");
+                log(" Příkazy: set, unlock_all, give, level, stats,     ", "#94a3b8");
+                log("          announce, delete, rooms, feedback, set_price ", "#94a3b8");
+                log("===================================================\n", "#334155");
+                // Inicializační načtení panelů
+                socket.emit('adminCommand', { cmd: 'rooms' });
+                socket.emit('adminCommand', { cmd: 'stats' });
+            }
+        });
+
+        socket.on('adminResponse', (data) => {
+            if (data.type === 'stats' && data.data) renderStatsTable(data.data);
+            else if (data.type === 'rooms') renderRooms(data.data);
+            else if (data.type === 'leaderboard') renderLeaderboard(data.data);
+            else log("> " + data.msg, data.color);
+        });
+
+        document.getElementById('btn-login').addEventListener('click', () => {
+            const user = document.getElementById('user-input').value.trim();
+            const pass = document.getElementById('pass-input').value.trim();
+            if (!user || !pass) return document.getElementById('err-1').innerText = "Vyplňte jméno a heslo.";
+            document.getElementById('err-1').innerText = "Ověřování...";
+            socket.emit('requestAdminPin', { user, pass });
+        });
+
+        document.getElementById('btn-verify').addEventListener('click', () => {
+            const user = document.getElementById('user-input').value.trim();
+            const pass = document.getElementById('pass-input').value.trim();
+            const pin = document.getElementById('pin-input').value.trim();
+            if (!pin) return document.getElementById('err-2').innerText = "Zadejte PIN.";
+            document.getElementById('err-2').innerText = "Ověřování PINu...";
+            socket.emit('verifyAdminPin', { user, pass, pin });
+        });
+
+        function sendCommandRaw(cmd) { socket.emit('adminCommand', { cmd: cmd }); }
+        
+        function sendCommand() {
+            const cmdInput = document.getElementById('cmd-input');
+            const cmd = cmdInput.value.trim();
+            if (!cmd) return;
+            log("$ " + cmd, "var(--text)");
+            sendCommandRaw(cmd);
+            cmdInput.value = '';
+            
+            // Automatický reload místností/žebříčku při změnách
+            if (cmd.startsWith('give ') || cmd.startsWith('set ') || cmd.startsWith('level ') || cmd.startsWith('unlock_all ')) {
+                setTimeout(() => { sendCommandRaw('stats'); }, 400);
+            }
+        }
+
+        document.getElementById('btn-send').addEventListener('click', sendCommand);
+        document.getElementById('cmd-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendCommand(); });
+    </script>
+</body>
+</html>

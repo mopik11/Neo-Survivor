@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.552
+ * NEO SURVIVOR - Core Game Logic - v1.553
  */
 
 window.addEventListener('beforeunload', () => {
@@ -576,15 +576,21 @@ const formatNumberFull = (num) => {
 const updateCurrencyUI = () => {
     const formatted = formatNumber(META.currency);
     const full = formatNumberFull(META.currency);
+    const spFull = formatNumberFull(META.skillPoints || 0);
     
     const displayDoge = document.getElementById('display-doge');
     if (displayDoge) displayDoge.innerText = formatted;
+    
+    const displaySp = document.getElementById('display-sp');
+    if (displaySp) displaySp.innerText = spFull;
     
     const shipsCurrency = document.getElementById('ships-currency');
     if (shipsCurrency) shipsCurrency.innerText = full;
     
     const metaCurrency = document.getElementById('meta-currency');
     if (metaCurrency) metaCurrency.innerText = full;
+    
+    if (window.updateMarketUI) window.updateMarketUI();
 };
 
 const saveMetaLocalOnly = () => {

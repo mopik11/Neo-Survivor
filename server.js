@@ -846,8 +846,18 @@ io.on('connection', (socket) => {
                 socket.emit('adminResponse', { msg: "Veškerý feedback byl smazán.", color: "lime" });
             });
         }
+        else if (cmd === 'set_price') {
+            let amount = parseInt(args[1]);
+            if (isNaN(amount)) return socket.emit('adminResponse', { msg: "Použití: set_price <částka>", color: "yellow" });
+            if (amount < 10) amount = 10;
+            MarketManager.currentPrice = amount;
+            MarketManager.history.push(MarketManager.currentPrice);
+            if (MarketManager.history.length > 20) MarketManager.history.shift();
+            io.emit('marketUpdate', { price: MarketManager.currentPrice, history: MarketManager.history });
+            socket.emit('adminResponse', { msg: `Cena 1 SP nastavena na ${amount} Doge.`, color: "lime" });
+        }
         else {
-            socket.emit('adminResponse', { msg: "Neznámý příkaz. Dostupné: give, level, stats, delete, rooms, feedback, clearfeedback", color: "yellow" });
+            socket.emit('adminResponse', { msg: "Neznámý příkaz. Dostupné: give, level, stats, delete, rooms, feedback, clearfeedback, set_price", color: "yellow" });
         }
     });
 
