@@ -728,7 +728,12 @@ io.on('connection', (socket) => {
                 db.all(`SELECT username, max_level FROM accounts ORDER BY max_level DESC`, [], (err, rows) => {
                     let text = `Zaregistrováno hráčů: ${rows.length}\n`;
                     rows.forEach(r => text += `- ${r.username} (Lvl ${r.max_level})\n`);
-                    socket.emit('adminResponse', { msg: text, color: "cyan" });
+                    socket.emit('adminResponse', { 
+                        msg: text, 
+                        color: "cyan",
+                        type: 'leaderboard',
+                        data: rows
+                    });
                 });
             }
         }
@@ -756,10 +761,18 @@ io.on('connection', (socket) => {
         else if (cmd === 'rooms') {
             let count = Object.keys(ROOMS).length;
             let text = `Aktivní místnosti: ${count}\n`;
+            let roomsData = [];
             for (let id in ROOMS) {
-                text += `- ID: ${id} | Hráčů: ${Object.keys(ROOMS[id].players).length} | Lvl: ${ROOMS[id].level}\n`;
+                const pCount = Object.keys(ROOMS[id].players).length;
+                text += `- ID: ${id} | Hráčů: ${pCount} | Lvl: ${ROOMS[id].level}\n`;
+                roomsData.push({ id: id, players: pCount, level: ROOMS[id].level });
             }
-            socket.emit('adminResponse', { msg: text, color: "cyan" });
+            socket.emit('adminResponse', { 
+                msg: text, 
+                color: "cyan",
+                type: 'rooms',
+                data: roomsData
+            });
         }
         else if (cmd === 'feedback') {
             db.all(`SELECT * FROM feedback ORDER BY timestamp DESC`, [], (err, rows) => {
