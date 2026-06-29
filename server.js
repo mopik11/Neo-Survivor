@@ -653,9 +653,19 @@ io.on('connection', (socket) => {
                 catch (e) { try { meta = JSON.parse(row.meta); } catch(e2) { meta = {}; } }
 
                 meta.maxLevel = Math.max(meta.maxLevel || 1, 50);
-                meta.ships = { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": true };
-                meta.abilities = { "1": true, "2": true, "3": true, "4": true, "5": true };
+                meta.ships = { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": true, "8": true, "9": true };
+                meta.abilities = { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true };
                 meta.skillTree = { unlocked: true, nodes: { "qol_1":5, "dmg_1":5, "dmg_2":5, "gain_1":5, "gain_2":5, "gain_3":5, "qol_2":5, "qol_3":5, "health_1":5, "health_2":5, "speed_1":5, "speed_2":5 } };
+                
+                // Unlock all items (pets, hats, emojis)
+                const allItems = ['alien', 'poop', 'skull', 'fire', 'star', 'cake', 'pizza', 'hamburger', 'fries', 'hotdog', 'taco', 'donut', 'cookie', 'chocolate', 'candy', 'lollipop', 'apple', 'banana', 'watermelon', 'sushi_roll', 'ramen', 'ice_cube', 'crystal', 'rainbow', 'clover', 'diamond_gem', 'gold_bar', 'hat_crown', 'hat_wizard', 'hat_ninja', 'pet_magnet', 'pet_laser', 'pet_healer', 'ultra_rare'];
+                meta.inventory = allItems.map(id => ({ id, count: 1 }));
+                
+                // Unlock all achievements
+                const allAchs = ['wide', 'cheapskate', 'boss_slayer', 'veteran', 'collector', 'gambling', 'cookie', 'first_blood', 'survivor', 'rich', 'millionaire', 'boss_hunter', 'boss_nightmare', 'rich_kid', 'explorer_fan', 'crate_addict', 'black_hole_survivor'];
+                meta.achievements = {};
+                meta.claimedAchievements = {};
+                allAchs.forEach(a => { meta.achievements[a] = true; meta.claimedAchievements[a] = true; });
                 
                 const encryptedMeta = Security.encrypt(JSON.stringify(meta));
                 db.run(`UPDATE accounts SET meta = ?, max_level = ? WHERE username = ?`, [encryptedMeta, meta.maxLevel, lowTarget], () => {
