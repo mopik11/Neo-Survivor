@@ -239,7 +239,7 @@ setInterval(broadcastServerStats, 5000);
 
 // --- MARKET MANAGER (v1.547) ---
 const MarketManager = {
-    currentPrice: 1000, // Starting price
+    currentPrice: 500, // Starting price
     history: Array(20).fill(500), // Keep last 20 prices for the chart
     
     updatePrice(amount) {
