@@ -769,26 +769,32 @@ io.on('connection', (socket) => {
                     const decryptedMeta = Security.decrypt(row.meta);
                     let rawMeta = {};
                     try { rawMeta = JSON.parse(decryptedMeta); } catch(e) {}
+                    const isOnline = onlineUsers.has(row.username);
                     socket.emit('adminResponse', { 
-                        msg: `Hráč: ${row.username} | Max Lvl: ${row.max_level}\nMeta: ${decryptedMeta}`, 
+                        msg: `Hráč: ${row.username} | Max Lvl: ${row.max_level} | Online: ${isOnline}\nMeta: ${decryptedMeta}`, 
                         color: "cyan",
                         type: 'stats',
                         data: {
                             username: row.username,
                             level: row.max_level,
-                            meta: rawMeta
+                            meta: rawMeta,
+                            online: isOnline
                         }
                     });
                 });
             } else {
                 db.all(`SELECT username, max_level FROM accounts ORDER BY max_level DESC`, [], (err, rows) => {
                     let text = `Zaregistrováno hráčů: ${rows.length}\n`;
-                    rows.forEach(r => text += `- ${r.username} (Lvl ${r.max_level})\n`);
+                    const rowsWithOnline = rows.map(r => {
+                        const isOnline = onlineUsers.has(r.username);
+                        text += `- ${r.username} (Lvl ${r.max_level}) [${isOnline ? 'ONLINE' : 'OFFLINE'}]\n`;
+                        return { ...r, online: isOnline };
+                    });
                     socket.emit('adminResponse', { 
                         msg: text, 
                         color: "cyan",
                         type: 'leaderboard',
-                        data: rows
+                        data: rowsWithOnline
                     });
                 });
             }

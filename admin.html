@@ -254,10 +254,19 @@
             container.style.marginBottom = '10px';
             container.style.marginTop = '8px';
             
+            const onlineDot = data.online ? '<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#10b981; box-shadow: 0 0 8px #10b981; margin-left:8px;" title="Online"></span>' 
+                                          : '<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#ef4444; margin-left:8px;" title="Offline"></span>';
+                                          
             container.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 12px;">
-                    <strong style="color: var(--primary); font-size: 1.1rem; font-family: 'Inter', sans-serif;">📊 ${data.username}</strong>
-                    <button onclick="document.getElementById('cmd-input').value = 'unlock_all ${data.username}'; sendCommand(); setTimeout(() => { socket.emit('adminCommand', { cmd: 'stats ${data.username}' }); }, 300);" style="width: auto; padding: 6px 12px; margin: 0; font-size: 11px; background: rgba(244,63,94,0.15); border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; box-shadow: none; font-weight: bold; cursor: pointer;">🔓 UNLOCK ALL</button>
+                    <div style="display: flex; align-items: center;">
+                        <span style="font-size: 1.4rem; font-weight: 900; background: linear-gradient(90deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-family: 'Inter', sans-serif; letter-spacing: 0.5px;">${data.username}</span>
+                        ${onlineDot}
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="if(confirm('Opravdu vymazat hráče ${data.username}?')) { document.getElementById('cmd-input').value = 'delete ${data.username}'; sendCommand(); setTimeout(() => { socket.emit('adminCommand', { cmd: 'stats' }); }, 300); }" style="width: auto; padding: 6px 10px; margin: 0; font-size: 11px; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444; border-radius: 6px; font-weight: bold; cursor: pointer;">🗑️ VYMAZAT</button>
+                        <button onclick="document.getElementById('cmd-input').value = 'unlock_all ${data.username}'; sendCommand(); setTimeout(() => { socket.emit('adminCommand', { cmd: 'stats ${data.username}' }); }, 300);" style="width: auto; padding: 6px 10px; margin: 0; font-size: 11px; background: rgba(244,63,94,0.15); border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; font-weight: bold; cursor: pointer;">🔓 UNLOCK ALL</button>
+                    </div>
                 </div>
             `;
             
@@ -330,21 +339,29 @@
                 return;
             }
             data.forEach((p, i) => {
+                const onlineDot = p.online 
+                    ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow: 0 0 6px #10b981; margin-left:8px;" title="Online"></span>' 
+                    : '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#475569; margin-left:8px;" title="Offline"></span>';
+                    
                 const div = document.createElement('div');
                 div.style.background = i < 3 ? 'rgba(251, 191, 36, 0.08)' : 'rgba(0,0,0,0.3)';
-                div.style.padding = '8px 10px';
+                div.style.padding = '10px 12px';
                 div.style.borderRadius = '8px';
                 div.style.border = i < 3 ? '1px solid rgba(251, 191, 36, 0.2)' : '1px solid rgba(255,255,255,0.05)';
                 div.style.display = 'flex'; div.style.justifyContent = 'space-between'; div.style.alignItems = 'center';
                 div.style.cursor = 'pointer'; div.title = 'Zobrazit staty hráče';
+                div.style.transition = 'all 0.2s';
+                div.onmouseover = () => { div.style.background = 'rgba(255,255,255,0.1)'; };
+                div.onmouseout = () => { div.style.background = i < 3 ? 'rgba(251, 191, 36, 0.08)' : 'rgba(0,0,0,0.3)'; };
                 div.onclick = () => { document.getElementById('cmd-input').value = `stats ${p.username}`; sendCommand(); };
                 
                 div.innerHTML = `
-                    <div style="font-size: 13px;">
-                        <span style="color: ${i<3 ? '#fbbf24' : '#94a3b8'}; width: 22px; display: inline-block;">#${i+1}</span>
-                        <strong style="color: white;">${p.username}</strong>
+                    <div style="display: flex; align-items: center; font-size: 14px;">
+                        <span style="color: ${i<3 ? '#fbbf24' : '#94a3b8'}; width: 28px; display: inline-block; font-weight: bold;">#${i+1}</span>
+                        <span style="color: #f8fafc; font-weight: 600; letter-spacing: 0.5px;">${p.username}</span>
+                        ${onlineDot}
                     </div>
-                    <div style="color: var(--primary); font-weight: bold; font-size: 12px;">Lvl ${p.max_level}</div>
+                    <div style="color: var(--primary); font-weight: bold; font-size: 13px; background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 4px;">Lvl ${p.max_level}</div>
                 `;
                 out.appendChild(div);
             });
