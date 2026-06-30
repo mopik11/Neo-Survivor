@@ -239,7 +239,7 @@ setInterval(broadcastServerStats, 5000);
 
 // --- MARKET MANAGER (v1.547) ---
 const MarketManager = {
-    currentPrice: 500,
+    currentPrice: 1000, // Starting price
     history: Array(20).fill(500), // Keep last 20 prices for the chart
     
     updatePrice(amount) {
@@ -762,6 +762,11 @@ io.on('connection', (socket) => {
             });
         }
         else if (cmd === 'stats') {
+            const onlineUsers = new Set();
+            for (const [id, s] of io.sockets.sockets) {
+                if (s.authenticatedUser) onlineUsers.add(s.authenticatedUser);
+            }
+
             if (target) {
                 db.get(`SELECT username, max_level, meta FROM accounts WHERE username = ?`, [target], (err, row) => {
                     if (!row) return socket.emit('adminResponse', { msg: `Hráč ${target} nenalezen.`, color: "red" });
