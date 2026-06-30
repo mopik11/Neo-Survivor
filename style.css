@@ -1897,7 +1897,7 @@ canvas {
   /* Active Players Badges */
   #menu-active-players {
     position: absolute !important;
-    top: max(85px, calc(env(safe-area-inset-top) + 70px)) !important;
+    top: max(105px, calc(env(safe-area-inset-top) + 90px)) !important;
     left: max(15px, env(safe-area-inset-left)) !important;
     margin: 0 !important;
     background: rgba(99, 102, 241, 0.15) !important;
