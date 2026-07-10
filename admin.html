@@ -13,14 +13,17 @@
     
     <style>
         :root {
-            --bg-dark: #09090b;
-            --bg-panel: rgba(24, 24, 27, 0.7);
+            --bg-dark: #020617;
+            --bg-panel: rgba(15, 23, 42, 0.65);
             --primary: #10b981;
             --primary-hover: #059669;
             --accent: #f43f5e;
+            --accent-hover: #e11d48;
             --text: #f8fafc;
             --text-muted: #94a3b8;
-            --border: rgba(255, 255, 255, 0.1);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(56, 189, 248, 0.3);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,8 +31,10 @@
         body {
             background-color: var(--bg-dark);
             background-image: 
-                radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 85% 30%, rgba(244, 63, 94, 0.08) 0%, transparent 50%);
+                radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.05) 0%, transparent 60%);
+            background-attachment: fixed;
             color: var(--text);
             font-family: 'Inter', sans-serif;
             display: flex;
@@ -41,79 +46,89 @@
         }
 
         h2 { 
-            color: var(--accent); 
+            color: transparent; 
+            background: linear-gradient(90deg, #f8fafc, #cbd5e1);
+            -webkit-background-clip: text;
             margin-bottom: 24px; 
             text-align: center; 
             font-weight: 800;
-            font-size: 1.5rem;
+            font-size: 1.7rem;
             letter-spacing: 1px;
             text-transform: uppercase;
-            text-shadow: 0 0 20px rgba(244, 63, 94, 0.4);
         }
         
-        .screen { display: none; width: 100%; max-width: 480px; animation: fadeIn 0.4s ease-out forwards; }
+        .screen { display: none; width: 100%; max-width: 480px; animation: scaleUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .screen.active { display: flex; flex-direction: column; }
 
         .box { 
             background: var(--bg-panel); 
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
             border: 1px solid var(--border); 
             padding: 40px; 
-            border-radius: 20px; 
+            border-radius: 24px; 
             text-align: center; 
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: var(--glass-shadow);
+            transition: transform 0.3s ease, border-color 0.3s ease;
         }
 
-        .box:hover { box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.15); }
+        .box:hover { border-color: rgba(255, 255, 255, 0.15); }
         
         input {
-            background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); color: var(--text);
+            background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border); color: var(--text);
             padding: 14px 18px; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; 
-            font-size: 15px; outline: none; border-radius: 12px; width: 100%; transition: all 0.2s ease;
+            font-size: 15px; outline: none; border-radius: 14px; width: 100%; transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
         }
 
-        input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); background: rgba(0, 0, 0, 0.6); }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15), inset 0 2px 4px rgba(0,0,0,0.2); background: rgba(15, 23, 42, 1); }
         input::placeholder { color: #475569; }
 
         button {
             background: linear-gradient(135deg, var(--primary), var(--primary-hover)); 
-            border: none; color: white; padding: 12px 20px; width: 100%; font-weight: 600; 
-            cursor: pointer; border-radius: 12px; font-size: 14px; letter-spacing: 1px;
-            margin-top: 10px; transition: all 0.2s ease; box-shadow: 0 10px 20px -10px var(--primary);
+            border: 1px solid rgba(255,255,255,0.1); color: white; padding: 14px 24px; width: 100%; font-weight: 700; 
+            cursor: pointer; border-radius: 14px; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase;
+            margin-top: 10px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 10px 25px -10px var(--primary);
+            position: relative; overflow: hidden;
         }
 
-        button:hover { transform: translateY(-2px); box-shadow: 0 15px 25px -10px var(--primary); filter: brightness(1.1); }
+        button::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: skewX(-20deg); transition: 0.5s;
+        }
+
+        button:hover::after { left: 150%; }
+        button:hover { transform: translateY(-3px); box-shadow: 0 15px 35px -10px var(--primary); filter: brightness(1.1); }
         button:active { transform: translateY(1px); }
 
-        .error-msg { color: #ef4444; margin-top: 16px; min-height: 20px; font-size: 14px; font-weight: 600; }
+        .error-msg { color: var(--accent); margin-top: 16px; min-height: 20px; font-size: 14px; font-weight: 600; text-shadow: 0 0 10px rgba(244, 63, 94, 0.3); }
         
-        /* Dashboard layout expansion - OPRAVENO NA PLNÁ ŠÍŘKA OBRAZOVKY (95vw) */
-        #screen-3 { height: 92vh; justify-content: flex-start; max-width: 95vw; }
+        #screen-3 { height: 94vh; justify-content: flex-start; max-width: 98vw; }
 
-        .terminal-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-        .status-dot { width: 10px; height: 10px; background-color: var(--primary); border-radius: 50%; box-shadow: 0 0 10px var(--primary); animation: pulse 2s infinite; }
+        .terminal-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+        .status-dot { width: 12px; height: 12px; background-color: var(--primary); border-radius: 50%; box-shadow: 0 0 15px var(--primary); animation: pulse 2s infinite; }
 
         #console-output {
-            flex: 1; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--border); 
-            padding: 15px; overflow-y: auto; white-space: pre-wrap; border-radius: 12px; 
-            margin-bottom: 15px; font-family: 'JetBrains Mono', monospace; font-size: 14px; 
-            line-height: 1.4; text-align: left; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+            flex: 1; background: rgba(2, 6, 23, 0.7); border: 1px solid rgba(255,255,255,0.05); 
+            padding: 20px; overflow-y: auto; white-space: pre-wrap; border-radius: 16px; 
+            margin-bottom: 20px; font-family: 'JetBrains Mono', monospace; font-size: 14px; 
+            line-height: 1.5; text-align: left; box-shadow: inset 0 4px 20px rgba(0,0,0,0.6);
         }
 
-        .controls { display: flex; gap: 12px; align-items: center; background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border); }
-        .controls span { color: var(--primary); font-weight: 800; font-size: 18px; padding-left: 5px; font-family: 'JetBrains Mono', monospace; }
-        .controls input { margin-bottom: 0; border: none; background: transparent; box-shadow: none; flex: 1; padding: 8px; }
-        .controls button { width: auto; margin-top: 0; padding: 10px 24px; box-shadow: none; }
+        .controls { display: flex; gap: 16px; align-items: center; background: rgba(15, 23, 42, 0.8); padding: 10px 16px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .controls span { color: var(--primary); font-weight: 800; font-size: 20px; font-family: 'JetBrains Mono', monospace; }
+        .controls input { margin-bottom: 0; border: none; background: transparent; box-shadow: none; flex: 1; padding: 10px; font-size: 16px; }
+        .controls input:focus { box-shadow: none; background: transparent; }
+        .controls button { width: auto; margin-top: 0; padding: 12px 28px; box-shadow: none; border-radius: 12px; }
 
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+        @keyframes scaleUp { from { opacity: 0; transform: scale(0.95) translateY(15px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); } 70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
     </style>
 </head>
 <body>
@@ -248,24 +263,25 @@
             const out = document.getElementById('console-output');
             const container = document.createElement('div');
             container.style.background = 'rgba(15, 23, 42, 0.8)';
-            container.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-            container.style.borderRadius = '8px';
-            container.style.padding = '12px 18px';
-            container.style.marginBottom = '10px';
-            container.style.marginTop = '8px';
+            container.style.border = '1px solid rgba(56, 189, 248, 0.3)';
+            container.style.borderRadius = '12px';
+            container.style.padding = '16px 20px';
+            container.style.marginBottom = '16px';
+            container.style.marginTop = '12px';
+            container.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
             
-            const onlineDot = data.online ? '<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#10b981; box-shadow: 0 0 8px #10b981; margin-left:8px;" title="Online"></span>' 
-                                          : '<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#ef4444; margin-left:8px;" title="Offline"></span>';
+            const onlineDot = data.online ? '<span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:var(--primary); box-shadow: 0 0 10px var(--primary); margin-left:10px;" title="Online"></span>' 
+                                          : '<span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:var(--text-muted); margin-left:10px;" title="Offline"></span>';
                                           
             container.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px; margin-bottom: 16px;">
                     <div style="display: flex; align-items: center;">
-                        <span style="font-size: 1.4rem; font-weight: 900; background: linear-gradient(90deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-family: 'Inter', sans-serif; letter-spacing: 0.5px;">${data.username}</span>
+                        <span style="font-size: 1.6rem; font-weight: 800; background: linear-gradient(90deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-family: 'Inter', sans-serif; letter-spacing: 0.5px;">${data.username}</span>
                         ${onlineDot}
                     </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button onclick="if(confirm('Opravdu vymazat hráče ${data.username}?')) { document.getElementById('cmd-input').value = 'delete ${data.username}'; sendCommand(); setTimeout(() => { socket.emit('adminCommand', { cmd: 'stats' }); }, 300); }" style="width: auto; padding: 6px 10px; margin: 0; font-size: 11px; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444; border-radius: 6px; font-weight: bold; cursor: pointer;">🗑️ VYMAZAT</button>
-                        <button onclick="document.getElementById('cmd-input').value = 'unlock_all ${data.username}'; sendCommand(); setTimeout(() => { socket.emit('adminCommand', { cmd: 'stats ${data.username}' }); }, 300);" style="width: auto; padding: 6px 10px; margin: 0; font-size: 11px; background: rgba(244,63,94,0.15); border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; font-weight: bold; cursor: pointer;">🔓 UNLOCK ALL</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="if(confirm('Opravdu vymazat hráče ${data.username}?')) { document.getElementById('cmd-input').value = 'delete ${data.username}'; sendCommand(); setTimeout(() => { socket.emit('adminCommand', { cmd: 'stats' }); }, 300); }" style="width: auto; padding: 8px 12px; margin: 0; font-size: 11px; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); color: var(--accent); border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow:none;">🗑️ VYMAZAT</button>
+                        <button onclick="document.getElementById('cmd-input').value = 'unlock_all ${data.username}'; sendCommand(); setTimeout(() => { socket.emit('adminCommand', { cmd: 'stats ${data.username}' }); }, 300);" style="width: auto; padding: 8px 12px; margin: 0; font-size: 11px; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow:none;">🔓 UNLOCK ALL</button>
                     </div>
                 </div>
             `;
@@ -301,7 +317,7 @@
             container.appendChild(table);
             
             const rawToggle = document.createElement('div');
-            rawToggle.innerHTML = `<span style="color: #64748b; font-size: 12px; cursor: pointer; text-decoration: underline;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">Zobrazit RAW meta data</span><div style="display:none; background: rgba(0,0,0,0.5); padding: 12px; border-radius: 8px; margin-top: 10px; font-size: 11px; max-height: 150px; overflow-y: auto; color: #cbd5e1;">${JSON.stringify(meta, null, 2)}</div>`;
+            rawToggle.innerHTML = `<span style="color: #94a3b8; font-size: 12px; cursor: pointer; text-decoration: none; border-bottom: 1px dashed #64748b; padding-bottom: 2px;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">+ Zobrazit RAW meta data</span><div style="display:none; background: rgba(0,0,0,0.4); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-top: 12px; font-size: 12px; max-height: 200px; overflow-y: auto; color: #94a3b8;">${JSON.stringify(meta, null, 2)}</div>`;
             rawToggle.style.marginTop = '12px';
             container.appendChild(rawToggle);
             
@@ -318,14 +334,14 @@
             }
             data.forEach(r => {
                 const div = document.createElement('div');
-                div.style.background = 'rgba(0,0,0,0.3)'; div.style.padding = '10px';
-                div.style.borderRadius = '8px'; div.style.border = '1px solid rgba(255,255,255,0.05)';
+                div.style.background = 'rgba(15, 23, 42, 0.4)'; div.style.padding = '12px 16px';
+                div.style.borderRadius = '12px'; div.style.border = '1px solid var(--border)';
                 div.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                        <strong style="color: white; font-size: 13px;">ID: ${r.id}</strong>
-                        <span style="color: var(--primary); font-size: 12px; font-weight: bold;">Lvl ${r.level}</span>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center;">
+                        <strong style="color: var(--text); font-size: 14px;">ID: ${r.id}</strong>
+                        <span style="color: var(--primary); font-size: 12px; font-weight: bold; background: rgba(16,185,129,0.15); padding: 2px 8px; border-radius: 6px;">Lvl ${r.level}</span>
                     </div>
-                    <div style="color: #94a3b8; font-size: 11px;">Hráčů v lobby: <strong style="color: white;">${r.players}</strong></div>
+                    <div style="color: var(--text-muted); font-size: 12px; display: flex; align-items: center; gap: 6px;">Hráčů v lobby: <strong style="color: #38bdf8;">${r.players}</strong></div>
                 `;
                 out.appendChild(div);
             });
@@ -344,15 +360,18 @@
                     : '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#475569; margin-left:8px;" title="Offline"></span>';
                     
                 const div = document.createElement('div');
-                div.style.background = i < 3 ? 'rgba(251, 191, 36, 0.08)' : 'rgba(0,0,0,0.3)';
-                div.style.padding = '10px 12px';
-                div.style.borderRadius = '8px';
-                div.style.border = i < 3 ? '1px solid rgba(251, 191, 36, 0.2)' : '1px solid rgba(255,255,255,0.05)';
+                div.style.background = i < 3 ? 'rgba(251, 191, 36, 0.05)' : 'rgba(15, 23, 42, 0.4)';
+                div.style.padding = '12px 16px';
+                div.style.borderRadius = '12px';
+                div.style.border = i < 3 ? '1px solid rgba(251, 191, 36, 0.2)' : '1px solid var(--border)';
                 div.style.display = 'flex'; div.style.justifyContent = 'space-between'; div.style.alignItems = 'center';
                 div.style.cursor = 'pointer'; div.title = 'Zobrazit staty hráče';
                 div.style.transition = 'all 0.2s';
-                div.onmouseover = () => { div.style.background = 'rgba(255,255,255,0.1)'; };
-                div.onmouseout = () => { div.style.background = i < 3 ? 'rgba(251, 191, 36, 0.08)' : 'rgba(0,0,0,0.3)'; };
+                div.onmouseover = () => { div.style.background = 'rgba(255,255,255,0.05)'; div.style.borderColor = 'rgba(255,255,255,0.15)'; };
+                div.onmouseout = () => { 
+                    div.style.background = i < 3 ? 'rgba(251, 191, 36, 0.05)' : 'rgba(15, 23, 42, 0.4)'; 
+                    div.style.borderColor = i < 3 ? 'rgba(251, 191, 36, 0.2)' : 'var(--border)';
+                };
                 div.onclick = () => { document.getElementById('cmd-input').value = `stats ${p.username}`; sendCommand(); };
                 
                 div.innerHTML = `
