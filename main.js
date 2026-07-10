@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.560
+ * NEO SURVIVOR - Core Game Logic - v1.561
  */
 
 window.addEventListener('beforeunload', () => {
@@ -1430,6 +1430,8 @@ class Projectile {
         this.isCrit = stats.isCrit || false;
         this.isAssassin = stats.isAssassin || false;
         this.isSoundWave = stats.isSoundWave || false;
+        this.isSniper = stats.isSniper || false;
+        this.ownerLevel = stats.ownerLevel || 1;
         this.knockbackMult = stats.knockbackMult || 1.0;
 
         this.type = stats.type || 'default';
@@ -5574,7 +5576,8 @@ function initSocket() {
             if (data.playerId === myPlayerId) return;
             const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, {
                 ownerId: data.playerId, speed: data.speed, size: data.size, pierce: data.pierce,
-                bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life, isAssassin: data.isAssassin, isSoundWave: data.isSoundWave, knockbackMult: data.knockbackMult
+                bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life, isAssassin: data.isAssassin, isSoundWave: data.isSoundWave, knockbackMult: data.knockbackMult,
+                isSniper: data.isSniper, ownerLevel: data.ownerLevel
             });
             if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
         });
@@ -5867,6 +5870,7 @@ function syncShot(proj) {
         ty: proj.y + Math.sin(angle) * 100,
         dmg: proj.damage, speed: speed, size: proj.radius, pierce: proj.pierce,
         bounce: proj.bounce, isCrit: proj.isCrit, type: proj.type, isAssassin: proj.isAssassin, isSoundWave: proj.isSoundWave, knockbackMult: proj.knockbackMult,
+        isSniper: proj.isSniper, ownerLevel: proj.ownerLevel,
         life: (proj.life === Infinity) ? 999999 : proj.life,
         playerId: myPlayerId
     });
@@ -7561,7 +7565,7 @@ function useUltimate(cx, cy) {
         const cam = GAME.camera;
         const worldTargetX = cx + (cam.x / GAME.zoom);
         const worldTargetY = cy + (cam.y / GAME.zoom);
-        const proj = new Projectile(p.x, p.y, worldTargetX, worldTargetY, p.damage * 10, { size: 12, pierce: Infinity });
+        const proj = new Projectile(p.x, p.y, worldTargetX, worldTargetY, p.damage, { size: 12, pierce: Infinity, isSniper: true, ownerLevel: p.level || 1 });
         if (GAME.entities.projectiles) GAME.entities.projectiles.push(proj);
         shakeScreen(15);
         if (NET.isMultiplayer) syncShot(proj);
@@ -8065,6 +8069,11 @@ function update(dt) {
 
                     if (!proj.hitEnemies.has(enemy) && d < hitDist && !enemy.possessed) {
                         let damage = proj.damage;
+                        if (proj.isSniper) {
+                            let percentage = 100 - (proj.ownerLevel - 1);
+                            if (percentage < 1) percentage = 1;
+                            damage = (enemy.maxHp * (percentage / 100)) + proj.damage;
+                        }
                         // Damage Resistance pro Štítonoše Bosse (Type 6)
             let boss6Alive = GAME.entities.enemies.some(b => b.isBoss && b.type === 6);
             if (boss6Alive && !enemy.isBoss) damage *= 0.5;
