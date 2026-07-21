@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.561
+ * NEO SURVIVOR - Core Game Logic - v1.566
  */
 
 window.addEventListener('beforeunload', () => {
@@ -5284,7 +5284,7 @@ function initSocket() {
     // Automatická detekce serveru (lokální vs produkční)
     const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? "http://localhost:3000"
-        : "https://pine-finished-dennis-allocation.trycloudflare.com";
+        : "https://naval-apparatus-jpg-teaches.trycloudflare.com";
 
     try {
         NET.socket = io(SERVER_URL, {
