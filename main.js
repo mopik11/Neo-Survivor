@@ -5284,7 +5284,7 @@ function initSocket() {
     // Automatická detekce serveru (lokální vs produkční)
     const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? "http://localhost:3000"
-        : "https://api.trycloudflare.com";
+        : "https://saying-hartford-gain-oscar.trycloudflare.com";
 
     try {
         NET.socket = io(SERVER_URL, {
