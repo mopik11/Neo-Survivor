@@ -217,7 +217,7 @@
             
             <!-- LEVÝ PANEL -->
             <div class="liquid-glass-panel" style="flex: 1; min-width: 250px; max-width: 320px; padding: 24px; display: flex; flex-direction: column;">
-                <h3 style="font-family: 'Instrument Serif', serif; color: #fff; font-size: 24px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; font-weight: normal; letter-spacing: 1px;">
+                <h3 style="color: #fff; font-size: 24px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; font-weight: normal; letter-spacing: 1px;">
                     Místnosti
                     <button onclick="sendCommandRaw('rooms')" style="width: auto; padding: 4px 8px; font-size: 10px; margin:0; height:fit-content; border-radius: 8px;">↻</button>
                 </h3>
@@ -225,7 +225,7 @@
                 
                 <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
                 
-                <h3 style="font-family: 'Instrument Serif', serif; color: #fff; font-size: 24px; margin-bottom: 16px; font-weight: normal; letter-spacing: 1px;">Burza (SP)</h3>
+                <h3 style="color: #fff; font-size: 24px; margin-bottom: 16px; font-weight: normal; letter-spacing: 1px;">Burza (SP)</h3>
                 <div style="background: rgba(0,0,0,0.3); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
                         <span style="color: #94a3b8; font-size: 12px;">Cena SP:</span>
@@ -238,8 +238,8 @@
                 </div>
 
                 <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
-
-                <h3 style="font-family: 'Instrument Serif', serif; color: #fff; font-size: 24px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; font-weight: normal; letter-spacing: 1px;">
+                
+                <h3 style="color: #fff; font-size: 24px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; font-weight: normal; letter-spacing: 1px;">
                     Systém
                     <button onclick="requestSysStats()" style="width: auto; padding: 4px 8px; font-size: 10px; margin:0; height:fit-content; border-radius: 8px;">↻</button>
                 </h3>
@@ -289,7 +289,7 @@
 
             <!-- PRAVÝ PANEL -->
             <div class="liquid-glass-panel" style="flex: 1; min-width: 250px; max-width: 320px; padding: 24px; display: flex; flex-direction: column;">
-                <h3 style="font-family: 'Instrument Serif', serif; color: #fff; font-size: 24px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; font-weight: normal; letter-spacing: 1px;">
+                <h3 style="color: #fff; font-size: 24px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; font-weight: normal; letter-spacing: 1px;">
                     Žebříček
                     <button onclick="sendCommandRaw('stats')" style="width: auto; padding: 4px 8px; font-size: 10px; margin:0; height:fit-content; border-radius: 8px;">↻</button>
                 </h3>
@@ -485,7 +485,10 @@
                 const playersHtml = (r.players && r.players.length > 0)
                     ? r.players.map(p => `
                         <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 6px; font-size: 11px;">
-                            <span style="color: #f8fafc;">${p.name}</span>
+                            <div style="display: flex; align-items: center;">
+                                <span style="color: #f8fafc;">${p.name}</span>
+                                <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981; box-shadow: 0 0 6px #10b981; margin-left:6px;" title="Online"></span>
+                            </div>
                             <span style="color: #38bdf8;">HP: ${p.hp}/${p.maxHp}</span>
                         </div>
                       `).join('')
@@ -493,7 +496,7 @@
 
                 div.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <strong style="color: #fff; font-size: 15px; font-family: 'Instrument Serif', serif; letter-spacing: 1px;">Místnost #${r.id}</strong>
+                        <strong style="color: #fff; font-size: 15px; letter-spacing: 1px;">Místnost #${r.id}</strong>
                         <span style="color: #10b981; font-size: 11px; font-weight: bold; background: rgba(16,185,129,0.15); padding: 2px 8px; border-radius: 6px;">Lvl ${r.level}</span>
                     </div>
                     <div style="color: #94a3b8; font-size: 11px; display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -625,9 +628,14 @@
                 setInterval(() => {
                     requestSysStats();
                     socket.emit('adminCommand', { cmd: 'rooms' });
+                    socket.emit('adminCommand', { cmd: 'stats' });
                 }, 5000);
             }
         });
+
+        function requestSysStats() {
+            socket.emit('adminCommand', { cmd: 'sysstats' });
+        }
 
         function updateGreeting() {
             const userVal = document.getElementById('user-input').value.trim();

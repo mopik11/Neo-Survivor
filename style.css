@@ -2784,5 +2784,4 @@ body.fullscreen-tree-active #meta-modal .modal-content {
     border-color: rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.04);
 }
-. g a m e p a d - f o c u s   {   o u t l i n e :   3 p x   s o l i d   # f b b f 2 4   ! i m p o r t a n t ;   o u t l i n e - o f f s e t :   2 p x ;   b o x - s h a d o w :   0   0   1 5 p x   r g b a ( 2 5 1 ,   1 9 1 ,   3 6 ,   0 . 8 )   ! i m p o r t a n t ;   t r a n s f o r m :   s c a l e ( 1 . 0 5 ) ;   }  
- 
+.gamepad-focus { outline: 3px solid #fbbf24 !important; outline-offset: 2px; box-shadow: 0 0 15px rgba(251, 191, 36, 0.8) !important; transform: scale(1.05); }

@@ -7685,7 +7685,8 @@ function updateGamepad() {
             GAME.input[' '] = true;
         }
 
-        const isModalOpen = document.querySelector('.modal.active') !== null;
+        const activeModals = Array.from(document.querySelectorAll('.modal.active'));
+        const isModalOpen = activeModals.length > 0;
         
         const dpadUp = gp.axes[1] < -0.5 || gp.buttons[12]?.pressed;
         const dpadDown = gp.axes[1] > 0.5 || gp.buttons[13]?.pressed;
@@ -7695,7 +7696,13 @@ function updateGamepad() {
         const btnStart = gp.buttons[9]?.pressed; 
         
         if (isModalOpen) {
-            const focusable = Array.from(document.querySelectorAll('.modal.active button:not([style*="display: none"]), .modal.active .dropdown-option, .modal.active .upgrade-card, .modal.active .btn-restart:not([style*="display: none"])')).filter(el => {
+            let topModal = activeModals[activeModals.length - 1];
+            const profileModal = document.getElementById('player-profile-modal');
+            if (profileModal && profileModal.classList.contains('active')) {
+                topModal = profileModal;
+            }
+            
+            const focusable = Array.from(topModal.querySelectorAll('button:not([style*="display: none"]), .dropdown-option, .upgrade-card, .btn-restart:not([style*="display: none"])')).filter(el => {
                 const style = window.getComputedStyle(el);
                 return style.display !== 'none' && style.visibility !== 'hidden';
             });
