@@ -129,6 +129,36 @@
 
         @keyframes scaleUp { from { opacity: 0; transform: scale(0.95) translateY(15px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); } 70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+        @keyframes textShimmer { 
+            0% { background-position: 0% 50%; } 
+            50% { background-position: 100% 50%; } 
+            100% { background-position: 0% 50%; } 
+        }
+
+        .welcome-banner {
+            width: 100%;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 20px;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shimmer-text {
+            background: linear-gradient(90deg, #38bdf8, #c084fc, #10b981, #38bdf8);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: textShimmer 4s linear infinite;
+        }
     </style>
 </head>
 <body>
@@ -155,7 +185,35 @@
 
     <!-- TŘÍSLOUPCOVÝ DASHBOARD LAYOUT (Rozšířeno na 95vw) -->
     <div id="screen-3" class="screen">
-        <div class="box" style="height: 100%; display: flex; flex-direction: row; padding: 15px; gap: 20px; background: transparent; border: none; box-shadow: none;">
+        <!-- VÍTACÍ BANNER METADATA / REACTBITS & UIVERSE STYL -->
+        <div class="welcome-banner">
+            <div style="position: absolute; top: -50%; left: -10%; width: 40%; height: 200%; background: radial-gradient(circle, rgba(56,189,248,0.12) 0%, transparent 70%); pointer-events: none;"></div>
+            <div style="display: flex; align-items: center; gap: 16px; z-index: 1;">
+                <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #38bdf8, #818cf8); display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); border: 1px solid rgba(255,255,255,0.2);">
+                    👑
+                </div>
+                <div>
+                    <h1 id="welcome-title" class="shimmer-text" style="font-size: 1.5rem; font-weight: 800; margin: 0; letter-spacing: 0.5px;">
+                        Ahoj Matěji! 👋
+                    </h1>
+                    <div style="color: #94a3b8; font-size: 13px; margin-top: 2px;">
+                        Vítej v řídícím centru Neo Survivor serveru. Všechny systémy jsou aktivní.
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 12px; z-index: 1;">
+                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 8px 14px; border-radius: 12px; display: flex; align-items: center; gap: 8px; font-size: 12px;">
+                    <span class="status-dot" style="width: 8px; height: 8px; margin: 0;"></span>
+                    <span style="color: #10b981; font-weight: 700; letter-spacing: 0.5px;">SYSTEM ONLINE</span>
+                </div>
+                <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 14px; border-radius: 12px; color: #38bdf8; font-size: 12px; font-weight: 600;">
+                    🛡️ Admin Panel
+                </div>
+            </div>
+        </div>
+
+        <div class="box" style="height: calc(100% - 90px); display: flex; flex-direction: row; padding: 15px; gap: 20px; background: transparent; border: none; box-shadow: none;">
             
             <!-- LEVÝ PANEL: MÍSTNOSTI A BURZA -->
             <!-- Omezení max-width aby střední panel dostal více místa -->
@@ -525,6 +583,7 @@
             if (data.step === 2) showScreen(2);
             if (data.step === 3) {
                 showScreen(3);
+                updateGreeting();
                 log("===================================================", "#334155");
                 log(" SPOJENÍ ZABEZPEČENO. VÍTEJTE V ADMIN TERMINÁLU. ", "var(--primary)");
                 log(" Příkazy: set, unlock_all, give, level, stats,     ", "#94a3b8");
@@ -544,6 +603,22 @@
 
         function requestSysStats() {
             socket.emit('adminCommand', { cmd: 'sysstats' });
+        }
+
+        function updateGreeting() {
+            const userVal = document.getElementById('user-input').value.trim();
+            const name = (userVal && userVal.toLowerCase() === 'matej') ? 'Matěji' : (userVal ? userVal : 'Matěji');
+            
+            const hour = new Date().getHours();
+            let prefix = "Ahoj";
+            if (hour >= 5 && hour < 12) prefix = "Dobré dopoledne";
+            else if (hour >= 12 && hour < 18) prefix = "Dobré odpoledne";
+            else if (hour >= 18 && hour < 22) prefix = "Dobrý večer";
+
+            const titleEl = document.getElementById('welcome-title');
+            if (titleEl) {
+                titleEl.innerHTML = `${prefix}, ${name}! 👋`;
+            }
         }
 
         socket.on('adminResponse', (data) => {
