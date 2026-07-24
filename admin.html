@@ -134,6 +134,108 @@
             50% { background-position: 100% 50%; } 
             100% { background-position: 0% 50%; } 
         }
+        @keyframes floatOrb1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(60px, 40px) scale(1.15); }
+        }
+        @keyframes floatOrb2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-50px, -50px) scale(1.2); }
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .hero-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            pointer-events: none;
+            opacity: 0.35;
+        }
+        .orb-1 {
+            width: 450px; height: 450px;
+            background: radial-gradient(circle, #38bdf8 0%, #818cf8 100%);
+            top: -100px; left: -100px;
+            animation: floatOrb1 10s ease-in-out infinite;
+        }
+        .orb-2 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, #10b981 0%, #a855f7 100%);
+            bottom: -150px; right: -150px;
+            animation: floatOrb2 12s ease-in-out infinite;
+        }
+
+        .hero-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 32px;
+            padding: 50px 40px;
+            text-align: center;
+            max-width: 620px;
+            width: 100%;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+            position: relative;
+            z-index: 10;
+            animation: scaleUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .hero-avatar {
+            width: 84px; height: 84px; border-radius: 26px;
+            background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 44px;
+            box-shadow: 0 0 40px rgba(56, 189, 248, 0.5), inset 0 2px 2px rgba(255,255,255,0.4);
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #10b981; font-weight: 700; font-size: 12px;
+            letter-spacing: 1px; padding: 6px 16px; border-radius: 20px;
+            margin-bottom: 20px; text-transform: uppercase;
+        }
+
+        .hero-name {
+            font-size: 2.8rem; font-weight: 800; margin-bottom: 12px;
+            letter-spacing: 0.5px; line-height: 1.2;
+        }
+
+        .hero-chip {
+            background: rgba(2, 6, 23, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 8px 16px; border-radius: 14px;
+            font-size: 13px; font-weight: 600;
+        }
+
+        .wet-mayfly-btn {
+            background: linear-gradient(135deg, #10b981, #0284c7, #818cf8);
+            background-size: 200% 200%;
+            animation: gradientMove 4s ease infinite;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white; padding: 18px 42px; font-size: 1.1rem;
+            font-weight: 800; border-radius: 20px; letter-spacing: 1.5px;
+            cursor: pointer; width: 100%;
+            box-shadow: 0 0 35px rgba(16, 185, 129, 0.4), inset 0 1px 1px rgba(255,255,255,0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative; overflow: hidden; margin-top: 10px;
+        }
+
+        .wet-mayfly-btn:hover {
+            transform: scale(1.03) translateY(-3px);
+            box-shadow: 0 0 50px rgba(56, 189, 248, 0.7), inset 0 1px 1px rgba(255,255,255,0.6);
+            filter: brightness(1.1);
+        }
+
+        .wet-mayfly-btn:active {
+            transform: scale(0.98);
+        }
 
         .welcome-banner {
             width: 100%;
@@ -180,6 +282,50 @@
             <input type="text" id="pin-input" placeholder="######" autocomplete="off" style="text-align: center; font-weight: bold; font-size: 24px; letter-spacing: 12px; padding-left: 24px;">
             <button id="btn-verify">POTVRDIT PIN</button>
             <div id="err-2" class="error-msg"></div>
+        </div>
+    </div>
+
+    <!-- FULLSCREEN HERO WELCOME OVERLAY (Motionsites.ai / ReactBits / UIverse wet-mayfly-23 style) -->
+    <div id="screen-welcome" class="screen" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; background: #020617; align-items: center; justify-content: center; overflow: hidden; padding: 20px;">
+        <div class="hero-orb orb-1"></div>
+        <div class="hero-orb orb-2"></div>
+
+        <div class="hero-card">
+            <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+                <div class="hero-avatar">👑</div>
+            </div>
+            
+            <div class="hero-badge">
+                <span class="status-dot" style="width: 8px; height: 8px; margin: 0;"></span>
+                <span>NEO SURVIVOR • ADMIN PORTAL</span>
+            </div>
+
+            <h1 id="hero-welcome-title" class="hero-name shimmer-text">
+                Ahoj Matěji! 👋
+            </h1>
+
+            <p style="color: #94a3b8; font-size: 1.05rem; max-width: 480px; margin: 0 auto 28px auto; line-height: 1.6;">
+                Vítej v řídícím centru serveru. Všechny systémy jsou aktivní a připraveny.
+            </p>
+
+            <div style="display: flex; justify-content: center; gap: 14px; margin-bottom: 30px; flex-wrap: wrap;">
+                <div class="hero-chip">
+                    <span style="color: #38bdf8; font-weight: bold;">RAM:</span>
+                    <span id="hero-ram" style="color: white; margin-left: 4px;">Načítání...</span>
+                </div>
+                <div class="hero-chip">
+                    <span style="color: #10b981; font-weight: bold;">MC Server:</span>
+                    <span id="hero-mc" style="color: white; margin-left: 4px;">ONLINE</span>
+                </div>
+                <div class="hero-chip">
+                    <span style="color: #fbbf24; font-weight: bold;">2FA:</span>
+                    <span style="color: white; margin-left: 4px;">Ověřeno ✓</span>
+                </div>
+            </div>
+
+            <button class="wet-mayfly-btn" onclick="enterDashboard()">
+                <span>VSTOUPIT DO DASHBOARDU 🚀</span>
+            </button>
         </div>
     </div>
 
@@ -486,6 +632,8 @@
             if (ramEl && data.ram) {
                 ramEl.innerText = `${data.ram.usedMb} / ${data.ram.totalMb} MB (${data.ram.percent}%)`;
                 ramEl.style.color = data.ram.percent > 85 ? '#f43f5e' : '#38bdf8';
+                const heroRam = document.getElementById('hero-ram');
+                if (heroRam) heroRam.innerText = `${data.ram.usedMb} MB (${data.ram.percent}%)`;
             }
             if (cpuEl && data.cpuLoad !== undefined) {
                 cpuEl.innerText = `${data.cpuLoad} (1m avg)`;
@@ -502,12 +650,15 @@
             }
             if (p25565El) {
                 const mc = data.mc || {};
+                const heroMc = document.getElementById('hero-mc');
                 if (mc.online) {
                     p25565El.innerText = `ONLINE (${mc.count || 0}/${mc.max || '?'}) 🔍`;
                     p25565El.style.color = '#10b981';
+                    if (heroMc) heroMc.innerText = `ONLINE (${mc.count || 0}/${mc.max || '?'})`;
                 } else {
                     p25565El.innerText = 'OFFLINE ✖';
                     p25565El.style.color = '#f43f5e';
+                    if (heroMc) heroMc.innerText = `OFFLINE`;
                 }
 
                 if (mcCountEl) {
@@ -582,8 +733,7 @@
             document.getElementById('err-1').innerText = ""; document.getElementById('err-2').innerText = "";
             if (data.step === 2) showScreen(2);
             if (data.step === 3) {
-                showScreen(3);
-                updateGreeting();
+                showWelcomeHero();
                 log("===================================================", "#334155");
                 log(" SPOJENÍ ZABEZPEČENO. VÍTEJTE V ADMIN TERMINÁLU. ", "var(--primary)");
                 log(" Příkazy: set, unlock_all, give, level, stats,     ", "#94a3b8");
@@ -601,6 +751,25 @@
             }
         });
 
+        function showWelcomeHero() {
+            updateGreeting();
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-welcome').classList.add('active');
+        }
+
+        function enterDashboard() {
+            const welcomeEl = document.getElementById('screen-welcome');
+            welcomeEl.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            welcomeEl.style.opacity = '0';
+            welcomeEl.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                welcomeEl.classList.remove('active');
+                welcomeEl.style.opacity = '1';
+                welcomeEl.style.transform = 'none';
+                showScreen(3);
+            }, 500);
+        }
+
         function requestSysStats() {
             socket.emit('adminCommand', { cmd: 'sysstats' });
         }
@@ -616,9 +785,9 @@
             else if (hour >= 18 && hour < 22) prefix = "Dobrý večer";
 
             const titleEl = document.getElementById('welcome-title');
-            if (titleEl) {
-                titleEl.innerHTML = `${prefix}, ${name}! 👋`;
-            }
+            const heroTitleEl = document.getElementById('hero-welcome-title');
+            if (titleEl) titleEl.innerHTML = `${prefix}, ${name}! 👋`;
+            if (heroTitleEl) heroTitleEl.innerHTML = `${prefix}, ${name}! 👋`;
         }
 
         socket.on('adminResponse', (data) => {
