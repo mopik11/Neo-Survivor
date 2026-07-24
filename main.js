@@ -7658,6 +7658,22 @@ let gamepadFocusIndex = 0;
 let gamepadLastModalId = null;
 let lastGamepadState = { dpadUp: false, dpadDown: false, dpadLeft: false, dpadRight: false, btnA: false, btnStart: false, connected: false };
 
+window.triggerGamepadVibration = function(duration = 150, strongMagnitude = 0.5, weakMagnitude = 0.5) {
+    try {
+        const rawGamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        const gamepads = Array.from(rawGamepads).filter(g => g !== null && g !== undefined);
+        const gp = gamepads[0];
+        if (gp && gp.vibrationActuator && typeof gp.vibrationActuator.playEffect === 'function') {
+            gp.vibrationActuator.playEffect('dual-rumble', {
+                startDelay: 0,
+                duration: duration,
+                strongMagnitude: strongMagnitude,
+                weakMagnitude: weakMagnitude
+            }).catch(() => {});
+        }
+    } catch (e) {}
+};
+
 function getSpatialNextFocus(currentEl, focusableElements, direction) {
     if (!currentEl || !focusableElements || focusableElements.length === 0) return focusableElements[0];
     
@@ -7837,6 +7853,7 @@ function updateGamepad() {
                 else if (dpadLeft && !lastGamepadState.dpadLeft) navDir = 'left';
 
                 if (navDir) {
+                    if (window.triggerGamepadVibration) window.triggerGamepadVibration(40, 0.05, 0.25);
                     const nextEl = getSpatialNextFocus(currentEl, focusable, navDir);
                     if (nextEl) {
                         const newIdx = focusable.indexOf(nextEl);
@@ -7864,10 +7881,12 @@ function updateGamepad() {
                 }
                 
                 if (btnA && !lastGamepadState.btnA) {
+                    if (window.triggerGamepadVibration) window.triggerGamepadVibration(90, 0.4, 0.6);
                     if (currentEl) currentEl.click();
                 }
             }
             if (btnB && !lastGamepadState.btnB) {
+                if (window.triggerGamepadVibration) window.triggerGamepadVibration(70, 0.3, 0.3);
                 if (topModal.id === 'pause-modal') {
                     togglePause(false);
                 } else if (topModal.id !== 'menu-modal' && topModal.id !== 'gameover-modal') {
@@ -7902,6 +7921,7 @@ function updateGamepad() {
                         }
                     }
                     if (typeof useUltimate === 'function') {
+                        if (window.triggerGamepadVibration) window.triggerGamepadVibration(250, 0.8, 0.9);
                         useUltimate(cx, cy);
                         GAME.lastSniperTime = Date.now();
                     }
