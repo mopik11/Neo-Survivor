@@ -2792,11 +2792,11 @@ a.gamepad-focus,
     background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%) !important; 
     color: #000000 !important;
     border: 3px solid #ffffff !important;
-    outline: 4px solid #fbbf24 !important; 
-    outline-offset: 3px !important; 
-    box-shadow: 0 0 35px rgba(251, 191, 36, 1), 0 0 15px rgba(255, 255, 255, 0.9) !important; 
-    transform: scale(1.08) translateY(-4px) !important; 
+    outline: none !important; 
+    box-shadow: 0 0 25px rgba(251, 191, 36, 1), inset 0 0 0 4px #fbbf24, inset 0 0 15px rgba(255, 255, 255, 0.9) !important; 
+    transform: scale(1.05) translateY(-2px) !important; 
     z-index: 99999 !important; 
+    position: relative !important;
     filter: brightness(1.2) !important;
     animation: gamepadPulse 1.2s infinite alternate ease-in-out !important; 
 }
