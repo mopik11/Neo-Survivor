@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.579
+ * NEO SURVIVOR - Core Game Logic - v1.580
  */
 
 window.addEventListener('beforeunload', () => {
@@ -2975,6 +2975,7 @@ class Player {
 }
 
 function spawnEnemy() {
+    if (!GAME.active || GAME.paused) return;
     if (NET.isMultiplayer && !NET.isHost) return;
     const now = Date.now();
     const alive = getAllAlivePlayers();
@@ -3722,6 +3723,11 @@ function togglePause(isAFK = false, forceState = null) {
     }
 
     document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
+
+    // Notify server of pause state in multiplayer
+    if (NET.isMultiplayer && NET.socket) {
+        NET.socket.emit('playerPause', { paused: GAME.paused });
+    }
 
 
     // Reset AFK timer and spawn timer when unpausing

@@ -2051,6 +2051,17 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('playerPause', (data) => {
+        const r = socket.roomId;
+        const p = socket.playerId;
+        if (r && ROOMS[r] && ROOMS[r].players[p]) {
+            ROOMS[r].players[p].isPaused = !!(data && data.paused);
+            const activePlayers = Object.values(ROOMS[r].players).filter(pl => !pl.disconnected && !pl.dead);
+            const allPaused = activePlayers.length > 0 && activePlayers.every(pl => pl.isPaused);
+            ROOMS[r].paused = allPaused;
+        }
+    });
+
     socket.on('enemyHit', (data) => {
         handleSingleHit(socket, data.id, data.damage);
     });
@@ -2288,7 +2299,7 @@ setInterval(() => {
 
             room.time += 1 / 20;
 
-            const playersArr = Object.values(room.players).filter(p => !p.dead && !p.disconnected);
+            const playersArr = Object.values(room.players).filter(p => !p.dead && !p.disconnected && !p.isPaused);
 
             const currentInterval = Math.max(100, CONFIG.SPAWN_INTERVAL / (1 + room.time / 60));
             const spawnChance = 1 / (currentInterval / 50);
