@@ -173,7 +173,7 @@ function broadcastLeaderboard() {
         if (!err && rows) {
             const onlineUsers = new Set();
             for (const [id, socket] of io.sockets.sockets) {
-                if (socket.authenticatedUser) {
+                if (socket.authenticatedUser && !socket.isAdminPage && !socket.isAdmin) {
                     onlineUsers.add(socket.authenticatedUser);
                 }
             }
@@ -220,9 +220,10 @@ function broadcastServerStats() {
             }
         }
     }
-    // Zjistíme počet unikátních hráčů podle playerId
+    // Zjistíme počet unikátních hráčů podle playerId (ignoring admin.html)
     const uniquePlayers = new Set();
     for (const [id, socket] of io.sockets.sockets) {
+        if (socket.isAdminPage || socket.isAdmin) continue;
         if (socket.playerId) {
             uniquePlayers.add(socket.playerId);
         } else {
@@ -578,7 +579,13 @@ function sanitizeMeta(meta) {
 }
 
 io.on('connection', (socket) => {
-    console.log('Hráč připojen:', socket.id);
+    const handshakeQuery = socket.handshake.query || {};
+    const referer = socket.handshake.headers ? (socket.handshake.headers.referer || '') : '';
+    if (handshakeQuery.page === 'admin' || handshakeQuery.isAdminPage === 'true' || referer.includes('admin.html')) {
+        socket.isAdminPage = true;
+    }
+
+    console.log('Hráč připojen:', socket.id, socket.isAdminPage ? '[ADMIN PAGE]' : '');
 
     socket.on('initPlayer', (data) => {
         socket.playerId = data.playerId;
@@ -764,7 +771,7 @@ io.on('connection', (socket) => {
         else if (cmd === 'stats') {
             const onlineUsers = new Set();
             for (const [id, s] of io.sockets.sockets) {
-                if (s.authenticatedUser) onlineUsers.add(s.authenticatedUser);
+                if (s.authenticatedUser && !s.isAdminPage && !s.isAdmin) onlineUsers.add(s.authenticatedUser);
             }
 
             if (target) {
