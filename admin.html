@@ -237,21 +237,25 @@
             transform: scale(0.98);
         }
 
-        .welcome-banner {
-            width: 100%;
-            margin-bottom: 16px;
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6));
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(56, 189, 248, 0.2);
-            border-radius: 20px;
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.1);
-            position: relative;
-            overflow: hidden;
+        #screen-welcome {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 100vh !important;
+            z-index: 99999 !important;
+            margin: 0 !important;
+            padding: 20px !important;
+            background: #020617 !important;
+            display: none;
+            align-items: center !important;
+            justify-content: center !important;
+            box-sizing: border-box !important;
+        }
+
+        #screen-welcome.active {
+            display: flex !important;
         }
 
         .shimmer-text {
@@ -286,7 +290,7 @@
     </div>
 
     <!-- FULLSCREEN HERO WELCOME OVERLAY (Motionsites.ai / ReactBits / UIverse wet-mayfly-23 style) -->
-    <div id="screen-welcome" class="screen" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; background: #020617; align-items: center; justify-content: center; overflow: hidden; padding: 20px;">
+    <div id="screen-welcome" class="screen">
         <div class="hero-orb orb-1"></div>
         <div class="hero-orb orb-2"></div>
 
@@ -308,7 +312,7 @@
                 Vítej v řídícím centru serveru. Všechny systémy jsou aktivní a připraveny.
             </p>
 
-            <div style="display: flex; justify-content: center; gap: 14px; margin-bottom: 30px; flex-wrap: wrap;">
+            <div style="display: flex; justify-content: center; gap: 14px; margin-bottom: 25px; flex-wrap: wrap;">
                 <div class="hero-chip">
                     <span style="color: #38bdf8; font-weight: bold;">RAM:</span>
                     <span id="hero-ram" style="color: white; margin-left: 4px;">Načítání...</span>
@@ -324,42 +328,20 @@
             </div>
 
             <button class="wet-mayfly-btn" onclick="enterDashboard()">
-                <span>VSTOUPIT DO DASHBOARDU 🚀</span>
+                <span>VSTOUPIT HNED 🚀</span>
             </button>
+
+            <!-- 5 SECOND ANIMATED PROGRESS BAR -->
+            <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 4px; margin-top: 24px; overflow: hidden; position: relative;">
+                <div id="welcome-progress" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981); border-radius: 4px;"></div>
+            </div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 8px;">Automatický přechod do dashboardu za 5s...</div>
         </div>
     </div>
 
     <!-- TŘÍSLOUPCOVÝ DASHBOARD LAYOUT (Rozšířeno na 95vw) -->
     <div id="screen-3" class="screen">
-        <!-- VÍTACÍ BANNER METADATA / REACTBITS & UIVERSE STYL -->
-        <div class="welcome-banner">
-            <div style="position: absolute; top: -50%; left: -10%; width: 40%; height: 200%; background: radial-gradient(circle, rgba(56,189,248,0.12) 0%, transparent 70%); pointer-events: none;"></div>
-            <div style="display: flex; align-items: center; gap: 16px; z-index: 1;">
-                <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #38bdf8, #818cf8); display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); border: 1px solid rgba(255,255,255,0.2);">
-                    👑
-                </div>
-                <div>
-                    <h1 id="welcome-title" class="shimmer-text" style="font-size: 1.5rem; font-weight: 800; margin: 0; letter-spacing: 0.5px;">
-                        Ahoj Matěji! 👋
-                    </h1>
-                    <div style="color: #94a3b8; font-size: 13px; margin-top: 2px;">
-                        Vítej v řídícím centru Neo Survivor serveru. Všechny systémy jsou aktivní.
-                    </div>
-                </div>
-            </div>
-            
-            <div style="display: flex; align-items: center; gap: 12px; z-index: 1;">
-                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 8px 14px; border-radius: 12px; display: flex; align-items: center; gap: 8px; font-size: 12px;">
-                    <span class="status-dot" style="width: 8px; height: 8px; margin: 0;"></span>
-                    <span style="color: #10b981; font-weight: 700; letter-spacing: 0.5px;">SYSTEM ONLINE</span>
-                </div>
-                <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 14px; border-radius: 12px; color: #38bdf8; font-size: 12px; font-weight: 600;">
-                    🛡️ Admin Panel
-                </div>
-            </div>
-        </div>
-
-        <div class="box" style="height: calc(100% - 90px); display: flex; flex-direction: row; padding: 15px; gap: 20px; background: transparent; border: none; box-shadow: none;">
+        <div class="box" style="height: 100%; display: flex; flex-direction: row; padding: 15px; gap: 20px; background: transparent; border: none; box-shadow: none;">
             
             <!-- LEVÝ PANEL: MÍSTNOSTI A BURZA -->
             <!-- Omezení max-width aby střední panel dostal více místa -->
@@ -751,23 +733,47 @@
             }
         });
 
+        let welcomeTimer = null;
+
         function showWelcomeHero() {
             updateGreeting();
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById('screen-welcome').classList.add('active');
+            const welcomeEl = document.getElementById('screen-welcome');
+            welcomeEl.classList.add('active');
+
+            const progressBar = document.getElementById('welcome-progress');
+            if (progressBar) {
+                progressBar.style.transition = 'none';
+                progressBar.style.width = '0%';
+                setTimeout(() => {
+                    progressBar.style.transition = 'width 5s linear';
+                    progressBar.style.width = '100%';
+                }, 50);
+            }
+
+            if (welcomeTimer) clearTimeout(welcomeTimer);
+            welcomeTimer = setTimeout(() => {
+                enterDashboard();
+            }, 5000);
         }
 
         function enterDashboard() {
+            if (welcomeTimer) {
+                clearTimeout(welcomeTimer);
+                welcomeTimer = null;
+            }
             const welcomeEl = document.getElementById('screen-welcome');
-            welcomeEl.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            if (!welcomeEl || !welcomeEl.classList.contains('active')) return;
+            
+            welcomeEl.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
             welcomeEl.style.opacity = '0';
-            welcomeEl.style.transform = 'scale(1.05)';
+            welcomeEl.style.transform = 'scale(1.04)';
             setTimeout(() => {
                 welcomeEl.classList.remove('active');
                 welcomeEl.style.opacity = '1';
                 welcomeEl.style.transform = 'none';
                 showScreen(3);
-            }, 500);
+            }, 400);
         }
 
         function requestSysStats() {
@@ -784,9 +790,7 @@
             else if (hour >= 12 && hour < 18) prefix = "Dobré odpoledne";
             else if (hour >= 18 && hour < 22) prefix = "Dobrý večer";
 
-            const titleEl = document.getElementById('welcome-title');
             const heroTitleEl = document.getElementById('hero-welcome-title');
-            if (titleEl) titleEl.innerHTML = `${prefix}, ${name}! 👋`;
             if (heroTitleEl) heroTitleEl.innerHTML = `${prefix}, ${name}! 👋`;
         }
 
