@@ -7784,6 +7784,9 @@ function updateGamepad() {
                 const currentEl = focusable[gamepadFocusIndex];
                 if (currentEl) {
                     currentEl.classList.add('gamepad-focus');
+                    if (document.activeElement !== currentEl && typeof currentEl.focus === 'function') {
+                        currentEl.focus({ preventScroll: true });
+                    }
                     if (typeof currentEl.scrollIntoView === 'function') {
                         currentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
@@ -7843,10 +7846,16 @@ function updateGamepad() {
             }
         }
         
-        lastGamepadState = { dpadUp, dpadDown, dpadLeft, dpadRight, btnA, btnB, btnX, btnRT, btnRB, btnStart };
+        const wasConnected = lastGamepadState.connected;
+        if (!wasConnected) {
+            lastGamepadState = { dpadUp, dpadDown, dpadLeft, dpadRight, btnA: true, btnB: true, btnX: true, btnRT: true, btnRB: true, btnStart: true, connected: true };
+        } else {
+            lastGamepadState = { dpadUp, dpadDown, dpadLeft, dpadRight, btnA, btnB, btnX, btnRT, btnRB, btnStart, connected: true };
+        }
         
     } else {
         showControllerNotification(false);
+        lastGamepadState.connected = false;
 
         if (statusEl) {
             statusEl.innerText = "Odpojeno (Stiskněte tlačítko na ovladači)";

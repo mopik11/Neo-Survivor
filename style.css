@@ -2790,11 +2790,14 @@ a.gamepad-focus,
 input.gamepad-focus,
 .modal .gamepad-focus,
 #menu-modal .btn-restart.gamepad-focus,
+:focus-visible,
+.gamepad-focus:focus,
 .gamepad-focus { 
     background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%) !important; 
     color: #000000 !important;
     border: 3px solid #ffffff !important;
-    outline: none !important; 
+    outline: 4px solid #38bdf8 !important;
+    outline-offset: 2px !important;
     transform: scale(1.06) translateY(-2px) !important; 
     z-index: 999999 !important; 
     position: relative !important;
