@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.574
+ * NEO SURVIVOR - Core Game Logic - v1.575
  */
 
 window.addEventListener('beforeunload', () => {
@@ -8637,7 +8637,8 @@ const initAudio = () => {
 
 // Permanent sticky fullscreen on any user click/touchstart (v1.524)
 ['click', 'touchstart'].forEach(type => {
-    window.addEventListener(type, () => {
+    window.addEventListener(type, (e) => {
+        if (e && e.target && e.target.closest && e.target.closest('a')) return;
         tryFullscreen();
     }, { passive: true });
 });
