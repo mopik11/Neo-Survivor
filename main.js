@@ -7654,7 +7654,97 @@ function handleEnemyDeath(enemy) {
     updateUI();
 }
 
+let gamepadFocusIndex = 0;
+let lastGamepadState = { dpadUp: false, dpadDown: false, dpadLeft: false, dpadRight: false, btnA: false, btnStart: false };
+
+function updateGamepad() {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const gp = gamepads[0];
+    
+    const statusEl = document.getElementById('gamepad-status');
+    if (gp) {
+        if (statusEl) {
+            statusEl.innerText = "Připojeno (" + gp.id.substring(0, 20) + "...)";
+            statusEl.style.color = "#10b981";
+        }
+        
+        GAME.input.w = false;
+        GAME.input.s = false;
+        GAME.input.a = false;
+        GAME.input.d = false;
+        GAME.input[' '] = false;
+        
+        const threshold = 0.2;
+        
+        if (gp.axes[1] < -threshold || gp.buttons[12]?.pressed) GAME.input.w = true;
+        if (gp.axes[1] > threshold || gp.buttons[13]?.pressed) GAME.input.s = true;
+        if (gp.axes[0] < -threshold || gp.buttons[14]?.pressed) GAME.input.a = true;
+        if (gp.axes[0] > threshold || gp.buttons[15]?.pressed) GAME.input.d = true;
+        
+        if (gp.buttons[0]?.pressed || gp.buttons[7]?.pressed) {
+            GAME.input[' '] = true;
+        }
+
+        const isModalOpen = document.querySelector('.modal.active') !== null;
+        
+        const dpadUp = gp.axes[1] < -0.5 || gp.buttons[12]?.pressed;
+        const dpadDown = gp.axes[1] > 0.5 || gp.buttons[13]?.pressed;
+        const dpadLeft = gp.axes[0] < -0.5 || gp.buttons[14]?.pressed;
+        const dpadRight = gp.axes[0] > 0.5 || gp.buttons[15]?.pressed;
+        const btnA = gp.buttons[0]?.pressed;
+        const btnStart = gp.buttons[9]?.pressed; 
+        
+        if (isModalOpen) {
+            const focusable = Array.from(document.querySelectorAll('.modal.active button:not([style*="display: none"]), .modal.active .dropdown-option, .modal.active .upgrade-card, .modal.active .btn-restart:not([style*="display: none"])')).filter(el => {
+                const style = window.getComputedStyle(el);
+                return style.display !== 'none' && style.visibility !== 'hidden';
+            });
+            if (focusable.length > 0) {
+                focusable.forEach(f => f.classList.remove('gamepad-focus'));
+                
+                if (dpadDown && !lastGamepadState.dpadDown) gamepadFocusIndex++;
+                if (dpadUp && !lastGamepadState.dpadUp) gamepadFocusIndex--;
+                if (dpadRight && !lastGamepadState.dpadRight) gamepadFocusIndex++;
+                if (dpadLeft && !lastGamepadState.dpadLeft) gamepadFocusIndex--;
+                
+                if (gamepadFocusIndex < 0) gamepadFocusIndex = focusable.length - 1;
+                if (gamepadFocusIndex >= focusable.length) gamepadFocusIndex = 0;
+                
+                const currentEl = focusable[gamepadFocusIndex];
+                if (currentEl) {
+                    currentEl.classList.add('gamepad-focus');
+                    if(typeof currentEl.scrollIntoView === 'function') {
+                        currentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }
+                
+                if (btnA && !lastGamepadState.btnA) {
+                    if (currentEl) currentEl.click();
+                }
+            }
+        }
+        
+        if (btnStart && !lastGamepadState.btnStart) {
+            if (GAME.active && !document.querySelector('.modal.active')) {
+                togglePause(false);
+            } else if (GAME.active && GAME.paused && document.getElementById('menu-modal').classList.contains('active')) {
+                togglePause(false);
+            }
+        }
+        
+        lastGamepadState = { dpadUp, dpadDown, dpadLeft, dpadRight, btnA, btnStart };
+        
+    } else {
+        if (statusEl) {
+            statusEl.innerText = "Odpojeno (Stiskněte tlačítko na ovladači)";
+            statusEl.style.color = "#f43f5e";
+        }
+    }
+}
+
 function loop(time) {
+    updateGamepad();
+
     if (!lastTime) lastTime = time;
     let dt = time - lastTime;
     lastTime = time;

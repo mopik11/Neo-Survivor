@@ -232,80 +232,22 @@ function checkPort(port, host = '127.0.0.1', timeout = 800) {
     });
 }
 
+const util = require('minecraft-server-util');
 function queryMinecraftServer(host = '127.0.0.1', port = 25565, timeout = 1200) {
-    return new Promise((resolve) => {
-        const client = new net.Socket();
-        client.setTimeout(timeout);
-        let buffer = Buffer.alloc(0);
-
-        client.on('connect', () => {
-            const hostBuf = Buffer.from(host, 'utf8');
-            const portBuf = Buffer.alloc(2);
-            portBuf.writeUInt16BE(port, 0);
-
-            const hsData = Buffer.concat([
-                Buffer.from([0x00]),
-                Buffer.from([0xFF, 0xFF, 0xFF, 0xFF, 0x0F]),
-                Buffer.from([hostBuf.length]),
-                hostBuf,
-                portBuf,
-                Buffer.from([0x01])
-            ]);
-
-            const hsLength = Buffer.from([hsData.length]);
-            const handshakePacket = Buffer.concat([hsLength, hsData]);
-            const requestPacket = Buffer.from([0x01, 0x00]);
-
-            client.write(Buffer.concat([handshakePacket, requestPacket]));
+    return util.status(host, port, { timeout: timeout })
+        .then((result) => {
+            const playerNames = result.players.sample ? result.players.sample.map(p => p.name) : [];
+            return {
+                online: true,
+                count: result.players.online,
+                max: result.players.max,
+                players: playerNames,
+                version: result.version.name
+            };
+        })
+        .catch((e) => {
+            return { online: false, players: [], count: 0, max: 0, version: null };
         });
-
-        client.on('data', (chunk) => {
-            buffer = Buffer.concat([buffer, chunk]);
-        });
-
-        client.on('end', () => {
-            parseResult();
-        });
-
-        client.on('error', () => {
-            client.destroy();
-            resolve({ online: false, players: [], count: 0, max: 0, version: null });
-        });
-
-        client.on('timeout', () => {
-            client.destroy();
-            resolve({ online: false, players: [], count: 0, max: 0, version: null });
-        });
-
-        function parseResult() {
-            try {
-                if (buffer.length >= 3) {
-                    const str = buffer.toString('utf8');
-                    const jsonStart = str.indexOf('{');
-                    const jsonEnd = str.lastIndexOf('}');
-                    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-                        const jsonStr = str.substring(jsonStart, jsonEnd + 1);
-                        const parsed = JSON.parse(jsonStr);
-                        const onlineCount = parsed.players ? (parsed.players.online || 0) : 0;
-                        const maxPlayers = parsed.players ? (parsed.players.max || 0) : 0;
-                        const sample = parsed.players ? (parsed.players.sample || []) : [];
-                        const playerNames = sample.map(p => p.name || p).filter(Boolean);
-                        const version = parsed.version ? (parsed.version.name || '') : '';
-                        client.destroy();
-                        return resolve({
-                            online: true,
-                            count: onlineCount,
-                            max: maxPlayers,
-                            players: playerNames,
-                            version: version
-                        });
-                    }
-                }
-            } catch (e) {}
-            client.destroy();
-            resolve({ online: true, count: 0, max: 0, players: [], version: 'Online' });
-        }
-    });
 }
 
 async function getSystemStatsData() {
