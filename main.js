@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.583
+ * NEO SURVIVOR - Core Game Logic - v1.587
  */
 
 window.addEventListener('beforeunload', () => {
@@ -7662,10 +7662,16 @@ function updateGamepad() {
     const gp = gamepads[0];
     
     const statusEl = document.getElementById('gamepad-status');
+    const headerStatusEl = document.getElementById('display-controller-status');
     if (gp) {
         if (statusEl) {
             statusEl.innerText = "Připojeno (" + gp.id.substring(0, 20) + "...)";
             statusEl.style.color = "#10b981";
+        }
+        if (headerStatusEl) {
+            headerStatusEl.innerText = "Connected";
+            headerStatusEl.style.color = "#10b981";
+            headerStatusEl.style.textShadow = "0 0 10px rgba(16, 185, 129, 0.5)";
         }
         
         GAME.input.w = false;
@@ -7745,6 +7751,11 @@ function updateGamepad() {
         if (statusEl) {
             statusEl.innerText = "Odpojeno (Stiskněte tlačítko na ovladači)";
             statusEl.style.color = "#f43f5e";
+        }
+        if (headerStatusEl) {
+            headerStatusEl.innerText = "Disconnected";
+            headerStatusEl.style.color = "#ef4444";
+            headerStatusEl.style.textShadow = "none";
         }
     }
 }

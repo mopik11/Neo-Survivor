@@ -61,7 +61,7 @@
         #screen-3 { height: 94vh; justify-content: flex-start; max-width: 98vw; }
         #screen-welcome { max-width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; padding: 0; align-items: center; justify-content: center; background: var(--bg-dark); }
 
-        h2, h1 { font-family: 'Instrument Serif', serif; font-weight: normal; margin-bottom: 24px; text-align: center; letter-spacing: 2px; text-transform: uppercase; }
+        h2, h1 { font-family: 'Inter', sans-serif; font-weight: 800; margin-bottom: 24px; text-align: center; letter-spacing: 1px; text-transform: uppercase; }
         h2 { font-size: 3rem; color: #fff; text-shadow: 0 4px 20px rgba(255,255,255,0.2); }
         
         /* LIQUID GLASS PANEL */
@@ -171,11 +171,12 @@
         </div>
     </div>
 
-    <div id="screen-welcome" class="screen">
-        <div class="liquid-glass-panel" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <div style="font-size: 5rem; display: inline-block; animation: waveHand 2s infinite ease-in-out;">👋</div>
-            <h1 id="hero-welcome-title" style="font-family: 'Instrument Serif', serif; font-size: 3rem; color: white; line-height: 1; margin: 20px 0;">AHOJ MATĚJI</h1>
-            <p style="color: #94a3b8; font-size: 1rem;">Systémy aktivovány. Přecházím do terminálu...</p>
+    <!-- WELCOME MODAL OVERLAY -->
+    <div id="screen-welcome" style="display: none; position: fixed; inset: 0; z-index: 10000; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); align-items: center; justify-content: center; opacity: 1; transition: opacity 0.4s ease;">
+        <div id="welcome-modal-card" class="liquid-glass-panel" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; max-width: 440px; width: 90%; padding: 40px 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.2); animation: welcomeModalEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+            <div style="font-size: 4.5rem; display: inline-block; animation: waveHand 2s infinite ease-in-out;">👋</div>
+            <h1 id="hero-welcome-title" style="font-size: 2.2rem; color: white; line-height: 1.2; margin: 20px 0; font-weight: 800; text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);">AHOJ MATĚJI</h1>
+            <p style="color: #94a3b8; font-size: 0.95rem; font-weight: 500;">Systémy aktivovány. Přecházím do terminálu...</p>
         </div>
     </div>
 
@@ -186,6 +187,17 @@
             50% { transform: translateX(0) rotate(0deg); }
             75% { transform: translateX(-20px) rotate(-20deg); }
             100% { transform: translateX(0) rotate(0deg); }
+        }
+        @keyframes welcomeModalEnter {
+            from { opacity: 0; transform: scale(0.85) translateY(20px); filter: blur(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+        }
+        .welcome-modal-exit {
+            animation: welcomeModalExit 0.45s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+        }
+        @keyframes welcomeModalExit {
+            0% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+            100% { opacity: 0; transform: scale(0.9) translateY(-25px); filter: blur(12px); }
         }
     </style>
 
@@ -416,7 +428,7 @@
             container.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 16px; margin-bottom: 16px;">
                     <div style="display: flex; align-items: center;">
-                        <span style="font-size: 1.8rem; font-family: 'Instrument Serif', serif; font-weight: normal; letter-spacing: 1px; color: #fff;">${data.username}</span>
+                        <span style="font-size: 1.8rem; font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: 1px; color: #fff;">${data.username}</span>
                         ${onlineDot}
                     </div>
                     <div style="display: flex; gap: 10px;">
@@ -609,12 +621,23 @@
             if (data.step === 2) showScreen(2);
             if (data.step === 3) {
                 updateGreeting();
-                showScreen('welcome');
-                setTimeout(() => {
-                    document.getElementById('screen-welcome').style.opacity = '0';
-                    document.getElementById('screen-welcome').style.transition = 'opacity 0.6s ease';
-                    setTimeout(() => { showScreen(3); }, 600);
-                }, 3500);
+                showScreen(3);
+                
+                const welcomeEl = document.getElementById('screen-welcome');
+                const welcomeCard = document.getElementById('welcome-modal-card');
+                if (welcomeEl && welcomeCard) {
+                    welcomeEl.style.display = 'flex';
+                    welcomeEl.style.opacity = '1';
+                    welcomeCard.classList.remove('welcome-modal-exit');
+                    
+                    setTimeout(() => {
+                        welcomeEl.style.opacity = '0';
+                        welcomeCard.classList.add('welcome-modal-exit');
+                        setTimeout(() => {
+                            welcomeEl.style.display = 'none';
+                        }, 450);
+                    }, 1800);
+                }
 
                 log("===================================================", "#94a3b8");
                 log(" SPOJENÍ ZABEZPEČENO. TERMINÁL AKTIVNÍ. ", "#38bdf8");
