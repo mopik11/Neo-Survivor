@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.587
+ * NEO SURVIVOR - Core Game Logic - v1.588
  */
 
 window.addEventListener('beforeunload', () => {
@@ -7657,13 +7657,63 @@ function handleEnemyDeath(enemy) {
 let gamepadFocusIndex = 0;
 let lastGamepadState = { dpadUp: false, dpadDown: false, dpadLeft: false, dpadRight: false, btnA: false, btnStart: false };
 
+function showControllerNotification(connected, controllerName = "Xbox / Gamepad") {
+    if (window._lastGamepadNotifyConnected === connected) return;
+    window._lastGamepadNotifyConnected = connected;
+
+    const notification = document.createElement('div');
+    notification.style.position = 'fixed';
+    notification.style.top = '15%';
+    notification.style.left = '50%';
+    notification.style.transform = 'translate(-50%, -50%) scale(1)';
+    notification.style.zIndex = '10000000';
+    notification.style.background = 'rgba(15, 23, 42, 0.95)';
+    notification.style.border = connected ? '3px solid #10b981' : '3px solid #ef4444';
+    notification.style.borderRadius = '24px';
+    notification.style.padding = '20px 35px';
+    notification.style.boxShadow = connected 
+        ? '0 15px 40px rgba(16, 185, 129, 0.4), inset 0 0 15px rgba(16, 185, 129, 0.2)' 
+        : '0 15px 40px rgba(239, 68, 68, 0.4), inset 0 0 15px rgba(239, 68, 68, 0.2)';
+    notification.style.color = '#fff';
+    notification.style.textAlign = 'center';
+    notification.style.fontFamily = "'Inter', sans-serif";
+    notification.style.pointerEvents = 'none';
+    notification.style.backdropFilter = 'blur(16px)';
+    notification.style.animation = 'achievementPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+    const icon = connected ? '🎮' : '🔌';
+    const title = connected ? 'OVLADAČ PŘIPOJEN!' : 'OVLADAČ ODPOJEN';
+    const shortName = controllerName.length > 25 ? controllerName.substring(0, 25) + "..." : controllerName;
+    const subtitle = connected ? shortName : 'Stiskněte tlačítko na ovladači pro aktivaci';
+    const accentColor = connected ? '#10b981' : '#ef4444';
+
+    notification.innerHTML = `
+        <div style="font-size: 2.2rem; margin-bottom: 4px;">${icon}</div>
+        <div style="font-size: 1.1rem; color: ${accentColor}; font-weight: 900; text-transform: uppercase; letter-spacing: 2px;">${title}</div>
+        <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-top: 4px;">${subtitle}</div>
+    `;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.transition = 'all 0.4s ease-in';
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, -70%) scale(0.9)';
+        setTimeout(() => notification.remove(), 400);
+    }, 3000);
+}
+
 function updateGamepad() {
-    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const rawGamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const gamepads = Array.from(rawGamepads).filter(g => g !== null && g !== undefined);
     const gp = gamepads[0];
     
     const statusEl = document.getElementById('gamepad-status');
     const headerStatusEl = document.getElementById('display-controller-status');
+    
     if (gp) {
+        showControllerNotification(true, gp.id);
+
         if (statusEl) {
             statusEl.innerText = "Připojeno (" + gp.id.substring(0, 20) + "...)";
             statusEl.style.color = "#10b981";
@@ -7687,7 +7737,13 @@ function updateGamepad() {
         if (gp.axes[0] < -threshold || gp.buttons[14]?.pressed) GAME.input.a = true;
         if (gp.axes[0] > threshold || gp.buttons[15]?.pressed) GAME.input.d = true;
         
-        if (gp.buttons[0]?.pressed || gp.buttons[7]?.pressed) {
+        const btnA = gp.buttons[0]?.pressed;
+        const btnX = gp.buttons[2]?.pressed;
+        const btnRB = gp.buttons[5]?.pressed;
+        const btnRT = gp.buttons[7]?.pressed;
+        const btnStart = gp.buttons[9]?.pressed; 
+
+        if (btnA || btnRT || btnX || btnRB) {
             GAME.input[' '] = true;
         }
 
@@ -7698,8 +7754,6 @@ function updateGamepad() {
         const dpadDown = gp.axes[1] > 0.5 || gp.buttons[13]?.pressed;
         const dpadLeft = gp.axes[0] < -0.5 || gp.buttons[14]?.pressed;
         const dpadRight = gp.axes[0] > 0.5 || gp.buttons[15]?.pressed;
-        const btnA = gp.buttons[0]?.pressed;
-        const btnStart = gp.buttons[9]?.pressed; 
         
         if (isModalOpen) {
             let topModal = activeModals[activeModals.length - 1];
@@ -7726,13 +7780,44 @@ function updateGamepad() {
                 const currentEl = focusable[gamepadFocusIndex];
                 if (currentEl) {
                     currentEl.classList.add('gamepad-focus');
-                    if(typeof currentEl.scrollIntoView === 'function') {
+                    if (typeof currentEl.scrollIntoView === 'function') {
                         currentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
                 }
                 
                 if (btnA && !lastGamepadState.btnA) {
                     if (currentEl) currentEl.click();
+                }
+            }
+        } else if (GAME.active && !GAME.paused) {
+            // IN-GAME ABILITY TRIGGERING (Button A, X, RT, RB)
+            const abilityPressed = (btnA && !lastGamepadState.btnA) || 
+                                   (btnX && !lastGamepadState.btnX) || 
+                                   (btnRT && !lastGamepadState.btnRT) || 
+                                   (btnRB && !lastGamepadState.btnRB);
+
+            if (abilityPressed && GAME.entities.player && !GAME.entities.player.dead) {
+                const p = GAME.entities.player;
+                if (typeof getAbilityCooldown === 'function' && Date.now() - GAME.lastSniperTime >= getAbilityCooldown()) {
+                    let cx = GAME.canvas.width / 2;
+                    let cy = GAME.canvas.height / 2;
+                    if (GAME.entities.enemies && GAME.entities.enemies.length > 0) {
+                        let closest = null;
+                        let minDist = Infinity;
+                        GAME.entities.enemies.forEach(e => {
+                            const d = dist(p.x, p.y, e.x, e.y);
+                            if (d < minDist) { minDist = d; closest = e; }
+                        });
+                        if (closest) {
+                            const cam = GAME.camera;
+                            cx = (closest.x - cam.x / GAME.zoom);
+                            cy = (closest.y - cam.y / GAME.zoom);
+                        }
+                    }
+                    if (typeof useUltimate === 'function') {
+                        useUltimate(cx, cy);
+                        GAME.lastSniperTime = Date.now();
+                    }
                 }
             }
         }
@@ -7745,9 +7830,11 @@ function updateGamepad() {
             }
         }
         
-        lastGamepadState = { dpadUp, dpadDown, dpadLeft, dpadRight, btnA, btnStart };
+        lastGamepadState = { dpadUp, dpadDown, dpadLeft, dpadRight, btnA, btnX, btnRT, btnRB, btnStart };
         
     } else {
+        showControllerNotification(false);
+
         if (statusEl) {
             statusEl.innerText = "Odpojeno (Stiskněte tlačítko na ovladači)";
             statusEl.style.color = "#f43f5e";

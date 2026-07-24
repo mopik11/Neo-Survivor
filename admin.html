@@ -125,14 +125,23 @@
         @keyframes drawHand {
             0% { stroke-dashoffset: 400; opacity: 0; }
             20% { opacity: 1; filter: drop-shadow(0 0 5px #38bdf8); }
-            50% { stroke-dashoffset: 0; filter: brightness(1.5) drop-shadow(0 0 15px #38bdf8); transform: translateY(-5px); }
-            80% { stroke-dashoffset: 0; filter: brightness(1.2) drop-shadow(0 0 10px #c084fc); transform: translateY(0px); }
+            50% { stroke-dashoffset: 0; filter: brightness(1.5) drop-shadow(0 0 15px #38bdf8); }
+            80% { stroke-dashoffset: 0; filter: brightness(1.2) drop-shadow(0 0 10px #c084fc); }
             100% { stroke-dashoffset: 0; opacity: 0; }
         }
         #cyber-hand {
-            position: absolute; right: 2%; bottom: 2%; width: 350px; height: 350px; 
-            opacity: 0.3; pointer-events: none; z-index: -1; 
-            transition: transform 0.1s;
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            width: 450px; 
+            height: 450px; 
+            margin-left: -225px; 
+            margin-top: -225px;
+            opacity: 0; 
+            display: none;
+            pointer-events: none; 
+            z-index: 0; 
+            transition: opacity 0.8s ease, transform 0.1s ease-out;
         }
 
         /* SCROLLBARS */
@@ -635,6 +644,17 @@
                         welcomeCard.classList.add('welcome-modal-exit');
                         setTimeout(() => {
                             welcomeEl.style.display = 'none';
+                            
+                            // Zapnutí cyber-ruky na 30 sekund po pozdravu
+                            const handEl = document.getElementById('cyber-hand');
+                            if (handEl) {
+                                handEl.style.display = 'block';
+                                setTimeout(() => { handEl.style.opacity = '0.18'; }, 50);
+                                setTimeout(() => {
+                                    handEl.style.opacity = '0';
+                                    setTimeout(() => { handEl.style.display = 'none'; }, 800);
+                                }, 30000);
+                            }
                         }, 450);
                     }, 1800);
                 }
