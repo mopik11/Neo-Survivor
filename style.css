@@ -2787,32 +2787,35 @@ body.fullscreen-tree-active #meta-modal .modal-content {
 button.gamepad-focus,
 div.gamepad-focus,
 a.gamepad-focus,
+input.gamepad-focus,
 .modal .gamepad-focus,
+#menu-modal .btn-restart.gamepad-focus,
 .gamepad-focus { 
     background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%) !important; 
     color: #000000 !important;
     border: 3px solid #ffffff !important;
     outline: none !important; 
-    box-shadow: 0 0 25px rgba(251, 191, 36, 1), inset 0 0 0 4px #fbbf24, inset 0 0 15px rgba(255, 255, 255, 0.9) !important; 
-    transform: scale(1.05) translateY(-2px) !important; 
-    z-index: 99999 !important; 
+    transform: scale(1.06) translateY(-2px) !important; 
+    z-index: 999999 !important; 
     position: relative !important;
     filter: brightness(1.2) !important;
     animation: gamepadPulse 1.2s infinite alternate ease-in-out !important; 
 }
 
 button.gamepad-focus *,
+div.gamepad-focus *,
+a.gamepad-focus *,
 .gamepad-focus * {
     color: #000000 !important;
 }
 
 @keyframes gamepadPulse {
     0% {
-        outline-color: #38bdf8;
-        box-shadow: 0 0 25px rgba(56, 189, 248, 0.9), 0 0 10px rgba(255, 255, 255, 0.8);
+        box-shadow: inset 0 0 0 4px #38bdf8, inset 0 0 15px rgba(255, 255, 255, 0.9), 0 0 20px rgba(56, 189, 248, 0.8) !important;
+        filter: brightness(1.15);
     }
     100% {
-        outline-color: #fbbf24;
-        box-shadow: 0 0 45px rgba(251, 191, 36, 1), 0 0 20px rgba(255, 255, 255, 1);
+        box-shadow: inset 0 0 0 4px #ffffff, inset 0 0 25px rgba(251, 191, 36, 1), 0 0 30px rgba(251, 191, 36, 1) !important;
+        filter: brightness(1.35);
     }
 }
