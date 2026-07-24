@@ -205,9 +205,16 @@
                         <span style="color: #94a3b8;">Web App (3000):</span>
                         <strong id="stat-port-3000" style="color: #10b981;">ONLINE</strong>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 2px 0;" onclick="toggleMcPlayers()" title="Klikněte pro zobrazení hráčů na Minecraft serveru">
                         <span style="color: #94a3b8;">Minecraft (25565):</span>
                         <strong id="stat-port-25565" style="color: #fbbf24;">Kontrola...</strong>
+                    </div>
+                    <div id="mc-players-box" style="display: none; background: rgba(0,0,0,0.4); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-top: 2px; font-size: 11px;">
+                        <div style="color: #94a3b8; font-weight: 700; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>🎮 Hráči na MC serveru:</span>
+                            <span id="mc-players-count" style="color: #38bdf8; font-weight: bold;">0</span>
+                        </div>
+                        <div id="mc-players-list" style="color: #f8fafc; word-break: break-word;">Načítání...</div>
                     </div>
                 </div>
             </div>
@@ -401,6 +408,13 @@
             });
         }
 
+        function toggleMcPlayers() {
+            const box = document.getElementById('mc-players-box');
+            if (box) {
+                box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+            }
+        }
+
         function renderSysStats(data) {
             if (!data) return;
             const ramEl = document.getElementById('stat-ram');
@@ -408,6 +422,8 @@
             const uptimeEl = document.getElementById('stat-uptime');
             const p3000El = document.getElementById('stat-port-3000');
             const p25565El = document.getElementById('stat-port-25565');
+            const mcListEl = document.getElementById('mc-players-list');
+            const mcCountEl = document.getElementById('mc-players-count');
 
             if (ramEl && data.ram) {
                 ramEl.innerText = `${data.ram.usedMb} / ${data.ram.totalMb} MB (${data.ram.percent}%)`;
@@ -426,9 +442,34 @@
                 p3000El.innerText = data.ports[3000] ? 'ONLINE' : 'OFFLINE';
                 p3000El.style.color = data.ports[3000] ? '#10b981' : '#f43f5e';
             }
-            if (p25565El && data.ports) {
-                p25565El.innerText = data.ports[25565] ? 'ONLINE' : 'OFFLINE';
-                p25565El.style.color = data.ports[25565] ? '#10b981' : '#f43f5e';
+            if (p25565El) {
+                const mc = data.mc || {};
+                if (mc.online) {
+                    p25565El.innerText = `ONLINE (${mc.count || 0}/${mc.max || '?'}) 🔍`;
+                    p25565El.style.color = '#10b981';
+                } else {
+                    p25565El.innerText = 'OFFLINE ✖';
+                    p25565El.style.color = '#f43f5e';
+                }
+
+                if (mcCountEl) {
+                    mcCountEl.innerText = `${mc.count || 0}/${mc.max || '?'}`;
+                }
+
+                if (mcListEl) {
+                    if (!mc.online) {
+                        mcListEl.innerText = 'Minecraft server je offline.';
+                        mcListEl.style.color = '#f43f5e';
+                    } else if (mc.players && mc.players.length > 0) {
+                        mcListEl.innerHTML = mc.players.map(name => `<span style="display:inline-block; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:6px; margin:2px; font-weight:bold;">🎮 ${name}</span>`).join(' ');
+                    } else if (mc.count > 0) {
+                        mcListEl.innerText = `${mc.count} hráč(ů) připojen(o) (jména skryta v configu)`;
+                        mcListEl.style.color = '#38bdf8';
+                    } else {
+                        mcListEl.innerText = 'Žádní hráči právě nehrají (0 online)';
+                        mcListEl.style.color = '#94a3b8';
+                    }
+                }
             }
         }
 
@@ -502,7 +543,7 @@
         });
 
         function requestSysStats() {
-            socket.emit('adminCommand', { cmd: 'sysStats' });
+            socket.emit('adminCommand', { cmd: 'sysstats' });
         }
 
         socket.on('adminResponse', (data) => {

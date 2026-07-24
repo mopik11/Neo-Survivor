@@ -212,23 +212,81 @@ function broadcastLeaderboard() {
 const os = require('os');
 const net = require('net');
 
-function checkPort(port, host = '127.0.0.1', timeout = 800) {
+function queryMinecraftServer(host = '127.0.0.1', port = 25565, timeout = 1200) {
     return new Promise((resolve) => {
-        const socket = new net.Socket();
-        socket.setTimeout(timeout);
-        socket.on('connect', () => {
-            socket.destroy();
-            resolve(true);
+        const client = new net.Socket();
+        client.setTimeout(timeout);
+        let buffer = Buffer.alloc(0);
+
+        client.on('connect', () => {
+            const hostBuf = Buffer.from(host, 'utf8');
+            const portBuf = Buffer.alloc(2);
+            portBuf.writeUInt16BE(port, 0);
+
+            const hsData = Buffer.concat([
+                Buffer.from([0x00]),
+                Buffer.from([0xFF, 0xFF, 0xFF, 0xFF, 0x0F]),
+                Buffer.from([hostBuf.length]),
+                hostBuf,
+                portBuf,
+                Buffer.from([0x01])
+            ]);
+
+            const hsLength = Buffer.from([hsData.length]);
+            const handshakePacket = Buffer.concat([hsLength, hsData]);
+            const requestPacket = Buffer.from([0x01, 0x00]);
+
+            client.write(Buffer.concat([handshakePacket, requestPacket]));
         });
-        socket.on('error', () => {
-            socket.destroy();
-            resolve(false);
+
+        client.on('data', (chunk) => {
+            buffer = Buffer.concat([buffer, chunk]);
         });
-        socket.on('timeout', () => {
-            socket.destroy();
-            resolve(false);
+
+        client.on('end', () => {
+            parseResult();
         });
-        socket.connect(port, host);
+
+        client.on('error', () => {
+            client.destroy();
+            resolve({ online: false, players: [], count: 0, max: 0, version: null });
+        });
+
+        client.on('timeout', () => {
+            client.destroy();
+            resolve({ online: false, players: [], count: 0, max: 0, version: null });
+        });
+
+        function parseResult() {
+            try {
+                if (buffer.length < 3) {
+                    client.destroy();
+                    return resolve({ online: false, players: [], count: 0, max: 0, version: null });
+                }
+                const str = buffer.toString('utf8');
+                const jsonStart = str.indexOf('{');
+                const jsonEnd = str.lastIndexOf('}');
+                if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+                    const jsonStr = str.substring(jsonStart, jsonEnd + 1);
+                    const parsed = JSON.parse(jsonStr);
+                    const onlineCount = parsed.players ? (parsed.players.online || 0) : 0;
+                    const maxPlayers = parsed.players ? (parsed.players.max || 0) : 0;
+                    const sample = parsed.players ? (parsed.players.sample || []) : [];
+                    const playerNames = sample.map(p => p.name || p).filter(Boolean);
+                    const version = parsed.version ? (parsed.version.name || '') : '';
+                    client.destroy();
+                    return resolve({
+                        online: true,
+                        count: onlineCount,
+                        max: maxPlayers,
+                        players: playerNames,
+                        version: version
+                    });
+                }
+            } catch (e) {}
+            client.destroy();
+            resolve({ online: true, count: 0, max: 0, players: [], version: 'Online' });
+        }
     });
 }
 
@@ -239,7 +297,7 @@ async function getSystemStatsData() {
     const memPercent = Math.round((usedMem / totalMem) * 100);
     const cpuLoad = os.loadavg ? os.loadavg()[0].toFixed(2) : '0.00';
     const uptimeSec = Math.floor(process.uptime());
-    const mcOnline = await checkPort(25565);
+    const mcStatus = await queryMinecraftServer('127.0.0.1', 25565);
 
     return {
         ram: {
@@ -251,8 +309,9 @@ async function getSystemStatsData() {
         uptime: uptimeSec,
         ports: {
             3000: true,
-            25565: mcOnline
-        }
+            25565: mcStatus.online
+        },
+        mc: mcStatus
     };
 }
 
@@ -927,7 +986,7 @@ io.on('connection', (socket) => {
                 data: roomsData
             });
         }
-        else if (cmd === 'sysStats') {
+        else if (cmd === 'sysstats' || cmd === 'sys_stats' || cmd === 'sysstats') {
             getSystemStatsData().then(statsData => {
                 socket.emit('adminResponse', {
                     msg: "Systémové statistiky načteny.",
