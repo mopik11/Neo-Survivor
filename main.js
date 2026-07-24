@@ -7661,6 +7661,9 @@ function showControllerNotification(connected, controllerName = "Xbox / Gamepad"
     if (window._lastGamepadNotifyConnected === connected) return;
     window._lastGamepadNotifyConnected = connected;
 
+    if (connected) window._hasGamepadConnectedAtLeastOnce = true;
+    if (!connected && !window._hasGamepadConnectedAtLeastOnce) return;
+
     const notification = document.createElement('div');
     notification.style.position = 'fixed';
     notification.style.top = '15%';
@@ -7738,6 +7741,7 @@ function updateGamepad() {
         if (gp.axes[0] > threshold || gp.buttons[15]?.pressed) GAME.input.d = true;
         
         const btnA = gp.buttons[0]?.pressed;
+        const btnB = gp.buttons[1]?.pressed;
         const btnX = gp.buttons[2]?.pressed;
         const btnRB = gp.buttons[5]?.pressed;
         const btnRT = gp.buttons[7]?.pressed;
@@ -7762,7 +7766,7 @@ function updateGamepad() {
                 topModal = profileModal;
             }
             
-            const focusable = Array.from(topModal.querySelectorAll('button:not([style*="display: none"]), .dropdown-option, .upgrade-card, .btn-restart:not([style*="display: none"])')).filter(el => {
+            const focusable = Array.from(topModal.querySelectorAll('button:not([style*="display: none"]), input[type="checkbox"], .dropdown-option, .upgrade-card, .btn-restart:not([style*="display: none"])')).filter(el => {
                 const style = window.getComputedStyle(el);
                 return style.display !== 'none' && style.visibility !== 'hidden';
             });
@@ -7787,6 +7791,15 @@ function updateGamepad() {
                 
                 if (btnA && !lastGamepadState.btnA) {
                     if (currentEl) currentEl.click();
+                }
+            }
+            if (btnB && !lastGamepadState.btnB) {
+                if (topModal.id === 'pause-modal') {
+                    togglePause(false);
+                } else if (topModal.id !== 'menu-modal' && topModal.id !== 'gameover-modal') {
+                    const closeBtn = topModal.querySelector('.btn-close-x, .back-btn, [id^="btn-close"], #btn-back');
+                    if (closeBtn && typeof closeBtn.click === 'function') closeBtn.click();
+                    else topModal.classList.remove('active');
                 }
             }
         } else if (GAME.active && !GAME.paused) {
@@ -7825,12 +7838,12 @@ function updateGamepad() {
         if (btnStart && !lastGamepadState.btnStart) {
             if (GAME.active && !document.querySelector('.modal.active')) {
                 togglePause(false);
-            } else if (GAME.active && GAME.paused && document.getElementById('menu-modal').classList.contains('active')) {
+            } else if (GAME.active && GAME.paused && document.getElementById('pause-modal') && document.getElementById('pause-modal').classList.contains('active')) {
                 togglePause(false);
             }
         }
         
-        lastGamepadState = { dpadUp, dpadDown, dpadLeft, dpadRight, btnA, btnX, btnRT, btnRB, btnStart };
+        lastGamepadState = { dpadUp, dpadDown, dpadLeft, dpadRight, btnA, btnB, btnX, btnRT, btnRB, btnStart };
         
     } else {
         showControllerNotification(false);
