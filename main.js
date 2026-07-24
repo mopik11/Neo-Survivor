@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.566
+ * NEO SURVIVOR - Core Game Logic - v1.573
  */
 
 window.addEventListener('beforeunload', () => {
@@ -2130,7 +2130,7 @@ class Enemy {
 
         if (this.type === 2) {
             let playerLvl = GAME.entities.player ? GAME.entities.player.level : 1;
-            let dynamicInterval = Math.max(1500, 5000 - (playerLvl * 150));
+            let dynamicInterval = Math.max(1200, 3000 - (playerLvl * 100));
 
             if (Date.now() - this.lastShot > dynamicInterval) {
                 let inaccuracy = Math.max(0, 0.6 - (playerLvl * 0.03));
@@ -2140,7 +2140,7 @@ class Enemy {
                 let tx = this.x + Math.cos(shootAngle) * 100;
                 let ty = this.y + Math.sin(shootAngle) * 100;
 
-                const pSpeed = CONFIG.ENEMY_BASE_SPEED * 1.2;
+                const pSpeed = CONFIG.PROJECTILE_SPEED * 1.2;
                 if (GAME.entities.projectiles) GAME.entities.projectiles.push(new Projectile(this.x, this.y, tx, ty, 10, {
                     isEnemy: true,
                     color: '#ff00ff',
@@ -5566,6 +5566,7 @@ function initSocket() {
 
         NET.socket.on('enemyShoot', (data) => {
             const proj = new Projectile(data.x, data.y, data.tx, data.ty, data.dmg, {
+                isEnemy: true,
                 ownerId: 'remote_enemy', speed: data.speed, size: data.size, pierce: data.pierce,
                 bounce: data.bounce, isCrit: data.isCrit, type: data.type, life: data.life
             });

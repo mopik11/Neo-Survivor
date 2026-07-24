@@ -2286,10 +2286,15 @@ setInterval(() => {
                         else speedMult = 0.7; // Skokan walking speed
                     }
                     if (enemy.type === 7) speedMult = 1.6; // Sebevrah
-                    if (enemy.type === 8) speedMult = 0.4; // Štítonoš
+                    let auraSpeedMult = 1.0;
+                    playersArr.forEach(p => {
+                        if (p && !p.dead && p.aura && dist(enemy.x, enemy.y, p.x, p.y) < (p.auraRange || 150)) {
+                            auraSpeedMult *= (p.auraPower || 0.5);
+                        }
+                    });
 
                     const enemyMod = enemy.mod || 1;
-                    const speed = (CONFIG.ENEMY_BASE_SPEED + (enemyMod * 0.15)) * speedMult;
+                    const speed = (CONFIG.ENEMY_BASE_SPEED + (enemyMod * 0.15)) * speedMult * auraSpeedMult;
                     
                     enemy.knockback = enemy.knockback || {x:0, y:0};
 
