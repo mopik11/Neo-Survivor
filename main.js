@@ -7655,7 +7655,55 @@ function handleEnemyDeath(enemy) {
 }
 
 let gamepadFocusIndex = 0;
-let lastGamepadState = { dpadUp: false, dpadDown: false, dpadLeft: false, dpadRight: false, btnA: false, btnStart: false };
+let gamepadLastModalId = null;
+let lastGamepadState = { dpadUp: false, dpadDown: false, dpadLeft: false, dpadRight: false, btnA: false, btnStart: false, connected: false };
+
+function getSpatialNextFocus(currentEl, focusableElements, direction) {
+    if (!currentEl || !focusableElements || focusableElements.length === 0) return focusableElements[0];
+    
+    const currRect = currentEl.getBoundingClientRect();
+    const currCenter = {
+        x: currRect.left + currRect.width / 2,
+        y: currRect.top + currRect.height / 2
+    };
+
+    let bestElem = null;
+    let minDistance = Infinity;
+
+    focusableElements.forEach(el => {
+        if (el === currentEl) return;
+        const rect = el.getBoundingClientRect();
+        const center = {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        };
+
+        const dx = center.x - currCenter.x;
+        const dy = center.y - currCenter.y;
+
+        let isCandidate = false;
+        if (direction === 'up' && dy < -5) isCandidate = true;
+        if (direction === 'down' && dy > 5) isCandidate = true;
+        if (direction === 'left' && dx < -5) isCandidate = true;
+        if (direction === 'right' && dx > 5) isCandidate = true;
+
+        if (isCandidate) {
+            let dist = 0;
+            if (direction === 'up' || direction === 'down') {
+                dist = Math.abs(dy) + Math.abs(dx) * 1.5;
+            } else {
+                dist = Math.abs(dx) + Math.abs(dy) * 1.5;
+            }
+
+            if (dist < minDistance) {
+                minDistance = dist;
+                bestElem = el;
+            }
+        }
+    });
+
+    return bestElem;
+}
 
 function showControllerNotification(connected, controllerName = "Xbox / Gamepad") {
     if (window._lastGamepadNotifyConnected === connected) return;
@@ -7754,10 +7802,10 @@ function updateGamepad() {
         const activeModals = Array.from(document.querySelectorAll('.modal.active'));
         const isModalOpen = activeModals.length > 0;
         
-        const dpadUp = gp.axes[1] < -0.5 || gp.buttons[12]?.pressed;
-        const dpadDown = gp.axes[1] > 0.5 || gp.buttons[13]?.pressed;
-        const dpadLeft = gp.axes[0] < -0.5 || gp.buttons[14]?.pressed;
-        const dpadRight = gp.axes[0] > 0.5 || gp.buttons[15]?.pressed;
+        const dpadUp = gp.axes[1] < -0.35 || gp.buttons[12]?.pressed;
+        const dpadDown = gp.axes[1] > 0.35 || gp.buttons[13]?.pressed;
+        const dpadLeft = gp.axes[0] < -0.35 || gp.buttons[14]?.pressed;
+        const dpadRight = gp.axes[0] > 0.35 || gp.buttons[15]?.pressed;
         
         if (isModalOpen) {
             let topModal = activeModals[activeModals.length - 1];
@@ -7765,23 +7813,46 @@ function updateGamepad() {
             if (profileModal && profileModal.classList.contains('active')) {
                 topModal = profileModal;
             }
+
+            if (topModal.id !== gamepadLastModalId) {
+                gamepadLastModalId = topModal.id;
+                gamepadFocusIndex = 0;
+            }
             
             const focusable = Array.from(topModal.querySelectorAll('button:not([style*="display: none"]), input[type="checkbox"], .dropdown-option, .upgrade-card, .btn-restart:not([style*="display: none"])')).filter(el => {
                 const style = window.getComputedStyle(el);
                 return style.display !== 'none' && style.visibility !== 'hidden';
             });
             if (focusable.length > 0) {
+                if (gamepadFocusIndex < 0 || gamepadFocusIndex >= focusable.length) {
+                    gamepadFocusIndex = 0;
+                }
+
+                let currentEl = focusable[gamepadFocusIndex];
+
+                let navDir = null;
+                if (dpadDown && !lastGamepadState.dpadDown) navDir = 'down';
+                else if (dpadUp && !lastGamepadState.dpadUp) navDir = 'up';
+                else if (dpadRight && !lastGamepadState.dpadRight) navDir = 'right';
+                else if (dpadLeft && !lastGamepadState.dpadLeft) navDir = 'left';
+
+                if (navDir) {
+                    const nextEl = getSpatialNextFocus(currentEl, focusable, navDir);
+                    if (nextEl) {
+                        const newIdx = focusable.indexOf(nextEl);
+                        if (newIdx !== -1) {
+                            gamepadFocusIndex = newIdx;
+                            currentEl = nextEl;
+                        }
+                    } else {
+                        // Fallback 1D linear step if no spatial candidate found in direction
+                        if (navDir === 'down' || navDir === 'right') gamepadFocusIndex = (gamepadFocusIndex + 1) % focusable.length;
+                        if (navDir === 'up' || navDir === 'left') gamepadFocusIndex = (gamepadFocusIndex - 1 + focusable.length) % focusable.length;
+                        currentEl = focusable[gamepadFocusIndex];
+                    }
+                }
+
                 focusable.forEach(f => f.classList.remove('gamepad-focus'));
-                
-                if (dpadDown && !lastGamepadState.dpadDown) gamepadFocusIndex++;
-                if (dpadUp && !lastGamepadState.dpadUp) gamepadFocusIndex--;
-                if (dpadRight && !lastGamepadState.dpadRight) gamepadFocusIndex++;
-                if (dpadLeft && !lastGamepadState.dpadLeft) gamepadFocusIndex--;
-                
-                if (gamepadFocusIndex < 0) gamepadFocusIndex = focusable.length - 1;
-                if (gamepadFocusIndex >= focusable.length) gamepadFocusIndex = 0;
-                
-                const currentEl = focusable[gamepadFocusIndex];
                 if (currentEl) {
                     currentEl.classList.add('gamepad-focus');
                     if (document.activeElement !== currentEl && typeof currentEl.focus === 'function') {
