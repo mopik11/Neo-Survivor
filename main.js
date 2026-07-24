@@ -4774,6 +4774,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
         const itemIdx = Math.floor(Math.abs(currentX) / itemWidth);
         if (itemIdx !== lastTickIdx && itemIdx < 40) {
             playSound('crateSpin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(45, 0.25, 0.6);
             lastTickIdx = itemIdx;
         }
         if (Date.now() - startTime > 7000) clearInterval(GAME.crateTickInterval);
@@ -4860,23 +4861,29 @@ function startCrateAnimation(winner, crateType = 'basic') {
         if (winner.id === 'ultra_rare') {
             showConfetti(2000);
             playSound('crateWin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(750, 1.0, 1.0);
             setTimeout(() => playSound('upgrade'), 300);
         } else if (winner.rarity === 'legendary') {
             showConfetti(600);
             playSound('crateWin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(650, 0.95, 0.95);
             setTimeout(() => playSound('upgrade'), 300);
         } else if (winner.rarity === 'epic') {
             showConfetti(300);
             playSound('crateWin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(500, 0.85, 0.85);
         } else if (winner.rarity === 'rare') {
             showConfetti(150);
             playSound('crateWin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(380, 0.7, 0.7);
         } else if (winner.rarity === 'uncommon') {
             showConfetti(60);
             playSound('crateWin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(280, 0.5, 0.5);
         } else {
             showConfetti(20);
             playSound('crateWin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(200, 0.35, 0.35);
         }
     };
 
