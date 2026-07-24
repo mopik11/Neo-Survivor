@@ -7535,6 +7535,14 @@ function useUltimate(cx, cy) {
     const ability = META.selectedAbility || 1;
     const p = GAME.entities.player;
 
+    if (window.triggerGamepadVibration) {
+        if (ability === 1) window.triggerGamepadVibration(250, 0.95, 0.95);
+        else if (ability === 2) window.triggerGamepadVibration(400, 0.6, 0.85);
+        else if (ability === 3) window.triggerGamepadVibration(300, 0.7, 0.7);
+        else if (ability === 4) window.triggerGamepadVibration(350, 0.4, 0.9);
+        else window.triggerGamepadVibration(200, 0.5, 0.6);
+    }
+
     if (ability === 1) { // SNIPER
         const cam = GAME.camera;
         const worldTargetX = cx + (cam.x / GAME.zoom);
@@ -8193,6 +8201,10 @@ function update(dt) {
 
                             if (t.isLocal) {
                                 shakeScreen(8);
+                                if (window.triggerGamepadVibration) {
+                                    if (t.dead) window.triggerGamepadVibration(650, 1.0, 0.85);
+                                    else window.triggerGamepadVibration(160, 0.75, 0.45);
+                                }
                                 const overlay = document.getElementById('hit-overlay');
                                 if (overlay) {
                                     overlay.style.opacity = '1';
@@ -8272,6 +8284,10 @@ function update(dt) {
 
                         if (pl.isLocal) {
                             shakeScreen(5);
+                            if (window.triggerGamepadVibration) {
+                                if (pl.dead) window.triggerGamepadVibration(650, 1.0, 0.85);
+                                else window.triggerGamepadVibration(140, 0.65, 0.35);
+                            }
                             const overlay = document.getElementById('hit-overlay');
                             if (overlay) {
                                 overlay.style.opacity = '1';
