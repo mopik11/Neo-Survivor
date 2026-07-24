@@ -212,6 +212,26 @@ function broadcastLeaderboard() {
 const os = require('os');
 const net = require('net');
 
+function checkPort(port, host = '127.0.0.1', timeout = 800) {
+    return new Promise((resolve) => {
+        const socket = new net.Socket();
+        socket.setTimeout(timeout);
+        socket.on('connect', () => {
+            socket.destroy();
+            resolve(true);
+        });
+        socket.on('error', () => {
+            socket.destroy();
+            resolve(false);
+        });
+        socket.on('timeout', () => {
+            socket.destroy();
+            resolve(false);
+        });
+        socket.connect(port, host);
+    });
+}
+
 function queryMinecraftServer(host = '127.0.0.1', port = 25565, timeout = 1200) {
     return new Promise((resolve) => {
         const client = new net.Socket();
@@ -259,29 +279,27 @@ function queryMinecraftServer(host = '127.0.0.1', port = 25565, timeout = 1200) 
 
         function parseResult() {
             try {
-                if (buffer.length < 3) {
-                    client.destroy();
-                    return resolve({ online: false, players: [], count: 0, max: 0, version: null });
-                }
-                const str = buffer.toString('utf8');
-                const jsonStart = str.indexOf('{');
-                const jsonEnd = str.lastIndexOf('}');
-                if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-                    const jsonStr = str.substring(jsonStart, jsonEnd + 1);
-                    const parsed = JSON.parse(jsonStr);
-                    const onlineCount = parsed.players ? (parsed.players.online || 0) : 0;
-                    const maxPlayers = parsed.players ? (parsed.players.max || 0) : 0;
-                    const sample = parsed.players ? (parsed.players.sample || []) : [];
-                    const playerNames = sample.map(p => p.name || p).filter(Boolean);
-                    const version = parsed.version ? (parsed.version.name || '') : '';
-                    client.destroy();
-                    return resolve({
-                        online: true,
-                        count: onlineCount,
-                        max: maxPlayers,
-                        players: playerNames,
-                        version: version
-                    });
+                if (buffer.length >= 3) {
+                    const str = buffer.toString('utf8');
+                    const jsonStart = str.indexOf('{');
+                    const jsonEnd = str.lastIndexOf('}');
+                    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+                        const jsonStr = str.substring(jsonStart, jsonEnd + 1);
+                        const parsed = JSON.parse(jsonStr);
+                        const onlineCount = parsed.players ? (parsed.players.online || 0) : 0;
+                        const maxPlayers = parsed.players ? (parsed.players.max || 0) : 0;
+                        const sample = parsed.players ? (parsed.players.sample || []) : [];
+                        const playerNames = sample.map(p => p.name || p).filter(Boolean);
+                        const version = parsed.version ? (parsed.version.name || '') : '';
+                        client.destroy();
+                        return resolve({
+                            online: true,
+                            count: onlineCount,
+                            max: maxPlayers,
+                            players: playerNames,
+                            version: version
+                        });
+                    }
                 }
             } catch (e) {}
             client.destroy();
@@ -297,7 +315,14 @@ async function getSystemStatsData() {
     const memPercent = Math.round((usedMem / totalMem) * 100);
     const cpuLoad = os.loadavg ? os.loadavg()[0].toFixed(2) : '0.00';
     const uptimeSec = Math.floor(process.uptime());
-    const mcStatus = await queryMinecraftServer('127.0.0.1', 25565);
+    
+    const isPortOpen = await checkPort(25565);
+    let mcStatus = { online: false, players: [], count: 0, max: 0, version: null };
+
+    if (isPortOpen) {
+        mcStatus = await queryMinecraftServer('127.0.0.1', 25565);
+        mcStatus.online = true;
+    }
 
     return {
         ram: {
@@ -309,7 +334,7 @@ async function getSystemStatsData() {
         uptime: uptimeSec,
         ports: {
             3000: true,
-            25565: mcStatus.online
+            25565: isPortOpen
         },
         mc: mcStatus
     };

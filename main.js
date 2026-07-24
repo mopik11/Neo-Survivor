@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.578
+ * NEO SURVIVOR - Core Game Logic - v1.579
  */
 
 window.addEventListener('beforeunload', () => {
@@ -3710,6 +3710,7 @@ function togglePause(isAFK = false, forceState = null) {
         document.getElementById('stat-regen').innerText = p.regen + ' HP/s';
         document.getElementById('stat-lifesteal').innerText = Math.floor(p.lifestealChance * 100) + '%';
         
+        // In pause mode, update stat displays
         const checkAuto = document.getElementById('chk-autoselect-pause');
         if (checkAuto) {
             checkAuto.checked = !!META.autoSelect;
@@ -3717,27 +3718,6 @@ function togglePause(isAFK = false, forceState = null) {
                 META.autoSelect = checkAuto.checked;
                 saveMeta();
             };
-        }
-
-
-        // In multiplayer: disconnect socket immediately when paused/AFK
-        // This stops the server from spawning enemies for this player
-        if (NET.isMultiplayer && NET.socket) {
-            console.log('[PAUSE/AFK] Disconnecting from server to stop enemy accumulation');
-            // Save session progress AND roomId before disconnecting
-            if (GAME.entities && GAME.entities.player && !GAME.entities.player.dead) {
-                META.lastSession = {
-                    roomId: NET.roomId,  // Save room to reconnect later
-                    level: GAME.entities.player.level,
-                    xp: GAME.entities.player.xp,
-                    nextLevelXp: GAME.entities.player.nextLevelXp,
-                    upgrades: GAME.entities.player.appliedUpgrades || []
-                };
-                saveMeta();
-            }
-            NET.socket.disconnect();
-            NET.socket = null;
-            NET.isMultiplayer = false;
         }
     }
 
@@ -3750,14 +3730,6 @@ function togglePause(isAFK = false, forceState = null) {
         GAME.lastSpawnTime = Date.now();
         META.isAFK = false;
         GAME.lastActivity = Date.now();
-
-        // Auto-rejoin room if it was a multiplayer session
-        if (META.lastSession && META.lastSession.roomId) {
-            console.log('[RESUME] Attempting auto-rejoin to room:', META.lastSession.roomId);
-            // We set lastMoveTime here too to prevent immediate AFK trigger
-            META.lastMoveTime = Date.now();
-            window.joinCloudServer(META.lastSession.roomId);
-        }
     }
 }
 
@@ -7436,19 +7408,7 @@ function init() {
 
     const btnResume = document.getElementById('btn-resume');
     if (btnResume) btnResume.onclick = () => {
-        if (META.lastSession && META.lastSession.roomId) {
-            // Was disconnected from MP room – reconnect to the same room
-            const savedRoomId = META.lastSession.roomId;
-            console.log('[RESUME] Reconnecting to room:', savedRoomId);
-            // Close pause modal first
-            document.getElementById('pause-modal').classList.remove('active');
-            GAME.paused = false;
-            GAME.active = false; // Will be set back by server join
-            // Rejoin – session will be restored in 'joined' handler
-            window.joinCloudServer(savedRoomId);
-        } else {
-            togglePause(false);
-        }
+        togglePause(false);
     };
 
     const mobilePause = document.getElementById('mobile-pause');
