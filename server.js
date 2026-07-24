@@ -209,25 +209,79 @@ function broadcastLeaderboard() {
     });
 }
 
+const os = require('os');
+const net = require('net');
+
+function checkPort(port, host = '127.0.0.1', timeout = 800) {
+    return new Promise((resolve) => {
+        const socket = new net.Socket();
+        socket.setTimeout(timeout);
+        socket.on('connect', () => {
+            socket.destroy();
+            resolve(true);
+        });
+        socket.on('error', () => {
+            socket.destroy();
+            resolve(false);
+        });
+        socket.on('timeout', () => {
+            socket.destroy();
+            resolve(false);
+        });
+        socket.connect(port, host);
+    });
+}
+
+async function getSystemStatsData() {
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const memPercent = Math.round((usedMem / totalMem) * 100);
+    const cpuLoad = os.loadavg ? os.loadavg()[0].toFixed(2) : '0.00';
+    const uptimeSec = Math.floor(process.uptime());
+    const mcOnline = await checkPort(25565);
+
+    return {
+        ram: {
+            usedMb: Math.round(usedMem / 1024 / 1024),
+            totalMb: Math.round(totalMem / 1024 / 1024),
+            percent: memPercent
+        },
+        cpuLoad: cpuLoad,
+        uptime: uptimeSec,
+        ports: {
+            3000: true,
+            25565: mcOnline
+        }
+    };
+}
+
 function broadcastServerStats() {
     let playersInRooms = 0;
     for (const id in ROOMS) {
         if (ROOMS[id] && ROOMS[id].players) {
+            let activeInRoom = 0;
             for (const pid in ROOMS[id].players) {
                 if (!ROOMS[id].players[pid].disconnected) {
                     playersInRooms++;
+                    activeInRoom++;
                 }
+            }
+            if (activeInRoom === 0) {
+                delete ROOMS[id]; // Automatické vyčištění prázdných místností
             }
         }
     }
-    // Zjistíme počet unikátních hráčů podle playerId (ignoring admin.html)
+    
+    // Zjistíme počet unikátních SKUTEČNÝCH hráčů (ignoring admin.html)
     const uniquePlayers = new Set();
     for (const [id, socket] of io.sockets.sockets) {
-        if (socket.isAdminPage || socket.isAdmin) continue;
+        const isPageAdmin = socket.isAdminPage || socket.isAdmin || (socket.handshake.query && (socket.handshake.query.page === 'admin' || socket.handshake.query.isAdminPage === 'true'));
+        if (isPageAdmin) continue;
         if (socket.playerId) {
             uniquePlayers.add(socket.playerId);
-        } else {
-            uniquePlayers.add(id); // Pokud nemá playerId, počítáme socket
+        } else if (socket.authenticatedUser) {
+            uniquePlayers.add(socket.authenticatedUser);
         }
     }
     const totalOnline = uniquePlayers.size;
@@ -600,6 +654,7 @@ io.on('connection', (socket) => {
 
     // --- ADMIN KONZOLE (2FA OCHRANA + RELACE) ---
     socket.on('requestAdminPin', (data) => {
+        socket.isAdminPage = true;
         console.log(`[ADMIN] Login attempt for user: ${data.user}`);
         Security.verifyPassword(data.pass, ADMIN_PASS_HASH).then(isMatch => {
             if (data.user === ADMIN_USER && isMatch) {
@@ -616,9 +671,11 @@ io.on('connection', (socket) => {
             console.error(`[ADMIN] Critical error during verification:`, err);
             socket.emit('adminAuthError', "Chyba serveru při ověřování.");
         });
+        broadcastServerStats();
     });
 
     socket.on('verifyAdminPin', (data) => {
+        socket.isAdminPage = true;
         Security.verifyPassword(data.pass, ADMIN_PASS_HASH).then(isMatch => {
             if (data.user === ADMIN_USER && isMatch && data.pin === SERVER_ADMIN_PIN) {
                 socket.isAdmin = true;
@@ -630,9 +687,11 @@ io.on('connection', (socket) => {
         }).catch(err => {
             socket.emit('adminAuthError', "Chyba serveru při ověřování PINu.");
         });
+        broadcastServerStats();
     });
 
     socket.on('adminCommand', (data) => {
+        socket.isAdminPage = true;
         if (!socket.isAdmin) {
             return socket.emit('adminResponse', { msg: "CHYBA: Neautorizovaný přístup! Přihlaste se.", color: "red" });
         }
@@ -833,19 +892,49 @@ io.on('connection', (socket) => {
             });
         }
         else if (cmd === 'rooms') {
-            let count = Object.keys(ROOMS).length;
-            let text = `Aktivní místnosti: ${count}\n`;
             let roomsData = [];
             for (let id in ROOMS) {
-                const pCount = Object.keys(ROOMS[id].players).length;
-                text += `- ID: ${id} | Hráčů: ${pCount} | Lvl: ${ROOMS[id].level}\n`;
-                roomsData.push({ id: id, players: pCount, level: ROOMS[id].level });
+                const room = ROOMS[id];
+                const activePlayers = Object.values(room.players || {}).filter(p => !p.disconnected);
+                if (activePlayers.length === 0) {
+                    delete ROOMS[id]; // Vyčištění opuštěných místností
+                    continue;
+                }
+                roomsData.push({
+                    id: id,
+                    level: room.level || 1,
+                    xp: room.xp || 0,
+                    nextLevelXp: room.nextLevelXp || 100,
+                    time: room.time || 0,
+                    bossesSlain: room.lastBossLevelSpawned || 0,
+                    isSolo: !!room.isSolo,
+                    playersCount: activePlayers.length,
+                    players: activePlayers.map(p => ({
+                        name: p.name || p.username || 'Hráč',
+                        username: p.username,
+                        level: p.level || 1,
+                        hp: Math.round(p.hp || 0),
+                        maxHp: Math.round(p.maxHp || 100),
+                        damage: p.damage || 10,
+                        dead: !!p.dead
+                    }))
+                });
             }
             socket.emit('adminResponse', { 
-                msg: text, 
+                msg: `Aktivních místností: ${roomsData.length}`, 
                 color: "cyan",
                 type: 'rooms',
                 data: roomsData
+            });
+        }
+        else if (cmd === 'sysStats') {
+            getSystemStatsData().then(statsData => {
+                socket.emit('adminResponse', {
+                    msg: "Systémové statistiky načteny.",
+                    color: "cyan",
+                    type: 'sysStats',
+                    data: statsData
+                });
             });
         }
         else if (cmd === 'feedback') {
@@ -2076,7 +2165,7 @@ io.on('connection', (socket) => {
             if (!anyActive) {
                 ROOMS[r].cleanupTimer = setTimeout(() => {
                     delete ROOMS[r];
-                }, 10 * 60 * 1000);
+                }, 5 * 1000); // 5 sekund na vyčištění prázdné místnosti
             } else if (ROOMS[r].paused) {
                 if (ROOMS[r].readyCount >= activePlayersCount && activePlayersCount > 0) {
                     ROOMS[r].paused = false;
