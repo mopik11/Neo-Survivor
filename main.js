@@ -122,6 +122,14 @@ const SOUND_URLS = {
 const SOUND_BUFFERS = {};
 
 function playSound(name) {
+    if (typeof window.triggerGamepadVibration === 'function') {
+        if (name === 'shoot') window.triggerGamepadVibration(30, 0.05, 0.25);
+        else if (name === 'crateSpin') window.triggerGamepadVibration(45, 0.25, 0.6);
+        else if (name === 'crateWin') window.triggerGamepadVibration(550, 0.9, 0.9);
+        else if (name === 'bossWarning') window.triggerGamepadVibration(500, 1.0, 0.8);
+        else if (name === 'upgrade') window.triggerGamepadVibration(150, 0.4, 0.6);
+        else if (name === 'coin') window.triggerGamepadVibration(40, 0.05, 0.2);
+    }
     if (!META.settings.sfx) return;
     if (AudioEngine.ctx) {
         if (AudioEngine.ctx.state === 'suspended') {
@@ -2413,6 +2421,18 @@ class Player {
     }
 
     update(dt) {
+        if (this.isLocal) {
+            if (this._prevHp !== undefined && this.hp < this._prevHp) {
+                const loss = this._prevHp - this.hp;
+                if (this.hp <= 0 || this.dead) {
+                    if (window.triggerGamepadVibration) window.triggerGamepadVibration(700, 1.0, 0.85);
+                } else {
+                    if (window.triggerGamepadVibration) window.triggerGamepadVibration(160, Math.min(1.0, 0.4 + loss / 30), 0.65);
+                }
+            }
+            this._prevHp = this.hp;
+        }
+
         if (this.dead) return;
 
         // Meta Upgrades: Regeneration
@@ -7844,6 +7864,10 @@ function updateGamepad() {
             if (profileModal && profileModal.classList.contains('active')) {
                 topModal = profileModal;
             }
+            const levelupModal = document.getElementById('levelup-modal');
+            if (levelupModal && levelupModal.classList.contains('active')) {
+                topModal = levelupModal;
+            }
 
             if (topModal.id !== gamepadLastModalId) {
                 gamepadLastModalId = topModal.id;
@@ -7876,11 +7900,6 @@ function updateGamepad() {
                             gamepadFocusIndex = newIdx;
                             currentEl = nextEl;
                         }
-                    } else {
-                        // Fallback 1D linear step if no spatial candidate found in direction
-                        if (navDir === 'down' || navDir === 'right') gamepadFocusIndex = (gamepadFocusIndex + 1) % focusable.length;
-                        if (navDir === 'up' || navDir === 'left') gamepadFocusIndex = (gamepadFocusIndex - 1 + focusable.length) % focusable.length;
-                        currentEl = focusable[gamepadFocusIndex];
                     }
                 }
 
