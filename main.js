@@ -122,6 +122,14 @@ const SOUND_URLS = {
 const SOUND_BUFFERS = {};
 
 function playSound(name) {
+    if (typeof window.triggerGamepadVibration === 'function') {
+        if (name === 'shoot') window.triggerGamepadVibration(30, 0.05, 0.25);
+        else if (name === 'crateSpin') window.triggerGamepadVibration(45, 0.25, 0.6);
+        else if (name === 'crateWin') window.triggerGamepadVibration(550, 0.9, 0.9);
+        else if (name === 'bossWarning') window.triggerGamepadVibration(500, 1.0, 0.8);
+        else if (name === 'upgrade') window.triggerGamepadVibration(150, 0.4, 0.6);
+        else if (name === 'coin') window.triggerGamepadVibration(40, 0.05, 0.2);
+    }
     if (!META.settings.sfx) return;
     if (AudioEngine.ctx) {
         if (AudioEngine.ctx.state === 'suspended') {
@@ -2413,6 +2421,18 @@ class Player {
     }
 
     update(dt) {
+        if (this.isLocal) {
+            if (this._prevHp !== undefined && this.hp < this._prevHp) {
+                const loss = this._prevHp - this.hp;
+                if (this.hp <= 0 || this.dead) {
+                    if (window.triggerGamepadVibration) window.triggerGamepadVibration(700, 1.0, 0.85);
+                } else {
+                    if (window.triggerGamepadVibration) window.triggerGamepadVibration(160, Math.min(1.0, 0.4 + loss / 30), 0.65);
+                }
+            }
+            this._prevHp = this.hp;
+        }
+
         if (this.dead) return;
 
         // Meta Upgrades: Regeneration
@@ -4774,6 +4794,7 @@ function startCrateAnimation(winner, crateType = 'basic') {
         const itemIdx = Math.floor(Math.abs(currentX) / itemWidth);
         if (itemIdx !== lastTickIdx && itemIdx < 40) {
             playSound('crateSpin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(45, 0.25, 0.6);
             lastTickIdx = itemIdx;
         }
         if (Date.now() - startTime > 7000) clearInterval(GAME.crateTickInterval);
@@ -4860,23 +4881,29 @@ function startCrateAnimation(winner, crateType = 'basic') {
         if (winner.id === 'ultra_rare') {
             showConfetti(2000);
             playSound('crateWin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(750, 1.0, 1.0);
             setTimeout(() => playSound('upgrade'), 300);
         } else if (winner.rarity === 'legendary') {
             showConfetti(600);
             playSound('crateWin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(650, 0.95, 0.95);
             setTimeout(() => playSound('upgrade'), 300);
         } else if (winner.rarity === 'epic') {
             showConfetti(300);
             playSound('crateWin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(500, 0.85, 0.85);
         } else if (winner.rarity === 'rare') {
             showConfetti(150);
             playSound('crateWin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(380, 0.7, 0.7);
         } else if (winner.rarity === 'uncommon') {
             showConfetti(60);
             playSound('crateWin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(280, 0.5, 0.5);
         } else {
             showConfetti(20);
             playSound('crateWin');
+            if (window.triggerGamepadVibration) window.triggerGamepadVibration(200, 0.35, 0.35);
         }
     };
 
@@ -7528,6 +7555,14 @@ function useUltimate(cx, cy) {
     const ability = META.selectedAbility || 1;
     const p = GAME.entities.player;
 
+    if (window.triggerGamepadVibration) {
+        if (ability === 1) window.triggerGamepadVibration(250, 0.95, 0.95);
+        else if (ability === 2) window.triggerGamepadVibration(400, 0.6, 0.85);
+        else if (ability === 3) window.triggerGamepadVibration(300, 0.7, 0.7);
+        else if (ability === 4) window.triggerGamepadVibration(350, 0.4, 0.9);
+        else window.triggerGamepadVibration(200, 0.5, 0.6);
+    }
+
     if (ability === 1) { // SNIPER
         const cam = GAME.camera;
         const worldTargetX = cx + (cam.x / GAME.zoom);
@@ -7657,6 +7692,22 @@ function handleEnemyDeath(enemy) {
 let gamepadFocusIndex = 0;
 let gamepadLastModalId = null;
 let lastGamepadState = { dpadUp: false, dpadDown: false, dpadLeft: false, dpadRight: false, btnA: false, btnStart: false, connected: false };
+
+window.triggerGamepadVibration = function(duration = 150, strongMagnitude = 0.5, weakMagnitude = 0.5) {
+    try {
+        const rawGamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        const gamepads = Array.from(rawGamepads).filter(g => g !== null && g !== undefined);
+        const gp = gamepads[0];
+        if (gp && gp.vibrationActuator && typeof gp.vibrationActuator.playEffect === 'function') {
+            gp.vibrationActuator.playEffect('dual-rumble', {
+                startDelay: 0,
+                duration: duration,
+                strongMagnitude: strongMagnitude,
+                weakMagnitude: weakMagnitude
+            }).catch(() => {});
+        }
+    } catch (e) {}
+};
 
 function getSpatialNextFocus(currentEl, focusableElements, direction) {
     if (!currentEl || !focusableElements || focusableElements.length === 0) return focusableElements[0];
@@ -7813,6 +7864,10 @@ function updateGamepad() {
             if (profileModal && profileModal.classList.contains('active')) {
                 topModal = profileModal;
             }
+            const levelupModal = document.getElementById('levelup-modal');
+            if (levelupModal && levelupModal.classList.contains('active')) {
+                topModal = levelupModal;
+            }
 
             if (topModal.id !== gamepadLastModalId) {
                 gamepadLastModalId = topModal.id;
@@ -7837,6 +7892,7 @@ function updateGamepad() {
                 else if (dpadLeft && !lastGamepadState.dpadLeft) navDir = 'left';
 
                 if (navDir) {
+                    if (window.triggerGamepadVibration) window.triggerGamepadVibration(40, 0.05, 0.25);
                     const nextEl = getSpatialNextFocus(currentEl, focusable, navDir);
                     if (nextEl) {
                         const newIdx = focusable.indexOf(nextEl);
@@ -7844,11 +7900,6 @@ function updateGamepad() {
                             gamepadFocusIndex = newIdx;
                             currentEl = nextEl;
                         }
-                    } else {
-                        // Fallback 1D linear step if no spatial candidate found in direction
-                        if (navDir === 'down' || navDir === 'right') gamepadFocusIndex = (gamepadFocusIndex + 1) % focusable.length;
-                        if (navDir === 'up' || navDir === 'left') gamepadFocusIndex = (gamepadFocusIndex - 1 + focusable.length) % focusable.length;
-                        currentEl = focusable[gamepadFocusIndex];
                     }
                 }
 
@@ -7864,10 +7915,12 @@ function updateGamepad() {
                 }
                 
                 if (btnA && !lastGamepadState.btnA) {
+                    if (window.triggerGamepadVibration) window.triggerGamepadVibration(90, 0.4, 0.6);
                     if (currentEl) currentEl.click();
                 }
             }
             if (btnB && !lastGamepadState.btnB) {
+                if (window.triggerGamepadVibration) window.triggerGamepadVibration(70, 0.3, 0.3);
                 if (topModal.id === 'pause-modal') {
                     togglePause(false);
                 } else if (topModal.id !== 'menu-modal' && topModal.id !== 'gameover-modal') {
@@ -7902,6 +7955,7 @@ function updateGamepad() {
                         }
                     }
                     if (typeof useUltimate === 'function') {
+                        if (window.triggerGamepadVibration) window.triggerGamepadVibration(250, 0.8, 0.9);
                         useUltimate(cx, cy);
                         GAME.lastSniperTime = Date.now();
                     }
@@ -8166,6 +8220,10 @@ function update(dt) {
 
                             if (t.isLocal) {
                                 shakeScreen(8);
+                                if (window.triggerGamepadVibration) {
+                                    if (t.dead) window.triggerGamepadVibration(650, 1.0, 0.85);
+                                    else window.triggerGamepadVibration(160, 0.75, 0.45);
+                                }
                                 const overlay = document.getElementById('hit-overlay');
                                 if (overlay) {
                                     overlay.style.opacity = '1';
@@ -8245,6 +8303,10 @@ function update(dt) {
 
                         if (pl.isLocal) {
                             shakeScreen(5);
+                            if (window.triggerGamepadVibration) {
+                                if (pl.dead) window.triggerGamepadVibration(650, 1.0, 0.85);
+                                else window.triggerGamepadVibration(140, 0.65, 0.35);
+                            }
                             const overlay = document.getElementById('hit-overlay');
                             if (overlay) {
                                 overlay.style.opacity = '1';
