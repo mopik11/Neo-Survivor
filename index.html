@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.599" />
+    <link rel="stylesheet" href="style.css?v=1.600" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.599
+            NEO SURVIVOR v1.600
           </div>
         </div>
       </div>
@@ -101,9 +101,6 @@
             ☰
           </button>
           
-          <button id="btn-daily-gift" style="display:none; position: absolute; top: max(20px, env(safe-area-inset-top)); right: max(20px, env(safe-area-inset-right)); width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); cursor: pointer; justify-content: center; align-items: center; font-size: 1.8rem; z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-            🎁
-            <span id="daily-timer" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: #fbbf24; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.5); white-space: nowrap; pointer-events: none; opacity: 0.9;"></span>
           </button>
 
           <!-- Player Stats -->
@@ -115,6 +112,8 @@
             <div class="stat-item-val">Doge: <span id="display-doge" style="color: #fbbf24; font-weight: bold;">0</span></div>
             <span class="stat-sep">|</span>
             <div class="stat-item-val">SP: <span id="display-sp" style="color: #a855f7; font-weight: bold;">0</span></div>
+            <span class="stat-sep desktop-only-sep">|</span>
+            <div class="stat-item-val desktop-only-stat">Controller: <span id="display-controller-status" style="color: #ef4444; font-weight: bold;">Disconnected</span></div>
           </div>
           <!-- Active Players -->
           <div id="menu-active-players" class="active-players-card" style="font-size: 0.75rem; color: #64748b; margin-top: -0.5rem; margin-bottom: 1.5rem; letter-spacing: 1px;">
@@ -173,11 +172,11 @@
 
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
-            <div id="menu-version">
-              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.599</span>
+            <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
+              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.600</span>
             </div>
 
-            <div id="menu-links">
+            <div id="menu-links" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 15px;">
               <span class="powered-by-label" style="color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.7rem; font-weight: 800;">Run on & Powered by:</span>
               
               <a href="https://www.oracle.com/cloud/" target="_blank" onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;" style="display: flex; align-items: center; gap: 6px; text-decoration: none; background: rgba(234, 45, 46, 0.15); border: 1px solid rgba(234, 45, 46, 0.4); padding: 5px 12px; border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 0 12px rgba(234, 45, 46, 0.4)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'" title="Oracle Cloud Server">
@@ -197,7 +196,6 @@
                 <span style="color: #38bdf8; font-weight: 800; font-size: 0.8rem; letter-spacing: 0.5px;">FreeDNS</span>
               </a>
             </div>
-          </div>
           </div>
       </div>
 
@@ -787,7 +785,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>window.GAME_VERSION = '1.599';</script>
-    <script type="module" src="./main.js?v=1.599"></script>
+    <script>window.GAME_VERSION = '1.600';</script>
+    <script type="module" src="./main.js?v=1.600"></script>
   </body>
 </html>

@@ -2190,13 +2190,18 @@ canvas {
     font-size: 0.6rem !important;
   }
 
+  .desktop-only-stat,
+  .desktop-only-sep {
+    display: none !important;
+  }
+
   /* Mobile Multiplayer Modal Styling */
   #multiplayer-modal .modal-content,
   #host-modal .modal-content {
-    width: 92vw !important;
-    max-width: 420px !important;
-    max-height: 88vh !important;
-    padding: 1.2rem 1rem !important;
+    width: 90vw !important;
+    max-width: 650px !important;
+    max-height: 90vh !important;
+    padding: 1.2rem 1.4rem !important;
     border-radius: 20px !important;
     overflow-y: auto !important;
     background: linear-gradient(160deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 27, 75, 0.99) 100%) !important;
@@ -2206,7 +2211,7 @@ canvas {
 
   #multiplayer-modal h2,
   #host-modal h2 {
-    font-size: 1.5rem !important;
+    font-size: 1.6rem !important;
     margin-bottom: 0.8rem !important;
     text-align: center !important;
   }
@@ -2221,6 +2226,15 @@ canvas {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+  }
+
+  #btn-refresh-servers {
+    padding: 5px 12px !important;
+    font-size: 0.75rem !important;
+    width: auto !important;
+    display: inline-block !important;
+    margin: 0 !important;
+    box-shadow: none !important;
   }
 
   #server-list-container {
@@ -2247,9 +2261,9 @@ canvas {
     white-space: nowrap !important;
   }
 
-  #multiplayer-modal button.btn-restart:last-child {
+  #btn-create-new-room {
     padding: 12px !important;
-    font-size: 0.9rem !important;
+    font-size: 0.95rem !important;
     margin-top: 12px !important;
     border-radius: 12px !important;
     background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%) !important;
