@@ -396,26 +396,35 @@
           <div class="modal-body">
             <h2 style="font-size: 2.2rem; margin-bottom: 1.5rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">SÍŤOVÁ HRA</h2>
             
-            <div style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
-              <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                    <h3 style="margin: 0; font-size: 0.9rem; opacity: 0.7; letter-spacing: 1px;">DOSTUPNÉ SERVERY</h3>
-                    <button onclick="requestServerList()" class="btn-restart" style="padding: 5px 10px; font-size: 0.7rem; background: rgba(255,255,255,0.1); border:none;">OBNOVIT</button>
-                </div>
-                <div id="server-list-container" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
-                    <div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">Hledám servery...</div>
+            <div class="multiplayer-split" style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
+              
+              <!-- Left side on mobile (Server List) -->
+              <div class="multiplayer-left" style="flex: 1; display: flex; flex-direction: column;">
+                <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); flex: 1;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                      <h3 style="margin: 0; font-size: 0.9rem; opacity: 0.7; letter-spacing: 1px; white-space: nowrap;">DOSTUPNÉ SERVERY</h3>
+                      <!-- Removed btn-restart class to prevent 100% width overriding the title -->
+                      <button onclick="requestServerList()" class="btn-obnovit modern-glass-btn" style="padding: 5px 10px; font-size: 0.7rem; background: rgba(255,255,255,0.1); border:none; border-radius: 6px; cursor: pointer;">OBNOVIT</button>
+                  </div>
+                  <div id="server-list-container" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
+                      <div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">Hledám servery...</div>
+                  </div>
                 </div>
               </div>
               
-              <div style="color: rgba(255,255,255,0.3); font-size: 0.8rem; letter-spacing: 2px;">— NEBO KÓD —</div>
-              
-              <div class="join-group">
-                  <input type="text" id="input-join-id" placeholder="ZADEJ KÓD...">
-                  <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart btn-join">PŘIPOJIT</button>
+              <!-- Right side on mobile (Join by Code / Create Room) -->
+              <div class="multiplayer-right" style="flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 15px;">
+                <div class="separator-text" style="color: rgba(255,255,255,0.3); font-size: 0.8rem; letter-spacing: 2px; text-align: center;">— NEBO KÓD —</div>
+                
+                <div class="join-group">
+                    <input type="text" id="input-join-id" placeholder="ZADEJ KÓD...">
+                    <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart btn-join">PŘIPOJIT</button>
+                </div>
+                
+                <button onclick="showHostModal()" class="btn-restart" style="width: 100%; background: #a855f7; margin-top: 5px; flex-shrink: 0;">ZALOŽIT NOVOU MÍSTNOST</button>
               </div>
+              
             </div>
-          </div>
-          <button onclick="showHostModal()" class="btn-restart" style="width: 100%; background: #a855f7; margin-top: 15px; flex-shrink: 0;">ZALOŽIT NOVOU MÍSTNOST</button>
         </div>
       </div>
 
