@@ -3719,17 +3719,30 @@ function togglePause(isAFK = false, forceState = null) {
     if (pauseTitle) pauseTitle.innerText = isAFK ? window.T('AFK') : window.T('PAUZA');
 
     if (GAME.paused) {
-        const p = GAME.entities.player;
-        document.getElementById('stat-hp').innerText = Math.floor(p.hp) + ' / ' + p.maxHp;
-        document.getElementById('stat-dmg').innerText = p.damage.toFixed(1);
-        document.getElementById('stat-speed').innerText = p.speed.toFixed(1);
-        document.getElementById('stat-count').innerText = p.projectileCount;
-        document.getElementById('stat-firerate').innerText = (p.fireRate / 1000).toFixed(2) + 's';
-        document.getElementById('stat-crit-chance').innerText = Math.floor(p.critChance * 100) + '%';
-        document.getElementById('stat-crit-dmg').innerText = p.critMultiplier + 'x';
-        document.getElementById('stat-shield').innerText = Math.floor((1 - p.shield) * 100) + '%';
-        document.getElementById('stat-regen').innerText = p.regen + ' HP/s';
-        document.getElementById('stat-lifesteal').innerText = Math.floor(p.lifestealChance * 100) + '%';
+        const p = GAME.entities && GAME.entities.player;
+        if (p) {
+            const elHp = document.getElementById('stat-hp');
+            const elDmg = document.getElementById('stat-dmg');
+            const elSpeed = document.getElementById('stat-speed');
+            const elCount = document.getElementById('stat-count');
+            const elFirerate = document.getElementById('stat-firerate');
+            const elCritChance = document.getElementById('stat-crit-chance');
+            const elCritDmg = document.getElementById('stat-crit-dmg');
+            const elShield = document.getElementById('stat-shield');
+            const elRegen = document.getElementById('stat-regen');
+            const elLifesteal = document.getElementById('stat-lifesteal');
+
+            if (elHp) elHp.innerText = Math.floor(p.hp || 0) + ' / ' + (p.maxHp || 0);
+            if (elDmg) elDmg.innerText = (p.damage || 0).toFixed(1);
+            if (elSpeed) elSpeed.innerText = (p.speed || 0).toFixed(1);
+            if (elCount) elCount.innerText = p.projectileCount || 1;
+            if (elFirerate) elFirerate.innerText = ((p.fireRate || 1000) / 1000).toFixed(2) + 's';
+            if (elCritChance) elCritChance.innerText = Math.floor((p.critChance || 0) * 100) + '%';
+            if (elCritDmg) elCritDmg.innerText = (p.critMultiplier || 3) + 'x';
+            if (elShield) elShield.innerText = Math.floor((1 - (p.shield || 1)) * 100) + '%';
+            if (elRegen) elRegen.innerText = (p.regen || 0) + ' HP/s';
+            if (elLifesteal) elLifesteal.innerText = Math.floor((p.lifestealChance || 0) * 100) + '%';
+        }
         
         // In pause mode, update stat displays
         const checkAuto = document.getElementById('chk-autoselect-pause');
@@ -3742,7 +3755,10 @@ function togglePause(isAFK = false, forceState = null) {
         }
     }
 
-    document.getElementById('pause-modal').classList.toggle('active', GAME.paused);
+    const pauseModal = document.getElementById('pause-modal');
+    if (pauseModal) {
+        pauseModal.classList.toggle('active', GAME.paused);
+    }
 
     // Notify server of pause state in multiplayer
     if (NET.isMultiplayer && NET.socket) {
