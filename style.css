@@ -1126,6 +1126,21 @@ canvas {
       gap: 10px !important;
     }
     
+    /* MOBILE FULLSCREEN MULTIPLAYER OVERRIDE */
+    #multiplayer-modal {
+      padding: 0 !important;
+    }
+    
+    #multiplayer-modal .modal-content {
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: none !important;
+      max-height: none !important;
+      border-radius: 0 !important;
+      border: none !important;
+      margin: 0 !important;
+    }
+    
     .multiplayer-split {
       flex-direction: row !important;
       gap: 15px !important;
@@ -2241,7 +2256,7 @@ canvas {
   #menu-footer {
     position: absolute !important;
     bottom: 5px !important;
-    left: 60% !important;
+    left: 53% !important;
     transform: translateX(-50%) !important;
     display: flex !important;
     flex-direction: column !important;
@@ -2922,19 +2937,4 @@ input.gamepad-focus,
         box-shadow: 0 15px 30px -5px rgba(139, 92, 246, 0.7), inset 0 0 20px rgba(255, 255, 255, 0.25);
         filter: brightness(1.35);
     }
-}
-
-/* FULLSCREEN MULTIPLAYER MODAL OVERRIDE */
-#multiplayer-modal {
-  padding: 0 !important;
-}
-
-#multiplayer-modal .modal-content {
-  width: 100vw !important;
-  height: 100vh !important;
-  max-width: none !important;
-  max-height: none !important;
-  border-radius: 0 !important;
-  border: none !important;
-  margin: 0 !important;
 }
