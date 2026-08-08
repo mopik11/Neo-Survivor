@@ -1094,6 +1094,16 @@ canvas {
       gap: 10px;
   }
 
+  #menu-links {
+    margin-top: 10px !important;
+  }
+  
+  #menu-links > span:first-child {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 5px;
+  }
+
   .upgrade-grid {
     grid-template-columns: 1fr;
     max-height: 50vh;
