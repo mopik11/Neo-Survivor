@@ -2135,15 +2135,16 @@ canvas {
 
   #menu-footer {
     position: absolute !important;
-    bottom: 5px !important;
+    bottom: 4px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
-    gap: 4px !important;
+    gap: 2px !important;
     z-index: 100 !important;
-    width: auto !important;
+    width: 95% !important;
+    max-width: 520px !important;
     pointer-events: auto !important;
   }
   
@@ -2151,8 +2152,8 @@ canvas {
     position: static !important;
     transform: none !important;
     margin: 0 !important;
-    font-size: 0.6rem !important;
-    color: rgba(71, 73, 105, 0.6) !important;
+    font-size: 0.55rem !important;
+    color: rgba(148, 163, 184, 0.7) !important;
     pointer-events: none;
     z-index: auto !important;
     white-space: nowrap !important;
@@ -2162,18 +2163,97 @@ canvas {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
-    gap: 12px !important;
-    opacity: 0.5 !important;
+    gap: 6px !important;
     margin: 0 !important;
+    flex-wrap: nowrap !important;
+  }
+
+  #menu-links .powered-by-label {
+    font-size: 0.55rem !important;
+    letter-spacing: 0.5px !important;
+    white-space: nowrap !important;
   }
   
   #menu-links svg {
     height: 12px !important;
-    width: 12px !important;
+    width: 14px !important;
   }
   
   #menu-links a {
+    padding: 3px 7px !important;
     font-size: 0.6rem !important;
+    border-radius: 6px !important;
+    gap: 4px !important;
+  }
+
+  #menu-links a span {
+    font-size: 0.6rem !important;
+  }
+
+  /* Mobile Multiplayer Modal Styling */
+  #multiplayer-modal .modal-content,
+  #host-modal .modal-content {
+    width: 92vw !important;
+    max-width: 420px !important;
+    max-height: 88vh !important;
+    padding: 1.2rem 1rem !important;
+    border-radius: 20px !important;
+    overflow-y: auto !important;
+    background: linear-gradient(160deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 27, 75, 0.99) 100%) !important;
+    border: 1px solid rgba(168, 85, 247, 0.3) !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), 0 0 20px rgba(168, 85, 247, 0.2) !important;
+  }
+
+  #multiplayer-modal h2,
+  #host-modal h2 {
+    font-size: 1.5rem !important;
+    margin-bottom: 0.8rem !important;
+    text-align: center !important;
+  }
+
+  #multiplayer-modal .btn-close-x,
+  #host-modal .btn-close-x {
+    top: 10px !important;
+    right: 12px !important;
+    font-size: 1.4rem !important;
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  #server-list-container {
+    max-height: 120px !important;
+  }
+
+  #multiplayer-modal .join-group {
+    display: flex !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  #multiplayer-modal .join-group input {
+    padding: 10px 12px !important;
+    font-size: 0.85rem !important;
+    border-radius: 12px !important;
+    flex: 1 !important;
+  }
+
+  #multiplayer-modal .join-group button {
+    padding: 10px 16px !important;
+    font-size: 0.85rem !important;
+    border-radius: 12px !important;
+    white-space: nowrap !important;
+  }
+
+  #multiplayer-modal button.btn-restart:last-child {
+    padding: 12px !important;
+    font-size: 0.9rem !important;
+    margin-top: 12px !important;
+    border-radius: 12px !important;
+    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%) !important;
+    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4) !important;
   }
 }
 
