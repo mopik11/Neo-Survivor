@@ -1124,16 +1124,6 @@ canvas {
     
     .footer-badges {
       gap: 10px !important;
-    }    /* MULTIPLAYER MODAL MOBILE FIXES (Split into halves) */
-    #multiplayer-modal .modal-content {
-      padding: 1rem !important;
-      height: 90vh !important;
-      max-width: 90vw !important; /* Make it wider to fit halves */
-    }
-    
-    #multiplayer-modal h2 {
-      font-size: 1.5rem !important;
-      margin-bottom: 10px !important;
     }
     
     .multiplayer-split {
