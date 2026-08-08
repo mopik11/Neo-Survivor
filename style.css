@@ -2194,80 +2194,241 @@ canvas {
   .desktop-only-sep {
     display: none !important;
   }
+}
 
-  /* Mobile Multiplayer Modal Styling */
-  #multiplayer-modal .modal-content,
-  #host-modal .modal-content {
-    width: 90vw !important;
-    max-width: 650px !important;
-    max-height: 90vh !important;
-    padding: 1.2rem 1.4rem !important;
-    border-radius: 20px !important;
-    overflow-y: auto !important;
-    background: linear-gradient(160deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 27, 75, 0.99) 100%) !important;
-    border: 1px solid rgba(168, 85, 247, 0.3) !important;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), 0 0 20px rgba(168, 85, 247, 0.2) !important;
+/* Wide Premium Multiplayer Modal (v1.601) */
+.multiplayer-modal-wide {
+  width: 90vw !important;
+  max-width: 780px !important;
+  max-height: 90vh !important;
+  padding: 2rem !important;
+  border-radius: 24px !important;
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.97) 0%, rgba(30, 27, 75, 0.98) 100%) !important;
+  border: 1px solid rgba(168, 85, 247, 0.35) !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(168, 85, 247, 0.25) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  overflow-y: auto !important;
+  position: relative !important;
+}
+
+#multiplayer-modal.active .modal-content,
+#host-modal.active .modal-content {
+  animation: modalExpandWide 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes modalExpandWide {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(25px);
+    filter: blur(8px);
   }
-
-  #multiplayer-modal h2,
-  #host-modal h2 {
-    font-size: 1.6rem !important;
-    margin-bottom: 0.8rem !important;
-    text-align: center !important;
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
   }
+}
 
-  #multiplayer-modal .btn-close-x,
-  #host-modal .btn-close-x {
-    top: 10px !important;
-    right: 12px !important;
+.mp-modal-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.mp-modal-title {
+  font-size: 2rem !important;
+  font-weight: 900 !important;
+  background: linear-gradient(135deg, #a5b4fc 0%, #d8b4fe 50%, #c084fc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 1px;
+  margin-bottom: 4px !important;
+}
+
+.mp-modal-subtitle {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.mp-modal-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.mp-box {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.mp-box-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.mp-box-title-row h3,
+.mp-action-section h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #c084fc;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.btn-refresh-pill {
+  padding: 6px 14px !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  background: rgba(168, 85, 247, 0.2) !important;
+  border: 1px solid rgba(168, 85, 247, 0.5) !important;
+  color: #e9d5ff !important;
+  border-radius: 10px !important;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.btn-refresh-pill:hover {
+  background: rgba(168, 85, 247, 0.4) !important;
+  transform: scale(1.05);
+}
+
+.mp-server-list {
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.mp-server-loading {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.85rem;
+  padding: 20px 0;
+}
+
+.mp-join-input-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mp-join-input-group input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  padding: 12px 14px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.mp-join-input-group input:focus {
+  outline: none;
+  border-color: #c084fc;
+  box-shadow: 0 0 12px rgba(192, 132, 252, 0.4);
+}
+
+.mp-btn-join {
+  padding: 12px 20px !important;
+  font-weight: 800 !important;
+  font-size: 0.85rem !important;
+  background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+  border-radius: 12px !important;
+  border: none !important;
+  color: #fff !important;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4) !important;
+}
+
+.mp-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 15px 0;
+  position: relative;
+}
+
+.mp-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mp-divider span {
+  position: relative;
+  background: rgba(20, 25, 45, 0.9);
+  padding: 0 10px;
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.mp-btn-create {
+  width: 100% !important;
+  padding: 14px !important;
+  font-size: 0.95rem !important;
+  font-weight: 900 !important;
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%) !important;
+  border-radius: 14px !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4) !important;
+  cursor: pointer;
+}
+
+.mp-btn-create:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(168, 85, 247, 0.6) !important;
+}
+
+/* Mobile Responsive Adjustments for Multiplayer Modal */
+@media (max-width: 768px) {
+  .multiplayer-modal-wide {
+    width: 94vw !important;
+    max-width: 680px !important;
+    padding: 1.2rem !important;
+  }
+  
+  .mp-modal-title {
     font-size: 1.4rem !important;
-    width: 32px !important;
-    height: 32px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
   }
-
-  #btn-refresh-servers {
-    padding: 5px 12px !important;
+  
+  .mp-modal-subtitle {
     font-size: 0.75rem !important;
-    width: auto !important;
-    display: inline-block !important;
-    margin: 0 !important;
-    box-shadow: none !important;
+  }
+  
+  .mp-modal-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .mp-box {
+    padding: 0.9rem;
   }
 
-  #server-list-container {
-    max-height: 120px !important;
-  }
-
-  #multiplayer-modal .join-group {
-    display: flex !important;
-    gap: 8px !important;
-    width: 100% !important;
-  }
-
-  #multiplayer-modal .join-group input {
-    padding: 10px 12px !important;
-    font-size: 0.85rem !important;
-    border-radius: 12px !important;
-    flex: 1 !important;
-  }
-
-  #multiplayer-modal .join-group button {
-    padding: 10px 16px !important;
-    font-size: 0.85rem !important;
-    border-radius: 12px !important;
-    white-space: nowrap !important;
-  }
-
-  #btn-create-new-room {
-    padding: 12px !important;
-    font-size: 0.95rem !important;
-    margin-top: 12px !important;
-    border-radius: 12px !important;
-    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%) !important;
-    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4) !important;
+  .mp-server-list {
+    max-height: 120px;
   }
 }
 

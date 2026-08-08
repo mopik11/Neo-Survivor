@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.600" />
+    <link rel="stylesheet" href="style.css?v=1.601" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.600
+            NEO SURVIVOR v1.601
           </div>
         </div>
       </div>
@@ -173,7 +173,7 @@
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
             <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.600</span>
+              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.601</span>
             </div>
 
             <div id="menu-links" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 15px;">
@@ -383,31 +383,49 @@
       </div>
 
       <div id="multiplayer-modal" class="modal">
-        <div class="modal-content" style="max-width: 500px; position: relative;">
+        <div class="modal-content multiplayer-modal-wide">
           <button class="btn-close-x" onclick="closeModal()">×</button>
-          <div class="modal-body">
-            <h2 style="font-size: 2.2rem; margin-bottom: 1.5rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">SÍŤOVÁ HRA</h2>
+          
+          <div class="mp-modal-header">
+            <h2 class="mp-modal-title">🌐 SÍŤOVÁ HRA (MULTIPLAYER)</h2>
+            <p class="mp-modal-subtitle">Připoj se k aktivním hráčům nebo založ vlastní místnost pro kamoše</p>
+          </div>
+          
+          <div class="mp-modal-grid">
+            <!-- Left Side: Server List -->
+            <div class="mp-box mp-box-servers">
+              <div class="mp-box-title-row">
+                <h3>📡 DOSTUPNÉ SERVERY</h3>
+                <button id="btn-refresh-servers" onclick="requestServerList()" class="btn-refresh-pill">
+                  <span>🔄</span> OBNOVIT
+                </button>
+              </div>
+              <div id="server-list-container" class="mp-server-list">
+                <div class="mp-server-loading">Hledám servery...</div>
+              </div>
+            </div>
             
-            <div style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
-              <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                    <h3 style="margin: 0; font-size: 0.9rem; opacity: 0.7; letter-spacing: 1px;">DOSTUPNÉ SERVERY</h3>
-                    <button onclick="requestServerList()" class="btn-restart" style="padding: 5px 10px; font-size: 0.7rem; background: rgba(255,255,255,0.1); border:none;">OBNOVIT</button>
-                </div>
-                <div id="server-list-container" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
-                    <div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">Hledám servery...</div>
+            <!-- Right Side: Join & Create Room -->
+            <div class="mp-box mp-box-actions">
+              <div class="mp-action-section">
+                <h3>🔑 PŘIPOJIT KÓDEM</h3>
+                <div class="join-group mp-join-input-group">
+                  <input type="text" id="input-join-id" placeholder="ZADEJ KÓD MÍSTNOSTI..." autocomplete="off">
+                  <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart btn-join mp-btn-join">
+                    PŘIPOJIT
+                  </button>
                 </div>
               </div>
-              
-              <div style="color: rgba(255,255,255,0.3); font-size: 0.8rem; letter-spacing: 2px;">— NEBO KÓD —</div>
-              
-              <div class="join-group">
-                  <input type="text" id="input-join-id" placeholder="ZADEJ KÓD...">
-                  <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart btn-join">PŘIPOJIT</button>
+
+              <div class="mp-divider"><span>NEBO</span></div>
+
+              <div class="mp-create-section">
+                <button id="btn-create-new-room" onclick="showHostModal()" class="btn-restart mp-btn-create">
+                  <span>➕</span> ZALOŽIT NOVOU MÍSTNOST
+                </button>
               </div>
             </div>
           </div>
-          <button onclick="showHostModal()" class="btn-restart" style="width: 100%; background: #a855f7; margin-top: 15px; flex-shrink: 0;">ZALOŽIT NOVOU MÍSTNOST</button>
         </div>
       </div>
 
@@ -785,7 +803,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>window.GAME_VERSION = '1.600';</script>
-    <script type="module" src="./main.js?v=1.600"></script>
+    <script>window.GAME_VERSION = '1.601';</script>
+    <script type="module" src="./main.js?v=1.601"></script>
   </body>
 </html>
