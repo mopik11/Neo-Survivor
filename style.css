@@ -1099,9 +1099,22 @@ canvas {
   }
   
   #menu-links > span:first-child {
-    width: 100%;
-    text-align: center;
-    margin-bottom: 5px;
+    width: 100% !important;
+    text-align: center !important;
+    margin-bottom: 8px !important;
+    display: block !important;
+  }
+
+  /* Prevent footer overlapping buttons on short mobile landscape screens */
+  @media screen and (max-height: 500px) {
+    .logo { font-size: 1.5rem !important; margin-bottom: 0 !important; }
+    .subtitle { display: none !important; }
+    #menu-player-stats { margin-bottom: 5px !important; font-size: 0.75rem !important; }
+    #menu-active-players { margin-bottom: 5px !important; }
+    .modal-content { padding: 0.5rem 1rem !important; }
+    #menu-version { margin-top: 5px !important; }
+    #menu-links { margin-top: 5px !important; gap: 8px !important; }
+    .btn-close-x { top: 0.5rem; right: 0.5rem; width: 32px; height: 32px; font-size: 1rem; }
   }
 
   .upgrade-grid {
