@@ -1083,6 +1083,16 @@ canvas {
     font-size: 2.2rem !important;
     letter-spacing: 6px !important;
   }
+  
+  #qr-code-img {
+      width: 140px !important;
+      height: 140px !important;
+  }
+  
+  #multiplayer-modal .modal-content {
+      padding: 1.5rem !important;
+      gap: 10px;
+  }
 
   .upgrade-grid {
     grid-template-columns: 1fr;
