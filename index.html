@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.603" />
+    <link rel="stylesheet" href="style.css?v=1.604" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -391,12 +391,12 @@
       </div>
 
       <div id="multiplayer-modal" class="modal">
-        <div class="modal-content" style="max-width: 800px; position: relative; padding: 2rem 5vw; display: flex; flex-direction: column;">
+        <div class="modal-content" style="max-width: 950px; position: relative; padding: 2.5rem; display: flex; flex-direction: column;">
           <button class="btn-close-x" onclick="closeModal()" style="top: 1.5rem; right: 1.5rem; width: 44px; height: 44px; font-size: 1.5rem; z-index: 1000;">×</button>
           <div class="modal-body" style="flex: 1; display: flex; flex-direction: column;">
-            <h2 style="font-size: 2.5rem; margin-bottom: 1.5rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-align: center;">SÍŤOVÁ HRA</h2>
+            <h2 style="font-size: 2.5rem; margin-bottom: 2rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-align: center; text-transform: uppercase; letter-spacing: 2px;">SÍŤOVÁ HRA</h2>
             
-            <div class="multiplayer-split" style="display: flex; gap: 30px; width: 100%; max-width: 1200px; margin: 0 auto; flex: 1;">
+            <div class="multiplayer-split" style="display: flex; gap: 30px; width: 100%; margin: 0 auto; flex: 1; align-items: stretch;">
               
               <!-- Left side (Server List) -->
               <div class="multiplayer-left" style="flex: 1; display: flex; flex-direction: column;">
@@ -412,26 +412,28 @@
               </div>
               
               <!-- Right side (Host QR & Join) -->
-              <div class="multiplayer-right" style="flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 15px;">
-                
-                <!-- NEW HOST SECTION (Merged from host-modal) -->
-                <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 15px; border: 1px solid rgba(16, 185, 129, 0.3); width: 100%; text-align: center;">
-                    <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 5px; text-transform: uppercase; font-weight: bold;">Založit hru</div>
-                    <div id="host-code-display" style="font-size: 1.5rem; letter-spacing: 4px; color: #10b981; font-weight: 800; margin-bottom: 10px;">Načítám...</div>
-                    <div id="qr-code-container" style="display: flex; justify-content: center; margin-bottom: 10px;">
-                        <img id="qr-code-img" src="" alt="QR Code" style="border-radius: 8px; border: 2px solid rgba(255,255,255,0.2); width: 120px; height: 120px; display: none;">
-                    </div>
-                    <div style="display: flex; gap: 5px;">
-                        <button id="btn-copy-code" class="btn-restart" style="flex: 1; padding: 10px; font-size: 0.7rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">📋 KOPÍROVAT</button>
-                        <button id="btn-start-hosted" class="btn-restart" style="flex: 1.5; padding: 10px; font-size: 0.8rem; background: #10b981;">🚀 HRA</button>
-                    </div>
-                </div>
-                
-                <div class="separator-text" style="color: rgba(255,255,255,0.3); font-size: 0.8rem; letter-spacing: 2px; text-align: center;">— NEBO KÓD —</div>
-                
-                <div class="join-group" style="display: flex; flex-direction: row; gap: 8px;">
-                    <input type="text" id="input-join-id" placeholder="ZADEJ KÓD..." style="padding: 0.8rem 0.5rem; font-size: 0.8rem; margin-bottom: 0; flex: 1;">
-                    <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart btn-join" style="padding: 0.8rem 1rem; font-size: 0.8rem; width: auto; flex: 0 0 auto;">PŘIPOJIT</button>
+              <div class="multiplayer-right" style="flex: 1; display: flex; flex-direction: column;">
+                <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                  
+                  <!-- NEW HOST SECTION (Merged from host-modal) -->
+                  <div style="background: rgba(16, 185, 129, 0.05); padding: 15px; border-radius: 12px; border: 1px dashed rgba(16, 185, 129, 0.3); text-align: center;">
+                      <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 5px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Založit hru</div>
+                      <div id="host-code-display" style="font-size: 1.8rem; letter-spacing: 6px; color: #10b981; font-weight: 900; margin-bottom: 15px; text-shadow: 0 0 10px rgba(16,185,129,0.4);">Načítám...</div>
+                      <div id="qr-code-container" style="display: flex; justify-content: center; margin-bottom: 15px;">
+                          <img id="qr-code-img" src="" alt="QR Code" style="border-radius: 8px; border: 2px solid rgba(16,185,129,0.3); width: 120px; height: 120px; display: none;">
+                      </div>
+                      <div style="display: flex; gap: 8px;">
+                          <button id="btn-copy-code" class="btn-restart" style="flex: 1; padding: 10px; font-size: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">📋 KOPÍROVAT</button>
+                          <button id="btn-start-hosted" class="btn-restart" style="flex: 1.5; padding: 10px; font-size: 0.8rem; background: #10b981; box-shadow: 0 0 15px rgba(16,185,129,0.4); border: none;">🚀 HRA</button>
+                      </div>
+                  </div>
+                  
+                  <div class="separator-text" style="color: rgba(255,255,255,0.3); font-size: 0.75rem; letter-spacing: 3px; text-align: center; margin: 15px 0;">— NEBO KÓD —</div>
+                  
+                  <div class="join-group" style="display: flex; flex-direction: column; gap: 10px;">
+                    <input type="text" id="input-join-id" placeholder="ZADEJ KÓD..." maxlength="6" style="text-align: center; font-size: 1rem; letter-spacing: 4px; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: white;">
+                    <button id="btn-join-room" class="btn-join btn-restart" style="width: 100%; padding: 12px; font-size: 0.9rem; background: #6366f1; border: none; box-shadow: 0 0 15px rgba(99,102,241,0.4);">PŘIPOJIT</button>
+                  </div>
                 </div>
               </div>
               
