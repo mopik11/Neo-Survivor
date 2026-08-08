@@ -2923,3 +2923,18 @@ input.gamepad-focus,
         filter: brightness(1.35);
     }
 }
+
+/* FULLSCREEN MULTIPLAYER MODAL OVERRIDE */
+#multiplayer-modal {
+  padding: 0 !important;
+}
+
+#multiplayer-modal .modal-content {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  border: none !important;
+  margin: 0 !important;
+}
