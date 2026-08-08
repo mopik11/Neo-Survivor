@@ -1093,20 +1093,9 @@ canvas {
       padding: 1.5rem !important;
       gap: 10px;
   }
-
-  #menu-links {
-    margin-top: 10px !important;
-  }
   
-  #menu-links > span:first-child {
-    width: 100% !important;
-    text-align: center !important;
-    margin-bottom: 8px !important;
-    display: block !important;
-  }
-
   /* Prevent footer overlapping buttons on short mobile landscape screens */
-  @media screen and (max-height: 500px) {
+  @media screen and (max-height: 550px) {
     .logo { font-size: 1.5rem !important; margin-bottom: 0 !important; }
     .subtitle { display: none !important; }
     #menu-player-stats { margin-bottom: 5px !important; font-size: 0.75rem !important; }
@@ -1115,6 +1104,71 @@ canvas {
     #menu-version { margin-top: 5px !important; }
     #menu-links { margin-top: 5px !important; gap: 8px !important; }
     .btn-close-x { top: 0.5rem; right: 0.5rem; width: 32px; height: 32px; font-size: 1rem; }
+  }
+
+  @media screen and (max-width: 950px), screen and (max-height: 550px) {
+    #menu-links {
+      margin-top: 10px !important;
+      flex-direction: column !important;
+      gap: 10px !important;
+    }
+    
+    .powered-by-text-desktop {
+      display: none !important;
+    }
+    
+    .powered-by-text {
+      display: block !important;
+      margin-bottom: 2px !important;
+    }
+    
+    .footer-badges {
+      gap: 10px !important;
+    }
+    
+    /* MULTIPLAYER MODAL MOBILE FIXES */
+    #multiplayer-modal .modal-content {
+      padding: 1.2rem 1rem !important;
+      height: 92vh !important;
+      gap: 5px;
+    }
+    
+    #multiplayer-modal h2 {
+      font-size: 1.5rem !important;
+      margin-bottom: 10px !important;
+    }
+    
+    #multiplayer-modal .modal-body > div > div:first-child {
+      padding: 10px !important;
+    }
+    
+    #server-list-container {
+      max-height: 100px !important;
+    }
+    
+    #multiplayer-modal .join-group {
+      flex-direction: row !important;
+      gap: 8px !important;
+    }
+    
+    #input-join-id {
+      padding: 0.8rem 1rem !important;
+      font-size: 0.9rem !important;
+      margin-bottom: 0 !important;
+    }
+    
+    #multiplayer-modal .btn-join {
+      padding: 0.8rem 1.2rem !important;
+      font-size: 0.9rem !important;
+      width: auto !important;
+      flex: 0 0 auto !important;
+    }
+    
+    #multiplayer-modal .btn-restart {
+      margin-top: 8px !important;
+      padding: 0.8rem !important;
+      font-size: 0.9rem !important;
+    }
   }
 
   .upgrade-grid {
