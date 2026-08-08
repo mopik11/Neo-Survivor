@@ -5883,37 +5883,7 @@ function syncShot(proj) {
 }
 
 window.showHostModal = () => {
-    const roomName = Math.random().toString(36).substr(2, 6).toUpperCase();
-    document.getElementById('host-code-display').innerText = roomName;
-    
-    // QR Code generation
-    const qrImg = document.getElementById('qr-code-img');
-    if (qrImg) {
-        const joinUrl = window.location.href.split('?')[0] + `?room=${roomName}`;
-        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl)}`;
-        qrImg.style.display = 'block';
-    }
-
-    document.getElementById('multiplayer-modal').classList.remove('active');
-    document.getElementById('host-modal').classList.add('active');
-
-    document.getElementById('btn-copy-code').onclick = () => {
-        navigator.clipboard.writeText(roomName).then(() => {
-            const btn = document.getElementById('btn-copy-code');
-            btn.innerText = window.T("✅ ZKOPÍROVÁNO!");
-            btn.style.background = "#10b981";
-            setTimeout(() => {
-                btn.innerText = window.T("📋 KOPÍROVAT KÓD");
-                btn.style.background = "rgba(255,255,255,0.1)";
-            }, 2000);
-        });
-    };
-
-    document.getElementById('btn-start-hosted').onclick = () => {
-        document.getElementById('host-modal').classList.remove('active');
-        tryFullscreen();
-        window.joinCloudServer(roomName);
-    };
+    // Deprecated. Host UI is now embedded in multiplayer-modal.
 };
 
 window.joinCloudServer = (roomName) => {
@@ -7144,11 +7114,47 @@ function init() {
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('multiplayer-modal').classList.add('active');
 
+        // Embedded Host Room Generation
+        const roomName = Math.random().toString(36).substr(2, 6).toUpperCase();
+        const displayEl = document.getElementById('host-code-display');
+        if(displayEl) displayEl.innerText = roomName;
+        
+        const qrImg = document.getElementById('qr-code-img');
+        if (qrImg) {
+            const joinUrl = window.location.href.split('?')[0] + `?room=${roomName}`;
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl)}`;
+            qrImg.style.display = 'block';
+        }
+
+        const btnCopy = document.getElementById('btn-copy-code');
+        if (btnCopy) {
+            btnCopy.onclick = () => {
+                navigator.clipboard.writeText(roomName).then(() => {
+                    btnCopy.innerText = window.T("✅ ZKOPÍROVÁNO!");
+                    btnCopy.style.background = "#10b981";
+                    setTimeout(() => {
+                        btnCopy.innerText = window.T("📋 KOPÍROVAT");
+                        btnCopy.style.background = "rgba(255,255,255,0.1)";
+                    }, 2000);
+                });
+            };
+        }
+
+        const btnStartHosted = document.getElementById('btn-start-hosted');
+        if (btnStartHosted) {
+            btnStartHosted.onclick = () => {
+                document.getElementById('multiplayer-modal').classList.remove('active');
+                tryFullscreen();
+                window.joinCloudServer(roomName);
+            };
+        }
+
         if (!NET.socket) {
             initSocket();
         }
 
         NET.serverPollingInterval = setInterval(window.requestServerList, 2000);
+        window.requestServerList();
     };
 
     const btnShips = document.getElementById('btn-ships-menu');
