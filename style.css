@@ -2241,7 +2241,7 @@ canvas {
   #menu-footer {
     position: absolute !important;
     bottom: 5px !important;
-    left: 50% !important;
+    left: 60% !important;
     transform: translateX(-50%) !important;
     display: flex !important;
     flex-direction: column !important;
