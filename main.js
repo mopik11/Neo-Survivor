@@ -1,5 +1,5 @@
  /**
- * NEO SURVIVOR - Core Game Logic - v1.650
+ * NEO SURVIVOR - Core Game Logic - v1.622
  */
 
 window.addEventListener('beforeunload', () => {
@@ -760,7 +760,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.620";
+const GAME_VERSION = window.GAME_VERSION || "1.622";
 const GAME = {
     active: false,
     paused: false,
