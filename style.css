@@ -1083,6 +1083,126 @@ canvas {
     font-size: 2.2rem !important;
     letter-spacing: 6px !important;
   }
+  
+  #qr-code-img {
+      width: 140px !important;
+      height: 140px !important;
+  }
+  
+  #multiplayer-modal .modal-content {
+      padding: 1.5rem !important;
+      gap: 10px;
+  }
+  
+  /* Prevent footer overlapping buttons on short mobile landscape screens */
+  @media screen and (max-height: 550px) {
+    .logo { font-size: 1.5rem !important; margin-bottom: 0 !important; }
+    .subtitle { display: none !important; }
+    #menu-player-stats { margin-bottom: 5px !important; font-size: 0.75rem !important; }
+    #menu-active-players { margin-bottom: 5px !important; }
+    .modal-content { padding: 0.5rem 1rem !important; }
+    #menu-version { margin-top: 5px !important; }
+    #menu-links { margin-top: 5px !important; gap: 8px !important; }
+    .btn-close-x { top: 0.5rem; right: 0.5rem; width: 32px; height: 32px; font-size: 1rem; }
+  }
+
+  @media screen and (max-width: 950px), screen and (max-height: 550px) {
+    #menu-links {
+      margin-top: 10px !important;
+      flex-direction: column !important;
+      gap: 10px !important;
+    }
+    
+    .powered-by-text-desktop {
+      display: none !important;
+    }
+    
+    .powered-by-text {
+      display: block !important;
+      margin-bottom: 2px !important;
+    }
+    
+    .footer-badges {
+      gap: 10px !important;
+    }
+    
+    /* MOBILE FULLSCREEN MULTIPLAYER OVERRIDE */
+    #multiplayer-modal {
+      padding: 0 !important;
+    }
+    
+    #multiplayer-modal .modal-content {
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: none !important;
+      max-height: none !important;
+      border-radius: 0 !important;
+      border: none !important;
+      margin: 0 !important;
+    }
+    
+    .multiplayer-split {
+      flex-direction: row !important;
+      gap: 15px !important;
+      height: 100%;
+    }
+    
+    .multiplayer-left {
+      /* Left half */
+    }
+    
+    .multiplayer-right {
+      /* Right half */
+      justify-content: flex-start !important;
+    }
+    
+    #multiplayer-modal .modal-body {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    #multiplayer-modal .modal-body > div > div:first-child {
+      padding: 10px !important;
+    }
+    
+    #server-list-container {
+      max-height: 140px !important; /* A bit more space since it's side-by-side */
+    }
+    
+    .separator-text {
+      display: none !important; /* Hide the "- NEBO KÓD -" text on mobile halves to save space */
+    }
+    
+    #multiplayer-modal .join-group {
+      flex-direction: row !important;
+      gap: 8px !important;
+    }
+    
+    #input-join-id {
+      padding: 0.8rem 0.5rem !important;
+      font-size: 0.8rem !important;
+      margin-bottom: 0 !important;
+    }
+    
+    #multiplayer-modal .btn-join {
+      padding: 0.8rem 1rem !important;
+      font-size: 0.8rem !important;
+      width: auto !important;
+      flex: 0 0 auto !important;
+    }
+    
+    #multiplayer-modal .btn-restart {
+      margin-top: 15px !important;
+      padding: 0.8rem !important;
+      font-size: 0.9rem !important;
+    }
+    
+    .btn-obnovit {
+      padding: 8px 12px !important;
+      font-size: 0.75rem !important;
+      border-radius: 8px !important;
+    }
+  }
 
   .upgrade-grid {
     grid-template-columns: 1fr;
@@ -2136,7 +2256,7 @@ canvas {
   #menu-footer {
     position: absolute !important;
     bottom: 5px !important;
-    left: 50% !important;
+    left: 53% !important;
     transform: translateX(-50%) !important;
     display: flex !important;
     flex-direction: column !important;

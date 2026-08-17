@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
+<<<<<<< HEAD
     <link rel="stylesheet" href="style.css?v=1.620" />
+=======
+    <link rel="stylesheet" href="style.css?v=1.604" />
+>>>>>>> 9873808a503a79e7ce934b25fd5e1a34e4014efa
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -115,15 +119,15 @@
             <div class="stat-item-val">Doge: <span id="display-doge" style="color: #fbbf24; font-weight: bold;">0</span></div>
             <span class="stat-sep">|</span>
             <div class="stat-item-val">SP: <span id="display-sp" style="color: #a855f7; font-weight: bold;">0</span></div>
-            <span class="stat-sep">|</span>
-            <div class="stat-item-val">Controller: <span id="display-controller-status" style="color: #ef4444; font-weight: bold;">Disconnected</span></div>
+            <!-- Controller status removed per request -->
           </div>
           <!-- Active Players -->
           <div id="menu-active-players" class="active-players-card" style="font-size: 0.75rem; color: #64748b; margin-top: -0.5rem; margin-bottom: 1.5rem; letter-spacing: 1px;">
              <span data-i18n="Aktivních hráčů online:">Aktivních hráčů online:</span> <span id="active-players-count" style="color: #6366f1; font-weight: bold;">?</span>
           </div>
 
-          <div class="menu-sections" id="menu-sections-container">
+          <div class="modal-body" style="width: 100%; padding: 0 5px;">
+            <div class="menu-sections" id="menu-sections-container">
             <div class="menu-group" id="menu-group-game">
               <h3 class="menu-group-title">HRA</h3>
               <div class="menu-actions-row">
@@ -172,6 +176,7 @@
               </div>
             </div>
           </div>
+          </div> <!-- Close modal-body here -->
 
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
@@ -179,24 +184,16 @@
               © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.598</span>
             </div>
 
-            <div id="menu-links" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 15px;">
-              <span style="color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.7rem; font-weight: 800;">Run on & Powered by:</span>
+            <div id="menu-links" class="mobile-stack-links" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 15px;">
+              <div class="powered-by-text" style="color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.7rem; font-weight: 800; width: 100%; text-align: center; display: none;">Run on & Powered by:</div>
+              <span class="powered-by-text-desktop" style="color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.7rem; font-weight: 800;">Run on & Powered by:</span>
               
-              <a href="https://www.raspberrypi.com/" target="_blank" onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;" style="display: flex; align-items: center; gap: 6px; text-decoration: none; background: rgba(197, 26, 74, 0.15); border: 1px solid rgba(197, 26, 74, 0.4); padding: 5px 12px; border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 0 12px rgba(197, 26, 74, 0.4)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'" title="Raspberry Pi Server">
-                <svg height="22" width="20" viewBox="0 0 100 120" style="filter: drop-shadow(0 0 4px rgba(197,26,74,0.6));">
-                  <path fill="#6CC04A" d="M 32 30 C 18 10, 42 0, 50 20 C 58 0, 82 10, 68 30 C 85 22, 95 42, 75 48 C 60 40, 52 45, 50 50 C 48 45, 40 40, 25 48 C 5 42, 15 22, 32 30 Z"/>
-                  <g fill="#E30B5D">
-                    <circle cx="35" cy="58" r="12" />
-                    <circle cx="65" cy="58" r="12" />
-                    <circle cx="22" cy="74" r="11" />
-                    <circle cx="50" cy="74" r="13" />
-                    <circle cx="78" cy="74" r="11" />
-                    <circle cx="32" cy="92" r="12" />
-                    <circle cx="68" cy="92" r="12" />
-                    <circle cx="50" cy="108" r="12" />
-                  </g>
+              <div class="footer-badges" style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
+              <a href="https://www.oracle.com/cloud/" target="_blank" onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;" style="display: flex; align-items: center; gap: 6px; text-decoration: none; background: rgba(248, 0, 0, 0.15); border: 1px solid rgba(248, 0, 0, 0.4); padding: 5px 12px; border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 0 12px rgba(248, 0, 0, 0.4)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'" title="Oracle Cloud">
+                <svg height="22" width="22" viewBox="0 0 24 24" fill="#F80000">
+                  <path d="M16.5 0h-9C3.364 0 0 3.364 0 7.5v9C0 20.636 3.364 24 7.5 24h9c4.136 0 7.5-3.364 7.5-7.5v-9C24 3.364 20.636 0 16.5 0zM17 17.5H7A4.505 4.505 0 0 1 2.5 13V8.5A4.505 4.505 0 0 1 7 4h10a4.505 4.505 0 0 1 4.5 4.5V13a4.505 4.505 0 0 1-4.5 4.5z"/>
                 </svg>
-                <span style="color: #f43f5e; font-weight: 800; font-size: 0.8rem; letter-spacing: 0.5px;">Raspberry Pi</span>
+                <span style="color: #F80000; font-weight: 800; font-size: 0.8rem; letter-spacing: 0.5px;">Oracle Cloud</span>
               </a>
 
               <a href="https://github.com/mopik11/Neo-Survivor" target="_blank" onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;" style="display: flex; align-items: center; gap: 6px; text-decoration: none; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); padding: 5px 12px; border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 0 12px rgba(255, 255, 255, 0.2)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'" title="GitHub Repository">
@@ -204,10 +201,11 @@
                 <span style="color: #f8fafc; font-weight: 800; font-size: 0.8rem; letter-spacing: 0.5px;">GitHub</span>
               </a>
 
-              <a href="https://freedns.afraid.org/" target="_blank" onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;" style="display: flex; align-items: center; gap: 6px; text-decoration: none; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); padding: 5px 12px; border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 0 12px rgba(56, 189, 248, 0.4)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'" title="Free DNS">
+              <a href="https://freedns.afraid.org/" target="_blank" onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;" class="freedns-link" style="display: flex; align-items: center; gap: 6px; text-decoration: none; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); padding: 5px 12px; border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 0 12px rgba(56, 189, 248, 0.4)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'" title="Free DNS">
                 <svg height="18" width="18" viewBox="0 0 24 24" fill="#38bdf8"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
                 <span style="color: #38bdf8; font-weight: 800; font-size: 0.8rem; letter-spacing: 0.5px;">FreeDNS</span>
               </a>
+              </div>
             </div>
           </div>
           </div>
@@ -397,53 +395,53 @@
       </div>
 
       <div id="multiplayer-modal" class="modal">
-        <div class="modal-content" style="max-width: 500px; position: relative;">
-          <button class="btn-close-x" onclick="closeModal()">×</button>
-          <div class="modal-body">
-            <h2 style="font-size: 2.2rem; margin-bottom: 1.5rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">SÍŤOVÁ HRA</h2>
+        <div class="modal-content" style="max-width: 950px; position: relative; padding: 2.5rem; display: flex; flex-direction: column;">
+          <button class="btn-close-x" onclick="closeModal()" style="top: 1.5rem; right: 1.5rem; width: 44px; height: 44px; font-size: 1.5rem; z-index: 1000;">×</button>
+          <div class="modal-body" style="flex: 1; display: flex; flex-direction: column;">
+            <h2 style="font-size: 2.5rem; margin-bottom: 2rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-align: center; text-transform: uppercase; letter-spacing: 2px;">SÍŤOVÁ HRA</h2>
             
-            <div style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
-              <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                    <h3 style="margin: 0; font-size: 0.9rem; opacity: 0.7; letter-spacing: 1px;">DOSTUPNÉ SERVERY</h3>
-                    <button onclick="requestServerList()" class="btn-restart" style="padding: 5px 10px; font-size: 0.7rem; background: rgba(255,255,255,0.1); border:none;">OBNOVIT</button>
-                </div>
-                <div id="server-list-container" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
-                    <div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">Hledám servery...</div>
+            <div class="multiplayer-split" style="display: flex; gap: 30px; width: 100%; margin: 0 auto; flex: 1; align-items: stretch;">
+              
+              <!-- Left side (Server List) -->
+              <div class="multiplayer-left" style="flex: 1; display: flex; flex-direction: column;">
+                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); flex: 1;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                      <h3 style="margin: 0; font-size: 0.9rem; opacity: 0.7; letter-spacing: 1px; white-space: nowrap;">DOSTUPNÉ SERVERY</h3>
+                      <button onclick="requestServerList()" class="btn-obnovit modern-glass-btn" style="padding: 5px 10px; font-size: 0.7rem; background: rgba(255,255,255,0.1); border:none; border-radius: 6px; cursor: pointer;">OBNOVIT</button>
+                  </div>
+                  <div id="server-list-container" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
+                      <div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">Hledám servery...</div>
+                  </div>
                 </div>
               </div>
               
-              <div style="color: rgba(255,255,255,0.3); font-size: 0.8rem; letter-spacing: 2px;">— NEBO KÓD —</div>
-              
-              <div class="join-group">
-                  <input type="text" id="input-join-id" placeholder="ZADEJ KÓD...">
-                  <button onclick="joinCloudServer(document.getElementById('input-join-id').value)" class="btn-restart btn-join">PŘIPOJIT</button>
-              </div>
-            </div>
-          </div>
-          <button onclick="showHostModal()" class="btn-restart" style="width: 100%; background: #a855f7; margin-top: 15px; flex-shrink: 0;">ZALOŽIT NOVOU MÍSTNOST</button>
-        </div>
-      </div>
-
-      <div id="host-modal" class="modal">
-        <div class="modal-content" style="max-width: 450px;">
-          <button class="btn-close-x" onclick="closeModal()">×</button>
-          <div class="modal-body">
-            <h2 style="font-size: 2.2rem; margin-bottom: 0.5rem; background: linear-gradient(to right, #10b981, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">MÍSTNOST ZALOŽENA</h2>
-            <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem;">Pošli tento kód spoluhráčům:</p>
-
-            <div style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; border: 1px solid rgba(16, 185, 129, 0.3); margin-bottom: 20px; width: 100%;">
-                <div id="host-code-display">XXXXXX</div>
-                <div id="qr-code-container" style="display: flex; justify-content: center; margin-bottom: 15px;">
-                    <img id="qr-code-img" src="" alt="QR Code" style="border-radius: 10px; border: 2px solid rgba(255,255,255,0.2); width: 120px; height: 120px; display: none;">
+              <!-- Right side (Host QR & Join) -->
+              <div class="multiplayer-right" style="flex: 1; display: flex; flex-direction: column;">
+                <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                  
+                  <!-- NEW HOST SECTION (Merged from host-modal) -->
+                  <div style="background: rgba(16, 185, 129, 0.05); padding: 15px; border-radius: 12px; border: 1px dashed rgba(16, 185, 129, 0.3); text-align: center;">
+                      <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 5px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Založit hru</div>
+                      <div id="host-code-display" style="font-size: 1.8rem; letter-spacing: 6px; color: #10b981; font-weight: 900; margin-bottom: 15px; text-shadow: 0 0 10px rgba(16,185,129,0.4);">Načítám...</div>
+                      <div id="qr-code-container" style="display: flex; justify-content: center; margin-bottom: 15px;">
+                          <img id="qr-code-img" src="" alt="QR Code" style="border-radius: 8px; border: 2px solid rgba(16,185,129,0.3); width: 120px; height: 120px; display: none;">
+                      </div>
+                      <div style="display: flex; gap: 8px;">
+                          <button id="btn-copy-code" class="btn-restart" style="flex: 1; padding: 10px; font-size: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">📋 KOPÍROVAT</button>
+                          <button id="btn-start-hosted" class="btn-restart" style="flex: 1.5; padding: 10px; font-size: 0.8rem; background: #10b981; box-shadow: 0 0 15px rgba(16,185,129,0.4); border: none;">🚀 HRA</button>
+                      </div>
+                  </div>
+                  
+                  <div class="separator-text" style="color: rgba(255,255,255,0.3); font-size: 0.75rem; letter-spacing: 3px; text-align: center; margin: 15px 0;">— NEBO KÓD —</div>
+                  
+                  <div class="join-group" style="display: flex; flex-direction: column; gap: 10px;">
+                    <input type="text" id="input-join-id" placeholder="ZADEJ KÓD..." maxlength="6" style="text-align: center; font-size: 1rem; letter-spacing: 4px; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: white;">
+                    <button id="btn-join-room" class="btn-join btn-restart" style="width: 100%; padding: 12px; font-size: 0.9rem; background: #6366f1; border: none; box-shadow: 0 0 15px rgba(99,102,241,0.4);">PŘIPOJIT</button>
+                  </div>
                 </div>
-                <button id="btn-copy-code" class="btn-restart" style="width: 100%; padding: 12px; font-size: 0.9rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">📋 KOPÍROVAT KÓD</button>
+              </div>
+              
             </div>
-          </div>
-          
-          <div class="menu-actions" style="width: 100%; margin-top: auto; padding-top: 15px; flex-shrink: 0;">
-              <button id="btn-start-hosted" class="btn-restart" style="width: 100%; background: #10b981;">🚀 VSTOUPIT DO HRY</button>
-              <button onclick="document.getElementById('host-modal').classList.remove('active'); document.getElementById('multiplayer-modal').classList.add('active');" class="btn-restart" style="width: 100%; background: rgba(255,255,255,0.05); font-size: 0.9rem; border: none; opacity: 0.5;">ZRUŠIT</button>
           </div>
         </div>
       </div>
