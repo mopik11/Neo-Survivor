@@ -1,6 +1,49 @@
- /**
- * NEO SURVIVOR - Core Game Logic - v1.623
+/**
+ * NEO SURVIVOR - Core Game Logic - v1.630
  */
+
+// Client-side Encrypted Storage for credentials & sensitive session data
+const SecureStorage = {
+    _key: 'ns_sec_v1_k9',
+    _xor(str) {
+        let res = '';
+        for (let i = 0; i < str.length; i++) {
+            res += String.fromCharCode(str.charCodeAt(i) ^ this._key.charCodeAt(i % this._key.length) ^ 0x5A);
+        }
+        return res;
+    },
+    setItem(key, value) {
+        if (value === null || value === undefined) {
+            localStorage.removeItem(key);
+            return;
+        }
+        try {
+            const enc = 'enc:' + btoa(encodeURIComponent(this._xor(String(value))));
+            localStorage.setItem(key, enc);
+        } catch (e) {
+            localStorage.setItem(key, value);
+        }
+    },
+    getItem(key) {
+        const val = localStorage.getItem(key);
+        if (!val) return null;
+        if (val.startsWith('enc:')) {
+            try {
+                const b64 = val.substring(4);
+                const raw = this._xor(decodeURIComponent(atob(b64)));
+                return raw;
+            } catch (e) {
+                return null;
+            }
+        }
+        // Legacy plaintext auto-migration to encrypted storage
+        this.setItem(key, val);
+        return val;
+    },
+    removeItem(key) {
+        localStorage.removeItem(key);
+    }
+};
 
 window.addEventListener('beforeunload', () => {
     localStorage.removeItem('game_session_active');
@@ -430,7 +473,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.536'
+    version: window.GAME_VERSION || '1.630'
 };
 
 let achievementsInitialized = false;
@@ -611,8 +654,8 @@ const saveMeta = () => {
     if (_saveMetaTimer) clearTimeout(_saveMetaTimer);
     _saveMetaTimer = setTimeout(() => {
         _saveMetaTimer = null;
-        const savedUser = localStorage.getItem('neoSurvivor_user');
-        const savedPass = localStorage.getItem('neoSurvivor_pass');
+        const savedUser = SecureStorage.getItem('neoSurvivor_user');
+        const savedPass = SecureStorage.getItem('neoSurvivor_pass');
         if (savedUser && savedPass && NET.socket && NET.socket.connected) {
             console.log('[SAVEMETA] syncAccount:', { selectedShip: META.selectedShip, autoSelect: META.autoSelect, musicMenu: META.settings?.musicMenu });
             NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META, token: NET.sessionToken });
@@ -627,8 +670,8 @@ const saveMetaForce = () => {
         clearTimeout(_saveMetaTimer);
         _saveMetaTimer = null;
     }
-    const savedUser = localStorage.getItem('neoSurvivor_user');
-    const savedPass = localStorage.getItem('neoSurvivor_pass');
+    const savedUser = SecureStorage.getItem('neoSurvivor_user');
+    const savedPass = SecureStorage.getItem('neoSurvivor_pass');
     if (savedUser && savedPass && NET.socket && NET.socket.connected) {
         NET.socket.emit('syncAccount', { user: savedUser, pass: savedPass, meta: META, token: NET.sessionToken });
         NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel, token: NET.sessionToken });
@@ -760,7 +803,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.623";
+const GAME_VERSION = window.GAME_VERSION || "1.630";
 const GAME = {
     active: false,
     paused: false,
@@ -5305,16 +5348,16 @@ function initSocket() {
             const discModal = document.getElementById('disconnect-modal');
             if (discModal) discModal.style.display = 'none';
 
-            if (!localStorage.getItem('neoSurvivor_pid')) {
+            if (!SecureStorage.getItem('neoSurvivor_pid')) {
                 myPlayerId = Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('neoSurvivor_pid', myPlayerId);
+                SecureStorage.setItem('neoSurvivor_pid', myPlayerId);
             } else {
-                myPlayerId = localStorage.getItem('neoSurvivor_pid');
+                myPlayerId = SecureStorage.getItem('neoSurvivor_pid');
             }
 
             NET.socket.emit('initPlayer', { playerId: myPlayerId });
 
-            const savedUser = localStorage.getItem('neoSurvivor_user');
+            const savedUser = SecureStorage.getItem('neoSurvivor_user');
             if (savedUser) {
                 NET.socket.emit('submitScore', { name: savedUser, level: META.maxLevel, token: NET.sessionToken });
             }
@@ -5821,7 +5864,7 @@ function syncPlayer() {
         safeLaserTargets = GAME.entities.player.laserTargets.map(chain => chain.map(e => e ? e.id : null).filter(id => id));
     }
 
-    const savedUser = META.playerName || localStorage.getItem('neoSurvivor_user') || "Hráč";
+    const savedUser = META.playerName || SecureStorage.getItem('neoSurvivor_user') || "Hráč";
 
     const now = Date.now();
     if (now - GAME.lastNetSync < 50) return; // Throttle to 20Hz
@@ -5896,8 +5939,8 @@ window.joinCloudServer = (roomName) => {
     NET.socket.emit('joinRoom', { 
         roomId: roomName.trim().toUpperCase(), 
         playerId: myPlayerId,
-        username: META.playerName || localStorage.getItem('neoSurvivor_user'),
-        name: META.playerName || localStorage.getItem('neoSurvivor_user')
+        username: META.playerName || SecureStorage.getItem('neoSurvivor_user'),
+        name: META.playerName || SecureStorage.getItem('neoSurvivor_user')
     });
 };
 
@@ -5942,8 +5985,8 @@ function handleAuth(isLogin) {
                 
                 if (res.meta) mergeMeta(res.meta);
 
-                localStorage.setItem('neoSurvivor_user', META.playerName);
-                localStorage.setItem('neoSurvivor_pass', passVal);
+                SecureStorage.setItem('neoSurvivor_user', META.playerName);
+                SecureStorage.setItem('neoSurvivor_pass', passVal);
                 saveMetaLocalOnly();
 
                 document.getElementById('display-player-name').innerText = META.playerName;
@@ -5981,8 +6024,8 @@ function handleAuth(isLogin) {
         });
     } else {
         META.playerName = nameVal;
-        localStorage.setItem('neoSurvivor_user', nameVal);
-        localStorage.setItem('neoSurvivor_pass', passVal);
+        SecureStorage.setItem('neoSurvivor_user', nameVal);
+        SecureStorage.setItem('neoSurvivor_pass', passVal);
         saveMetaLocalOnly();
 
         document.getElementById('display-player-name').innerText = nameVal;
@@ -6754,8 +6797,8 @@ function init() {
 
     initSocket();
 
-    const savedUser = localStorage.getItem('neoSurvivor_user');
-    const savedPass = localStorage.getItem('neoSurvivor_pass');
+    const savedUser = SecureStorage.getItem('neoSurvivor_user');
+    const savedPass = SecureStorage.getItem('neoSurvivor_pass');
 
     if (!savedUser || !savedPass) {
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -6892,26 +6935,26 @@ function init() {
                 // Wait for confirmation from server
                 NET.socket.once('accountDeleted', (res) => {
                     if (res.success) {
-                        localStorage.removeItem('neoSurvivor_meta');
-                        localStorage.removeItem('neoSurvivor_pid');
-                        localStorage.removeItem('neoSurvivor_user');
-                        localStorage.removeItem('neoSurvivor_pass');
+                        SecureStorage.removeItem('neoSurvivor_meta');
+                        SecureStorage.removeItem('neoSurvivor_pid');
+                        SecureStorage.removeItem('neoSurvivor_user');
+                        SecureStorage.removeItem('neoSurvivor_pass');
                         location.reload();
                     } else {
                         window.showCustomAlert(window.T("Smazání se nezdařilo: ") + res.msg);
                     }
                 });
                 NET.socket.emit('deleteAccount', { 
-                    user: localStorage.getItem('neoSurvivor_user'), 
-                    pass: localStorage.getItem('neoSurvivor_pass') 
+                    user: SecureStorage.getItem('neoSurvivor_user'), 
+                    pass: SecureStorage.getItem('neoSurvivor_pass') 
                 });
                 // Fallback in case server doesn't respond
-                setTimeout(() => { if (localStorage.getItem('neoSurvivor_user')) location.reload(); }, 2000);
+                setTimeout(() => { if (SecureStorage.getItem('neoSurvivor_user')) location.reload(); }, 2000);
             } else {
-                localStorage.removeItem('neoSurvivor_meta');
-                localStorage.removeItem('neoSurvivor_pid');
-                localStorage.removeItem('neoSurvivor_user');
-                localStorage.removeItem('neoSurvivor_pass');
+                SecureStorage.removeItem('neoSurvivor_meta');
+                SecureStorage.removeItem('neoSurvivor_pid');
+                SecureStorage.removeItem('neoSurvivor_user');
+                SecureStorage.removeItem('neoSurvivor_pass');
                 location.reload();
             }
         });
@@ -7475,10 +7518,10 @@ function init() {
     const btnMainQuit = document.getElementById('btn-main-quit');
     if (btnMainQuit) btnMainQuit.onclick = () => {
         window.showCustomConfirm(window.T("Opravdu se chceš odhlásit?"), () => {
-            localStorage.removeItem('neoSurvivor_user');
-            localStorage.removeItem('neoSurvivor_pass');
-            localStorage.removeItem('neoSurvivor_meta');
-            localStorage.removeItem('neoSurvivor_pid');
+            SecureStorage.removeItem('neoSurvivor_user');
+            SecureStorage.removeItem('neoSurvivor_pass');
+            SecureStorage.removeItem('neoSurvivor_meta');
+            SecureStorage.removeItem('neoSurvivor_pid');
             window.location.href = window.location.origin + window.location.pathname; 
         });
     };

@@ -384,6 +384,17 @@
             extraHeaders: { "ngrok-skip-browser-warning": "true" }
         });
 
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return String(str || '');
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag] || tag));
+        }
+
         function showScreen(num) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById('screen-' + num).classList.add('active');
@@ -394,9 +405,13 @@
             const div = document.createElement('div');
             div.style.color = color;
             
-            if (msg.startsWith('>')) div.innerHTML = `<strong style="color: #64748b;">></strong> ${msg.substring(1)}`;
-            else if (msg.startsWith('$')) div.innerHTML = `<strong style="color: #38bdf8;">$</strong> ${msg.substring(1)}`;
-            else div.innerText = msg;
+            if (msg.startsWith('>')) {
+                div.innerHTML = `<strong style="color: #64748b;">&gt;</strong> ${escapeHtml(msg.substring(1))}`;
+            } else if (msg.startsWith('$')) {
+                div.innerHTML = `<strong style="color: #38bdf8;">$</strong> ${escapeHtml(msg.substring(1))}`;
+            } else {
+                div.innerText = msg;
+            }
             
             div.style.marginBottom = "6px";
             out.appendChild(div);
@@ -404,11 +419,13 @@
         }
 
         function editProp(username, prop, currentVal) {
-            const newVal = prompt(`Nastavit novou hodnotu pro '${prop}' hráče ${username}:`, currentVal);
+            const cleanUser = String(username).replace(/[^a-zA-Z0-9_-]/g, '');
+            const cleanProp = String(prop).replace(/[^a-zA-Z0-9_.]/g, '');
+            const newVal = prompt(`Nastavit novou hodnotu pro '${cleanProp}' hráče ${cleanUser}:`, currentVal);
             if (newVal !== null && newVal !== "") {
-                document.getElementById('cmd-input').value = `set ${username} ${prop} ${newVal}`;
+                document.getElementById('cmd-input').value = `set ${cleanUser} ${cleanProp} ${newVal}`;
                 sendCommand();
-                setTimeout(() => { socket.emit('adminCommand', { cmd: `stats ${username}` }); }, 300);
+                setTimeout(() => { socket.emit('adminCommand', { cmd: `stats ${cleanUser}` }); }, 300);
             }
         }
         
@@ -431,18 +448,21 @@
             container.style.marginBottom = '20px';
             container.style.marginTop = '12px';
             
+            const cleanUser = escapeHtml(data.username);
+            const rawUser = String(data.username).replace(/[^a-zA-Z0-9_-]/g, '');
+            
             const onlineDot = data.online ? '<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#10b981; box-shadow: 0 0 10px #10b981; margin-left:12px;"></span>' 
                                           : '<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#475569; margin-left:12px;"></span>';
                                           
             container.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 16px; margin-bottom: 16px;">
                     <div style="display: flex; align-items: center;">
-                        <span style="font-size: 1.8rem; font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: 1px; color: #fff;">${data.username}</span>
+                        <span style="font-size: 1.8rem; font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: 1px; color: #fff;">${cleanUser}</span>
                         ${onlineDot}
                     </div>
                     <div style="display: flex; gap: 10px;">
-                        <button onclick="if(confirm('Opravdu vymazat hráče ${data.username}?')) { document.getElementById('cmd-input').value = 'delete ${data.username}'; sendCommand(); setTimeout(() => { socket.emit('adminCommand', { cmd: 'stats' }); }, 300); }" style="width: auto; padding: 8px 16px; margin: 0; font-size: 11px; background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.3); color: #f43f5e;">Smazat</button>
-                        <button onclick="document.getElementById('cmd-input').value = 'unlock_all ${data.username}'; sendCommand(); setTimeout(() => { socket.emit('adminCommand', { cmd: 'stats ${data.username}' }); }, 300);" style="width: auto; padding: 8px 16px; margin: 0; font-size: 11px; background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3); color: #c084fc;">Unlock All</button>
+                        <button onclick="if(confirm('Opravdu vymazat hráče ${rawUser}?')) { document.getElementById('cmd-input').value = 'delete ${rawUser}'; sendCommand(); setTimeout(() => { socket.emit('adminCommand', { cmd: 'stats' }); }, 300); }" style="width: auto; padding: 8px 16px; margin: 0; font-size: 11px; background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.3); color: #f43f5e;">Smazat</button>
+                        <button onclick="document.getElementById('cmd-input').value = 'unlock_all ${rawUser}'; sendCommand(); setTimeout(() => { socket.emit('adminCommand', { cmd: 'stats ${rawUser}' }); }, 300);" style="width: auto; padding: 8px 16px; margin: 0; font-size: 11px; background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3); color: #c084fc;">Unlock All</button>
                     </div>
                 </div>
             `;
@@ -584,7 +604,7 @@
         function renderLeaderboard(data) {
             const out = document.getElementById('leaderboard-output');
             out.innerHTML = '';
-            if (data.length === 0) {
+            if (!data || data.length === 0) {
                 out.innerHTML = '<div style="color: #64748b; text-align: center; margin-top: 20px; font-size: 13px;">Prázdno.</div>';
                 return;
             }
@@ -593,6 +613,9 @@
                     ? '<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981; box-shadow: 0 0 6px #10b981; margin-left:8px;"></span>' 
                     : '<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#475569; margin-left:8px;"></span>';
                     
+                const cleanUser = escapeHtml(p.username);
+                const rawUser = String(p.username).replace(/[^a-zA-Z0-9_-]/g, '');
+
                 const div = document.createElement('div');
                 div.style.background = i < 3 ? 'rgba(251, 191, 36, 0.05)' : 'rgba(255, 255, 255, 0.03)';
                 div.style.padding = '12px 16px';
@@ -603,12 +626,12 @@
                 div.style.transition = 'all 0.2s';
                 div.onmouseover = () => { div.style.background = 'rgba(255,255,255,0.1)'; };
                 div.onmouseout = () => { div.style.background = i < 3 ? 'rgba(251, 191, 36, 0.05)' : 'rgba(255, 255, 255, 0.03)'; };
-                div.onclick = () => { document.getElementById('cmd-input').value = `stats ${p.username}`; sendCommand(); };
+                div.onclick = () => { document.getElementById('cmd-input').value = `stats ${rawUser}`; sendCommand(); };
                 
                 div.innerHTML = `
                     <div style="display: flex; align-items: center; font-size: 14px;">
                         <span style="color: ${i<3 ? '#fbbf24' : '#94a3b8'}; width: 24px; display: inline-block; font-weight: bold;">${i+1}.</span>
-                        <span style="color: #f8fafc; font-weight: 600;">${p.username}</span>
+                        <span style="color: #f8fafc; font-weight: 600;">${cleanUser}</span>
                         ${onlineDot}
                     </div>
                     <div style="color: #10b981; font-weight: bold; font-size: 13px;">Lvl ${p.max_level}</div>

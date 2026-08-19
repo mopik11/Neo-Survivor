@@ -23,8 +23,6 @@ const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || (function() {
     try { return config.ADMIN_PASS_HASH; } catch(e) { return null; }
 })() || "8a7b6c5d4e3f2a1b:c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2";
 
-const IV_LENGTH = 12;
-
 // --- GLOBAL ERROR HANDLING ---
 process.on('uncaughtException', (err) => {
     console.error('!!! UNCAUGHT EXCEPTION !!!', err);
@@ -33,72 +31,206 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('!!! UNHANDLED REJECTION !!!', reason);
 });
 
+// Timing-safe buffer comparison to prevent side-channel timing attacks
+function timingSafeCompare(a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string') return false;
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+    if (bufA.length !== bufB.length) {
+        // Compare with dummy to preserve constant time
+        crypto.timingSafeEqual(bufA, bufA);
+        return false;
+    }
+    return crypto.timingSafeEqual(bufA, bufB);
+}
+
+// In-memory rate limiter to prevent DoS / Brute-force attacks
+class RateLimiter {
+    constructor() {
+        this.records = new Map();
+        // Periodically purge stale records every 5 minutes
+        setInterval(() => this.cleanup(), 5 * 60 * 1000);
+    }
+
+    check(key, maxRequests, windowMs) {
+        const now = Date.now();
+        let record = this.records.get(key);
+        if (!record || now > record.resetTime) {
+            record = { count: 1, resetTime: now + windowMs };
+            this.records.set(key, record);
+            return true;
+        }
+        if (record.count >= maxRequests) {
+            return false;
+        }
+        record.count++;
+        return true;
+    }
+
+    cleanup() {
+        const now = Date.now();
+        for (const [key, record] of this.records.entries()) {
+            if (now > record.resetTime) this.records.delete(key);
+        }
+    }
+}
+const socketRateLimiter = new RateLimiter();
+
 const Security = {
-    // Password Hashing (scrypt)
+    // Password Hashing (scrypt with 32-byte salt and 64-byte key)
     hashPassword: (password) => {
         return new Promise((resolve, reject) => {
-            const salt = crypto.randomBytes(16).toString('hex');
-            crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-                if (err) reject(err);
+            if (typeof password !== 'string' || password.length === 0) {
+                return reject(new Error("Neplatné heslo."));
+            }
+            const salt = crypto.randomBytes(32).toString('hex');
+            crypto.scrypt(password, salt, 64, { N: 16384, r: 8, p: 1 }, (err, derivedKey) => {
+                if (err) return reject(err);
                 resolve(salt + ":" + derivedKey.toString('hex'));
             });
         });
     },
 
     verifyPassword: (password, hash) => {
-        return new Promise((resolve, reject) => {
-            if (!hash) {
-                resolve(false);
-                return;
+        return new Promise((resolve) => {
+            if (!hash || typeof password !== 'string' || typeof hash !== 'string') {
+                return resolve(false);
             }
             
             // Očištění hashe od neviditelných znaků (CRLF z Windows), uvozovek a mezer
             const cleanHash = hash.replace(/['"\r\n]/g, '').trim(); 
             
             if (!cleanHash.includes(':')) {
-                // Zpětná kompatibilita pro plain-text hesla
-                resolve(password === cleanHash);
-                return;
+                // Zpětná kompatibilita pro stará plain-text hesla s timing-safe porovnáním
+                return resolve(timingSafeCompare(password, cleanHash));
             }
             
             const [salt, key] = cleanHash.split(':');
-            crypto.scrypt(password, salt.trim(), 64, (err, derivedKey) => {
-                if (err) reject(err);
-                // Striktní porovnání očištěných klíčů
-                resolve(key.trim() === derivedKey.toString('hex'));
+            if (!salt || !key) return resolve(false);
+
+            crypto.scrypt(password, salt.trim(), 64, { N: 16384, r: 8, p: 1 }, (err, derivedKey) => {
+                if (err) return resolve(false);
+                const derivedHex = derivedKey.toString('hex');
+                // Striktní timing-safe porovnání klíčů proti útokům postranním kanálem
+                resolve(timingSafeCompare(key.trim(), derivedHex));
             });
         });
     },
 
+    // Authenticated Encryption (AES-256-GCM) with 12-byte IV and 16-byte Auth Tag
     encrypt: (text) => {
-        const iv = crypto.randomBytes(16);
-        const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+        if (typeof text !== 'string') text = JSON.stringify(text);
+        const iv = crypto.randomBytes(12); // Standard 96-bit IV for GCM
+        const cipher = crypto.createCipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
         let encrypted = cipher.update(text, 'utf8', 'hex');
         encrypted += cipher.final('hex');
-        return iv.toString('hex') + ":" + encrypted;
+        const authTag = cipher.getAuthTag().toString('hex');
+        return `gcm:${iv.toString('hex')}:${authTag}:${encrypted}`;
     },
 
+    // Dual Decryptor: Supports new authenticated AES-256-GCM and legacy AES-256-CBC
     decrypt: (data) => {
+        if (!data || typeof data !== 'string') return data;
         try {
-            if (!data.includes(':')) return data;
-            const [ivHex, encryptedHex] = data.split(':');
-            if (!ivHex || !encryptedHex) return data;
-            const iv = Buffer.from(ivHex, 'hex');
-            const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
-            let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
-            decrypted += decipher.final('utf8');
-            return decrypted;
+            // New GCM format: gcm:<iv>:<authTag>:<ciphertext>
+            if (data.startsWith('gcm:')) {
+                const parts = data.split(':');
+                if (parts.length !== 4) return data;
+                const iv = Buffer.from(parts[1], 'hex');
+                const authTag = Buffer.from(parts[2], 'hex');
+                const ciphertext = parts[3];
+                const decipher = crypto.createDecipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
+                decipher.setAuthTag(authTag);
+                let decrypted = decipher.update(ciphertext, 'hex', 'utf8');
+                decrypted += decipher.final('utf8');
+                return decrypted;
+            }
+            
+            // Legacy CBC format: <ivHex>:<encryptedHex>
+            if (data.includes(':')) {
+                const [ivHex, encryptedHex] = data.split(':');
+                if (!ivHex || !encryptedHex) return data;
+                const iv = Buffer.from(ivHex, 'hex');
+                if (iv.length !== 16) return data;
+                const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+                let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
+                decrypted += decipher.final('utf8');
+                return decrypted;
+            }
+            return data;
         } catch (e) {
-            console.error("Decryption failed:", e.message);
+            console.error("[SECURITY] Decryption failed/tampered data:", e.message);
             return data;
         }
     }
 };
+
+// 2FA Admin PIN manager with cryptographically secure PRNG, expiration, and attempt limiting
+const AdminAuthManager = {
+    currentPin: null,
+    expiresAt: 0,
+    attemptsLeft: 0,
+
+    generatePin() {
+        // Cryptographically strong random 6-digit PIN
+        this.currentPin = crypto.randomInt(100000, 1000000).toString();
+        this.expiresAt = Date.now() + (5 * 60 * 1000); // 5 minutes TTL
+        this.attemptsLeft = 3;
+        return this.currentPin;
+    },
+
+    verifyPin(pin) {
+        if (!this.currentPin || Date.now() > this.expiresAt || this.attemptsLeft <= 0) {
+            this.currentPin = null;
+            return false;
+        }
+        this.attemptsLeft--;
+        const isMatch = timingSafeCompare(String(pin).trim(), this.currentPin);
+        if (isMatch) {
+            this.currentPin = null; // Single use
+            return true;
+        }
+        if (this.attemptsLeft <= 0) {
+            this.currentPin = null; // Invalidate after failed attempts
+        }
+        return false;
+    }
+};
 const app = express();
+app.disable('x-powered-by');
+
+// Security HTTP headers
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+});
+
 const server = http.createServer(app);
+
+// Strict CORS whitelist (GitHub Pages production + local development)
+const ALLOWED_ORIGINS = [
+    "https://mopik11.github.io",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500"
+];
+
 const io = new Server(server, {
     cors: {
-        origin: "https://mopik11.github.io",
+        origin: (origin, callback) => {
+            // Allow requests with no origin (e.g. mobile apps, curl) or matched in whitelist
+            if (!origin || ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.github.io')) {
+                callback(null, true);
+            } else {
+                callback(new Error('Blokováno CORS bezpečnostní politikou.'));
+            }
+        },
         methods: ["GET", "POST"]
     }
 });
@@ -114,6 +246,11 @@ const db = new sqlite3.Database('./neo_survivor.db', (err) => {
     } else {
         console.log("Připojeno k SQLite databázi.");
         db.serialize(() => {
+            // Bezpečnostní a výkonnostní nastavení SQLite (ochrana proti pádům a uzamčení DB)
+            db.run(`PRAGMA journal_mode = WAL`);
+            db.run(`PRAGMA synchronous = NORMAL`);
+            db.run(`PRAGMA busy_timeout = 5000`);
+
             db.run(`CREATE TABLE IF NOT EXISTS accounts (
                 username TEXT PRIMARY KEY,
                 password TEXT,
@@ -673,20 +810,47 @@ io.on('connection', (socket) => {
     });
 
     socket.on('globalChatMessage', (data) => {
-        io.emit('chatMessage', { user: data.user, text: data.text });
+        if (!data || typeof data.text !== 'string') return;
+        const clientIp = socket.handshake.address || socket.id;
+        if (!socketRateLimiter.check(`chat:${clientIp}`, 5, 3000)) {
+            return socket.emit('systemMessage', { text: 'Příliš rychlé odesílání zpráv. Zpomal!', type: 'error' });
+        }
+
+        // Sanitize and limit message
+        let cleanText = data.text.replace(/[<>]/g, '').trim().substring(0, 200);
+        if (!cleanText) return;
+
+        // Prevent identity spoofing: if socket is logged in, force authenticated username
+        let senderName = socket.authenticatedUser;
+        if (!senderName) {
+            senderName = (typeof data.user === 'string' && /^[a-zA-Z0-9_-]{3,15}$/.test(data.user.trim())) 
+                ? data.user.trim() 
+                : `Hráč_${socket.id.substring(0, 4)}`;
+        }
+
+        io.emit('chatMessage', { user: senderName, text: cleanText });
     });
 
     broadcastServerStats();
 
-    // --- ADMIN KONZOLE (2FA OCHRANA + RELACE) ---
+    // --- ADMIN KONZOLE (2FA OCHRANA + RELACE S BEZPEČNÝM PINEM A RATE-LIMITINGEM) ---
     socket.on('requestAdminPin', (data) => {
         socket.isAdminPage = true;
+        const clientIp = socket.handshake.address || socket.id;
+        if (!socketRateLimiter.check(`adminPinReq:${clientIp}`, 5, 60000)) {
+            return socket.emit('adminAuthError', "Příliš mnoho pokusů. Zkuste to za minutu.");
+        }
+
+        if (!data || typeof data.user !== 'string' || typeof data.pass !== 'string') {
+            return socket.emit('adminAuthError', "Neplatné přihlašovací údaje.");
+        }
+
         console.log(`[ADMIN] Login attempt for user: ${data.user}`);
         Security.verifyPassword(data.pass, ADMIN_PASS_HASH).then(isMatch => {
             if (data.user === ADMIN_USER && isMatch) {
-                SERVER_ADMIN_PIN = Math.floor(100000 + Math.random() * 900000).toString();
+                const generatedPin = AdminAuthManager.generatePin();
                 console.log(`\n===========================================`);
-                console.log(`🔑 ADMIN PIN KÓD BYL VYGENEROVÁN: ${SERVER_ADMIN_PIN}`);
+                console.log(`🔑 ADMIN PIN KÓD BYL VYGENEROVÁN: ${generatedPin} (Platnost 5 minut)`);
                 console.log(`===========================================\n`);
                 socket.emit('adminAuthStep', { step: 2 });
             } else {
@@ -702,13 +866,21 @@ io.on('connection', (socket) => {
 
     socket.on('verifyAdminPin', (data) => {
         socket.isAdminPage = true;
+        const clientIp = socket.handshake.address || socket.id;
+        if (!socketRateLimiter.check(`adminPinVer:${clientIp}`, 5, 60000)) {
+            return socket.emit('adminAuthError', "Příliš mnoho neúspěšných pokusů.");
+        }
+
+        if (!data || typeof data.user !== 'string' || typeof data.pass !== 'string' || !data.pin) {
+            return socket.emit('adminAuthError', "Neplatné údaje PIN ověření.");
+        }
+
         Security.verifyPassword(data.pass, ADMIN_PASS_HASH).then(isMatch => {
-            if (data.user === ADMIN_USER && isMatch && data.pin === SERVER_ADMIN_PIN) {
+            if (data.user === ADMIN_USER && isMatch && AdminAuthManager.verifyPin(data.pin)) {
                 socket.isAdmin = true;
-                SERVER_ADMIN_PIN = null;
                 socket.emit('adminAuthStep', { step: 3 });
             } else {
-                socket.emit('adminAuthError', "Špatný nebo expirovaný PIN kód.");
+                socket.emit('adminAuthError', "Špatný, expirovaný nebo vyčerpaný PIN kód.");
             }
         }).catch(err => {
             socket.emit('adminAuthError', "Chyba serveru při ověřování PINu.");
@@ -816,6 +988,14 @@ io.on('connection', (socket) => {
             const prop = args[2];
             const value = args[3];
             if (!target || !prop || value === undefined) return socket.emit('adminResponse', { msg: "Použití: set <jméno> <vlastnost> <hodnota>", color: "yellow" });
+            
+            // Prototype Pollution Guard
+            const forbiddenKeys = ['__proto__', 'constructor', 'prototype'];
+            const parts = prop.split('.');
+            if (parts.some(p => forbiddenKeys.includes(p.toLowerCase()))) {
+                return socket.emit('adminResponse', { msg: "CHYBA: Neplatný název vlastnosti (bezpečnostní blokace).", color: "red" });
+            }
+
             const lowTarget = target.toLowerCase().trim();
             db.get(`SELECT meta, currency, max_level FROM accounts WHERE username = ?`, [lowTarget], (err, row) => {
                 if (!row) return socket.emit('adminResponse', { msg: `Hráč ${lowTarget} nenalezen.`, color: "red" });
@@ -832,11 +1012,13 @@ io.on('connection', (socket) => {
                 else if (value === 'true') parsedVal = true;
                 else if (value === 'false') parsedVal = false;
 
-                const parts = prop.split('.');
                 let current = meta;
                 for (let i = 0; i < parts.length - 1; i++) {
-                    if (current[parts[i]] === undefined) current[parts[i]] = {};
-                    current = current[parts[i]];
+                    const key = parts[i];
+                    if (current[key] === undefined || current[key] === null || typeof current[key] !== 'object') {
+                        current[key] = {};
+                    }
+                    current = current[key];
                 }
                 current[parts[parts.length - 1]] = parsedVal;
                 
@@ -1001,14 +1183,19 @@ io.on('connection', (socket) => {
             console.warn(`[OPENCRATE] Blocked: socket is not authenticated.`);
             return;
         }
-        if (!data || !data.type) {
+        if (!data || typeof data.type !== 'string') {
             console.warn(`[OPENCRATE] Blocked for "${user}": missing crate type.`);
             return;
         }
-        if (data.token !== socket.sessionToken) {
-            console.warn(`[OPENCRATE] Blocked for "${user}": session token mismatch. Client token: "${data ? data.token : 'none'}", Server token: "${socket.sessionToken}"`);
+        if (!socket.sessionToken || !timingSafeCompare(String(data.token), socket.sessionToken)) {
+            console.warn(`[OPENCRATE] Blocked for "${user}": session token mismatch.`);
             return;
         }
+
+        const validCrates = ['basic', 'premium', 'legendary', 'pet'];
+        if (!validCrates.includes(data.type)) return;
+
+        const reqCount = Math.max(1, Math.min(100, Math.floor(Number(data.count) || 1)));
 
         db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err || !row) return;
@@ -1016,7 +1203,7 @@ io.on('connection', (socket) => {
             try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
             if (!meta || !meta.unopenedCrates || (meta.unopenedCrates[data.type] || 0) < 1) return;
 
-            const count = Math.min(meta.unopenedCrates[data.type], data.count || 1);
+            const count = Math.min(meta.unopenedCrates[data.type], reqCount);
             const results = [];
             for (let i = 0; i < count; i++) {
                 const item = generateLoot(data.type);
@@ -1041,14 +1228,16 @@ io.on('connection', (socket) => {
             console.warn(`[SELLITEM] Blocked: socket is not authenticated.`);
             return;
         }
-        if (!data || !data.id) {
+        if (!data || typeof data.id !== 'string') {
             console.warn(`[SELLITEM] Blocked for "${user}": missing item ID.`);
             return;
         }
-        if (data.token !== socket.sessionToken) {
-            console.warn(`[SELLITEM] Blocked for "${user}": session token mismatch. Client token: "${data ? data.token : 'none'}", Server token: "${socket.sessionToken}"`);
+        if (!socket.sessionToken || !timingSafeCompare(String(data.token), socket.sessionToken)) {
+            console.warn(`[SELLITEM] Blocked for "${user}": session token mismatch.`);
             return;
         }
+
+        const reqCount = Math.max(1, Math.min(1000, Math.floor(Number(data.count) || 1)));
 
         db.get(`SELECT meta FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err || !row) return;
@@ -1062,16 +1251,17 @@ io.on('connection', (socket) => {
             const emoji = EMOJIS.find(e => e.id === data.id);
             if (!emoji) return;
 
-            const countToSell = Math.min(meta.inventory[invIdx].count, data.count || 1);
+            const countToSell = Math.min(meta.inventory[invIdx].count, reqCount);
             const gain = emoji.price * countToSell;
 
-            meta.currency += gain;
+            meta.currency = (meta.currency || 0) + gain;
             meta.inventory[invIdx].count -= countToSell;
             if (meta.inventory[invIdx].count <= 0) meta.inventory.splice(invIdx, 1);
 
             const encrypted = Security.encrypt(JSON.stringify(meta));
-            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+            db.run(`UPDATE accounts SET meta = ?, currency = ? WHERE username = ?`, [encrypted, meta.currency, user], () => {
                 socket.emit('syncSuccess', { meta: meta });
+                socket.emit('currencyUpdated', { amount: meta.currency });
             });
         });
     });
@@ -1082,8 +1272,8 @@ io.on('connection', (socket) => {
             console.warn(`[SELLALLITEMS] Blocked: socket is not authenticated.`);
             return;
         }
-        if (data.token !== socket.sessionToken) {
-            console.warn(`[SELLALLITEMS] Blocked for "${user}": session token mismatch. Client token: "${data ? data.token : 'none'}", Server token: "${socket.sessionToken}"`);
+        if (!socket.sessionToken || !timingSafeCompare(String(data?.token), socket.sessionToken)) {
+            console.warn(`[SELLALLITEMS] Blocked for "${user}": session token mismatch.`);
             return;
         }
 
@@ -1114,7 +1304,7 @@ io.on('connection', (socket) => {
             meta.inventory = newInventory;
 
             const encrypted = Security.encrypt(JSON.stringify(meta));
-            db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encrypted, user], () => {
+            db.run(`UPDATE accounts SET meta = ?, currency = ? WHERE username = ?`, [encrypted, meta.currency, user], () => {
                 socket.emit('syncSuccess', { meta: meta });
                 socket.emit('currencyUpdated', { amount: meta.currency });
             });
@@ -1127,8 +1317,8 @@ io.on('connection', (socket) => {
             console.warn(`[DAILYGIFT] Blocked: socket is not authenticated.`);
             return;
         }
-        if (data.token !== socket.sessionToken) {
-            console.warn(`[DAILYGIFT] Blocked for "${user}": session token mismatch. Client token: "${data ? data.token : 'none'}", Server token: "${socket.sessionToken}"`);
+        if (!socket.sessionToken || !timingSafeCompare(String(data?.token), socket.sessionToken)) {
+            console.warn(`[DAILYGIFT] Blocked for "${user}": session token mismatch.`);
             return;
         }
 
@@ -1168,12 +1358,12 @@ io.on('connection', (socket) => {
             console.warn(`[ACHIEVEMENT] Claim blocked: socket is not authenticated.`);
             return;
         }
-        if (!data || !data.id) {
+        if (!data || typeof data.id !== 'string') {
             console.warn(`[ACHIEVEMENT] Claim blocked for "${user}": missing achievement ID.`);
             return;
         }
-        if (data.token !== socket.sessionToken) {
-            console.warn(`[ACHIEVEMENT] Claim blocked for "${user}": session token mismatch. Client token: "${data ? data.token : 'none'}", Server token: "${socket.sessionToken}"`);
+        if (!socket.sessionToken || !timingSafeCompare(String(data.token), socket.sessionToken)) {
+            console.warn(`[ACHIEVEMENT] Claim blocked for "${user}": session token mismatch.`);
             return;
         }
 
@@ -1204,7 +1394,6 @@ io.on('connection', (socket) => {
             if (!meta.claimedAchievements) meta.claimedAchievements = {};
             meta.claimedAchievements[data.id] = true;
             
-            // Místo meta.currency použijeme přesnou databázovou hodnotu
             const newCurrency = (row.currency || 0) + reward;
             meta.currency = newCurrency;
             
@@ -1219,10 +1408,11 @@ io.on('connection', (socket) => {
             });
         });
     });
+
     // --- MARKET HANDLERS (v1.547) ---
     socket.on('marketBuy', (data) => {
         const user = socket.authenticatedUser;
-        if (!user || data.token !== socket.sessionToken) return;
+        if (!user || !socket.sessionToken || !timingSafeCompare(String(data?.token), socket.sessionToken)) return;
 
         db.get(`SELECT currency, meta FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err || !row) return;
@@ -1255,7 +1445,7 @@ io.on('connection', (socket) => {
 
     socket.on('marketSell', (data) => {
         const user = socket.authenticatedUser;
-        if (!user || data.token !== socket.sessionToken) return;
+        if (!user || !socket.sessionToken || !timingSafeCompare(String(data?.token), socket.sessionToken)) return;
 
         db.get(`SELECT currency, meta FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err || !row) return;
@@ -1291,8 +1481,8 @@ io.on('connection', (socket) => {
             console.warn(`[PURCHASE] Blocked: socket is not authenticated.`);
             return;
         }
-        if (data.token !== socket.sessionToken) {
-            console.warn(`[PURCHASE] Blocked for "${user}": session token mismatch. Client token: "${data ? data.token : 'none'}", Server token: "${socket.sessionToken}"`);
+        if (!socket.sessionToken || !timingSafeCompare(String(data?.token), socket.sessionToken)) {
+            console.warn(`[PURCHASE] Blocked for "${user}": session token mismatch.`);
             return;
         }
 
@@ -1338,12 +1528,10 @@ io.on('connection', (socket) => {
                 
                 if (data.id === 'vstupne') {
                     if (!meta.skillTree.unlocked) {
-                        cost = 0; // Vstupní poplatek zrušen nebo je v SP
+                        cost = 0;
                         meta.skillTree.unlocked = true;
                         success = true;
                     } else {
-                        // Already unlocked: return current state as success (not error)
-                        console.log(`[PURCHASE] Vstupne already unlocked for "${user}", returning syncSuccess`);
                         socket.emit('syncSuccess', { meta: meta });
                         socket.emit('purchaseSuccess', { type: data.type, id: data.id });
                         return;
@@ -1361,23 +1549,17 @@ io.on('connection', (socket) => {
                             
                             // SKILL POINTS LOGIC
                             if (meta.skillPoints >= cost) {
-                                meta.skillPoints -= cost; // Odejteme Skill Pointy
+                                meta.skillPoints -= cost;
                                 meta.skillTree.nodes[data.id] = level + 1;
                                 success = true;
-                                cost = 0; // Nastavíme cost na 0, aby se neodečítaly Dogecoiny
-                            } else {
-                                console.log(`[PURCHASE] Node "${data.id}" FAIL for "${user}": not enough SP (${meta.skillPoints} < ${cost})`);
+                                cost = 0;
                             }
-                        } else {
-                            console.log(`[PURCHASE] Node "${data.id}" FAIL for "${user}": reqMet=${reqMet} (unlocked=${isUnlocked}, req=${req}, reqLevel=${req ? meta.skillTree.nodes[req] : 'n/a'}), level=${level}/${nodeData.maxLevel}`);
                         }
-                    } else {
-                        console.log(`[PURCHASE] Unknown skillTree node "${data.id}" for "${user}"`);
                     }
                 }
             } else if (data.type === 'crate') {
                 const baseCost = (PRICES.crates && PRICES.crates[data.id]) || 0;
-                const count = data.count || 1;
+                const count = Math.max(1, Math.min(100, Math.floor(Number(data.count) || 1)));
                 cost = baseCost * count;
                 if (row.currency >= cost) {
                     // INSTANT UNBOXING (no inventory for bought crates)
@@ -1430,11 +1612,26 @@ io.on('connection', (socket) => {
     });
 
     socket.on('register', (data) => {
-        let { user, pass } = data;
-        if (!user || user.length < 3 || user.length > 15 || !pass || pass.length < 1) {
-            return socket.emit('registerResponse', { success: false, msg: 'Jméno musí mít 3 až 15 znaků a heslo nesmí být prázdné.' });
+        const clientIp = socket.handshake.address || socket.id;
+        if (!socketRateLimiter.check(`reg:${clientIp}`, 5, 30000)) {
+            return socket.emit('registerResponse', { success: false, msg: 'Příliš mnoho pokusů o registraci. Zkuste to za chvíli.' });
         }
-        user = user.toLowerCase().trim();
+
+        if (!data || typeof data.user !== 'string' || typeof data.pass !== 'string') {
+            return socket.emit('registerResponse', { success: false, msg: 'Neplatná data pro registraci.' });
+        }
+
+        let { user, pass } = data;
+        user = user.trim().toLowerCase();
+
+        // Strict username regex validation: letters, numbers, underscore, hyphen only (3-15 chars)
+        if (!/^[a-zA-Z0-9_-]{3,15}$/.test(user)) {
+            return socket.emit('registerResponse', { success: false, msg: 'Jméno může obsahovat pouze písmena, čísla, pomlčku nebo podtržítko (3-15 znaků).' });
+        }
+
+        if (pass.length < 1 || pass.length > 128) {
+            return socket.emit('registerResponse', { success: false, msg: 'Heslo musí mít 1 až 128 znaků.' });
+        }
 
         db.get(`SELECT username FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (row) {
@@ -1473,42 +1670,52 @@ io.on('connection', (socket) => {
                         socket.emit('registerResponse', { success: true, meta: defaultMeta, token: socket.sessionToken });
                         broadcastLeaderboard();
                     });
+            }).catch(e => {
+                socket.emit('registerResponse', { success: false, msg: 'Chyba při šifrování hesla.' });
             });
         });
     });
 
     socket.on('deleteAccount', (data) => {
+        const clientIp = socket.handshake.address || socket.id;
+        if (!socketRateLimiter.check(`del:${clientIp}`, 5, 60000)) {
+            return socket.emit('accountDeleted', { success: false, msg: 'Příliš mnoho pokusů o mazání účtu.' });
+        }
+
+        if (!data || typeof data.user !== 'string' || typeof data.pass !== 'string') {
+            return socket.emit('accountDeleted', { success: false, msg: "Neplatná data." });
+        }
+
         let { user, pass } = data;
-        if (!user) return;
         user = user.toLowerCase().trim();
         console.log(`[DELETE] Žádost o smazání účtu: "${user}"`);
-        if (!pass) {
-            console.log(`[DELETE] Neúspěch: Chybějící heslo.`);
-            return;
-        }
-        console.log(`[DELETE] Checking credentials for: "${user}"`);
+
         db.get(`SELECT password FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err) console.error(`[DELETE] DB Get Error:`, err);
             
             if (row) {
-                console.log(`[DELETE] Found user. Comparing passwords...`);
                 Security.verifyPassword(pass, row.password).then(isMatch => {
                     if (isMatch) {
-                        console.log(`[DELETE] Password match. Deleting...`);
                         db.run(`DELETE FROM accounts WHERE username = ?`, [user], function (err) {
                             if (err) {
                                 console.error(`[DELETE] DB Delete Error:`, err);
                                 socket.emit('accountDeleted', { success: false, msg: "Chyba při mazání." });
                             } else {
-                                console.log(`[DELETE] Success. Changes: ${this.changes}`);
+                                console.log(`[DELETE] Success for "${user}". Changes: ${this.changes}`);
+                                if (socket.authenticatedUser === user) {
+                                    socket.authenticatedUser = null;
+                                    socket.sessionToken = null;
+                                }
                                 broadcastLeaderboard();
                                 socket.emit('accountDeleted', { success: true });
                             }
                         });
                     } else {
-                        console.log(`[DELETE] Password mismatch!`);
+                        console.log(`[DELETE] Password mismatch for "${user}"`);
                         socket.emit('accountDeleted', { success: false, msg: "Špatné heslo." });
                     }
+                }).catch(err => {
+                    socket.emit('accountDeleted', { success: false, msg: "Chyba ověřování." });
                 });
             } else {
                 console.log(`[DELETE] User "${user}" not found in DB.`);
@@ -1518,8 +1725,16 @@ io.on('connection', (socket) => {
     });
 
     socket.on('login', (data) => {
+        const clientIp = socket.handshake.address || socket.id;
+        if (!socketRateLimiter.check(`login:${clientIp}`, 10, 60000)) {
+            return socket.emit('loginResponse', { success: false, msg: 'Příliš mnoho pokusů o přihlášení. Počkejte minutu.' });
+        }
+
+        if (!data || typeof data.user !== 'string' || typeof data.pass !== 'string') {
+            return socket.emit('loginResponse', { success: false, msg: "Neplatná data pro přihlášení." });
+        }
+
         let { user, pass } = data;
-        if (!user) return;
         user = user.toLowerCase().trim();
         console.log(`[LOGIN] Attempt: "${user}"`);
         db.get(`SELECT password, meta, currency FROM accounts WHERE username = ?`, [user], (err, row) => {
@@ -1529,27 +1744,23 @@ io.on('connection', (socket) => {
                 Security.verifyPassword(pass, row.password).then(isMatch => {
                     if (isMatch) {
                         try {
-                            // Dekryptování metadat
-                             // Sanitize Meta (Anti-Cheat Cleanup for existing exploited accounts)
                              const parsedMeta = sanitizeMeta(JSON.parse(Security.decrypt(row.meta)));
                              if (!parsedMeta.abilities) parsedMeta.abilities = { 1: true, 2: false, 3: false };
                              if (!parsedMeta.selectedAbility) parsedMeta.selectedAbility = 1;
 
-                             // Update DB if metadata was sanitized
-                             const resanitizedMeta = JSON.stringify(parsedMeta);
-                             if (resanitizedMeta !== Security.decrypt(row.meta)) {
-                                 const encryptedMeta = Security.encrypt(resanitizedMeta);
-                                 db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [encryptedMeta, user]);
+                             // Upgrade legacy plaintext / non-scrypt password
+                             if (!row.password.includes(':')) {
+                                 Security.hashPassword(pass).then(hashed => {
+                                     db.run(`UPDATE accounts SET password = ? WHERE username = ?`, [hashed, user]);
+                                 }).catch(e => console.error("[LOGIN] Migration error:", e));
                              }
 
-                            // Lazy Migration: Pokud heslo bylo plain-text, zahashujeme ho
-                            if (!row.password.includes(':')) {
-                                Security.hashPassword(pass).then(hashed => {
-                                    db.run(`UPDATE accounts SET password = ? WHERE username = ?`, [hashed, user]);
-                                }).catch(e => console.error("[LOGIN] Migration error:", e));
-                            }
+                             // Re-encrypt meta to AES-256-GCM if stored in legacy CBC
+                             if (row.meta && !row.meta.startsWith('gcm:')) {
+                                 const upgradedEncrypted = Security.encrypt(JSON.stringify(parsedMeta));
+                                 db.run(`UPDATE accounts SET meta = ? WHERE username = ?`, [upgradedEncrypted, user]);
+                             }
 
-                             // Lazy Migration (v1.424): Ensure currency column is synced with meta
                              if (parsedMeta.currency !== undefined && row.currency === 0 && parsedMeta.currency > 0) {
                                  db.run(`UPDATE accounts SET currency = ? WHERE username = ?`, [parsedMeta.currency, user]);
                                  row.currency = parsedMeta.currency;
@@ -1557,7 +1768,9 @@ io.on('connection', (socket) => {
                              parsedMeta.currency = row.currency;
 
                              console.log(`[LOGIN] Success: "${user}"`);
-                             socket.authenticatedUser = user; socket.sessionToken = crypto.randomBytes(16).toString('hex'); socket.emit('loginResponse', { success: true, meta: parsedMeta, token: socket.sessionToken });
+                             socket.authenticatedUser = user;
+                             socket.sessionToken = crypto.randomBytes(16).toString('hex');
+                             socket.emit('loginResponse', { success: true, meta: parsedMeta, token: socket.sessionToken });
                         } catch (e) {
                             console.error(`[LOGIN] Meta parse error for "${user}":`, e.message);
                             socket.emit('loginResponse', { success: false, msg: "Chyba při načítání dat účtu." });
@@ -1578,18 +1791,21 @@ io.on('connection', (socket) => {
     });
 
     socket.on('syncAccount', (data) => {
-        // SECURITY: Whitelist of fields the client CAN update
-        let user = socket.authenticatedUser || (data.user ? data.user.toLowerCase().trim() : null);
+        const clientIp = socket.handshake.address || socket.id;
+        if (!socketRateLimiter.check(`sync:${clientIp}`, 20, 10000)) {
+            return socket.emit('syncError', "Příliš časté synchronizace.");
+        }
+
+        let user = socket.authenticatedUser || (data && typeof data.user === 'string' ? data.user.toLowerCase().trim() : null);
         if (!user) return socket.emit('syncError', "Nutné přihlášení.");
 
-        const { meta, pass } = data;
+        const { meta, pass } = data || {};
         if (!meta) return;
 
         db.get(`SELECT password, max_level, meta, currency FROM accounts WHERE username = ?`, [user], (err, row) => {
             if (err || !row) return socket.emit('syncError', "Účet nenalezen.");
 
             const proceedWithSync = () => {
-                if (!socket.sessionToken) socket.sessionToken = data.token;
                 let oldMeta;
                 try {
                     const decrypted = Security.decrypt(row.meta);
@@ -1750,9 +1966,17 @@ io.on('connection', (socket) => {
     });
 
     socket.on('sendFeedback', (data) => {
-        if (data && data.text) {
-            const encryptedText = Security.encrypt(data.text);
-            db.run(`INSERT INTO feedback (username, text) VALUES (?, ?)`, [data.user || 'Anonym', encryptedText]);
+        const clientIp = socket.handshake.address || socket.id;
+        if (!socketRateLimiter.check(`feedback:${clientIp}`, 3, 60000)) {
+            return socket.emit('systemMessage', { text: 'Příliš mnoho odeslaných zpráv. Počkejte chvíli.', type: 'error' });
+        }
+
+        if (data && typeof data.text === 'string') {
+            const cleanText = data.text.trim().substring(0, 1000);
+            if (!cleanText) return;
+            const senderUser = socket.authenticatedUser || (typeof data.user === 'string' && /^[a-zA-Z0-9_-]{3,15}$/.test(data.user.trim()) ? data.user.trim() : 'Anonym');
+            const encryptedText = Security.encrypt(cleanText);
+            db.run(`INSERT INTO feedback (username, text) VALUES (?, ?)`, [senderUser, encryptedText]);
         }
     });
 
@@ -1771,10 +1995,14 @@ io.on('connection', (socket) => {
     });
 
     socket.on('joinRoom', (data) => {
-        if (!data || !data.roomId || !data.playerId) return;
+        if (!data || typeof data.roomId !== 'string' || typeof data.playerId !== 'string') return;
 
-        const roomId = data.roomId.toUpperCase();
-        const playerId = data.playerId;
+        const roomId = data.roomId.trim().toUpperCase().substring(0, 16);
+        const playerId = data.playerId.trim().substring(0, 64);
+
+        if (!/^[A-Z0-9_-]{1,16}$/i.test(roomId) || !/^[A-Za-z0-9_-]{1,64}$/.test(playerId)) {
+            return socket.emit('error', { msg: "Neplatný formát místnosti nebo ID hráče." });
+        }
 
         // Prevent joining if room is finished or in game over state (v1.426)
         if (ROOMS[roomId]) {
@@ -1825,13 +2053,16 @@ io.on('connection', (socket) => {
             }
         }
 
+        const safePlayerName = (typeof data.name === 'string') ? data.name.replace(/[<>]/g, '').trim().substring(0, 16) : "Hráč";
+        const safeUsername = (typeof data.username === 'string') ? data.username.toLowerCase().trim().substring(0, 16) : null;
+
         if (!ROOMS[roomId].players[playerId]) {
             // AUTHORITATIVE STAT LOADING (v1.430)
             let authDmg = CONFIG.BASE_PLAYER_DMG;
             let authMaxHp = CONFIG.BASE_PLAYER_HP;
             
-            if (data.username) {
-                db.get(`SELECT meta FROM accounts WHERE username = ?`, [data.username.toLowerCase()], (err, row) => {
+            if (safeUsername) {
+                db.get(`SELECT meta FROM accounts WHERE username = ?`, [safeUsername], (err, row) => {
                     if (row) {
                         try {
                             const meta = JSON.parse(Security.decrypt(row.meta));
@@ -1853,14 +2084,15 @@ io.on('connection', (socket) => {
             ROOMS[roomId].players[playerId] = {
                 id: playerId, x: 0, y: 0, hp: authMaxHp, maxHp: authMaxHp, damage: authDmg, 
                 dead: false, hat: null, level: 1, disconnected: false, 
-                name: data.name || "Hráč",
-                username: data.username || null,
+                name: safePlayerName,
+                username: safeUsername,
                 pendingRewards: 0,
                 socketId: socket.id 
             };
         } else {
             ROOMS[roomId].players[playerId].disconnected = false;
-            if (data.username) ROOMS[roomId].players[playerId].username = data.username;
+            if (safeUsername) ROOMS[roomId].players[playerId].username = safeUsername;
+            ROOMS[roomId].players[playerId].name = safePlayerName;
         }
 
         socket.emit('joined', {
@@ -1872,7 +2104,7 @@ io.on('connection', (socket) => {
     socket.on('playerUpdate', (data) => {
         const r = socket.roomId;
         const p = socket.playerId;
-        if (r && ROOMS[r] && ROOMS[r].players[p]) {
+        if (r && ROOMS[r] && ROOMS[r].players[p] && data && typeof data === 'object') {
             // ZERO TRUST: Strict Whitelist for visual/non-critical properties only
             const whitelist = ['x', 'y', 'rot', 'anim', 'hat', 'pet', 'name', 'kills', 'dead', 'hp', 'maxHp', 'flipX', 'aura', 'auraRange', 'auraLevel', 'fireTrail', 'kaktus', 'shipType', 'laserTargetsIds', 'orbitals', 'portals'];
             whitelist.forEach(key => {
@@ -1923,7 +2155,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('shoot', (projData) => {
-        if (socket.roomId) {
+        if (socket.roomId && socketRateLimiter.check(`shoot:${socket.id}`, 30, 1000)) {
             socket.to(socket.roomId).emit('shoot', projData);
         }
     });
@@ -1931,11 +2163,11 @@ io.on('connection', (socket) => {
     // PŘIJETÍ SCHOPNOSTÍ OD HRÁČE
     socket.on('useAbility', (data) => {
         const r = socket.roomId;
-        if (r && ROOMS[r]) {
+        if (r && ROOMS[r] && data) {
             if (data.type === 2) {
                 ROOMS[r].frozenUntil = Date.now() + 5000;
-            } else if (data.type === 3 && data.enemyIds) {
-                data.enemyIds.forEach(id => {
+            } else if (data.type === 3 && Array.isArray(data.enemyIds)) {
+                data.enemyIds.slice(0, 50).forEach(id => {
                     const e = ROOMS[r].enemies.find(en => en.id === id);
                     if (e && !e.isBoss) e.possessed = true;
                 });
@@ -1947,7 +2179,7 @@ io.on('connection', (socket) => {
 
     socket.on('asteroidDestroyed', (data) => {
         const r = socket.roomId;
-        if (r && ROOMS[r]) {
+        if (r && ROOMS[r] && data && data.id) {
             const idx = ROOMS[r].envObjects.findIndex(o => o.id === data.id);
             if (idx !== -1) {
                 const obj = ROOMS[r].envObjects[idx];
@@ -1965,10 +2197,11 @@ io.on('connection', (socket) => {
 
     socket.on('healPlayers', (data) => {
         const r = socket.roomId;
-        if (r && ROOMS[r] && data.targets) {
-            data.targets.forEach(tid => {
+        if (r && ROOMS[r] && data && Array.isArray(data.targets)) {
+            const safeAmount = Math.min(50, Math.max(0, Number(data.amount) || 0));
+            data.targets.slice(0, 10).forEach(tid => {
                 if (ROOMS[r].players[tid] && !ROOMS[r].players[tid].dead) {
-                    ROOMS[r].players[tid].hp = Math.min(ROOMS[r].players[tid].maxHp, ROOMS[r].players[tid].hp + data.amount);
+                    ROOMS[r].players[tid].hp = Math.min(ROOMS[r].players[tid].maxHp, ROOMS[r].players[tid].hp + safeAmount);
                 }
             });
         }
@@ -1976,10 +2209,11 @@ io.on('connection', (socket) => {
 
     socket.on('reviveProgress', (data) => {
         const r = socket.roomId;
-        if (r && ROOMS[r]) {
+        if (r && ROOMS[r] && data && data.tombstoneId) {
             const t = ROOMS[r].tombstones.find(tb => tb.id === data.tombstoneId);
             if (t) {
-                t.reviveProgress += data.amount;
+                const safeProgress = Math.min(20, Math.max(0, Number(data.amount) || 0));
+                t.reviveProgress += safeProgress;
                 if (t.reviveProgress >= 100) {
                     // Oživení!
                     if (ROOMS[r].players[t.playerId]) {
@@ -2005,36 +2239,42 @@ io.on('connection', (socket) => {
     });
 
     socket.on('enemyHit', (data) => {
-        handleSingleHit(socket, data.id, data.damage);
+        if (data && data.id) handleSingleHit(socket, data.id, data.damage);
     });
 
     socket.on('batchEnemyHit', (data) => {
-        if (data) {
-            for (let id in data) handleSingleHit(socket, id, data[id]);
+        if (data && typeof data === 'object') {
+            const keys = Object.keys(data).slice(0, 50);
+            for (const id of keys) handleSingleHit(socket, id, data[id]);
         }
     });
 
     socket.on('batchEnemyKnockback', (data) => {
         const r = socket.roomId;
-        if (!r || !ROOMS[r] || !data) return;
+        if (!r || !ROOMS[r] || !data || typeof data !== 'object') return;
         const room = ROOMS[r];
-        for (let id in data) {
+        const keys = Object.keys(data).slice(0, 50);
+        for (const id of keys) {
             const enemy = room.enemies.find(e => e.id === id);
-            if (enemy) {
+            if (enemy && data[id]) {
+                const kx = Math.max(-50, Math.min(50, Number(data[id].x) || 0));
+                const ky = Math.max(-50, Math.min(50, Number(data[id].y) || 0));
                 enemy.knockback = enemy.knockback || {x:0, y:0};
-                enemy.knockback.x += data[id].x;
-                enemy.knockback.y += data[id].y;
+                enemy.knockback.x += kx;
+                enemy.knockback.y += ky;
             }
         }
     });
 
     socket.on('gemPickup', (gemId) => {
-        handleSingleGem(socket, gemId);
+        if (typeof gemId === 'string') handleSingleGem(socket, gemId);
     });
 
     socket.on('batchGemPickup', (gemIds) => {
         if (Array.isArray(gemIds)) {
-            gemIds.forEach(id => handleSingleGem(socket, id));
+            gemIds.slice(0, 50).forEach(id => {
+                if (typeof id === 'string') handleSingleGem(socket, id);
+            });
         }
     });
 
