@@ -1901,19 +1901,25 @@ canvas {
   100% { transform: rotate(-90deg); }
 }
 
-@media (max-width: 950px), (max-height: 550px) {
-  /* BRAWL STARS MAIN MENU LAYOUT */
-  #menu-modal {
+@media (max-width: 1024px) and (orientation: landscape), (max-height: 600px), (max-width: 768px) {
+  /* FULLSCREEN NATIVE MODALS */
+  .modal {
     padding: 0 !important;
+    margin: 0 !important;
+    background: rgba(10, 15, 29, 0.98) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
     display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
+    justify-content: stretch !important;
+    align-items: stretch !important;
   }
   
   #menu-modal .modal-content {
     width: 100vw !important;
     height: 100vh !important;
+    height: 100dvh !important;
     max-height: 100vh !important;
+    max-height: 100dvh !important;
     max-width: 100vw !important;
     border-radius: 0 !important;
     border: none !important;
@@ -1923,44 +1929,96 @@ canvas {
     -webkit-overflow-scrolling: touch !important;
   }
 
-  .modal-content {
-    width: 94vw !important;
-    height: auto !important;
-    max-height: 88vh !important;
-    max-width: 94vw !important;
-    border-radius: 28px !important;
-    padding: max(20px, env(safe-area-inset-top)) max(15px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(15px, env(safe-area-inset-left)) !important;
+  .modal-content,
+  #meta-modal .modal-content,
+  #multiplayer-modal .modal-content,
+  #ships-modal .modal-content,
+  #achievements-modal .modal-content,
+  #settings-modal .modal-content,
+  #tutorial-modal .modal-content,
+  #leaderboard-modal .modal-content,
+  #player-profile-modal .modal-content,
+  #pet-detail-modal .modal-content,
+  #feedback-modal .modal-content,
+  #pause-modal .modal-content,
+  #waiting-modal .modal-content,
+  .crate-modal-content {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)) !important;
     margin: 0 !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
     justify-content: flex-start !important;
-    background: linear-gradient(160deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 40px rgba(99, 102, 241, 0.15) !important;
+    background: linear-gradient(160deg, #0f172a 0%, #020617 100%) !important;
+    box-shadow: none !important;
+    transform: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
   }
 
-  .modal-content h2 {
+  .modal-content h2,
+  .modal-body h2 {
     text-shadow: 0 0 15px rgba(251, 191, 36, 0.4) !important;
-    margin-bottom: 20px !important;
-    font-size: 1.35rem !important;
+    margin-top: 2px !important;
+    margin-bottom: 12px !important;
+    font-size: 1.4rem !important;
+    text-align: center !important;
+    padding: 0 54px !important; /* Space for top-left back arrow */
   }
 
+  /* TOP-LEFT BACK ARROW (←) BUTTON */
   .btn-close-x {
-    top: 12px !important;
-    right: 12px !important;
-    width: 36px !important;
-    height: 36px !important;
-    font-size: 1.2rem !important;
-    background: rgba(255, 255, 255, 0.1) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 50% !important;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+    position: absolute !important;
+    top: max(10px, env(safe-area-inset-top)) !important;
+    left: max(14px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 0 !important; /* Hide original × */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5) !important;
+    cursor: pointer !important;
+    z-index: 1000 !important;
+    transition: transform 0.2s, background 0.2s !important;
   }
 
-  /* Make sure modal bodies scroll properly on mobile */
+  .btn-close-x::before {
+    content: '←' !important;
+    font-size: 1.6rem !important;
+    font-weight: 900 !important;
+    color: #ffffff !important;
+    line-height: 1 !important;
+    margin-top: -2px !important;
+  }
+
+  .btn-close-x:active {
+    transform: scale(0.92) !important;
+    background: rgba(99, 102, 241, 0.35) !important;
+    border-color: rgba(99, 102, 241, 0.7) !important;
+  }
+
+  /* Modal bodies scroll properly and take full height */
   .modal-body {
     flex: 1 !important;
     min-height: 0 !important;
-    padding-bottom: 30px !important; /* give space at bottom for buttons */
+    height: 100% !important;
+    padding-bottom: 25px !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
     box-sizing: border-box !important;
   }
@@ -2937,4 +2995,242 @@ input.gamepad-focus,
         box-shadow: 0 15px 30px -5px rgba(139, 92, 246, 0.7), inset 0 0 20px rgba(255, 255, 255, 0.25);
         filter: brightness(1.35);
     }
+}
+
+/* ==========================================================================
+   MOBILE & LANDSCAPE FULL-SCREEN MODALS & NAVIGATION SYSTEM
+   ========================================================================== */
+@media screen and (max-width: 1024px) and (orientation: landscape),
+       screen and (max-height: 600px),
+       screen and (max-width: 768px) {
+
+  /* 1. Fullscreen Modals */
+  .modal {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: rgba(10, 15, 29, 0.98) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    display: flex !important;
+    justify-content: stretch !important;
+    align-items: stretch !important;
+    z-index: var(--modal-z) !important;
+  }
+
+  .modal-content,
+  #meta-modal .modal-content,
+  #multiplayer-modal .modal-content,
+  #ships-modal .modal-content,
+  #achievements-modal .modal-content,
+  #settings-modal .modal-content,
+  #tutorial-modal .modal-content,
+  #leaderboard-modal .modal-content,
+  #player-profile-modal .modal-content,
+  #pet-detail-modal .modal-content,
+  #feedback-modal .modal-content,
+  #pause-modal .modal-content,
+  #waiting-modal .modal-content,
+  .crate-modal-content {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)) !important;
+    margin: 0 !important;
+    justify-content: flex-start !important;
+    background: linear-gradient(160deg, #0f172a 0%, #020617 100%) !important;
+    box-shadow: none !important;
+    transform: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+  }
+
+  .modal.active .modal-content {
+    transform: none !important;
+  }
+
+  /* 2. Top-Left Back Arrow (←) Button */
+  .btn-close-x {
+    position: absolute !important;
+    top: max(10px, env(safe-area-inset-top)) !important;
+    left: max(14px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5) !important;
+    cursor: pointer !important;
+    z-index: 1000 !important;
+    transition: transform 0.2s, background 0.2s !important;
+  }
+
+  .btn-close-x::before {
+    content: '←' !important;
+    font-size: 1.6rem !important;
+    font-weight: 900 !important;
+    color: #ffffff !important;
+    line-height: 1 !important;
+    margin-top: -2px !important;
+  }
+
+  .btn-close-x:active {
+    transform: scale(0.92) !important;
+    background: rgba(99, 102, 241, 0.35) !important;
+    border-color: rgba(99, 102, 241, 0.7) !important;
+  }
+
+  /* 3. Modal Body Scrollable Area */
+  .modal-body {
+    flex: 1 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    padding-bottom: 25px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 4. Modal Header & Title */
+  .modal-content h2,
+  .modal-body h2 {
+    text-shadow: 0 0 15px rgba(251, 191, 36, 0.4) !important;
+    margin-top: 2px !important;
+    margin-bottom: 12px !important;
+    font-size: 1.4rem !important;
+    text-align: center !important;
+    padding: 0 54px !important;
+  }
+
+  /* 5. SKILL TREE (#meta-modal) */
+  #meta-modal .modal-content {
+    padding: 0 !important;
+  }
+  #meta-modal .modal-body {
+    padding: 0 !important;
+  }
+  #meta-modal .modal-body > div:first-child {
+    padding: 8px 18px 8px 65px !important;
+    background: rgba(15, 23, 42, 0.95) !important;
+  }
+  #meta-modal #skill-tree-wrapper {
+    height: 52vh !important;
+    min-height: 240px !important;
+  }
+
+  /* 6. ACHIEVEMENTS (#achievements-modal) */
+  #achievements-list {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+    gap: 10px !important;
+    padding-right: 0 !important;
+  }
+  .achievement-item {
+    padding: 10px 14px !important;
+    gap: 10px !important;
+  }
+  .achievement-icon {
+    font-size: 1.6rem !important;
+  }
+  .achievement-info h3 {
+    font-size: 0.9rem !important;
+    margin-bottom: 2px !important;
+  }
+  .achievement-info p {
+    font-size: 0.75rem !important;
+    margin: 0 !important;
+  }
+
+  /* 7. SHIPS / HANGAR (#ships-modal) */
+  #ships-modal .modal-body > div:first-child {
+    padding-left: 54px !important;
+    margin-bottom: 0.6rem !important;
+  }
+  #ships-modal h2 {
+    padding: 0 !important;
+    font-size: 1.4rem !important;
+  }
+  #ships-grid, #abilities-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  /* 8. MULTIPLAYER (#multiplayer-modal) */
+  #multiplayer-modal .modal-content {
+    padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)) !important;
+  }
+  #multiplayer-modal h2 {
+    font-size: 1.4rem !important;
+    margin-bottom: 12px !important;
+    padding-left: 54px !important;
+  }
+  .multiplayer-split {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 14px !important;
+    flex: 1 !important;
+    align-items: stretch !important;
+  }
+  .multiplayer-left, .multiplayer-right {
+    height: 100% !important;
+  }
+  #server-list-container {
+    max-height: 200px !important;
+  }
+  #host-code-display {
+    font-size: 1.6rem !important;
+    letter-spacing: 4px !important;
+    margin-bottom: 8px !important;
+  }
+  #qr-code-container img {
+    width: 85px !important;
+    height: 85px !important;
+  }
+
+  /* 9. SETTINGS (#settings-modal) */
+  #settings-modal .modal-body {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px 18px !important;
+    align-items: start !important;
+  }
+  #settings-modal .modal-body > div {
+    margin-bottom: 0 !important;
+  }
+
+  /* 10. CRATE OPENING (Dynamic Modal) */
+  .crate-modal-content {
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)) !important;
+  }
+  #btn-skip-crate {
+    top: max(10px, env(safe-area-inset-top)) !important;
+    right: max(14px, env(safe-area-inset-right)) !important;
+    padding: 8px 16px !important;
+    font-size: 0.8rem !important;
+  }
 }

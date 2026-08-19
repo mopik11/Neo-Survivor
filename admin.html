@@ -590,9 +590,17 @@
             }
             if (cpuEl && data.cpuLoad !== undefined) cpuEl.innerText = `${data.cpuLoad}`;
             if (uptimeEl && data.uptime !== undefined) {
-                const hrs = Math.floor(data.uptime / 3600);
-                const mins = Math.floor((data.uptime % 3600) / 60);
-                uptimeEl.innerText = `${hrs}h ${mins}m`;
+                const totalSec = Math.floor(data.uptime);
+                const days = Math.floor(totalSec / 86400);
+                const hrs = Math.floor((totalSec % 86400) / 3600);
+                const mins = Math.floor((totalSec % 3600) / 60);
+                if (days > 0) {
+                    uptimeEl.innerText = `${days}d ${hrs}h ${mins}m`;
+                } else if (hrs > 0) {
+                    uptimeEl.innerText = `${hrs}h ${mins}m`;
+                } else {
+                    uptimeEl.innerText = `${mins}m ${totalSec % 60}s`;
+                }
             }
             if (p3000El && data.ports) {
                 p3000El.innerText = data.ports[3000] ? 'ONLINE' : 'OFFLINE';

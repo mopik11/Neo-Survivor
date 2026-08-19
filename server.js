@@ -393,7 +393,7 @@ async function getSystemStatsData() {
     const usedMem = totalMem - freeMem;
     const memPercent = Math.round((usedMem / totalMem) * 100);
     const cpuLoad = os.loadavg ? os.loadavg()[0].toFixed(2) : '0.00';
-    const uptimeSec = Math.floor(process.uptime());
+    const uptimeSec = Math.floor(os.uptime());
     
     const isPortOpen = await checkPort(25565);
     let mcStatus = { online: false, players: [], count: 0, max: 0, version: null };
