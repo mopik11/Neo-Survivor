@@ -1902,127 +1902,6 @@ canvas {
 }
 
 @media (max-width: 1024px) and (orientation: landscape), (max-height: 600px), (max-width: 768px) {
-  /* FULLSCREEN NATIVE MODALS */
-  .modal {
-    padding: 0 !important;
-    margin: 0 !important;
-    background: rgba(10, 15, 29, 0.98) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    display: flex !important;
-    justify-content: stretch !important;
-    align-items: stretch !important;
-  }
-  
-  #menu-modal .modal-content {
-    width: 100vw !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-    max-height: 100vh !important;
-    max-height: 100dvh !important;
-    max-width: 100vw !important;
-    border-radius: 0 !important;
-    border: none !important;
-    background: radial-gradient(circle at center, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
-    padding: max(15px, env(safe-area-inset-top)) max(15px, env(safe-area-inset-right)) max(15px, env(safe-area-inset-bottom)) max(15px, env(safe-area-inset-left)) !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
-
-  .modal-content,
-  #meta-modal .modal-content,
-  #multiplayer-modal .modal-content,
-  #ships-modal .modal-content,
-  #achievements-modal .modal-content,
-  #settings-modal .modal-content,
-  #tutorial-modal .modal-content,
-  #leaderboard-modal .modal-content,
-  #player-profile-modal .modal-content,
-  #pet-detail-modal .modal-content,
-  #feedback-modal .modal-content,
-  #pause-modal .modal-content,
-  #waiting-modal .modal-content,
-  .crate-modal-content {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    min-width: 100vw !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-    max-height: 100vh !important;
-    max-height: 100dvh !important;
-    border-radius: 0 !important;
-    border: none !important;
-    padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)) !important;
-    margin: 0 !important;
-    justify-content: flex-start !important;
-    background: linear-gradient(160deg, #0f172a 0%, #020617 100%) !important;
-    box-shadow: none !important;
-    transform: none !important;
-    display: flex !important;
-    flex-direction: column !important;
-    box-sizing: border-box !important;
-  }
-
-  .modal-content h2,
-  .modal-body h2 {
-    text-shadow: 0 0 15px rgba(251, 191, 36, 0.4) !important;
-    margin-top: 2px !important;
-    margin-bottom: 12px !important;
-    font-size: 1.4rem !important;
-    text-align: center !important;
-    padding: 0 54px !important; /* Space for top-left back arrow */
-  }
-
-  /* TOP-LEFT BACK ARROW (←) BUTTON */
-  .btn-close-x {
-    position: absolute !important;
-    top: max(10px, env(safe-area-inset-top)) !important;
-    left: max(14px, env(safe-area-inset-left)) !important;
-    right: auto !important;
-    width: 44px !important;
-    height: 44px !important;
-    font-size: 0 !important; /* Hide original × */
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.18) !important;
-    border-radius: 12px !important;
-    backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.5) !important;
-    cursor: pointer !important;
-    z-index: 1000 !important;
-    transition: transform 0.2s, background 0.2s !important;
-  }
-
-  .btn-close-x::before {
-    content: '←' !important;
-    font-size: 1.6rem !important;
-    font-weight: 900 !important;
-    color: #ffffff !important;
-    line-height: 1 !important;
-    margin-top: -2px !important;
-  }
-
-  .btn-close-x:active {
-    transform: scale(0.92) !important;
-    background: rgba(99, 102, 241, 0.35) !important;
-    border-color: rgba(99, 102, 241, 0.7) !important;
-  }
-
-  /* Modal bodies scroll properly and take full height */
-  .modal-body {
-    flex: 1 !important;
-    min-height: 0 !important;
-    height: 100% !important;
-    padding-bottom: 25px !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-    box-sizing: border-box !important;
-  }
-  
   #menu-modal .logo {
     position: absolute !important;
     top: 30px !important;
@@ -3004,8 +2883,13 @@ input.gamepad-focus,
        screen and (max-height: 600px),
        screen and (max-width: 768px) {
 
-  /* 1. Fullscreen Modals */
+  /* 1. Fullscreen Modal Overlays */
   .modal {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
     padding: 0 !important;
     margin: 0 !important;
     background: rgba(10, 15, 29, 0.98) !important;
@@ -3015,8 +2899,10 @@ input.gamepad-focus,
     justify-content: stretch !important;
     align-items: stretch !important;
     z-index: var(--modal-z) !important;
+    overflow: hidden !important;
   }
 
+  /* 2. Fullscreen Modal Containers */
   .modal-content,
   #meta-modal .modal-content,
   #multiplayer-modal .modal-content,
@@ -3030,6 +2916,8 @@ input.gamepad-focus,
   #feedback-modal .modal-content,
   #pause-modal .modal-content,
   #waiting-modal .modal-content,
+  #custom-alert-modal .modal-content,
+  #custom-confirm-modal .modal-content,
   .crate-modal-content {
     width: 100vw !important;
     max-width: 100vw !important;
@@ -3040,36 +2928,36 @@ input.gamepad-focus,
     max-height: 100dvh !important;
     border-radius: 0 !important;
     border: none !important;
-    padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)) !important;
+    padding: max(6px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
     margin: 0 !important;
-    justify-content: flex-start !important;
     background: linear-gradient(160deg, #0f172a 0%, #020617 100%) !important;
     box-shadow: none !important;
     transform: none !important;
     display: flex !important;
     flex-direction: column !important;
     box-sizing: border-box !important;
+    overflow: hidden !important;
   }
 
   .modal.active .modal-content {
     transform: none !important;
   }
 
-  /* 2. Top-Left Back Arrow (←) Button */
+  /* 3. Top-Left Back Arrow (←) Button */
   .btn-close-x {
     position: absolute !important;
-    top: max(10px, env(safe-area-inset-top)) !important;
-    left: max(14px, env(safe-area-inset-left)) !important;
+    top: max(6px, env(safe-area-inset-top)) !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
     right: auto !important;
-    width: 44px !important;
-    height: 44px !important;
+    width: 38px !important;
+    height: 38px !important;
     font-size: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     background: rgba(255, 255, 255, 0.08) !important;
     border: 1px solid rgba(255, 255, 255, 0.18) !important;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
     backdrop-filter: blur(10px) !important;
     -webkit-backdrop-filter: blur(10px) !important;
     box-shadow: 0 4px 14px rgba(0,0,0,0.5) !important;
@@ -3080,7 +2968,7 @@ input.gamepad-focus,
 
   .btn-close-x::before {
     content: '←' !important;
-    font-size: 1.6rem !important;
+    font-size: 1.4rem !important;
     font-weight: 900 !important;
     color: #ffffff !important;
     line-height: 1 !important;
@@ -3093,61 +2981,83 @@ input.gamepad-focus,
     border-color: rgba(99, 102, 241, 0.7) !important;
   }
 
-  /* 3. Modal Body Scrollable Area */
-  .modal-body {
-    flex: 1 !important;
-    min-height: 0 !important;
-    height: 100% !important;
-    padding-bottom: 25px !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-    box-sizing: border-box !important;
-  }
-
   /* 4. Modal Header & Title */
   .modal-content h2,
   .modal-body h2 {
     text-shadow: 0 0 15px rgba(251, 191, 36, 0.4) !important;
-    margin-top: 2px !important;
-    margin-bottom: 12px !important;
-    font-size: 1.4rem !important;
+    margin-top: 0 !important;
+    margin-bottom: 6px !important;
+    font-size: 1.2rem !important;
     text-align: center !important;
-    padding: 0 54px !important;
+    padding: 0 48px !important;
+    flex-shrink: 0 !important;
   }
 
-  /* 5. SKILL TREE (#meta-modal) */
+  /* 5. Fluid, Scrollable Modal Body (NEVER CUT OFF) */
+  .modal-body,
+  #meta-modal .modal-body,
+  #multiplayer-modal .modal-body,
+  #ships-modal .modal-body,
+  #achievements-modal .modal-body,
+  #settings-modal .modal-body,
+  #tutorial-modal .modal-body,
+  #leaderboard-modal .modal-body,
+  #player-profile-modal .modal-body,
+  #pet-detail-modal .modal-body,
+  #feedback-modal .modal-body,
+  #pause-modal .modal-body {
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    width: 100% !important;
+    padding: 0 4px max(35px, calc(env(safe-area-inset-bottom) + 20px)) 4px !important;
+    margin: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* 6. SKILL TREE (#meta-modal) */
   #meta-modal .modal-content {
     padding: 0 !important;
   }
   #meta-modal .modal-body {
-    padding: 0 !important;
+    padding: 0 0 35px 0 !important;
   }
   #meta-modal .modal-body > div:first-child {
-    padding: 8px 18px 8px 65px !important;
+    padding: 6px 14px 6px 52px !important;
     background: rgba(15, 23, 42, 0.95) !important;
+    flex-shrink: 0 !important;
   }
   #meta-modal #skill-tree-wrapper {
-    height: 52vh !important;
-    min-height: 240px !important;
+    height: 48vh !important;
+    min-height: 200px !important;
+    flex-shrink: 0 !important;
   }
 
-  /* 6. ACHIEVEMENTS (#achievements-modal) */
+  /* 7. ACHIEVEMENTS (#achievements-modal) */
   #achievements-list {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
-    gap: 10px !important;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 850px !important;
+    margin: 0 auto !important;
     padding-right: 0 !important;
   }
   .achievement-item {
-    padding: 10px 14px !important;
-    gap: 10px !important;
+    padding: 8px 12px !important;
+    gap: 8px !important;
   }
   .achievement-icon {
-    font-size: 1.6rem !important;
+    font-size: 1.4rem !important;
   }
   .achievement-info h3 {
-    font-size: 0.9rem !important;
+    font-size: 0.85rem !important;
     margin-bottom: 2px !important;
   }
   .achievement-info p {
@@ -3155,30 +3065,36 @@ input.gamepad-focus,
     margin: 0 !important;
   }
 
-  /* 7. SHIPS / HANGAR (#ships-modal) */
+  /* 8. SHIPS / HANGAR (#ships-modal) */
   #ships-modal .modal-body > div:first-child {
-    padding-left: 54px !important;
-    margin-bottom: 0.6rem !important;
+    padding-left: 48px !important;
+    margin-bottom: 0.4rem !important;
+    flex-shrink: 0 !important;
   }
   #ships-modal h2 {
     padding: 0 !important;
-    font-size: 1.4rem !important;
+    font-size: 1.2rem !important;
+  }
+  #ships-options {
+    width: 100% !important;
+    max-width: 850px !important;
+    margin: 0 auto !important;
   }
   #ships-grid, #abilities-grid {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
-    gap: 10px !important;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)) !important;
+    gap: 8px !important;
   }
 
-  /* 8. MULTIPLAYER (#multiplayer-modal) */
+  /* 9. MULTIPLAYER (#multiplayer-modal) */
   #multiplayer-modal .modal-content {
-    padding: max(8px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)) !important;
+    padding: max(6px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
   }
   #multiplayer-modal h2 {
-    font-size: 1.25rem !important;
+    font-size: 1.2rem !important;
     margin-top: 0 !important;
     margin-bottom: 6px !important;
-    padding-left: 54px !important;
+    padding-left: 48px !important;
   }
   .multiplayer-split {
     display: grid !important;
@@ -3187,7 +3103,7 @@ input.gamepad-focus,
     width: 100% !important;
     max-width: 850px !important;
     margin: 0 auto !important;
-    flex: 1 !important;
+    flex: 1 1 auto !important;
     min-height: 0 !important;
     align-items: stretch !important;
   }
@@ -3198,9 +3114,9 @@ input.gamepad-focus,
     padding: 8px 12px !important;
     display: flex !important;
     flex-direction: column !important;
-    height: 100% !important;
     box-sizing: border-box !important;
     min-height: 0 !important;
+    flex: 1 1 auto !important;
   }
   .multiplayer-left, .multiplayer-right {
     height: 100% !important;
@@ -3209,7 +3125,8 @@ input.gamepad-focus,
     min-height: 0 !important;
   }
   #server-list-container {
-    flex: 1 !important;
+    flex: 1 1 auto !important;
+    min-height: 80px !important;
     max-height: 140px !important;
     overflow-y: auto !important;
   }
@@ -3219,9 +3136,10 @@ input.gamepad-focus,
     border-radius: 10px !important;
     padding: 6px 10px !important;
     text-align: center !important;
+    margin-bottom: 6px !important;
   }
   #host-code-display {
-    font-size: 1.35rem !important;
+    font-size: 1.3rem !important;
     letter-spacing: 4px !important;
     color: #10b981 !important;
     font-weight: 900 !important;
@@ -3229,17 +3147,17 @@ input.gamepad-focus,
     text-shadow: 0 0 10px rgba(16,185,129,0.4) !important;
   }
   #qr-code-img {
-    width: 60px !important;
-    height: 60px !important;
+    width: 55px !important;
+    height: 55px !important;
     border-radius: 6px !important;
     border: 1px solid rgba(16,185,129,0.3) !important;
   }
 
-  /* 9. SETTINGS (#settings-modal) */
+  /* 10. SETTINGS (#settings-modal) */
   #settings-modal .modal-body {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    gap: 12px 20px !important;
+    gap: 8px 16px !important;
     align-items: start !important;
     max-width: 750px !important;
     margin: 0 auto !important;
@@ -3250,47 +3168,53 @@ input.gamepad-focus,
   }
   #settings-modal .modal-content > div:last-child {
     max-width: 750px !important;
-    margin: 10px auto 0 !important;
+    margin: 6px auto 0 !important;
     width: 100% !important;
   }
 
-  /* 10. LEADERBOARD (#leaderboard-modal) */
+  /* 11. LEADERBOARD (#leaderboard-modal) */
   #leaderboard-list {
     max-width: 650px !important;
     width: 100% !important;
     margin: 0 auto !important;
-    flex: 1 !important;
+    flex: 1 1 auto !important;
     max-height: none !important;
     overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
   }
 
-  /* 11. FEEDBACK (#feedback-modal) */
+  /* 12. FEEDBACK (#feedback-modal) */
   #feedback-modal .modal-body {
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
-    max-width: 650px !important;
+    max-width: 600px !important;
     margin: 0 auto !important;
     width: 100% !important;
   }
   #feedback-text {
     width: 100% !important;
-    flex: 1 !important;
-    min-height: 120px !important;
-    margin-bottom: 14px !important;
+    flex: 1 1 auto !important;
+    min-height: 100px !important;
+    margin-bottom: 10px !important;
   }
   #btn-send-feedback {
     width: 100% !important;
   }
 
-  /* 12. TUTORIAL (#tutorial-modal) */
+  /* 13. TUTORIAL (#tutorial-modal) */
   #tutorial-modal .modal-body > div {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
-    gap: 12px !important;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+    gap: 10px !important;
+    max-width: 900px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
   }
 
-  /* 13. PAUSE (#pause-modal) */
+  /* 14. PAUSE (#pause-modal) */
   #pause-modal .modal-content {
     justify-content: center !important;
     align-items: center !important;
@@ -3298,13 +3222,13 @@ input.gamepad-focus,
   #pause-modal .stats-grid {
     display: grid !important;
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
-    gap: 8px !important;
+    gap: 6px !important;
     max-width: 650px !important;
     width: 100% !important;
-    margin: 10px auto !important;
+    margin: 6px auto !important;
   }
 
-  /* 14. CRATE OPENING (Dynamic Modal) */
+  /* 15. CRATE OPENING (Dynamic Modal) */
   .crate-modal-content {
     width: 100vw !important;
     height: 100vh !important;
@@ -3316,12 +3240,12 @@ input.gamepad-focus,
     border: none !important;
     justify-content: center !important;
     align-items: center !important;
-    padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)) !important;
+    padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
   }
   #btn-skip-crate {
-    top: max(10px, env(safe-area-inset-top)) !important;
-    right: max(14px, env(safe-area-inset-right)) !important;
-    padding: 8px 16px !important;
+    top: max(8px, env(safe-area-inset-top)) !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    padding: 6px 14px !important;
     font-size: 0.8rem !important;
   }
 }
