@@ -3206,14 +3206,72 @@ input.gamepad-focus,
   #settings-modal .modal-body {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    gap: 12px 18px !important;
+    gap: 12px 20px !important;
     align-items: start !important;
+    max-width: 750px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
   }
   #settings-modal .modal-body > div {
     margin-bottom: 0 !important;
   }
+  #settings-modal .modal-content > div:last-child {
+    max-width: 750px !important;
+    margin: 10px auto 0 !important;
+    width: 100% !important;
+  }
 
-  /* 10. CRATE OPENING (Dynamic Modal) */
+  /* 10. LEADERBOARD (#leaderboard-modal) */
+  #leaderboard-list {
+    max-width: 650px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    flex: 1 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+  }
+
+  /* 11. FEEDBACK (#feedback-modal) */
+  #feedback-modal .modal-body {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    max-width: 650px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+  }
+  #feedback-text {
+    width: 100% !important;
+    flex: 1 !important;
+    min-height: 120px !important;
+    margin-bottom: 14px !important;
+  }
+  #btn-send-feedback {
+    width: 100% !important;
+  }
+
+  /* 12. TUTORIAL (#tutorial-modal) */
+  #tutorial-modal .modal-body > div {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  /* 13. PAUSE (#pause-modal) */
+  #pause-modal .modal-content {
+    justify-content: center !important;
+    align-items: center !important;
+  }
+  #pause-modal .stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+    gap: 8px !important;
+    max-width: 650px !important;
+    width: 100% !important;
+    margin: 10px auto !important;
+  }
+
+  /* 14. CRATE OPENING (Dynamic Modal) */
   .crate-modal-content {
     width: 100vw !important;
     height: 100vh !important;
