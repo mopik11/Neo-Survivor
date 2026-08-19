@@ -3172,34 +3172,67 @@ input.gamepad-focus,
 
   /* 8. MULTIPLAYER (#multiplayer-modal) */
   #multiplayer-modal .modal-content {
-    padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)) !important;
+    padding: max(8px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)) !important;
   }
   #multiplayer-modal h2 {
-    font-size: 1.4rem !important;
-    margin-bottom: 12px !important;
+    font-size: 1.25rem !important;
+    margin-top: 0 !important;
+    margin-bottom: 6px !important;
     padding-left: 54px !important;
   }
   .multiplayer-split {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    gap: 14px !important;
+    gap: 10px !important;
+    width: 100% !important;
+    max-width: 850px !important;
+    margin: 0 auto !important;
     flex: 1 !important;
+    min-height: 0 !important;
     align-items: stretch !important;
+  }
+  .multiplayer-card {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    padding: 8px 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
+    min-height: 0 !important;
   }
   .multiplayer-left, .multiplayer-right {
     height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
   }
   #server-list-container {
-    max-height: 200px !important;
+    flex: 1 !important;
+    max-height: 140px !important;
+    overflow-y: auto !important;
+  }
+  .host-section-box {
+    background: rgba(16, 185, 129, 0.06) !important;
+    border: 1px dashed rgba(16, 185, 129, 0.3) !important;
+    border-radius: 10px !important;
+    padding: 6px 10px !important;
+    text-align: center !important;
   }
   #host-code-display {
-    font-size: 1.6rem !important;
+    font-size: 1.35rem !important;
     letter-spacing: 4px !important;
-    margin-bottom: 8px !important;
+    color: #10b981 !important;
+    font-weight: 900 !important;
+    margin: 2px 0 4px 0 !important;
+    text-shadow: 0 0 10px rgba(16,185,129,0.4) !important;
   }
-  #qr-code-container img {
-    width: 85px !important;
-    height: 85px !important;
+  #qr-code-img {
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 6px !important;
+    border: 1px solid rgba(16,185,129,0.3) !important;
   }
 
   /* 9. SETTINGS (#settings-modal) */
