@@ -3056,6 +3056,7 @@ input.gamepad-focus,
     flex-direction: column !important;
     box-sizing: border-box !important;
     overflow: visible !important;
+    flex: 0 0 auto !important;
   }
 
   .modal.active .modal-content {
