@@ -1132,12 +1132,9 @@ canvas {
     }
     
     #multiplayer-modal .modal-content {
-      position: absolute !important;
-      top: 0 !important;
-      bottom: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      width: 100% !important;
+      width: 100vw !important;
+      min-height: 100vh !important;
+      min-height: 100dvh !important;
       height: auto !important;
       max-width: none !important;
       max-height: none !important;
@@ -1921,14 +1918,12 @@ canvas {
   }
   
   #menu-modal .modal-content {
-    position: absolute !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    height: auto !important;
-    max-height: none !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    max-width: 100vw !important;
     border-radius: 0 !important;
     border: none !important;
     background: radial-gradient(circle at center, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
@@ -1951,14 +1946,13 @@ canvas {
   #pause-modal .modal-content,
   #waiting-modal .modal-content,
   .crate-modal-content {
-    position: absolute !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    height: auto !important;
-    max-height: none !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
     border-radius: 0 !important;
     border: none !important;
     padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)) !important;
@@ -2581,14 +2575,10 @@ body.fullscreen-tree-active #meta-modal .modal-content {
 
 /* Skill Tree Meta Modal layout stability and scroll fixes (v1.528) */
 #meta-modal .modal-content {
-  position: absolute !important;
-  top: 0 !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  width: 100% !important;
-  height: auto !important;
-  max-height: none !important;
+  height: 90vh !important;
+  height: 90dvh !important;
+  max-height: 90vh !important;
+  max-height: 90dvh !important;
 }
 
 #meta-modal .modal-body {
@@ -2780,14 +2770,10 @@ body.fullscreen-tree-active #meta-modal .modal-content {
 
 /* Skill Tree Meta Modal layout stability and scroll fixes (v1.528) */
 #meta-modal .modal-content {
-  position: absolute !important;
-  top: 0 !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  width: 100% !important;
-  height: auto !important;
-  max-height: none !important;
+  height: 90vh !important;
+  height: 90dvh !important;
+  max-height: 90vh !important;
+  max-height: 90dvh !important;
 }
 
 #meta-modal .modal-body {
@@ -3049,14 +3035,12 @@ input.gamepad-focus,
   #pause-modal .modal-content,
   #waiting-modal .modal-content,
   .crate-modal-content {
-    position: absolute !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    height: auto !important;
-    max-height: none !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-width: 100vw !important;
+    flex: 1 1 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
     border-radius: 0 !important;
     border: none !important;
     padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left)) !important;
@@ -3118,12 +3102,15 @@ input.gamepad-focus,
     flex: 1 1 auto !important;
     min-height: 0 !important;
     height: 100% !important;
+    width: 100% !important;
     max-height: none !important;
-    padding-bottom: max(60px, env(safe-area-inset-bottom, 40px)) !important;
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 15px)) !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
     box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   /* 4. Modal Header & Title */
@@ -3156,24 +3143,27 @@ input.gamepad-focus,
   /* 6. ACHIEVEMENTS (#achievements-modal) */
   #achievements-list {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
-    gap: 10px !important;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 12px !important;
     padding-right: 0 !important;
-    padding-bottom: 20px !important;
+    padding-bottom: max(30px, env(safe-area-inset-bottom, 20px)) !important;
+    width: 100% !important;
+    flex: 1 !important;
   }
   .achievement-item {
-    padding: 10px 14px !important;
-    gap: 10px !important;
+    padding: 12px 16px !important;
+    gap: 12px !important;
+    min-height: 60px !important;
   }
   .achievement-icon {
-    font-size: 1.6rem !important;
+    font-size: 1.8rem !important;
   }
   .achievement-info h3 {
-    font-size: 0.9rem !important;
-    margin-bottom: 2px !important;
+    font-size: 0.95rem !important;
+    margin-bottom: 3px !important;
   }
   .achievement-info p {
-    font-size: 0.75rem !important;
+    font-size: 0.8rem !important;
     margin: 0 !important;
   }
 
@@ -3188,14 +3178,41 @@ input.gamepad-focus,
   }
   #ships-grid, #abilities-grid {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
     gap: 10px !important;
     padding-bottom: 20px !important;
+    width: 100% !important;
+  }
+  #ships-modal .upgrade-card {
+    min-height: 130px !important;
+    padding: 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+  #ships-modal .upgrade-icon {
+    font-size: 2rem !important;
+    margin-bottom: 4px !important;
+  }
+  #ships-modal .upgrade-card h3 {
+    font-size: 0.85rem !important;
+    margin-bottom: 2px !important;
+  }
+  #ships-modal .upgrade-card p {
+    font-size: 0.7rem !important;
+    line-height: 1.2 !important;
+    margin-bottom: 4px !important;
+  }
+  #ships-modal .upgrade-card span.cost {
+    font-size: 0.7rem !important;
+    padding: 4px 8px !important;
+    margin-top: auto !important;
   }
 
   /* 8. MULTIPLAYER (#multiplayer-modal) */
   #multiplayer-modal .modal-content {
-    padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom, 30px)) max(18px, env(safe-area-inset-left)) !important;
+    padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom, 15px)) max(18px, env(safe-area-inset-left)) !important;
   }
   #multiplayer-modal h2 {
     font-size: 1.4rem !important;
@@ -3207,17 +3224,30 @@ input.gamepad-focus,
     grid-template-columns: 1fr 1fr !important;
     gap: 14px !important;
     width: 100% !important;
-    height: auto !important;
-    min-height: fit-content !important;
-    align-items: start !important;
-    padding-bottom: 25px !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+    align-items: stretch !important;
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 15px)) !important;
   }
   .multiplayer-left, .multiplayer-right {
-    height: auto !important;
-    min-height: fit-content !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .multiplayer-left > div, .multiplayer-right > div {
+    height: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    box-sizing: border-box !important;
   }
   #server-list-container {
-    max-height: 180px !important;
+    flex: 1 !important;
+    max-height: none !important;
+    min-height: 80px !important;
+    overflow-y: auto !important;
   }
   #host-code-display {
     font-size: 1.5rem !important;
@@ -3239,6 +3269,7 @@ input.gamepad-focus,
     max-width: 750px !important;
     margin: 0 auto !important;
     width: 100% !important;
+    flex: 1 !important;
     padding-bottom: 15px !important;
   }
   #settings-modal .modal-body > div {
@@ -3248,44 +3279,71 @@ input.gamepad-focus,
     max-width: 750px !important;
     margin: 10px auto 0 !important;
     width: 100% !important;
-    padding-bottom: 20px !important;
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 15px)) !important;
   }
 
   /* 10. LEADERBOARD (#leaderboard-modal) */
   #leaderboard-list {
-    max-width: 650px !important;
+    max-width: 750px !important;
     width: 100% !important;
     margin: 0 auto !important;
     flex: 1 !important;
+    height: 100% !important;
     max-height: none !important;
-    padding-bottom: 25px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding-bottom: max(30px, env(safe-area-inset-bottom, 20px)) !important;
   }
 
   /* 11. FEEDBACK (#feedback-modal) */
   #feedback-modal .modal-body {
     display: flex !important;
     flex-direction: column !important;
-    align-items: center !important;
+    align-items: stretch !important;
     max-width: 650px !important;
     margin: 0 auto !important;
     width: 100% !important;
-    padding-bottom: 25px !important;
+    flex: 1 !important;
+    height: 100% !important;
+    padding-bottom: max(25px, env(safe-area-inset-bottom, 20px)) !important;
+    box-sizing: border-box !important;
   }
   #feedback-text {
     width: 100% !important;
-    min-height: 120px !important;
+    flex: 1 !important;
+    min-height: 130px !important;
     margin-bottom: 14px !important;
+    box-sizing: border-box !important;
   }
   #btn-send-feedback {
     width: 100% !important;
+    padding: 12px !important;
+    margin-top: auto !important;
   }
 
   /* 12. TUTORIAL (#tutorial-modal) */
   #tutorial-modal .modal-body > div {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
     gap: 12px !important;
-    padding-bottom: 25px !important;
+    padding-bottom: max(35px, env(safe-area-inset-bottom, 20px)) !important;
+    width: 100% !important;
+  }
+  #tutorial-modal .tutorial-card {
+    min-height: 140px !important;
+    padding: 12px !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  #tutorial-modal .tutorial-card h3 {
+    font-size: 0.9rem !important;
+    margin-bottom: 6px !important;
+  }
+  #tutorial-modal .tutorial-card p, #tutorial-modal .tutorial-card ul, #tutorial-modal .tutorial-card li {
+    font-size: 0.75rem !important;
+    line-height: 1.25 !important;
   }
 
   /* 13. PAUSE (#pause-modal) */
