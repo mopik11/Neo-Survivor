@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.642" />
+    <link rel="stylesheet" href="style.css?v=1.643" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.642
+            NEO SURVIVOR v1.643
           </div>
         </div>
       </div>
@@ -124,60 +124,83 @@
 
           <div class="modal-body" style="width: 100%; padding: 0 5px;">
             <div class="menu-sections" id="menu-sections-container">
-            <div class="menu-group" id="menu-group-game">
-              <h3 class="menu-group-title">HRA</h3>
-              <div class="menu-actions-row">
-                <button class="btn-restart btn-main desktop-play-btn modern-glass-btn premium-btn-solo" id="btn-start"><span>🕹️</span> SOLO</button>
-                <button class="btn-restart btn-main btn-mp desktop-play-btn modern-glass-btn premium-btn-multi" id="btn-multiplayer"><span>🌐</span> MULTIPLAYER</button>
-                
-                 <!-- Hidden real select to maintain JS compatibility -->
-                 <select id="game-mode-select" style="display: none !important;">
-                     <option value="solo">solo</option>
-                     <option value="multiplayer">multiplayer</option>
-                 </select>
-
-                 <!-- Custom dropdown replacement -->
-                 <div class="custom-dropdown mobile-play-ui" id="custom-game-mode-dropdown" style="display: none;">
-                   <div class="dropdown-trigger" id="game-mode-trigger">
-                     <span id="game-mode-label">🕹️ SOLO</span>
-                     <span class="dropdown-arrow"></span>
-                   </div>
-                   <div class="dropdown-options" id="game-mode-options">
-                     <div class="dropdown-option selected" data-value="solo">🕹️ SOLO</div>
-                     <div class="dropdown-option" data-value="multiplayer">🌐 MULTIPLAYER</div>
-                   </div>
-                 </div>
-                 <button class="btn-restart btn-main mobile-play-ui" id="btn-play-action" style="display: none; font-size: 1.5rem; padding: 15px 30px; border-radius: 15px; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);"><span>🚀</span> HRÁT</button>
+              
+              <!-- Left Wing: Gear & Skill Tree -->
+              <div class="menu-group" id="menu-group-progression">
+                <h3 class="menu-group-title" data-i18n="VÝBAVA & SCHOPNOSTI">VÝBAVA & SCHOPNOSTI</h3>
+                <div class="menu-actions-grid">
+                  <button class="btn-restart btn-sub modern-glass-btn menu-hero-btn" id="btn-ships-menu">
+                    <span class="menu-hero-icon">🚀</span>
+                    <span class="menu-hero-text" data-i18n="VÝBAVA">VÝBAVA</span>
+                  </button>
+                  <button class="btn-restart btn-sub modern-glass-btn special-glow menu-hero-btn" id="btn-meta-menu">
+                    <span class="menu-hero-icon">🌌</span>
+                    <span class="menu-hero-text">SKILL TREE</span>
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div class="menu-group" id="menu-group-progression">
-              <h3 class="menu-group-title">POSTUP</h3>
-              <div class="menu-actions-grid">
-                <button class="btn-restart btn-sub modern-glass-btn" id="btn-ships-menu"><span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span></button>
-                <button class="btn-restart btn-sub modern-glass-btn special-glow" id="btn-meta-menu"><span>🌌</span> <span>SKILL TREE</span></button>
+              <!-- Center: Play Zone -->
+              <div class="menu-group" id="menu-group-game">
+                <h3 class="menu-group-title" data-i18n="HRA">HRA</h3>
+                <div class="menu-actions-row">
+                  <button class="btn-restart btn-main desktop-play-btn modern-glass-btn premium-btn-solo" id="btn-start"><span>🕹️</span> SOLO</button>
+                  <button class="btn-restart btn-main btn-mp desktop-play-btn modern-glass-btn premium-btn-multi" id="btn-multiplayer"><span>🌐</span> MULTIPLAYER</button>
+                  
+                  <!-- Hidden real select to maintain JS compatibility -->
+                  <select id="game-mode-select" style="display: none !important;">
+                      <option value="solo">solo</option>
+                      <option value="multiplayer">multiplayer</option>
+                  </select>
 
-                <button class="btn-restart btn-sub modern-glass-btn" id="btn-leaderboard"><span>🏆</span> <span data-i18n="ŽEBŘÍČEK">ŽEBŘÍČEK</span></button>
-                <button class="btn-restart btn-sub modern-glass-btn" id="btn-achievements"><span>🌟</span> <span data-i18n="ÚSPĚCHY">ÚSPĚCHY</span></button>
+                  <!-- Custom dropdown replacement -->
+                  <div class="custom-dropdown mobile-play-ui" id="custom-game-mode-dropdown" style="display: none;">
+                    <div class="dropdown-trigger" id="game-mode-trigger">
+                      <span id="game-mode-label">🕹️ SOLO</span>
+                      <span class="dropdown-arrow"></span>
+                    </div>
+                    <div class="dropdown-options" id="game-mode-options">
+                      <div class="dropdown-option selected" data-value="solo">🕹️ SOLO</div>
+                      <div class="dropdown-option" data-value="multiplayer">🌐 MULTIPLAYER</div>
+                    </div>
+                  </div>
+                  <button class="btn-restart btn-main mobile-play-ui" id="btn-play-action" style="display: none;"><span>🚀</span> <span data-i18n="HRÁT">HRÁT</span></button>
+                </div>
               </div>
-            </div>
 
-            <div class="menu-group" id="menu-group-other">
-              <h3 class="menu-group-title">OSTATNÍ</h3>
-              <div class="menu-actions-grid secondary">
-                <button class="btn-restart btn-mini modern-glass-btn" id="btn-tutorial"><span>📖</span> <span data-i18n="NÁVOD">NÁVOD</span></button>
-                <button class="btn-restart btn-mini modern-glass-btn" id="btn-feedback"><span>💬</span> <span data-i18n="FEEDBACK">FEEDBACK</span></button>
-                <button class="btn-restart btn-mini modern-glass-btn" id="btn-settings"><span>⚙️</span> <span data-i18n="NASTAVENÍ">NASTAVENÍ</span></button>
-                <button class="btn-restart btn-mini modern-glass-btn premium-btn-quit" id="btn-main-quit"><span>🚪</span> <span data-i18n="ODHLÁSIT">ODHLÁSIT</span></button>
+              <!-- Right Wing: Social & Trophy -->
+              <div class="menu-group" id="menu-group-social">
+                <h3 class="menu-group-title" data-i18n="ŽEBŘÍČEK & ÚSPĚCHY">ŽEBŘÍČEK & ÚSPĚCHY</h3>
+                <div class="menu-actions-grid">
+                  <button class="btn-restart btn-sub modern-glass-btn menu-hero-btn" id="btn-leaderboard">
+                    <span class="menu-hero-icon">🏆</span>
+                    <span class="menu-hero-text" data-i18n="ŽEBŘÍČEK">ŽEBŘÍČEK</span>
+                  </button>
+                  <button class="btn-restart btn-sub modern-glass-btn menu-hero-btn" id="btn-achievements">
+                    <span class="menu-hero-icon">🌟</span>
+                    <span class="menu-hero-text" data-i18n="ÚSPĚCHY">ÚSPĚCHY</span>
+                  </button>
+                </div>
               </div>
+
+              <!-- Hamburger Drawer -->
+              <div class="menu-group" id="menu-group-other">
+                <h3 class="menu-group-title">OSTATNÍ</h3>
+                <div class="menu-actions-grid secondary">
+                  <button class="btn-restart btn-mini modern-glass-btn" id="btn-tutorial"><span>📖</span> <span data-i18n="NÁVOD">NÁVOD</span></button>
+                  <button class="btn-restart btn-mini modern-glass-btn" id="btn-feedback"><span>💬</span> <span data-i18n="FEEDBACK">FEEDBACK</span></button>
+                  <button class="btn-restart btn-mini modern-glass-btn" id="btn-settings"><span>⚙️</span> <span data-i18n="NASTAVENÍ">NASTAVENÍ</span></button>
+                  <button class="btn-restart btn-mini modern-glass-btn premium-btn-quit" id="btn-main-quit"><span>🚪</span> <span data-i18n="ODHLÁSIT">ODHLÁSIT</span></button>
+                </div>
+              </div>
+
             </div>
-          </div>
           </div> <!-- Close modal-body here -->
 
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
             <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.642</span>
+              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.643</span>
             </div>
 
             <div id="menu-links" class="mobile-stack-links" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 15px;">
@@ -821,7 +844,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>window.GAME_VERSION = '1.642';</script>
-    <script type="module" src="./main.js?v=1.642"></script>
+    <script>window.GAME_VERSION = '1.643';</script>
+    <script type="module" src="./main.js?v=1.643"></script>
   </body>
 </html>

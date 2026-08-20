@@ -2272,10 +2272,10 @@ canvas {
   
   #menu-modal .logo {
     position: absolute !important;
-    top: 30px !important;
+    top: 15px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    font-size: 3rem !important;
+    font-size: 2.3rem !important;
     margin: 0 !important;
     text-align: center !important;
     width: auto !important;
@@ -2286,67 +2286,81 @@ canvas {
   
   #menu-modal .subtitle {
     position: absolute !important;
-    top: 80px !important;
+    top: 52px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    font-size: 0.8rem !important;
+    font-size: 0.7rem !important;
     margin: 0 !important;
     text-align: center !important;
     width: auto !important;
     pointer-events: none;
     z-index: 5 !important;
-    letter-spacing: 2px !important;
+    letter-spacing: 2.5px !important;
   }
 
   /* Player Stats Card in Top-Left */
   #menu-player-stats {
     position: absolute !important;
-    top: max(15px, env(safe-area-inset-top)) !important;
+    top: max(12px, env(safe-area-inset-top)) !important;
     left: max(15px, env(safe-area-inset-left)) !important;
     margin: 0 !important;
-    background: rgba(15, 23, 42, 0.65) !important;
+    background: rgba(15, 23, 42, 0.75) !important;
     backdrop-filter: blur(8px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
     padding: 6px 12px !important;
     border-radius: 12px !important;
-    font-size: 0.75rem !important;
+    font-size: 0.72rem !important;
     color: #e2e8f0 !important;
     text-align: left !important;
     z-index: 10 !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
-    max-width: 180px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    max-width: 190px !important;
+    display: flex !important;
     flex-direction: column !important;
     align-items: flex-start !important;
-    gap: 4px !important;
+    gap: 3px !important;
     white-space: normal !important;
   }
   
   #menu-player-stats .stat-sep {
     display: none !important;
   }
-  
-  /* Active Players Badges */
+
+  /* Active Players repositioned under play button */
   #menu-active-players {
-    position: absolute !important;
-    top: max(105px, calc(env(safe-area-inset-top) + 90px)) !important;
-    left: max(15px, env(safe-area-inset-left)) !important;
-    margin: 0 !important;
+    position: static !important;
+    margin: 4px auto 0 !important;
     background: rgba(99, 102, 241, 0.15) !important;
     backdrop-filter: blur(8px) !important;
     border: 1px solid rgba(99, 102, 241, 0.3) !important;
-    padding: 4px 10px !important;
-    border-radius: 8px !important;
+    padding: 3px 10px !important;
+    border-radius: 20px !important;
     font-size: 0.65rem !important;
     color: #a5b4fc !important;
-    text-align: left !important;
+    text-align: center !important;
     z-index: 10 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
     white-space: nowrap !important;
   }
 
-  /* Menu sections container */
+  /* MAIN MENU 3-COLUMN BALANCED HERO DECK */
   .menu-sections {
-    display: block !important;
-    position: static !important;
+    position: absolute !important;
+    top: 80px !important;
+    bottom: 35px !important;
+    left: max(15px, env(safe-area-inset-left)) !important;
+    right: max(15px, env(safe-area-inset-right)) !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1.15fr 1fr !important;
+    gap: 14px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    max-width: 960px !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    z-index: 10 !important;
   }
 
   /* Hide titles inside groups */
@@ -2354,105 +2368,122 @@ canvas {
     display: none !important;
   }
 
-  /* HRA (Game controls): Bottom Right */
-  #menu-group-game {
-    position: absolute !important;
-    bottom: max(15px, env(safe-area-inset-bottom)) !important;
-    right: max(15px, env(safe-area-inset-right)) !important;
-    width: 200px !important;
-    z-index: 10 !important;
+  #menu-group-progression,
+  #menu-group-social {
+    position: static !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 10px !important;
   }
-  
+
+  #menu-group-progression .menu-actions-grid,
+  #menu-group-social .menu-actions-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .menu-hero-btn {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    padding: 10px 14px !important;
+    height: 52px !important;
+    border-radius: 14px !important;
+    background: linear-gradient(145deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.5) 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.2s ease !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+  }
+  .menu-hero-btn:active {
+    transform: scale(0.96) !important;
+  }
+
+  .menu-hero-icon {
+    font-size: 1.4rem !important;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4)) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .menu-hero-text {
+    font-size: 0.85rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 1px !important;
+    color: #f1f5f9 !important;
+    white-space: nowrap !important;
+  }
+
+  /* Center Play Deck */
+  #menu-group-game {
+    position: static !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+  }
+
   #menu-group-game .menu-actions-row {
     display: flex !important;
     flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
     gap: 8px !important;
   }
-  
+
   .desktop-play-btn {
     display: none !important;
   }
-  
+
   .mobile-play-ui {
     display: block !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
-  
+
   #custom-game-mode-dropdown {
     display: block !important;
     width: 100% !important;
-    box-sizing: border-box !important;
-    margin: 0 0 10px 0 !important;
+    max-width: 220px !important;
+    margin: 0 !important;
   }
-  
+
   #game-mode-select {
     display: none !important;
   }
-  
+
   #btn-play-action {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
-    width: 100% !important;
-    height: 48px !important;
-    font-size: 1.25rem !important;
-    font-weight: 900 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-    border-radius: 12px !important;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-    border: 2px solid rgba(255, 255, 255, 0.2) !important;
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4) !important;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
-    transition: all 0.2s ease !important;
-    margin: 0 !important;
-  }
-  
-  #btn-play-action:active {
-    transform: scale(0.95) !important;
-    box-shadow: 0 0 5px rgba(16, 185, 129, 0.2) !important;
-  }
-
-  /* POSTUP (Progression): Bottom Left 2x2 Grid */
-  #menu-group-progression {
-    position: absolute !important;
-    bottom: max(15px, env(safe-area-inset-bottom)) !important;
-    left: max(15px, env(safe-area-inset-left)) !important;
-    width: 270px !important;
-    z-index: 10 !important;
-  }
-  
-  #menu-group-progression .menu-actions-grid {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
     gap: 8px !important;
     width: 100% !important;
-  }
-  
-  #menu-group-progression .menu-actions-grid button {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 4px !important;
-    padding: 6px !important;
-    height: 60px !important;
-    font-size: 0.75rem !important;
-    font-weight: 800 !important;
-    text-align: left !important;
-    border-radius: 8px !important;
-    margin: 0 !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+    max-width: 220px !important;
+    height: 52px !important;
+    font-size: 1.3rem !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 2px !important;
+    border-radius: 14px !important;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    border: 2px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45) !important;
+    color: #ffffff !important;
+    cursor: pointer !important;
     transition: all 0.2s ease !important;
+    margin: 0 !important;
   }
-  
-  #menu-group-progression .menu-actions-grid button:active {
-    transform: scale(0.95) !important;
-  }
-  
-  #menu-group-progression .menu-actions-grid button span {
-    font-size: 1rem !important;
+  #btn-play-action:active {
+    transform: scale(0.96) !important;
   }
 
   #btn-hamburger {
@@ -2561,7 +2592,7 @@ canvas {
   #menu-footer {
     position: absolute !important;
     bottom: 5px !important;
-    left: 53% !important;
+    left: 50% !important;
     transform: translateX(-50%) !important;
     display: flex !important;
     flex-direction: column !important;
@@ -2858,7 +2889,7 @@ body.fullscreen-tree-active #meta-modal .modal-content {
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-#menu-group-progression, #menu-group-other {
+#menu-group-progression, #menu-group-social, #menu-group-other {
     background: rgba(255, 255, 255, 0.03);
     padding: 15px;
     border-radius: 16px;
@@ -3054,7 +3085,7 @@ body.fullscreen-tree-active #meta-modal .modal-content {
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-#menu-group-progression, #menu-group-other {
+#menu-group-progression, #menu-group-social, #menu-group-other {
     background: rgba(255, 255, 255, 0.03);
     padding: 15px;
     border-radius: 16px;
@@ -3200,13 +3231,13 @@ body.fullscreen-tree-active #meta-modal .modal-content {
     color: #fff !important;
 }
 
-#menu-group-progression, #menu-group-other, #menu-group-game {
+#menu-group-progression, #menu-group-social, #menu-group-other, #menu-group-game {
     box-shadow: inset 0 2px 10px rgba(255, 255, 255, 0.02), 0 10px 30px -10px rgba(0,0,0,0.5) !important;
     backdrop-filter: blur(16px) !important;
     -webkit-backdrop-filter: blur(16px) !important;
     transition: all 0.3s ease;
 }
-#menu-group-progression:hover, #menu-group-other:hover, #menu-group-game:hover {
+#menu-group-progression:hover, #menu-group-social:hover, #menu-group-other:hover, #menu-group-game:hover {
     border-color: rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.04);
 }
