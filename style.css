@@ -1132,9 +1132,12 @@ canvas {
     }
     
     #multiplayer-modal .modal-content {
-      width: 100vw !important;
-      min-height: 100vh !important;
-      min-height: 100dvh !important;
+      position: absolute !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
       height: auto !important;
       max-width: none !important;
       max-height: none !important;
@@ -1918,12 +1921,14 @@ canvas {
   }
   
   #menu-modal .modal-content {
-    width: 100vw !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-    max-height: 100vh !important;
-    max-height: 100dvh !important;
-    max-width: 100vw !important;
+    position: absolute !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
     border-radius: 0 !important;
     border: none !important;
     background: radial-gradient(circle at center, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
@@ -1946,13 +1951,14 @@ canvas {
   #pause-modal .modal-content,
   #waiting-modal .modal-content,
   .crate-modal-content {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    min-width: 100vw !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-    max-height: 100vh !important;
-    max-height: 100dvh !important;
+    position: absolute !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
     border-radius: 0 !important;
     border: none !important;
     padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)) !important;
@@ -2575,10 +2581,14 @@ body.fullscreen-tree-active #meta-modal .modal-content {
 
 /* Skill Tree Meta Modal layout stability and scroll fixes (v1.528) */
 #meta-modal .modal-content {
-  height: 90vh !important;
-  height: 90dvh !important;
-  max-height: 90vh !important;
-  max-height: 90dvh !important;
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
 }
 
 #meta-modal .modal-body {
@@ -2770,10 +2780,14 @@ body.fullscreen-tree-active #meta-modal .modal-content {
 
 /* Skill Tree Meta Modal layout stability and scroll fixes (v1.528) */
 #meta-modal .modal-content {
-  height: 90vh !important;
-  height: 90dvh !important;
-  max-height: 90vh !important;
-  max-height: 90dvh !important;
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
 }
 
 #meta-modal .modal-body {
@@ -3035,12 +3049,14 @@ input.gamepad-focus,
   #pause-modal .modal-content,
   #waiting-modal .modal-content,
   .crate-modal-content {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    min-width: 100vw !important;
-    flex: 1 1 100% !important;
-    height: 100% !important;
-    max-height: 100% !important;
+    position: absolute !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
     border-radius: 0 !important;
     border: none !important;
     padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left)) !important;
