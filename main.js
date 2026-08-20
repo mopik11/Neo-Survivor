@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.640
+ * NEO SURVIVOR - Core Game Logic - v1.641
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -473,7 +473,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.640'
+    version: window.GAME_VERSION || '1.641'
 };
 
 let achievementsInitialized = false;
@@ -803,7 +803,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.640";
+const GAME_VERSION = window.GAME_VERSION || "1.641";
 const GAME = {
     active: false,
     paused: false,
@@ -4760,8 +4760,8 @@ function startCrateAnimation(winner, crateType = 'basic') {
         'pet': { name: window.T('VAJÍČKO (PET)'), icon: '🥚', color: '#22c55e', glow: 'rgba(34, 197, 94, 0.6)', bg: '#022c22' }
     }[crateType];
 
-    const isMobile = window.innerWidth <= 768;
-    const itemSize = isMobile ? 110 : 130;
+    const isMobile = window.innerWidth <= 768 || window.innerHeight <= 600;
+    const itemSize = isMobile ? 90 : 125;
     const itemGap = isMobile ? 8 : 10;
     const itemWidth = itemSize + itemGap;
 
@@ -4774,13 +4774,13 @@ function startCrateAnimation(winner, crateType = 'basic') {
     randomItems[35] = winner; // The 36th item is the target
 
     modal.innerHTML = `
-        <div class="modal-content crate-modal-content" style="max-width: 800px; width: 95vw; background: ${crateData.bg}; border: 2px solid ${crateData.color}44; padding: 2rem; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 0 50px ${crateData.glow};">
-            <button id="btn-skip-crate" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px 20px; border-radius: 12px; cursor: pointer; font-weight: 800; z-index: 10;">${window.T('PŘESKOČIT')}</button>
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom: 1.2rem; opacity: 0.8; flex-wrap: wrap; justify-content: center; width: 100%; padding: 0 40px;">
-                <span style="font-size: 1.2rem;">${crateData.icon}</span>
-                <h2 class="crate-anim-title" style="color: ${crateData.color}; font-size: 0.85rem; margin:0; letter-spacing: 2px; text-transform: uppercase; text-align: center;">${window.T(crateData.name)}</h2>
+        <div class="modal-content crate-modal-content" style="max-width: 800px; width: 95vw; background: ${crateData.bg}; border: 2px solid ${crateData.color}44; padding: ${isMobile ? '1.2rem 1.4rem' : '2rem'}; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 0 50px ${crateData.glow};">
+            <button id="btn-skip-crate" style="position: absolute; top: ${isMobile ? '12px' : '20px'}; right: ${isMobile ? '14px' : '20px'}; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: ${isMobile ? '6px 14px' : '10px 20px'}; border-radius: 12px; cursor: pointer; font-weight: 800; z-index: 10; font-size: ${isMobile ? '0.75rem' : '0.9rem'};">${window.T('PŘESKOČIT')}</button>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom: ${isMobile ? '0.8rem' : '1.2rem'}; opacity: 0.95; flex-wrap: wrap; justify-content: center; width: 100%; padding: 0 40px;">
+                <span style="font-size: ${isMobile ? '1.3rem' : '1.6rem'};">${crateData.icon}</span>
+                <h2 class="crate-anim-title" style="color: ${crateData.color}; font-size: ${isMobile ? '1.1rem' : '1.4rem'}; margin:0; letter-spacing: 2px; text-transform: uppercase; text-align: center; text-shadow: 0 0 15px ${crateData.color}66;">${window.T(crateData.name)}</h2>
             </div>
-            <div style="position: relative; width: 100%; height: ${itemSize + 30}px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);">
+            <div style="position: relative; width: 100%; height: ${itemSize + 24}px; overflow: hidden; background: rgba(0,0,0,0.5); border-radius: 18px; border: 1px solid ${crateData.color}44; display: flex; align-items: center; box-shadow: inset 0 0 25px rgba(0,0,0,0.7), 0 0 20px ${crateData.glow};">
                 <!-- Pointer/Marker -->
                 <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #fbbf24; z-index: 100; pointer-events: none;">
                     <svg style="position: absolute; top: 0; left: 50%; transform: translateX(-50%);" width="20" height="15" viewBox="0 0 20 15">
@@ -4793,27 +4793,27 @@ function startCrateAnimation(winner, crateType = 'basic') {
                 
                 <div id="crate-carousel" style="display: flex; gap: ${itemGap}px; width: ${40 * itemWidth}px; box-sizing: content-box; transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1); transform: translateX(0); padding-left: 50%;">
                     ${randomItems.map(item => `
-                        <div class="crate-item" style="min-width: ${itemSize}px; height: ${itemSize}px; background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.08); border-bottom: 3px solid ${getRarityColor(item.rarity)}; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
-                            <div style="font-size: ${isMobile ? '2.5rem' : '3.5rem'}; filter: drop-shadow(0 0 8px rgba(255,255,255,0.05));">${item.icon}</div>
-                            <div style="font-size: 0.5rem; font-weight: 900; color: ${getRarityColor(item.rarity)}; letter-spacing: 1px;">${item.rarity.toUpperCase()}</div>
+                        <div class="crate-item" style="min-width: ${itemSize}px; width: ${itemSize}px; height: ${itemSize}px; background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.4) 100%); border: 1px solid rgba(255,255,255,0.1); border-bottom: 3px solid ${getRarityColor(item.rarity)}; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box; flex-shrink: 0;">
+                            <div class="crate-item-icon" style="font-size: ${isMobile ? '2.2rem' : '3.2rem'}; line-height: 1; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));">${item.icon}</div>
+                            <div class="crate-item-rarity" style="font-size: ${isMobile ? '0.55rem' : '0.65rem'}; font-weight: 900; color: ${getRarityColor(item.rarity)}; letter-spacing: 1px; text-transform: uppercase; text-shadow: 0 0 8px ${getRarityColor(item.rarity)}88;">${item.rarity.toUpperCase()}</div>
                         </div>
                     `).join('')}
                 </div>
             </div>
 
-            <div id="crate-result-info" style="margin-top: 1.5rem; opacity: 0; visibility: hidden; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%; position: relative;">
+            <div id="crate-result-info" style="margin-top: ${isMobile ? '0.8rem' : '1.5rem'}; opacity: 0; visibility: hidden; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px); text-align: center; width: 100%; position: relative;">
                 <div id="crate-blocker" style="position: absolute; inset: -50px; z-index: 999; cursor: wait;"></div>
-                <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;">${window.T('ZÍSKÁNO:')} ${GAME.lastCrateBatchSize - (GAME.crateQueue ? GAME.crateQueue.length : 0)} / ${GAME.lastCrateBatchSize || 1}</p>
-                <h2 id="crate-winner-name" style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 5px; text-shadow: 0 0 20px rgba(255,255,255,0.2);">${window.T(winner.name)}</h2>
-                <div id="crate-winner-rarity" style="font-size: 1.1rem; font-weight: 800; color: ${getRarityColor(winner.rarity)}; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 30px;">${winner.rarity.toUpperCase()}</div>
+                <p style="font-size: ${isMobile ? '0.7rem' : '0.8rem'}; color: #94a3b8; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 2px;">${window.T('ZÍSKÁNO:')} ${GAME.lastCrateBatchSize - (GAME.crateQueue ? GAME.crateQueue.length : 0)} / ${GAME.lastCrateBatchSize || 1}</p>
+                <h2 id="crate-winner-name" style="font-size: ${isMobile ? '1.6rem' : '2.5rem'}; font-weight: 800; color: #fff; margin-bottom: 2px; text-shadow: 0 0 20px rgba(255,255,255,0.2);">${window.T(winner.name)}</h2>
+                <div id="crate-winner-rarity" style="font-size: ${isMobile ? '0.85rem' : '1.1rem'}; font-weight: 800; color: ${getRarityColor(winner.rarity)}; text-transform: uppercase; letter-spacing: 3px; margin-bottom: ${isMobile ? '12px' : '25px'};">${winner.rarity.toUpperCase()}</div>
                 
-                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                    <button id="btn-crate-collect" class="btn-restart" style="min-width: 180px; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: 12px; font-size: 0.9rem;">
+                <div style="display: flex; gap: ${isMobile ? '10px' : '15px'}; justify-content: center; flex-wrap: wrap;">
+                    <button id="btn-crate-collect" class="btn-restart" style="min-width: ${isMobile ? '130px' : '180px'}; background: ${getRarityColor(winner.rarity)}; color: #000; font-weight: 800; padding: ${isMobile ? '8px 14px' : '12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'};">
                         ${(GAME.crateQueue && GAME.crateQueue.length > 0) ? `${window.T('DALŠÍ')} (<span id="crate-auto-timer">3</span>s)` : window.T('PŘIDAT DO SBÍRKY')}
                     </button>
-                    <button id="btn-crate-sell" class="btn-restart" style="min-width: 120px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem;">${window.T('PRODAT')} (+${winner.price})</button>
-                    <button id="btn-crate-again" class="btn-restart" style="min-width: 180px; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 800; padding: 12px; font-size: 0.9rem; display: none;">${window.T('ZATOČIT ZNOVU')}</button>
-                    <button id="btn-crate-sell-all" class="btn-restart" style="min-width: 180px; background: #ef4444; color: #fff; font-weight: 800; padding: 12px; font-size: 0.9rem; border: none; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); display: none;">${window.T('PRODAT VŠE')}</button>
+                    <button id="btn-crate-sell" class="btn-restart" style="min-width: ${isMobile ? '100px' : '120px'}; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; padding: ${isMobile ? '8px 14px' : '12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'};">${window.T('PRODAT')} (+${winner.price})</button>
+                    <button id="btn-crate-again" class="btn-restart" style="min-width: ${isMobile ? '130px' : '180px'}; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 800; padding: ${isMobile ? '8px 14px' : '12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'}; display: none;">${window.T('ZATOČIT ZNOVU')}</button>
+                    <button id="btn-crate-sell-all" class="btn-restart" style="min-width: ${isMobile ? '130px' : '180px'}; background: #ef4444; color: #fff; font-weight: 800; padding: ${isMobile ? '8px 14px' : '12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'}; border: none; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); display: none;">${window.T('PRODAT VŠE')}</button>
                 </div>
             </div>
         </div>

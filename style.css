@@ -1535,32 +1535,6 @@ canvas {
     }
 
     h2 { font-size: 1rem !important; margin-bottom: 0.5rem !important; }
-
-    #crate-carousel {
-        height: 100px !important;
-    }
-
-    .crate-item {
-        min-width: 90px !important;
-        height: 90px !important;
-    }
-
-    .crate-item div {
-        font-size: 2rem !important;
-    }
-
-    #crate-result-info {
-        margin-top: 0.5rem !important;
-    }
-
-    #crate-result-info h3 {
-        font-size: 1.5rem !important;
-    }
-
-    #crate-result-info .btn-restart {
-        margin-top: 0.5rem !important;
-        padding: 8px !important;
-    }
 }
 
 @media (max-width: 480px) {
@@ -3363,23 +3337,56 @@ input.gamepad-focus,
   }
 
   /* 14. CRATE OPENING (Dynamic Modal) */
-  .crate-modal-content {
-    width: 100vw !important;
-    min-height: 100vh !important;
-    min-height: 100dvh !important;
-    height: auto !important;
-    max-width: 100vw !important;
-    max-height: none !important;
-    border-radius: 0 !important;
-    border: none !important;
+  .modal-crate-active {
+    display: flex !important;
     justify-content: center !important;
     align-items: center !important;
-    padding: max(10px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom, 30px)) max(18px, env(safe-area-inset-left)) !important;
+    padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)) !important;
+    background: rgba(10, 15, 29, 0.96) !important;
   }
-  #btn-skip-crate {
-    top: max(10px, env(safe-area-inset-top)) !important;
-    right: max(14px, env(safe-area-inset-right)) !important;
-    padding: 8px 16px !important;
+  .crate-modal-content {
+    width: 95vw !important;
+    max-width: 750px !important;
+    min-height: auto !important;
+    height: auto !important;
+    max-height: 94vh !important;
+    max-height: 94dvh !important;
+    border-radius: 24px !important;
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 1.2rem 1.4rem !important;
+    margin: auto !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8) !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+  }
+  .crate-modal-content .crate-anim-title {
+    font-size: 1.1rem !important;
+    letter-spacing: 2px !important;
+  }
+  .crate-modal-content #btn-skip-crate {
+    top: 12px !important;
+    right: 14px !important;
+    padding: 6px 14px !important;
+    font-size: 0.75rem !important;
+    border-radius: 10px !important;
+  }
+  .crate-modal-content #crate-result-info {
+    margin-top: 10px !important;
+  }
+  .crate-modal-content #crate-winner-name {
+    font-size: 1.6rem !important;
+    margin-bottom: 2px !important;
+  }
+  .crate-modal-content #crate-winner-rarity {
+    font-size: 0.85rem !important;
+    letter-spacing: 2px !important;
+    margin-bottom: 12px !important;
+  }
+  .crate-modal-content #crate-result-info .btn-restart {
+    min-width: 130px !important;
+    padding: 8px 14px !important;
     font-size: 0.8rem !important;
   }
 }
