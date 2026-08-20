@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.641
+ * NEO SURVIVOR - Core Game Logic - v1.642
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -473,7 +473,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.641'
+    version: window.GAME_VERSION || '1.642'
 };
 
 let achievementsInitialized = false;
@@ -803,7 +803,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.641";
+const GAME_VERSION = window.GAME_VERSION || "1.642";
 const GAME = {
     active: false,
     paused: false,
@@ -5429,18 +5429,29 @@ function initSocket() {
             if (!container) return;
             container.innerHTML = '';
             if (rooms.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: gray; font-size: 0.9rem; padding: 10px 0;">' + window.T("Žádné aktivní servery") + '</div>';
+                container.innerHTML = `
+                    <div class="mp-empty-state">
+                        <div class="mp-empty-icon">📡</div>
+                        <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">${window.T("Žádné aktivní servery.")}</p>
+                        <span style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">${window.T("Založ hru vpravo a pozvi kamaráda!")}</span>
+                    </div>`;
                 return;
             }
             rooms.forEach(room => {
                 const btn = document.createElement('div');
-                btn.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);";
+                btn.className = 'mp-server-item';
                 btn.innerHTML = `
-                    <div>
-                        <strong style="color: #a5b4fc; font-size: 1.1rem; letter-spacing: 2px;">${room.id}</strong>
-                        <div style="font-size: 0.75rem; color: gray; margin-top: 4px;">LVL ${room.level} | Hráči: ${room.players}</div>
+                    <div class="mp-server-meta">
+                        <div class="mp-server-code">
+                            <span class="mp-status-dot"></span>
+                            <strong>${room.id}</strong>
+                        </div>
+                        <div class="mp-server-details">
+                            <span class="mp-badge-lvl">LVL ${room.level}</span>
+                            <span class="mp-badge-players">👥 ${room.players}/4</span>
+                        </div>
                     </div>
-                    <button class="btn-restart" style="padding: 8px 15px; font-size: 0.8rem; background: #10b981; margin: 0;" onclick="window.joinCloudServer('${room.id}')">HRÁT</button>
+                    <button class="btn-restart mp-btn-play" onclick="window.joinCloudServer('${room.id}')">${window.T("HRÁT")} ➔</button>
                 `;
                 container.appendChild(btn);
             });
@@ -7189,6 +7200,24 @@ function init() {
                 document.getElementById('multiplayer-modal').classList.remove('active');
                 tryFullscreen();
                 window.joinCloudServer(roomName);
+            };
+        }
+
+        const btnJoinRoom = document.getElementById('btn-join-room');
+        const inputJoin = document.getElementById('input-join-id');
+        const doJoin = () => {
+            if (inputJoin && inputJoin.value.trim()) {
+                document.getElementById('multiplayer-modal').classList.remove('active');
+                tryFullscreen();
+                window.joinCloudServer(inputJoin.value.trim());
+            } else {
+                window.showCustomAlert(window.T("Zadej platný kód!"));
+            }
+        };
+        if (btnJoinRoom) btnJoinRoom.onclick = doJoin;
+        if (inputJoin) {
+            inputJoin.onkeyup = (e) => {
+                if (e.key === 'Enter') doJoin();
             };
         }
 
