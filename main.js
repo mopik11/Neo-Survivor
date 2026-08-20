@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.635
+ * NEO SURVIVOR - Core Game Logic - v1.636
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -473,7 +473,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.635'
+    version: window.GAME_VERSION || '1.636'
 };
 
 let achievementsInitialized = false;
@@ -803,7 +803,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.635";
+const GAME_VERSION = window.GAME_VERSION || "1.636";
 const GAME = {
     active: false,
     paused: false,
