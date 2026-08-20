@@ -2660,6 +2660,7 @@ body.fullscreen-tree-active #meta-modal .modal-content {
   color: #ef4444 !important;
   cursor: not-allowed !important;
   opacity: 0.5 !important;
+  }
 }
 
 @media (max-width: 950px), (max-height: 550px) {
