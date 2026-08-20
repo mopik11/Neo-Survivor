@@ -2522,19 +2522,19 @@ canvas {
 
 /* Make preview map nodes and lines clearer when scaled down */
 .preview-mode .skill-node {
-  width: 90px !important;
-  height: 90px !important;
-  border-width: 6px !important;
+  width: 75px !important;
+  height: 75px !important;
+  border-width: 4px !important;
 }
 .preview-mode .skill-node .node-icon {
-  font-size: 2.2rem !important;
-  margin-bottom: 4px !important;
+  font-size: 1.8rem !important;
+  margin-bottom: 2px !important;
 }
 .preview-mode .skill-node .node-label {
-  font-size: 1.1rem !important;
+  font-size: 0.85rem !important;
 }
 .preview-mode #skill-tree-lines line {
-  stroke-width: 12px !important;
+  stroke-width: 8px !important;
 }
 
 /* Escape containing block transform/filter constraints when tree is fullscreen */
@@ -3101,18 +3101,33 @@ input.gamepad-focus,
 
   /* 5. SKILL TREE (#meta-modal) */
   #meta-modal .modal-content {
-    padding: 0 0 max(40px, env(safe-area-inset-bottom, 30px)) 0 !important;
+    padding: 0 !important;
   }
   #meta-modal .modal-body {
     padding: 0 0 25px 0 !important;
   }
   #meta-modal .modal-body > div:first-child {
-    padding: 8px 18px 8px 65px !important;
+    padding: 8px 18px 8px 50px !important;
     background: rgba(15, 23, 42, 0.95) !important;
   }
   #meta-modal #skill-tree-wrapper {
-    height: 52vh !important;
-    min-height: 240px !important;
+    height: calc(100vh - 60px) !important;
+    height: calc(100dvh - 60px) !important;
+    min-height: 280px !important;
+    width: 100% !important;
+  }
+  #meta-modal #skill-tree-wrapper.fullscreen-active {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    z-index: 9999999 !important;
+    border: none !important;
+    border-radius: 0 !important;
   }
 
   /* 6. ACHIEVEMENTS (#achievements-modal) */

@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.642
+ * NEO SURVIVOR - Core Game Logic - v1.643
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -473,7 +473,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.642'
+    version: window.GAME_VERSION || '1.643'
 };
 
 let achievementsInitialized = false;
@@ -803,7 +803,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.642";
+const GAME_VERSION = window.GAME_VERSION || "1.643";
 const GAME = {
     active: false,
     paused: false,
@@ -4194,6 +4194,26 @@ function showSkillTreeMenu(silent = false) {
         wrapper.scrollLeft = scrollLeft - walkX;
         wrapper.scrollTop = scrollTop - walkY;
     };
+
+    // Touch Panning Logic (Mobile touchscreen)
+    let touchStartX, touchStartY, touchScrollLeft, touchScrollTop;
+    wrapper.ontouchstart = (e) => {
+        if (!wrapper.classList.contains('fullscreen-active') || e.touches.length !== 1) return;
+        touchStartX = e.touches[0].pageX;
+        touchStartY = e.touches[0].pageY;
+        touchScrollLeft = wrapper.scrollLeft;
+        touchScrollTop = wrapper.scrollTop;
+    };
+    wrapper.ontouchmove = (e) => {
+        if (!wrapper.classList.contains('fullscreen-active') || e.touches.length !== 1) return;
+        const x = e.touches[0].pageX;
+        const y = e.touches[0].pageY;
+        const walkX = (x - touchStartX) * 1.5;
+        const walkY = (y - touchStartY) * 1.5;
+        wrapper.scrollLeft = touchScrollLeft - walkX;
+        wrapper.scrollTop = touchScrollTop - walkY;
+    };
+
     wrapper.style.cursor = wrapper.classList.contains('fullscreen-active') ? 'grab' : 'pointer';
 }
 
@@ -9029,23 +9049,24 @@ window.toggleTreeFullscreen = function() {
         wrapper.classList.add('preview-mode');
         document.body.classList.remove('fullscreen-tree-active');
         
-        wrapper.style.position = 'relative';
-        wrapper.style.width = '100%';
-        wrapper.style.height = '400px';
-        wrapper.style.zIndex = '1';
-        wrapper.style.overflow = 'hidden';
-        wrapper.style.marginTop = '0px';
+        wrapper.style.position = '';
+        wrapper.style.top = '';
+        wrapper.style.left = '';
+        wrapper.style.width = '';
+        wrapper.style.height = '';
+        wrapper.style.zIndex = '';
+        wrapper.style.overflow = '';
+        wrapper.style.marginTop = '';
         wrapper.scrollLeft = 0;
         wrapper.scrollTop = 0;
         
         canvas.style.position = 'absolute';
         canvas.style.left = '50%';
         canvas.style.top = '50%';
-        canvas.style.transform = 'translate(-50%, -50%) scale(0.38)';
+        canvas.style.transform = 'translate(-50%, -50%) scale(0.42)';
         canvas.style.transformOrigin = 'center center';
         
         btn.style.display = 'none';
-        btn.innerHTML = '🔍 ZVĚTŠIT';
     } else {
         wrapper.classList.remove('preview-mode');
         wrapper.classList.add('fullscreen-active');
@@ -9056,7 +9077,7 @@ window.toggleTreeFullscreen = function() {
         wrapper.style.left = '0';
         wrapper.style.width = '100vw';
         wrapper.style.height = '100vh';
-        wrapper.style.zIndex = '999999';
+        wrapper.style.zIndex = '9999999';
         wrapper.style.overflow = 'auto';
         wrapper.style.marginTop = '0px';
         
@@ -9067,12 +9088,11 @@ window.toggleTreeFullscreen = function() {
         canvas.style.transformOrigin = 'top left';
         
         btn.style.display = 'block';
-        btn.innerHTML = '✖ ZAVŘÍT';
         
         // Center the scroll
         setTimeout(() => {
             wrapper.scrollLeft = 1000 - wrapper.clientWidth / 2;
             wrapper.scrollTop = 1000 - wrapper.clientHeight / 2;
-        }, 10);
+        }, 30);
     }
 };
