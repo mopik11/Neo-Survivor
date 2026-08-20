@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.643" />
+    <link rel="stylesheet" href="style.css?v=1.642" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.643
+            NEO SURVIVOR v1.642
           </div>
         </div>
       </div>
@@ -124,83 +124,60 @@
 
           <div class="modal-body" style="width: 100%; padding: 0 5px;">
             <div class="menu-sections" id="menu-sections-container">
-              
-              <!-- Left Wing: Gear & Skill Tree -->
-              <div class="menu-group" id="menu-group-progression">
-                <h3 class="menu-group-title" data-i18n="VÝBAVA & SCHOPNOSTI">VÝBAVA & SCHOPNOSTI</h3>
-                <div class="menu-actions-grid">
-                  <button class="btn-restart btn-sub modern-glass-btn menu-hero-btn" id="btn-ships-menu">
-                    <span class="menu-hero-icon">🚀</span>
-                    <span class="menu-hero-text" data-i18n="VÝBAVA">VÝBAVA</span>
-                  </button>
-                  <button class="btn-restart btn-sub modern-glass-btn special-glow menu-hero-btn" id="btn-meta-menu">
-                    <span class="menu-hero-icon">🌌</span>
-                    <span class="menu-hero-text">SKILL TREE</span>
-                  </button>
-                </div>
+            <div class="menu-group" id="menu-group-game">
+              <h3 class="menu-group-title">HRA</h3>
+              <div class="menu-actions-row">
+                <button class="btn-restart btn-main desktop-play-btn modern-glass-btn premium-btn-solo" id="btn-start"><span>🕹️</span> SOLO</button>
+                <button class="btn-restart btn-main btn-mp desktop-play-btn modern-glass-btn premium-btn-multi" id="btn-multiplayer"><span>🌐</span> MULTIPLAYER</button>
+                
+                 <!-- Hidden real select to maintain JS compatibility -->
+                 <select id="game-mode-select" style="display: none !important;">
+                     <option value="solo">solo</option>
+                     <option value="multiplayer">multiplayer</option>
+                 </select>
+
+                 <!-- Custom dropdown replacement -->
+                 <div class="custom-dropdown mobile-play-ui" id="custom-game-mode-dropdown" style="display: none;">
+                   <div class="dropdown-trigger" id="game-mode-trigger">
+                     <span id="game-mode-label">🕹️ SOLO</span>
+                     <span class="dropdown-arrow"></span>
+                   </div>
+                   <div class="dropdown-options" id="game-mode-options">
+                     <div class="dropdown-option selected" data-value="solo">🕹️ SOLO</div>
+                     <div class="dropdown-option" data-value="multiplayer">🌐 MULTIPLAYER</div>
+                   </div>
+                 </div>
+                 <button class="btn-restart btn-main mobile-play-ui" id="btn-play-action" style="display: none; font-size: 1.5rem; padding: 15px 30px; border-radius: 15px; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);"><span>🚀</span> HRÁT</button>
               </div>
-
-              <!-- Center: Play Zone -->
-              <div class="menu-group" id="menu-group-game">
-                <h3 class="menu-group-title" data-i18n="HRA">HRA</h3>
-                <div class="menu-actions-row">
-                  <button class="btn-restart btn-main desktop-play-btn modern-glass-btn premium-btn-solo" id="btn-start"><span>🕹️</span> SOLO</button>
-                  <button class="btn-restart btn-main btn-mp desktop-play-btn modern-glass-btn premium-btn-multi" id="btn-multiplayer"><span>🌐</span> MULTIPLAYER</button>
-                  
-                  <!-- Hidden real select to maintain JS compatibility -->
-                  <select id="game-mode-select" style="display: none !important;">
-                      <option value="solo">solo</option>
-                      <option value="multiplayer">multiplayer</option>
-                  </select>
-
-                  <!-- Custom dropdown replacement -->
-                  <div class="custom-dropdown mobile-play-ui" id="custom-game-mode-dropdown" style="display: none;">
-                    <div class="dropdown-trigger" id="game-mode-trigger">
-                      <span id="game-mode-label">🕹️ SOLO</span>
-                      <span class="dropdown-arrow"></span>
-                    </div>
-                    <div class="dropdown-options" id="game-mode-options">
-                      <div class="dropdown-option selected" data-value="solo">🕹️ SOLO</div>
-                      <div class="dropdown-option" data-value="multiplayer">🌐 MULTIPLAYER</div>
-                    </div>
-                  </div>
-                  <button class="btn-restart btn-main mobile-play-ui" id="btn-play-action" style="display: none;"><span>🚀</span> <span data-i18n="HRÁT">HRÁT</span></button>
-                </div>
-              </div>
-
-              <!-- Right Wing: Social & Trophy -->
-              <div class="menu-group" id="menu-group-social">
-                <h3 class="menu-group-title" data-i18n="ŽEBŘÍČEK & ÚSPĚCHY">ŽEBŘÍČEK & ÚSPĚCHY</h3>
-                <div class="menu-actions-grid">
-                  <button class="btn-restart btn-sub modern-glass-btn menu-hero-btn" id="btn-leaderboard">
-                    <span class="menu-hero-icon">🏆</span>
-                    <span class="menu-hero-text" data-i18n="ŽEBŘÍČEK">ŽEBŘÍČEK</span>
-                  </button>
-                  <button class="btn-restart btn-sub modern-glass-btn menu-hero-btn" id="btn-achievements">
-                    <span class="menu-hero-icon">🌟</span>
-                    <span class="menu-hero-text" data-i18n="ÚSPĚCHY">ÚSPĚCHY</span>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Hamburger Drawer -->
-              <div class="menu-group" id="menu-group-other">
-                <h3 class="menu-group-title">OSTATNÍ</h3>
-                <div class="menu-actions-grid secondary">
-                  <button class="btn-restart btn-mini modern-glass-btn" id="btn-tutorial"><span>📖</span> <span data-i18n="NÁVOD">NÁVOD</span></button>
-                  <button class="btn-restart btn-mini modern-glass-btn" id="btn-feedback"><span>💬</span> <span data-i18n="FEEDBACK">FEEDBACK</span></button>
-                  <button class="btn-restart btn-mini modern-glass-btn" id="btn-settings"><span>⚙️</span> <span data-i18n="NASTAVENÍ">NASTAVENÍ</span></button>
-                  <button class="btn-restart btn-mini modern-glass-btn premium-btn-quit" id="btn-main-quit"><span>🚪</span> <span data-i18n="ODHLÁSIT">ODHLÁSIT</span></button>
-                </div>
-              </div>
-
             </div>
+
+            <div class="menu-group" id="menu-group-progression">
+              <h3 class="menu-group-title">POSTUP</h3>
+              <div class="menu-actions-grid">
+                <button class="btn-restart btn-sub modern-glass-btn" id="btn-ships-menu"><span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span></button>
+                <button class="btn-restart btn-sub modern-glass-btn special-glow" id="btn-meta-menu"><span>🌌</span> <span>SKILL TREE</span></button>
+
+                <button class="btn-restart btn-sub modern-glass-btn" id="btn-leaderboard"><span>🏆</span> <span data-i18n="ŽEBŘÍČEK">ŽEBŘÍČEK</span></button>
+                <button class="btn-restart btn-sub modern-glass-btn" id="btn-achievements"><span>🌟</span> <span data-i18n="ÚSPĚCHY">ÚSPĚCHY</span></button>
+              </div>
+            </div>
+
+            <div class="menu-group" id="menu-group-other">
+              <h3 class="menu-group-title">OSTATNÍ</h3>
+              <div class="menu-actions-grid secondary">
+                <button class="btn-restart btn-mini modern-glass-btn" id="btn-tutorial"><span>📖</span> <span data-i18n="NÁVOD">NÁVOD</span></button>
+                <button class="btn-restart btn-mini modern-glass-btn" id="btn-feedback"><span>💬</span> <span data-i18n="FEEDBACK">FEEDBACK</span></button>
+                <button class="btn-restart btn-mini modern-glass-btn" id="btn-settings"><span>⚙️</span> <span data-i18n="NASTAVENÍ">NASTAVENÍ</span></button>
+                <button class="btn-restart btn-mini modern-glass-btn premium-btn-quit" id="btn-main-quit"><span>🚪</span> <span data-i18n="ODHLÁSIT">ODHLÁSIT</span></button>
+              </div>
+            </div>
+          </div>
           </div> <!-- Close modal-body here -->
 
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
             <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.643</span>
+              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.642</span>
             </div>
 
             <div id="menu-links" class="mobile-stack-links" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 15px;">
@@ -417,75 +394,48 @@
         <div class="modal-content" style="position: relative;">
           <button class="btn-close-x" onclick="closeModal()">×</button>
           <div class="modal-body" style="flex: 1; display: flex; flex-direction: column;">
-            <h2 class="mp-modal-title" style="font-size: 2rem; margin-bottom: 0.8rem; background: linear-gradient(135deg, #a5b4fc 0%, #38bdf8 50%, #c084fc 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-align: center; text-transform: uppercase; letter-spacing: 3px; font-weight: 900;">SÍŤOVÁ HRA</h2>
+            <h2 style="font-size: 2rem; margin-top: 0; margin-bottom: 0.8rem; background: linear-gradient(to right, #a5b4fc, #d8b4fe); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-align: center; text-transform: uppercase; letter-spacing: 2px;">SÍŤOVÁ HRA</h2>
             
-            <div class="multiplayer-split">
+            <div class="multiplayer-split" style="display: flex; gap: 20px; width: 100%; margin: 0 auto; flex: 1; align-items: stretch;">
               
-              <!-- Left side (Live Server Browser) -->
-              <div class="multiplayer-left">
-                <div class="mp-card mp-browser-card">
-                  <div class="mp-card-header">
-                      <div class="mp-header-title">
-                        <span class="mp-radar-icon">🌐</span>
-                        <h3 data-i18n="DOSTUPNÉ SERVERY">DOSTUPNÉ SERVERY</h3>
-                      </div>
-                      <button onclick="requestServerList()" class="btn-obnovit modern-glass-btn" title="Obnovit seznam serverů">
-                        <span>🔄</span>
-                        <span data-i18n="OBNOVIT">OBNOVIT</span>
-                      </button>
+              <!-- Left side (Server List & Join via Code) -->
+              <div class="multiplayer-left" style="flex: 1; display: flex; flex-direction: column;">
+                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                        <h3 style="margin: 0; font-size: 0.9rem; opacity: 0.8; letter-spacing: 1px; white-space: nowrap;">DOSTUPNÉ SERVERY</h3>
+                        <button onclick="requestServerList()" class="btn-obnovit modern-glass-btn" style="padding: 5px 10px; font-size: 0.7rem; background: rgba(255,255,255,0.1); border:none; border-radius: 6px; cursor: pointer;">OBNOVIT</button>
+                    </div>
+                    <div id="server-list-container" style="flex: 1; max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;">
+                        <div style="text-align: center; color: gray; font-size: 0.85rem; padding: 10px 0;">Hledám servery...</div>
+                    </div>
                   </div>
-                  <div id="server-list-container" class="mp-server-list">
-                      <div class="mp-empty-state">
-                        <div class="mp-empty-icon">📡</div>
-                        <p data-i18n="Hledám aktivní servery...">Hledám aktivní servery...</p>
-                      </div>
+
+                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
+                    <div class="separator-text" style="color: rgba(255,255,255,0.4); font-size: 0.7rem; letter-spacing: 2px; text-align: center; margin-bottom: 6px;">— NEBO KÓD —</div>
+                    <div class="join-group" style="display: flex; gap: 8px;">
+                      <input type="text" id="input-join-id" placeholder="ZADEJ KÓD..." maxlength="6" style="flex: 1; min-width: 0; text-align: center; font-size: 0.9rem; letter-spacing: 3px; padding: 8px 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: white;">
+                      <button id="btn-join-room" class="btn-join btn-restart" style="padding: 8px 16px; font-size: 0.85rem; background: #6366f1; border: none; box-shadow: 0 0 15px rgba(99,102,241,0.4); white-space: nowrap;">PŘIPOJIT</button>
+                    </div>
                   </div>
                 </div>
               </div>
               
-              <!-- Right side (Host & Join Panels) -->
-              <div class="multiplayer-right">
-                
-                <!-- HOST CARD -->
-                <div class="mp-card mp-host-card">
-                  <div class="mp-card-header">
-                    <div class="mp-header-title">
-                      <span class="mp-radar-icon">👑</span>
-                      <h3 style="color: #34d399;" data-i18n="ZALOŽIT VLASTNÍ HRU">ZALOŽIT VLASTNÍ HRU</h3>
+              <!-- Right side (Host QR & Start Game) -->
+              <div class="multiplayer-right" style="flex: 1; display: flex; flex-direction: column;">
+                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: space-between;">
+                  <div style="width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center;">
+                    <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 2px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Založit hru</div>
+                    <div id="host-code-display" style="font-size: 1.8rem; letter-spacing: 6px; color: #10b981; font-weight: 900; margin-bottom: 6px; text-shadow: 0 0 10px rgba(16,185,129,0.4);">Načítám...</div>
+                    <div id="qr-code-container" style="display: flex; justify-content: center; margin-bottom: 6px;">
+                        <img id="qr-code-img" src="" alt="QR Code" style="border-radius: 10px; border: 2px solid rgba(16,185,129,0.4); width: 130px; height: 130px; display: none; box-shadow: 0 0 15px rgba(16,185,129,0.2);">
                     </div>
                   </div>
-                  
-                  <div class="mp-host-body">
-                    <div class="mp-host-info">
-                      <span class="mp-sublabel" data-i18n="Kód tvého lobby:">KÓD TVÉHO LOBBY:</span>
-                      <div id="host-code-display" class="mp-code-pill">------</div>
-                      <div class="mp-host-actions">
-                        <button id="btn-copy-code" class="btn-restart mp-btn-secondary">📋 <span data-i18n="KOPÍROVAT">KOPÍROVAT</span></button>
-                        <button id="btn-start-hosted" class="btn-restart mp-btn-primary">🚀 <span data-i18n="SPUSTIT HRU">SPUSTIT HRU</span></button>
-                      </div>
-                    </div>
-                    
-                    <div id="qr-code-container" class="mp-qr-box">
-                      <img id="qr-code-img" src="" alt="QR Code" style="display: none;">
-                      <span class="mp-qr-hint" data-i18n="Skenuj mobilem">Skenuj mobilem</span>
-                    </div>
+                  <div style="display: flex; gap: 8px; width: 100%;">
+                      <button id="btn-copy-code" class="btn-restart" style="flex: 1; padding: 10px; font-size: 0.8rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">📋 KOPÍROVAT</button>
+                      <button id="btn-start-hosted" class="btn-restart" style="flex: 1.5; padding: 10px; font-size: 0.85rem; background: #10b981; box-shadow: 0 0 15px rgba(16,185,129,0.4); border: none;">🚀 HRA</button>
                   </div>
                 </div>
-                
-                <!-- JOIN CARD -->
-                <div class="mp-card mp-join-card">
-                  <div class="mp-card-header">
-                    <div class="mp-header-title">
-                      <span class="mp-radar-icon">🔑</span>
-                      <h3 style="color: #a5b4fc;" data-i18n="PŘIPOJIT SE KÓDEM">PŘIPOJIT SE KÓDEM</h3>
-                    </div>
-                  </div>
-                  <div class="mp-join-row">
-                    <input type="text" id="input-join-id" placeholder="KÓD HRY..." maxlength="6" autocomplete="off" spellcheck="false" class="mp-input-code">
-                    <button id="btn-join-room" class="btn-join btn-restart mp-btn-join">⚡ <span data-i18n="PŘIPOJIT">PŘIPOJIT</span></button>
-                  </div>
-                </div>
-
               </div>
               
             </div>
@@ -844,7 +794,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>window.GAME_VERSION = '1.643';</script>
-    <script type="module" src="./main.js?v=1.643"></script>
+    <script>window.GAME_VERSION = '1.642';</script>
+    <script type="module" src="./main.js?v=1.642"></script>
   </body>
 </html>
