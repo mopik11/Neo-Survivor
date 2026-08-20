@@ -263,6 +263,88 @@ canvas {
   transform: scale(1) translateY(0);
 }
 
+/* ==========================================================================
+   DESKTOP MULTIPLAYER MODAL
+   ========================================================================== */
+#multiplayer-modal .modal-content {
+  max-width: 860px !important;
+  width: 90vw !important;
+  padding: 2.2rem 2.5rem !important;
+  overflow: hidden !important;
+}
+
+#multiplayer-modal .multiplayer-split {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 24px !important;
+  width: 100% !important;
+  align-items: stretch !important;
+}
+
+#multiplayer-modal .multiplayer-left,
+#multiplayer-modal .multiplayer-right {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+#multiplayer-modal .multiplayer-left > div,
+#multiplayer-modal .multiplayer-right > div {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 20px !important;
+  padding: 20px !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  box-sizing: border-box !important;
+}
+
+#multiplayer-modal #server-list-container {
+  height: 170px !important;
+  max-height: 170px !important;
+  overflow-y: auto !important;
+}
+
+#multiplayer-modal #host-code-display {
+  font-size: 1.8rem !important;
+  letter-spacing: 5px !important;
+  margin-bottom: 8px !important;
+}
+
+#multiplayer-modal #qr-code-img {
+  width: 130px !important;
+  height: 130px !important;
+  border-radius: 10px !important;
+  margin: 4px auto !important;
+}
+
+#multiplayer-modal .join-group {
+  display: flex !important;
+  gap: 10px !important;
+}
+
+#multiplayer-modal #input-join-id {
+  flex: 1 !important;
+  min-width: 0 !important;
+  padding: 10px 14px !important;
+  font-size: 0.95rem !important;
+  letter-spacing: 3px !important;
+}
+
+#multiplayer-modal #btn-join-room {
+  padding: 10px 20px !important;
+  font-size: 0.9rem !important;
+  white-space: nowrap !important;
+}
+
+#multiplayer-modal #btn-copy-code,
+#multiplayer-modal #btn-start-hosted {
+  padding: 12px 18px !important;
+  font-size: 0.85rem !important;
+}
+
 /* Premium X Close Button */
 .btn-close-x {
   position: absolute;
@@ -1075,84 +1157,7 @@ canvas {
     width: 100%;
   }
 
-  #multiplayer-modal .modal-content {
-      max-width: 860px !important;
-      width: 90vw !important;
-      padding: 2rem 2.2rem !important;
-      overflow: hidden !important;
-  }
 
-  #multiplayer-modal .multiplayer-split {
-      display: grid !important;
-      grid-template-columns: 1fr 1fr !important;
-      gap: 22px !important;
-      width: 100% !important;
-      align-items: stretch !important;
-  }
-
-  #multiplayer-modal .multiplayer-left,
-  #multiplayer-modal .multiplayer-right {
-      height: 100% !important;
-      display: flex !important;
-      flex-direction: column !important;
-  }
-
-  #multiplayer-modal .multiplayer-left > div,
-  #multiplayer-modal .multiplayer-right > div {
-      background: rgba(255, 255, 255, 0.04) !important;
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
-      border-radius: 20px !important;
-      padding: 18px 20px !important;
-      height: 100% !important;
-      display: flex !important;
-      flex-direction: column !important;
-      justify-content: space-between !important;
-      box-sizing: border-box !important;
-  }
-
-  #multiplayer-modal #server-list-container {
-      height: 180px !important;
-      max-height: 180px !important;
-      overflow-y: auto !important;
-  }
-
-  #multiplayer-modal #host-code-display {
-      font-size: 1.8rem !important;
-      letter-spacing: 5px !important;
-      margin-bottom: 8px !important;
-  }
-
-  #multiplayer-modal #qr-code-img {
-      width: 125px !important;
-      height: 125px !important;
-      border-radius: 10px !important;
-      margin: 4px auto !important;
-  }
-
-  #multiplayer-modal .join-group {
-      display: flex !important;
-      gap: 10px !important;
-  }
-
-  #multiplayer-modal #input-join-id {
-      flex: 1 !important;
-      min-width: 0 !important;
-      padding: 10px 14px !important;
-      font-size: 0.95rem !important;
-      letter-spacing: 3px !important;
-  }
-
-  #multiplayer-modal #btn-join-room {
-      padding: 10px 20px !important;
-      font-size: 0.9rem !important;
-      white-space: nowrap !important;
-  }
-
-  #multiplayer-modal #btn-copy-code,
-  #multiplayer-modal #btn-start-hosted {
-      padding: 11px 16px !important;
-      font-size: 0.85rem !important;
-  }
   
   /* Prevent footer overlapping buttons on short mobile landscape screens */
   @media screen and (max-height: 550px) {
