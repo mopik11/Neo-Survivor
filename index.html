@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.660
+            NEO SURVIVOR v1.661
           </div>
         </div>
       </div>
@@ -410,22 +410,16 @@
             </div>
           </div>
           
-          <!-- TOP RIGHT UI (Navigation) -->
-          <div style="position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto;">
-            <button id="btn-planet-menu-back" class="btn-restart modern-glass-btn" style="padding: 10px 15px; font-size: 0.8rem; border-radius: 12px; background: rgba(10, 15, 30, 0.8); border: 1px solid rgba(255,255,255,0.2);">
-              <span>🏠</span> <span data-i18n="MENU">MENU</span>
-            </button>
-            <button id="btn-planet-ships" class="btn-restart modern-glass-btn" style="padding: 10px 15px; font-size: 0.8rem; border-radius: 12px; background: rgba(10, 15, 30, 0.8); border: 1px solid rgba(255,255,255,0.2);">
-              <span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span>
-            </button>
-            <button id="btn-planet-tree" class="btn-restart modern-glass-btn" style="padding: 10px 15px; font-size: 0.8rem; border-radius: 12px; background: rgba(10, 15, 30, 0.8); border: 1px solid rgba(255,255,255,0.2);">
-              <span>🌌</span> <span data-i18n="SKILL TREE">SKILL TREE</span>
+          <!-- BOTTOM LEFT UI (Menu Navigation) -->
+          <div style="position: absolute; bottom: 25px; left: 25px; pointer-events: auto; z-index: 20;">
+            <button id="btn-planet-menu-back" class="btn-restart modern-glass-btn" style="padding: 12px 20px; font-size: 0.9rem; font-weight: 800; border-radius: 14px; background: rgba(10, 15, 30, 0.85); border: 1.5px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(0,0,0,0.5); cursor: pointer;">
+              <span>🏠</span> <span data-i18n="MENU">HLAVNÍ MENU</span>
             </button>
           </div>
 
-          <!-- FLOATING FIGHT BUTTON (Bottom Right) -->
-          <button id="btn-planet-fight" class="btn-restart" style="position: absolute; bottom: 30px; right: 30px; padding: 20px 30px; font-size: 1.4rem; font-weight: 900; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #fff; border: 2px solid rgba(255,255,255,0.4); border-radius: 20px; box-shadow: 0 0 40px rgba(239, 68, 68, 0.8); cursor: pointer; pointer-events: auto;">
-            <span>⚔️</span> <span data-i18n="ODSTARTOVAT">ODSTARTOVAT</span> <span>🚀</span>
+          <!-- FLOATING FIGHT BUTTON (Revealed when rocket is clicked) -->
+          <button id="btn-planet-fight" class="btn-restart" style="display: none; position: absolute; bottom: 25px; right: 25px; padding: 18px 32px; font-size: 1.3rem; font-weight: 900; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #fff; border: 2px solid rgba(255,255,255,0.4); border-radius: 20px; box-shadow: 0 0 40px rgba(239, 68, 68, 0.85); cursor: pointer; pointer-events: auto;">
+            <span>⚔️</span> <span id="btn-planet-fight-text" data-i18n="ODSTARTOVAT">ODSTARTOVAT</span> <span>🚀</span>
           </button>
         </div>
       </div>
