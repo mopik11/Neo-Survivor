@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.677
+ * NEO SURVIVOR - Core Game Logic - v1.678
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -3877,20 +3877,74 @@ function toggleFullscreen(element, force = false) {
     }
 }
 
-const PLANET_BUILDINGS = [
-    { id: 1, name: 'Těžební Vrt #1', cost: 100, icon: '⛏️', desc: 'Základní těžba Dogecoinů z povrchu' },
-    { id: 2, name: 'Solární Kolektor #2', cost: 250, icon: '☀️', desc: 'Čerpá sluneční energii pro těžbu' },
-    { id: 3, name: 'Krystalový Důl #3', cost: 500, icon: '💎', desc: 'Hloubkový důl na cenné rudy' },
-    { id: 4, name: 'Doge Reaktor #4', cost: 1000, icon: '⚡', desc: 'Generuje energii pro automatizaci' },
-    { id: 5, name: 'Termální Generátor #5', cost: 2500, icon: '🌋', desc: 'Využívá geotermální energii jádra' },
-    { id: 6, name: 'Atómová Elektrárna #6', cost: 5000, icon: '☢️', desc: 'Vysokovýkonný zdroj pro masivní těžbu' },
-    { id: 7, name: 'Fúzní Komora #7', cost: 10000, icon: '🌀', desc: 'Plazmová fúze pro pokročilý zisk' },
-    { id: 8, name: 'Kvantový Důl #8', cost: 25000, icon: '🌌', desc: 'Kvantová těžba napříč dimenzemi' }
-];
+const PLANET_BUILDINGS_BY_WORLD = {
+    terra: [
+        { id: 1, name: 'Větrná Turbína #1', cost: 100, income: 1, icon: '💨', desc: 'Základní výroba energie z větru' },
+        { id: 2, name: 'Solární Pole #2', cost: 300, income: 2, icon: '☀️', desc: 'Čerpá sluneční energii pro těžbu' },
+        { id: 3, name: 'Těžební Vrt #3', cost: 800, income: 3, icon: '⛏️', desc: 'Hloubkový důl na cenné minerály' },
+        { id: 4, name: 'Doge Baterie #4', cost: 2000, income: 5, icon: '⚡', desc: 'Akumuluje a automatizuje zisk' },
+        { id: 5, name: 'Datacentrum #5', cost: 5000, income: 8, icon: '🖥️', desc: 'Kryptografické těžení na síti' },
+        { id: 6, name: 'Jaderný Reaktor #6', cost: 12000, income: 15, icon: '☢️', desc: 'Masivní stálá produkce Doge' },
+        { id: 7, name: 'Fúzní Komora #7', cost: 30000, income: 25, icon: '🌀', desc: 'Plazmová fúze pro stabilní zisk' },
+        { id: 8, name: 'Kvantový Vysílač #8', cost: 75000, income: 50, icon: '🌌', desc: 'Kvantový kanál napříč vesmírem' }
+    ],
+    ignis: [
+        { id: 1, name: 'Geotermální Sonda #1', cost: 100000, income: 75, icon: '🌋', desc: 'Čerpá žár z lávových komor' },
+        { id: 2, name: 'Lávový Extraktor #2', cost: 250000, income: 150, icon: '🔥', desc: 'Taví vzácné rudy z hlubin' },
+        { id: 3, name: 'Termální Rafinerie #3', cost: 600000, income: 300, icon: '🏭', desc: 'Vysokotlaké zpracování plazmy' },
+        { id: 4, name: 'Magmatická Kovárna #4', cost: 1500000, income: 600, icon: '🔨', desc: 'Kování titánových krystalů' },
+        { id: 5, name: 'Plazmová Věž #5', cost: 3500000, income: 1200, icon: '⚡', desc: 'Vysokoteplotní iontová syntéza' },
+        { id: 6, name: 'Vulkanický Tokamak #6', cost: 8000000, income: 2500, icon: '⚛️', desc: 'Magnetické uvěznění lávové fúze' },
+        { id: 7, name: 'Magnetický Urychlovač #7', cost: 20000000, income: 5000, icon: '🧲', desc: 'Urychlování energetických toků' },
+        { id: 8, name: 'Temný Pyronový Obelisk #8', cost: 50000000, income: 12000, icon: '🔮', desc: 'Prastará ohnivá technologie' }
+    ],
+    cryo: [
+        { id: 1, name: 'Kryogenický Vrt #1', cost: 100000000, income: 25000, icon: '❄️', desc: 'Těžba v absolutním mrazu' },
+        { id: 2, name: 'Ledový Kondenzátor #2', cost: 250000000, income: 55000, icon: '🧊', desc: 'Kondenzace supratekutých plynů' },
+        { id: 3, name: 'Glaciální Stanice #3', cost: 600000000, income: 120000, icon: '🏔️', desc: 'Polární vědecký hub' },
+        { id: 4, name: 'Sub-Zero Rezonátor #4', cost: 1500000000, income: 260000, icon: '📡', desc: 'Rezonanční generátor pole' },
+        { id: 5, name: 'Krystalová Observatoř #5', cost: 3500000000, income: 550000, icon: '🔭', desc: 'Skenování hlubokého kryo-prostoru' },
+        { id: 6, name: 'Chladící Reaktor #6', cost: 8000000000, income: 1200000, icon: '💠', desc: 'Udržuje teplotu blízko 0 Kelvinů' },
+        { id: 7, name: 'Hvězdný Kryo-Tokamak #7', cost: 20000000000, income: 2800000, icon: '🌀', desc: 'Supravodivý fúzní cyklus' },
+        { id: 8, name: 'Monolit Nulového Bodu #8', cost: 50000000000, income: 6500000, icon: '💎', desc: 'Extrahuje energii z vakua' }
+    ],
+    cyber: [
+        { id: 1, name: 'Neonový Uzel #1', cost: 100000000000, income: 15000000, icon: '🟣', desc: 'Základní kybernetický hub' },
+        { id: 2, name: 'Kvantový Mainframe #2', cost: 250000000000, income: 35000000, icon: '💻', desc: 'Superpočítačová síť metropole' },
+        { id: 3, name: 'Tachyonová Matice #3', cost: 600000000000, income: 80000000, icon: '🌐', desc: 'Nadsvětelný přenos dat' },
+        { id: 4, name: 'Kyber Mrakodrap #4', cost: 1500000000000, income: 180000000, icon: '🏙️', desc: 'Vertikální metropole budoucnosti' },
+        { id: 5, name: 'Singulární Reaktor #5', cost: 3500000000000, income: 400000000, icon: '⚫', desc: 'Miniaturní černá díra v magnetickém poli' },
+        { id: 6, name: 'Antihmotový Syntetizér #6', cost: 8000000000000, income: 900000000, icon: '✨', desc: 'Přímá konverze hmoty na energii' },
+        { id: 7, name: 'Hyperdimenzionální Brána #7', cost: 20000000000000, income: 2000000000, icon: '🚪', desc: 'Otevírá portály do paralelních světů' },
+        { id: 8, name: 'Boží Jádro Nexusu #8', cost: 50000000000000, income: 5000000000, icon: '👑', desc: 'Absolutní nadvláda nad vesmírem' }
+    ]
+};
+
+const PLANET_BUILDINGS = PLANET_BUILDINGS_BY_WORLD.terra;
+
+function getCurrentWorldBuildings() {
+    const planetId = window.PlanetVisualEngine?.currentPlanetId || 'terra';
+    return PLANET_BUILDINGS_BY_WORLD[planetId] || PLANET_BUILDINGS_BY_WORLD.terra;
+}
 
 function getPlanetIncomePerMinute() {
-    if (!META.planet || !META.planet.buildings) return 0;
-    return Object.values(META.planet.buildings).filter(Boolean).length;
+    if (!META.planet) return 0;
+    let total = 0;
+    if (META.planet.planets) {
+        for (const [wId, wData] of Object.entries(META.planet.planets)) {
+            const bList = PLANET_BUILDINGS_BY_WORLD[wId] || [];
+            if (wData && wData.buildings) {
+                bList.forEach(b => {
+                    if (wData.buildings[b.id]) total += (b.income || 1);
+                });
+            }
+        }
+    } else if (META.planet.buildings) {
+        PLANET_BUILDINGS_BY_WORLD.terra.forEach(b => {
+            if (META.planet.buildings[b.id]) total += (b.income || 1);
+        });
+    }
+    return total;
 }
 
 function getPendingPlanetIncome() {
@@ -3909,11 +3963,11 @@ function claimPlanetIncome() {
         return;
     }
     META.currency += earned;
-    if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
+    if (!META.planet) META.planet = { planets: {}, buildings: {}, lastIncomeTime: Date.now() };
     META.planet.lastIncomeTime = Date.now();
     if (typeof playSound === 'function') playSound('upgrade');
     if (typeof showCurrencyNotification === 'function') {
-        showCurrencyNotification(earned, window.T("VÝNOS Z DOMOVSKÉ PLANETY"));
+        showCurrencyNotification(earned, window.T("VÝNOS Z MEZIPLANETÁRNÍ TĚŽBY"));
     }
     updateCurrencyUI();
     renderPlanetUI();
@@ -3932,7 +3986,7 @@ function renderPlanetUI() {
 
     const rate = getPlanetIncomePerMinute();
     const rateEl = document.getElementById('planet-income-rate');
-    if (rateEl) rateEl.innerText = `+${rate} DOGE / min`;
+    if (rateEl) rateEl.innerText = `+${formatNumberFull(rate)} DOGE / min`;
 
     const pending = getPendingPlanetIncome();
     const pendingEl = document.getElementById('planet-pending-income');
@@ -3950,81 +4004,55 @@ function renderPlanetUI() {
             claimBtn.style.filter = 'none';
         }
     }
+}
+window.renderPlanetUI = renderPlanetUI;
 
-    const grid = document.getElementById('planet-plots-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-
-    if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
-    if (!META.planet.buildings) META.planet.buildings = {};
-
-    PLANET_BUILDINGS.forEach(b => {
-        const isBuilt = !!META.planet.buildings[b.id];
-        const card = document.createElement('div');
-        card.className = 'upgrade-card';
-        card.style.minHeight = '140px';
-        card.style.display = 'flex';
-        card.style.flexDirection = 'column';
-        card.style.alignItems = 'center';
-        card.style.justifyContent = 'space-between';
-        card.style.padding = '12px 10px';
-        card.style.borderRadius = '14px';
-        card.style.background = isBuilt 
-            ? 'linear-gradient(160deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 78, 59, 0.25) 100%)' 
-            : 'linear-gradient(160deg, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.3) 100%)';
-        card.style.border = isBuilt ? '1.5px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)';
-        card.style.boxShadow = isBuilt ? '0 0 15px rgba(16, 185, 129, 0.2)' : 'none';
-
-        if (isBuilt) {
+function openPlanetSelectModal() {
+    const modal = document.getElementById('planet-select-modal');
+    if (!modal) return;
+    const grid = document.getElementById('planet-destination-grid');
+    if (grid) {
+        grid.innerHTML = '';
+        const curId = window.PlanetVisualEngine?.currentPlanetId || 'terra';
+        PLANET_WORLDS.forEach(world => {
+            const isCur = world.id === curId;
+            const card = document.createElement('div');
+            card.className = `planet-dest-card ${isCur ? 'current' : ''}`;
             card.innerHTML = `
-                <div style="font-size: 2rem; filter: drop-shadow(0 0 8px #10b981);">${b.icon}</div>
-                <div style="text-align: center; margin: 4px 0;">
-                    <div style="font-size: 0.8rem; font-weight: 800; color: #f8fafc;">${window.T(b.name)}</div>
-                    <div style="font-size: 0.65rem; color: #94a3b8; line-height: 1.2; margin-top: 2px;">${window.T(b.desc)}</div>
+                <div style="font-size: 3rem; filter: drop-shadow(0 0 15px ${world.accentColor || '#38bdf8'}); margin-bottom: 8px;">
+                    ${world.icon}
                 </div>
-                <div style="font-size: 0.7rem; font-weight: 900; color: #10b981; background: rgba(16, 185, 129, 0.2); padding: 3px 8px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.4);">
-                    🟢 ${window.T('V PROVOZU (+1 Doge/min)')}
+                <div style="font-size: 1.05rem; font-weight: 900; color: ${world.accentColor || '#fff'}; letter-spacing: 1px;">
+                    ${world.name}
                 </div>
-            `;
-        } else {
-            const canAfford = META.currency >= b.cost;
-            card.innerHTML = `
-                <div style="font-size: 2rem; opacity: 0.6; filter: grayscale(0.5);">${b.icon}</div>
-                <div style="text-align: center; margin: 4px 0;">
-                    <div style="font-size: 0.8rem; font-weight: 800; color: #cbd5e1;">${window.T(b.name)}</div>
-                    <div style="font-size: 0.65rem; color: #64748b; line-height: 1.2; margin-top: 2px;">${window.T(b.desc)}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; margin: 4px 0 12px; line-height: 1.3;">
+                    ${world.shortName} • Doba letu: ${(world.travelDuration || 3.0).toFixed(1)}s
                 </div>
-                <button class="btn-buy-building btn-restart" style="width: 100%; padding: 6px 4px; font-size: 0.72rem; font-weight: 800; background: ${canAfford ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'rgba(255,255,255,0.05)'}; color: ${canAfford ? '#fff' : '#64748b'}; border: ${canAfford ? 'none' : '1px solid rgba(255,255,255,0.1)'}; border-radius: 8px; cursor: ${canAfford ? 'pointer' : 'not-allowed'}; box-shadow: ${canAfford ? '0 0 10px rgba(16,185,129,0.3)' : 'none'};">
-                    🔨 ${window.T('POSTAVIT')} (${formatNumberFull(b.cost)} DOGE)
+                <button class="btn-restart" style="width: 100%; padding: 8px 10px; font-size: 0.78rem; font-weight: 800; border-radius: 10px; background: ${isCur ? 'rgba(16, 185, 129, 0.2)' : 'linear-gradient(135deg, #38bdf8 0%, #6366f1 100%)'}; color: ${isCur ? '#10b981' : '#fff'}; border: ${isCur ? '1.5px solid #10b981' : 'none'}; cursor: ${isCur ? 'default' : 'pointer'};">
+                    ${isCur ? '🟢 SOUČASNÁ DESTINACE' : '🚀 ODSTARTOVAT'}
                 </button>
             `;
-            
-            const buyBtn = card.querySelector('.btn-buy-building');
-            if (buyBtn) {
-                buyBtn.onclick = () => {
-                    if (META.currency >= b.cost) {
-                        META.currency -= b.cost;
-                        META.planet.buildings[b.id] = true;
-                        if (!META.planet.lastIncomeTime) META.planet.lastIncomeTime = Date.now();
-                        playSound('upgrade');
-                        updateCurrencyUI();
-                        renderPlanetUI();
-                        if (NET.socket && NET.socket.connected) {
-                            NET.socket.emit('purchase', { type: 'building', id: b.id, token: NET.sessionToken });
-                        } else {
-                            saveMeta();
-                        }
-                    } else {
-                        if (typeof playSound === 'function') playSound('error');
-                        window.showCustomAlert(window.T("Nedostatek Dogecoinů na stavbu této budovy!"));
+            if (!isCur) {
+                card.onclick = () => {
+                    closePlanetSelectModal();
+                    if (window.PlanetVisualEngine) {
+                        window.PlanetVisualEngine.travelTo(world.id);
                     }
                 };
             }
-        }
-        grid.appendChild(card);
-    });
+            grid.appendChild(card);
+        });
+    }
+    modal.classList.add('active');
+    if (typeof playSound === 'function') playSound('menuOpen');
 }
-window.renderPlanetUI = renderPlanetUI;
+window.openPlanetSelectModal = openPlanetSelectModal;
+
+function closePlanetSelectModal() {
+    const modal = document.getElementById('planet-select-modal');
+    if (modal) modal.classList.remove('active');
+}
+window.closePlanetSelectModal = closePlanetSelectModal;
 
 const PLANET_WORLDS = [
     {
@@ -4044,7 +4072,7 @@ const PLANET_WORLDS = [
         lavaGlow: '#f97316',
         beaconColor: '#10b981',
         accentColor: '#10b981',
-        travelDuration: 2.4
+        travelDuration: 3.2
     },
     {
         id: 'ignis',
@@ -4063,7 +4091,7 @@ const PLANET_WORLDS = [
         lavaGlow: '#f59e0b',
         beaconColor: '#f97316',
         accentColor: '#f97316',
-        travelDuration: 3.2
+        travelDuration: 3.8
     },
     {
         id: 'cryo',
@@ -4082,7 +4110,7 @@ const PLANET_WORLDS = [
         lavaGlow: '#38bdf8',
         beaconColor: '#38bdf8',
         accentColor: '#38bdf8',
-        travelDuration: 3.8
+        travelDuration: 4.2
     },
     {
         id: 'cyber',
@@ -4101,7 +4129,7 @@ const PLANET_WORLDS = [
         lavaGlow: '#e879f9',
         beaconColor: '#c084fc',
         accentColor: '#c084fc',
-        travelDuration: 4.4
+        travelDuration: 4.8
     }
 ];
 
@@ -4117,6 +4145,10 @@ const PlanetVisualEngine = {
     particles: [],
     stars: [],
     travelAsteroids: [],
+    passingPlanets: [],
+    shipLateralX: 0,
+    shipTilt: 0,
+    shipRotation: 0,
     mode: 'solo',
     launchCallback: null,
     isInitialized: false,
@@ -4134,7 +4166,7 @@ const PlanetVisualEngine = {
             }
         });
         
-        // Handle clicks for buying buildings
+        // Handle clicks on canvas (Rocket click opens map, Building click buys)
         this.canvas.addEventListener('click', (e) => {
             if (this.state !== 'idle') return;
             const rect = this.canvas.getBoundingClientRect();
@@ -4143,21 +4175,22 @@ const PlanetVisualEngine = {
             const cx = (this.logicalW || window.innerWidth) / 2;
             const shipY = this.shipY;
             
-            // Check direct click on the Rocket
+            // Check direct click on the Rocket -> Opens Planet Select Star Map!
             const dxRocket = clickX - cx;
             const dyRocket = clickY - shipY;
             if (Math.abs(dxRocket) < 55 && Math.abs(dyRocket) < 75) {
-                this.startTakeoff();
+                openPlanetSelectModal();
                 return;
             }
 
             // Check click on buildings / price badges
             if (this.plotPositions) {
+                const bList = getCurrentWorldBuildings();
                 this.plotPositions.forEach((pos, idx) => {
                     const dx = clickX - pos.x;
                     const dy = clickY - (pos.y - 15);
                     if (Math.abs(dx) < 45 && Math.abs(dy) < 55) {
-                        const bInfo = PLANET_BUILDINGS[idx];
+                        const bInfo = bList[idx];
                         if (bInfo) this.attemptBuyBuilding(bInfo.id);
                     }
                 });
@@ -4181,18 +4214,26 @@ const PlanetVisualEngine = {
     },
     
     attemptBuyBuilding(id) {
-        if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
-        if (META.planet.buildings[id]) return;
-        const b = PLANET_BUILDINGS.find(x => x.id == id);
+        if (!META.planet) META.planet = { planets: {}, buildings: {}, lastIncomeTime: Date.now() };
+        if (!META.planet.planets) META.planet.planets = {};
+        const worldId = this.currentPlanetId || 'terra';
+        if (!META.planet.planets[worldId]) META.planet.planets[worldId] = { buildings: {} };
+
+        if (META.planet.planets[worldId].buildings[id]) return;
+        const bList = getCurrentWorldBuildings();
+        const b = bList.find(x => x.id == id);
         if (b && (META.currency || 0) >= b.cost) {
             if (NET.socket && NET.socket.connected) {
-                NET.socket.emit('purchase', { type: 'building', id: b.id, token: NET.sessionToken });
+                NET.socket.emit('purchase', { type: 'building', id: b.id, world: worldId, token: NET.sessionToken });
             } else {
                 META.currency -= b.cost;
-                META.planet.buildings[b.id] = true;
+                META.planet.planets[worldId].buildings[b.id] = true;
+                if (!META.planet.buildings) META.planet.buildings = {};
+                if (worldId === 'terra') META.planet.buildings[b.id] = true;
                 if (!META.planet.lastIncomeTime) META.planet.lastIncomeTime = Date.now();
                 saveMetaLocalOnly();
                 updateCurrencyUI();
+                renderPlanetUI();
                 if (typeof playSound === 'function') playSound('upgrade');
             }
         } else {
@@ -4224,11 +4265,14 @@ const PlanetVisualEngine = {
         this.sourcePlanet = sourceWorld;
         this.targetPlanet = targetWorld;
         this.travelStartTime = Date.now();
-        this.travelDuration = targetWorld.travelDuration || 3.0;
+        this.travelDuration = targetWorld.travelDuration || 3.8;
+        this.shipLateralX = 0;
+        this.shipTilt = 0;
+        this.shipRotation = 0;
         
         // Generate traveling asteroids
         this.travelAsteroids = [];
-        for (let i = 0; i < 18; i++) {
+        for (let i = 0; i < 20; i++) {
             this.travelAsteroids.push({
                 x: Math.random() * (this.logicalW || window.innerWidth),
                 y: -Math.random() * (this.logicalH * 3) - 100,
@@ -4245,6 +4289,14 @@ const PlanetVisualEngine = {
             });
         }
 
+        // Generate passing celestial planets in parallax
+        const w = this.logicalW || window.innerWidth;
+        this.passingPlanets = [
+            { x: w * 0.16, y: -250, radius: 48, speed: 1.8, color: '#f59e0b', ring: true, ringColor: 'rgba(251, 191, 36, 0.35)' },
+            { x: w * 0.84, y: -750, radius: 65, speed: 2.2, color: '#38bdf8', ring: false },
+            { x: w * 0.25, y: -1350, radius: 40, speed: 2.6, color: '#c084fc', ring: true, ringColor: 'rgba(192, 132, 252, 0.3)' }
+        ];
+
         // Hide menus during flight
         const topCard = document.getElementById('planet-top-card');
         if (topCard) { topCard.style.transition = 'opacity 0.3s ease'; topCard.style.opacity = '0'; topCard.style.pointerEvents = 'none'; }
@@ -4260,12 +4312,6 @@ const PlanetVisualEngine = {
             statusTag.style.color = targetWorld.accentColor || '#38bdf8';
             statusTag.style.borderColor = targetWorld.accentColor || 'rgba(56, 189, 248, 0.4)';
         }
-
-        // Update active destination chips
-        document.querySelectorAll('.planet-select-chip').forEach(chip => {
-            if (chip.getAttribute('data-planet') === planetId) chip.classList.add('active');
-            else chip.classList.remove('active');
-        });
 
         if (typeof playSound === 'function') playSound('shoot');
     },
@@ -4284,6 +4330,9 @@ const PlanetVisualEngine = {
         this.ejectedPlayers = [];
         this.shockwaves = [];
         this.hasLaunched = false;
+        this.shipLateralX = 0;
+        this.shipTilt = 0;
+        this.shipRotation = 0;
 
         const modal = document.getElementById('planet-modal');
         if (modal) {
@@ -4357,17 +4406,20 @@ const PlanetVisualEngine = {
         // The rocket resting height so it sits squarely ON TOP of the landing pad
         const restY = padY - 52;
 
-        // Volcano smoke generator
+        // Volcano smoke generator (Directly at volcano crater!)
         if (this.flightOffset < 150 && Math.random() < 0.4) {
-            const vxBase = cx - 210;
-            const vyBase = groundY - 32;
+            const volX = Math.max(60, (this.logicalW || window.innerWidth) * 0.10);
+            const volY = groundY - 15 - 26; // Exact top opening of volcano cone!
+            const isIgnis = (this.currentPlanetId === 'ignis');
             this.particles.push({
-                x: vxBase + (Math.random() - 0.5) * 12,
-                y: vyBase,
-                vx: (Math.random() - 0.7) * 1.5,
-                vy: -(Math.random() * 2 + 1),
-                size: Math.random() * 6 + 4,
-                color: Math.random() > 0.4 ? 'rgba(75, 85, 99, 0.7)' : 'rgba(239, 68, 68, 0.8)',
+                x: volX + (Math.random() - 0.5) * 10,
+                y: volY,
+                vx: (Math.random() - 0.6) * 1.5,
+                vy: -(Math.random() * 2.5 + 1.2),
+                size: Math.random() * 6 + 3,
+                color: isIgnis 
+                    ? (Math.random() > 0.3 ? '#f97316' : '#ef4444') 
+                    : (Math.random() > 0.4 ? 'rgba(75, 85, 99, 0.7)' : 'rgba(239, 68, 68, 0.8)'),
                 alpha: 1,
                 life: 1.5
             });
@@ -4378,6 +4430,9 @@ const PlanetVisualEngine = {
             const progress = Math.min(1.0, elapsed / 1.1); // Smooth 1.1s landing
             const easeP = Math.sin(progress * Math.PI / 2); // Smooth deceleration onto pad
             this.shipY = -140 + easeP * (restY - (-140));
+            this.shipLateralX = 0;
+            this.shipTilt = 0;
+            this.shipRotation = 0;
 
             // Thrusters brake firing
             for (let i = 0; i < 4; i++) {
@@ -4426,6 +4481,9 @@ const PlanetVisualEngine = {
         } else if (this.state === 'idle') {
             if (this.bounce > 0) this.bounce *= 0.88;
             this.shipY = restY + Math.sin(Date.now() / 350) * 0.8;
+            this.shipLateralX = 0;
+            this.shipTilt = 0;
+            this.shipRotation = 0;
 
             if (Math.random() < 0.25) {
                 this.particles.push({
@@ -4441,15 +4499,28 @@ const PlanetVisualEngine = {
             }
         } else if (this.state === 'traveling') {
             const elapsed = (Date.now() - this.travelStartTime) / 1000;
-            const progress = Math.min(1.0, elapsed / (this.travelDuration || 3.0));
+            const duration = this.travelDuration || 3.8;
+            const progress = Math.min(1.0, elapsed / duration);
             
-            // Rocket hovers and navigates through space
+            // Dynamic banking & lateral evasion of passing asteroids
+            this.shipLateralX = Math.sin(elapsed * 3.8) * 55;
+            this.shipTilt = Math.sin(elapsed * 3.8) * 0.25;
+
+            // 180° Retrograde turn (retro-burn) during descent phase (progress 0.55 to 0.85)
+            if (progress >= 0.55 && progress <= 0.85) {
+                const pTurn = (progress - 0.55) / 0.30;
+                this.shipRotation = Math.sin(pTurn * Math.PI) * Math.PI;
+            } else {
+                this.shipRotation = 0;
+            }
+
+            // Rocket hovers in camera center
             const targetCamY = this.logicalH * 0.45;
             this.shipY = targetCamY + Math.sin(Date.now() / 200) * 4;
             
-            // Planet scrolls down out of view, then target planet scrolls up near the end
-            if (progress < 0.3) {
-                const p1 = progress / 0.3;
+            // Planet scrolls down out of view, deep space opens, then target planet scrolls up
+            if (progress < 0.25) {
+                const p1 = progress / 0.25;
                 this.flightOffset = p1 * (this.logicalH * 1.6);
             } else if (progress > 0.75) {
                 const p2 = (progress - 0.75) / 0.25;
@@ -4459,9 +4530,10 @@ const PlanetVisualEngine = {
             }
 
             // Thruster trail in space
+            const rocketBaseX = cx + this.shipLateralX;
             for (let i = 0; i < 8; i++) {
                 this.particles.push({
-                    x: cx + (Math.random() - 0.5) * 28,
+                    x: rocketBaseX + (Math.random() - 0.5) * 28,
                     y: this.shipY + 52,
                     vx: (Math.random() - 0.5) * 3,
                     vy: Math.random() * 8 + 6,
@@ -4484,6 +4556,13 @@ const PlanetVisualEngine = {
                 });
             }
 
+            // Update passing celestial planets in background
+            if (this.passingPlanets) {
+                this.passingPlanets.forEach(p => {
+                    p.y += p.speed * 2.5;
+                });
+            }
+
             // Landing on the destination planet when travel completes
             if (progress >= 1.0) {
                 this.currentPlanetId = this.targetPlanet.id;
@@ -4492,6 +4571,10 @@ const PlanetVisualEngine = {
                 this.landingStartTime = Date.now();
                 this.flightOffset = 0;
                 this.travelAsteroids = [];
+                this.passingPlanets = [];
+                this.shipLateralX = 0;
+                this.shipTilt = 0;
+                this.shipRotation = 0;
                 
                 // Update header & title
                 const titleEl = document.getElementById('planet-header-title');
@@ -4954,20 +5037,23 @@ const PlanetVisualEngine = {
     },
 
     // Big majestic vector-modeled rocket spaceship with crew and landing gear
-    drawRocketModel(ctx, x, y, vy, state, time, isHovered, mode) {
+    drawRocketModel(ctx, x, y, vy, state, time, isHovered, mode, tilt = 0, rotation = 0) {
         ctx.save();
         ctx.translate(x, y);
+        if (tilt || rotation) {
+            ctx.rotate(tilt + rotation);
+        }
 
         // Big Majestic Rocket Dimensions (increased for epic scale!)
         const bodyW = 56;
         const bodyH = 118;
 
-        // Thruster flame when landing / takeoff / idle
-        if (state === 'takeoff' || state === 'landing' || state === 'idle') {
-            const flameLen = (state === 'takeoff') ? 75 + Math.sin(time * 25) * 18 : (state === 'landing') ? 45 + Math.sin(time * 15) * 10 : 16 + Math.sin(time * 10) * 4;
+        // Thruster flame when landing / takeoff / idle / traveling
+        if (state === 'takeoff' || state === 'landing' || state === 'idle' || state === 'traveling') {
+            const flameLen = (state === 'takeoff' || state === 'traveling') ? 75 + Math.sin(time * 25) * 18 : (state === 'landing') ? 45 + Math.sin(time * 15) * 10 : 16 + Math.sin(time * 10) * 4;
             
             // Outer Fire
-            ctx.fillStyle = (state === 'takeoff') ? '#ef4444' : '#0284c7';
+            ctx.fillStyle = (state === 'takeoff' || state === 'traveling') ? '#ef4444' : '#0284c7';
             ctx.beginPath();
             ctx.moveTo(-bodyW * 0.35, bodyH * 0.44);
             ctx.lineTo(0, bodyH * 0.44 + flameLen);
@@ -5238,7 +5324,74 @@ const PlanetVisualEngine = {
             });
             ctx.restore();
 
-            // 3b. Render Traveling Asteroids in Deep Space!
+            // 3b. Render Passing Celestial Planets & Moons in Deep Space!
+            if (this.state === 'traveling' && this.passingPlanets && this.passingPlanets.length > 0) {
+                ctx.save();
+                this.passingPlanets.forEach(pp => {
+                    if (pp.y > -100 && pp.y < h + 150) {
+                        ctx.save();
+                        ctx.translate(pp.x, pp.y);
+                        // Planetary ring if any
+                        if (pp.ring) {
+                            ctx.strokeStyle = pp.ringColor || 'rgba(255, 255, 255, 0.3)';
+                            ctx.lineWidth = pp.radius * 0.18;
+                            ctx.beginPath();
+                            ctx.ellipse(0, 0, pp.radius * 1.7, pp.radius * 0.45, Math.PI / 6, 0, Math.PI * 2);
+                            ctx.stroke();
+                        }
+                        // Planet body with atmospheric glow
+                        ctx.fillStyle = pp.color;
+                        ctx.shadowBlur = 20;
+                        ctx.shadowColor = pp.color;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, pp.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        // Dark shadow crescent
+                        ctx.fillStyle = 'rgba(2, 6, 23, 0.55)';
+                        ctx.beginPath();
+                        ctx.arc(pp.radius * 0.3, pp.radius * 0.2, pp.radius * 0.95, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                });
+                ctx.restore();
+            }
+
+            // 3c. Approaching Destination Planet in Center Background (Scales Up in Deep Space)
+            if (this.state === 'traveling') {
+                const elapsed = (Date.now() - this.travelStartTime) / 1000;
+                const duration = this.travelDuration || 3.8;
+                const progress = Math.min(1.0, elapsed / duration);
+                if (progress > 0.25) {
+                    const pAppr = (progress - 0.25) / 0.75;
+                    const targetWorld = this.targetPlanet || PLANET_WORLDS[0];
+                    const pRad = 20 + pAppr * (Math.min(w, h) * 0.34);
+                    ctx.save();
+                    ctx.translate(cx, h * 0.45 + (1 - pAppr) * 140);
+                    
+                    // Atmospheric aura
+                    ctx.shadowBlur = 35;
+                    ctx.shadowColor = targetWorld.accentColor || '#38bdf8';
+                    ctx.fillStyle = targetWorld.surfaceLine || '#38bdf8';
+                    ctx.globalAlpha = Math.min(1.0, pAppr * 1.4);
+                    ctx.beginPath();
+                    ctx.arc(0, 0, pRad * 1.06, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Planet sphere body
+                    const pGrad = ctx.createRadialGradient(-pRad * 0.3, -pRad * 0.3, pRad * 0.1, 0, 0, pRad);
+                    pGrad.addColorStop(0, targetWorld.accentColor || '#38bdf8');
+                    pGrad.addColorStop(0.6, targetWorld.hillsGrad || '#064e3b');
+                    pGrad.addColorStop(1, targetWorld.skyTop || '#020617');
+                    ctx.fillStyle = pGrad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, pRad, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            // 3d. Render Traveling Asteroids in Deep Space!
             if (this.state === 'traveling' && this.travelAsteroids && this.travelAsteroids.length > 0) {
                 ctx.save();
                 this.travelAsteroids.forEach(ast => {
@@ -5272,47 +5425,98 @@ const PlanetVisualEngine = {
             // ONLY DRAW PLANET SURFACE IF STILL IN VIEW
             if (groundY < h + 200) {
                 // Responsive building scale on mobile
-                const bScale = Math.min(1.0, Math.max(0.68, w / 850));
+                const bScale = Math.min(1.0, Math.max(0.65, Math.min(w / 850, h / 520)));
 
-                // 4. Active Smoking Volcano on left horizon
-                const volX = Math.max(60, w * 0.10);
-                const volY = groundY - 15;
-                ctx.save();
-                ctx.fillStyle = curWorld.volcanoBody || '#1e1b4b';
-                ctx.beginPath();
-                ctx.moveTo(volX - 65, groundY + 40);
-                ctx.lineTo(volX - 14, volY - 26);
-                ctx.lineTo(volX + 14, volY - 26);
-                ctx.lineTo(volX + 65, groundY + 40);
-                ctx.closePath();
-                ctx.fill();
+                // 4. Planet-Specific Horizon Landmark & Background Biome
+                if (curWorld.id === 'terra' || curWorld.id === 'ignis') {
+                    // Active Smoking Volcano
+                    const volX = Math.max(60, w * 0.10);
+                    const volY = groundY - 15;
+                    ctx.save();
+                    ctx.fillStyle = curWorld.volcanoBody || '#1e1b4b';
+                    ctx.beginPath();
+                    ctx.moveTo(volX - 65, groundY + 40);
+                    ctx.lineTo(volX - 14, volY - 26);
+                    ctx.lineTo(volX + 14, volY - 26);
+                    ctx.lineTo(volX + 65, groundY + 40);
+                    ctx.closePath();
+                    ctx.fill();
 
-                ctx.fillStyle = curWorld.volcanoLava || '#ef4444';
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = curWorld.lavaGlow || '#f97316';
-                ctx.beginPath();
-                ctx.ellipse(volX, volY - 26, 14, 4, 0, 0, Math.PI * 2);
-                ctx.fill();
+                    ctx.fillStyle = curWorld.volcanoLava || '#ef4444';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = curWorld.lavaGlow || '#f97316';
+                    ctx.beginPath();
+                    ctx.ellipse(volX, volY - 26, 14, 4, 0, 0, Math.PI * 2);
+                    ctx.fill();
 
-                ctx.strokeStyle = curWorld.lavaGlow ? `${curWorld.lavaGlow}bb` : 'rgba(249, 115, 22, 0.75)';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(volX - 5, volY - 24);
-                ctx.lineTo(volX - 12, volY + 6);
-                ctx.lineTo(volX - 22, groundY + 15);
-                ctx.moveTo(volX + 5, volY - 24);
-                ctx.lineTo(volX + 12, volY + 2);
-                ctx.lineTo(volX + 20, groundY + 20);
-                ctx.stroke();
-                ctx.restore();
+                    ctx.strokeStyle = curWorld.lavaGlow ? `${curWorld.lavaGlow}bb` : 'rgba(249, 115, 22, 0.75)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(volX - 5, volY - 24);
+                    ctx.lineTo(volX - 12, volY + 6);
+                    ctx.lineTo(volX - 22, groundY + 15);
+                    ctx.moveTo(volX + 5, volY - 24);
+                    ctx.lineTo(volX + 12, volY + 2);
+                    ctx.lineTo(volX + 20, groundY + 20);
+                    ctx.stroke();
+                    ctx.restore();
+                } else if (curWorld.id === 'cryo') {
+                    // Frozen Ice Spikes / Spires
+                    ctx.save();
+                    ctx.fillStyle = '#082f49';
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 1.5;
+                    const spX = Math.max(70, w * 0.12);
+                    ctx.beginPath();
+                    ctx.moveTo(spX - 45, groundY + 30);
+                    ctx.lineTo(spX - 15, groundY - 55);
+                    ctx.lineTo(spX, groundY - 20);
+                    ctx.lineTo(spX + 20, groundY - 70);
+                    ctx.lineTo(spX + 50, groundY + 30);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.restore();
+                } else if (curWorld.id === 'cyber') {
+                    // Futuristic Neon Skyscrapers in Background
+                    ctx.save();
+                    const bldgCount = 6;
+                    const startX = Math.max(30, w * 0.05);
+                    for (let i = 0; i < bldgCount; i++) {
+                        const bx = startX + i * 28;
+                        const bh = 50 + (i % 3) * 25;
+                        ctx.fillStyle = '#1e1035';
+                        ctx.strokeStyle = '#c084fc';
+                        ctx.lineWidth = 1;
+                        ctx.fillRect(bx, groundY - bh, 22, bh + 40);
+                        ctx.strokeRect(bx, groundY - bh, 22, bh + 40);
+                        // Glowing windows
+                        ctx.fillStyle = '#e879f9';
+                        for (let wy = groundY - bh + 6; wy < groundY; wy += 8) {
+                            ctx.fillRect(bx + 4, wy, 4, 4);
+                            ctx.fillRect(bx + 14, wy, 4, 4);
+                        }
+                    }
+                    ctx.restore();
+                }
 
-                // 5. Distant hills terrain
+                // 5. Distant hills / mountains terrain
                 ctx.save();
                 ctx.fillStyle = curWorld.hillsGrad || '#064e3b';
                 ctx.beginPath();
                 ctx.moveTo(0, groundY + 30);
-                ctx.bezierCurveTo(w * 0.25, groundY - 40, w * 0.45, groundY - 15, w * 0.65, groundY - 35);
-                ctx.bezierCurveTo(w * 0.8, groundY - 50, w * 0.95, groundY - 20, w, groundY - 20);
+                if (curWorld.id === 'ignis') {
+                    // Angular jagged volcanic ridge
+                    ctx.lineTo(w * 0.2, groundY - 35);
+                    ctx.lineTo(w * 0.35, groundY - 10);
+                    ctx.lineTo(w * 0.55, groundY - 45);
+                    ctx.lineTo(w * 0.75, groundY - 15);
+                    ctx.lineTo(w * 0.9, groundY - 40);
+                    ctx.lineTo(w, groundY - 20);
+                } else {
+                    ctx.bezierCurveTo(w * 0.25, groundY - 40, w * 0.45, groundY - 15, w * 0.65, groundY - 35);
+                    ctx.bezierCurveTo(w * 0.8, groundY - 50, w * 0.95, groundY - 20, w, groundY - 20);
+                }
                 ctx.lineTo(w, h + 200);
                 ctx.lineTo(0, h + 200);
                 ctx.fill();
@@ -5337,7 +5541,7 @@ const PlanetVisualEngine = {
                 ctx.fill();
                 ctx.stroke();
 
-                // Surface cybernetic lines
+                // Surface cybernetic / fissure lines
                 ctx.strokeStyle = curWorld.surfaceLine ? `${curWorld.surfaceLine}26` : 'rgba(16, 185, 129, 0.15)';
                 ctx.lineWidth = 1;
                 for (let i = 0; i < 7; i++) {
@@ -5350,9 +5554,9 @@ const PlanetVisualEngine = {
                 ctx.restore();
 
                 // 7. Calculate 8 building plot positions evenly distributed along horizon WITHOUT touching landing pad
-                const padW = Math.min(240, w * 0.35);
-                const minSafeDist = padW / 2 + 45; // Strict safe distance from pad center
-                const maxSpread = Math.min(w * 0.44, 560);
+                const padW = Math.min(230, w * 0.34);
+                const minSafeDist = padW / 2 + 50; // Strict safe distance from pad center
+                const maxSpread = Math.min(w * 0.44, 570);
 
                 const leftStep = (maxSpread - minSafeDist) / 3;
                 const rightStep = (maxSpread - minSafeDist) / 3;
@@ -5372,14 +5576,14 @@ const PlanetVisualEngine = {
                 ];
 
                 // 8. Draw Vector Buildings & Clean Floating Price Badges
-                if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
-                if (!META.planet.buildings) META.planet.buildings = {};
+                const bList = getCurrentWorldBuildings();
+                const curWorldBuildings = (META.planet?.planets?.[this.currentPlanetId]?.buildings) || (this.currentPlanetId === 'terra' ? (META.planet?.buildings || {}) : {});
 
-                PLANET_BUILDINGS.forEach((bInfo, idx) => {
+                bList.forEach((bInfo, idx) => {
                     const pos = this.plotPositions[idx];
                     if (!pos) return;
                     
-                    const isBuilt = !!META.planet.buildings[bInfo.id];
+                    const isBuilt = !!curWorldBuildings[bInfo.id];
                     
                     // Hover detection
                     let isHovered = false;
@@ -5395,7 +5599,7 @@ const PlanetVisualEngine = {
                     // Draw the clean floating text box / price badge in front
                     ctx.save();
                     const badgeY = pos.y + 12;
-                    const badgeW = 68 * bScale;
+                    const badgeW = 72 * bScale;
                     const badgeH = 24 * bScale;
 
                     ctx.fillStyle = isHovered ? 'rgba(15, 23, 42, 0.95)' : 'rgba(10, 15, 30, 0.85)';
@@ -5412,23 +5616,23 @@ const PlanetVisualEngine = {
 
                     if (isBuilt) {
                         ctx.fillStyle = curWorld.surfaceLine || '#34d399';
-                        ctx.font = `bold ${8 * bScale}px "Inter", Arial, sans-serif`;
+                        ctx.font = `bold ${7.8 * bScale}px "Inter", Arial, sans-serif`;
                         ctx.textAlign = 'center';
-                        ctx.fillText('AKTIVNÍ', pos.x, badgeY + 10 * bScale);
+                        ctx.fillText('AKTIVNÍ', pos.x, badgeY + 9.5 * bScale);
                         ctx.fillStyle = '#fbbf24';
-                        ctx.font = `bold ${7.5 * bScale}px "Inter", Arial, sans-serif`;
-                        ctx.fillText('+1 DOGE/m', pos.x, badgeY + 19 * bScale);
+                        ctx.font = `bold ${7.2 * bScale}px "Inter", Arial, sans-serif`;
+                        ctx.fillText(`+${formatNumberFull(bInfo.income || 1)}/m`, pos.x, badgeY + 18.5 * bScale);
                     } else {
                         ctx.fillStyle = isHovered ? '#fbbf24' : '#cbd5e1';
-                        ctx.font = `bold ${7.5 * bScale}px "Inter", Arial, sans-serif`;
+                        ctx.font = `bold ${7.2 * bScale}px "Inter", Arial, sans-serif`;
                         ctx.textAlign = 'center';
                         ctx.fillText(bInfo.name.split(' #')[0], pos.x, badgeY + 9 * bScale);
 
                         const canAfford = (META.currency || 0) >= bInfo.cost;
                         ctx.fillStyle = canAfford ? (curWorld.surfaceLine || '#10b981') : '#ef4444';
-                        ctx.font = `900 ${8 * bScale}px "Inter", Arial, sans-serif`;
-                        const costText = (bInfo.cost >= 1000) ? (bInfo.cost / 1000) + 'k DOGE' : bInfo.cost + ' DOGE';
-                        ctx.fillText(costText, pos.x, badgeY + 19 * bScale);
+                        ctx.font = `900 ${7.8 * bScale}px "Inter", Arial, sans-serif`;
+                        const costText = (bInfo.cost >= 1e12) ? (bInfo.cost / 1e12) + 'T DOGE' : (bInfo.cost >= 1e9) ? (bInfo.cost / 1e9) + 'B DOGE' : (bInfo.cost >= 1e6) ? (bInfo.cost / 1e6) + 'M DOGE' : (bInfo.cost >= 1000) ? (bInfo.cost / 1000) + 'k DOGE' : bInfo.cost + ' DOGE';
+                        ctx.fillText(costText, pos.x, badgeY + 18.5 * bScale);
                     }
                     ctx.restore();
                 });
@@ -5486,7 +5690,7 @@ const PlanetVisualEngine = {
             ctx.restore();
 
             // 11. Draw Vector Modelled Rocket Ship (SITTING FLUSH ON THE PAD)
-            const shipX = cx;
+            const shipX = (this.state === 'traveling') ? cx + (this.shipLateralX || 0) : cx;
             const shipY = this.shipY;
 
             let isRocketHovered = false;
@@ -5505,7 +5709,7 @@ const PlanetVisualEngine = {
                 ctx.fill();
             }
 
-            this.drawRocketModel(ctx, shipX, shipY, this.shipVy, this.state, time, isRocketHovered, this.mode);
+            this.drawRocketModel(ctx, shipX, shipY, this.shipVy, this.state, time, isRocketHovered, this.mode, this.shipTilt || 0, this.shipRotation || 0);
 
             // 12. Draw Expanding Ejection Shockwave Rings (Efekt vyplivnutí)
             if (this.shockwaves && this.shockwaves.length > 0) {

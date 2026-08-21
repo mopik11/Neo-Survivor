@@ -255,33 +255,32 @@ canvas {
   transition: border-color 0.3s ease;
 }
 
-.planet-select-chip {
-  background: rgba(15, 23, 42, 0.85);
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  color: #94a3b8;
-  font-weight: 800;
-  font-size: 0.8rem;
-  padding: 6px 14px;
-  border-radius: 99px;
-  cursor: pointer;
+.planet-dest-card {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 16px 12px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+  text-align: center;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
 
-.planet-select-chip:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  color: #fff;
-  transform: translateY(-2px);
-}
-
-.planet-select-chip.active {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(99, 102, 241, 0.2) 100%);
+.planet-dest-card:hover {
+  transform: translateY(-4px) scale(1.02);
   border-color: #38bdf8;
-  color: #38bdf8;
-  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 10px 25px rgba(56, 189, 248, 0.25);
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.planet-dest-card.current {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
 }
 
 #btn-planet-launch-battle {
@@ -293,45 +292,35 @@ canvas {
   100% { transform: scale(1.04); box-shadow: 0 0 35px rgba(239, 68, 68, 0.85); }
 }
 
-@media (max-width: 768px), (max-height: 600px) {
+@media (max-width: 900px), (max-height: 520px) {
   #planet-top-card {
-    top: 8px !important;
-    left: 8px !important;
+    top: 5px !important;
+    left: 5px !important;
     padding: 6px 10px !important;
     border-radius: 12px !important;
-    transform: scale(0.78);
-    transform-origin: top left;
+    transform: scale(0.68) !important;
+    transform-origin: top left !important;
   }
   #planet-status-tag {
-    top: 6px !important;
-    font-size: 0.65rem !important;
-    padding: 3px 8px !important;
-  }
-  #planet-destination-bar {
-    top: 8px !important;
-    right: 8px !important;
-    gap: 4px !important;
-    transform: scale(0.85);
-    transform-origin: top right;
-  }
-  .planet-select-chip {
-    padding: 4px 8px !important;
-    font-size: 0.7rem !important;
+    top: 5px !important;
+    font-size: 0.6rem !important;
+    padding: 2px 8px !important;
   }
   #planet-bottom-menu {
-    bottom: 8px !important;
-    left: 8px !important;
+    bottom: 6px !important;
+    left: 6px !important;
+    gap: 6px !important;
   }
   #planet-bottom-menu button {
-    padding: 6px 10px !important;
-    font-size: 0.7rem !important;
+    padding: 5px 10px !important;
+    font-size: 0.68rem !important;
   }
   #planet-center-actions {
-    bottom: 12px !important;
+    bottom: 8px !important;
   }
   #btn-planet-launch-battle {
-    padding: 8px 18px !important;
-    font-size: 0.8rem !important;
+    padding: 7px 16px !important;
+    font-size: 0.78rem !important;
   }
 }
 

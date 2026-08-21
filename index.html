@@ -108,7 +108,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.677
+            NEO SURVIVOR v1.678
           </div>
         </div>
       </div>
@@ -429,14 +429,6 @@
               </div>
             </div>
           </div>
-
-          <!-- PLANET DESTINATION SELECTOR (TOP RIGHT) -->
-          <div id="planet-destination-bar" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 20; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
-            <button class="planet-select-chip active" data-planet="terra" onclick="window.PlanetVisualEngine.travelTo('terra')">🌍 Terra</button>
-            <button class="planet-select-chip" data-planet="ignis" onclick="window.PlanetVisualEngine.travelTo('ignis')">🔴 Ignis</button>
-            <button class="planet-select-chip" data-planet="cryo" onclick="window.PlanetVisualEngine.travelTo('cryo')">❄️ Cryo</button>
-            <button class="planet-select-chip" data-planet="cyber" onclick="window.PlanetVisualEngine.travelTo('cyber')">🟣 Cyber</button>
-          </div>
           
           <!-- CENTER BOTTOM ACTION: ENTER BATTLE BUTTON -->
           <div id="planet-center-actions" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); pointer-events: auto; z-index: 20; display: flex; flex-direction: column; align-items: center; gap: 6px;">
@@ -446,10 +438,31 @@
           </div>
 
           <!-- BOTTOM LEFT UI (Menu Navigation) -->
-          <div id="planet-bottom-menu" style="position: absolute; bottom: 20px; left: 20px; pointer-events: auto; z-index: 20;">
+          <div id="planet-bottom-menu" style="position: absolute; bottom: 20px; left: 20px; pointer-events: auto; z-index: 20; display: flex; gap: 10px;">
             <button id="btn-planet-menu-back" class="btn-restart modern-glass-btn" style="padding: 10px 18px; font-size: 0.85rem; font-weight: 800; border-radius: 12px; background: rgba(10, 15, 30, 0.85); border: 1.5px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(0,0,0,0.5); cursor: pointer;">
               <span>🏠</span> <span data-i18n="MENU">HLAVNÍ MENU</span>
             </button>
+            <button id="btn-planet-open-map" class="btn-restart modern-glass-btn" onclick="window.openPlanetSelectModal()" style="padding: 10px 18px; font-size: 0.85rem; font-weight: 800; border-radius: 12px; background: rgba(15, 23, 42, 0.85); border: 1.5px solid rgba(56, 189, 248, 0.4); color: #38bdf8; box-shadow: 0 8px 25px rgba(0,0,0,0.5); cursor: pointer;">
+              <span>🗺️</span> <span data-i18n="MAPA PLANET">MAPA PLANET</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEZIPLANETÁRNÍ MAPA MODAL (STAR MAP DIALOG) -->
+      <div id="planet-select-modal" class="modal" style="background: rgba(2, 6, 23, 0.88); backdrop-filter: blur(14px) !important; -webkit-backdrop-filter: blur(14px) !important; z-index: 1000000;">
+        <div class="modal-content" style="max-width: 820px; width: 92%; padding: 22px 24px; border-radius: 20px; background: linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(10, 15, 30, 0.98) 100%); border: 1.5px solid rgba(56, 189, 248, 0.3); box-shadow: 0 0 50px rgba(0,0,0,0.8), 0 0 30px rgba(56, 189, 248, 0.15);">
+          <button class="btn-close-x" onclick="window.closePlanetSelectModal()">×</button>
+          
+          <div style="text-align: center; margin-bottom: 18px;">
+            <h2 style="font-size: 1.8rem; margin: 0; color: #38bdf8; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 15px rgba(56, 189, 248, 0.4);">
+              🚀 MEZIPLANETÁRNÍ MAPA
+            </h2>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">Klikni na planetu k odletu rakety. Každá planeta má unikátní budovy a vyšší produkci Dogecoinů!</p>
+          </div>
+
+          <div id="planet-destination-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; width: 100%;">
+            <!-- Dynamic world cards injected by JS -->
           </div>
         </div>
       </div>
