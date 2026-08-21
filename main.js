@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.661
+ * NEO SURVIVOR - Core Game Logic - v1.662
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -3906,14 +3906,15 @@ function claimPlanetIncome() {
     const earned = getPendingPlanetIncome();
     if (earned <= 0) {
         if (typeof playSound === 'function') playSound('error');
-        window.showCustomAlert(window.T("Zatím nemáš žádný nasbíraný výnos k vybrání."));
         return;
     }
     META.currency += earned;
     if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
     META.planet.lastIncomeTime = Date.now();
     if (typeof playSound === 'function') playSound('upgrade');
-    window.showCustomAlert(window.T("Úspěšně vybráno ") + formatNumberFull(earned) + " DOGE!");
+    if (typeof showCurrencyNotification === 'function') {
+        showCurrencyNotification(earned, window.T("VÝNOS Z DOMOVSKÉ PLANETY"));
+    }
     updateCurrencyUI();
     renderPlanetUI();
     
