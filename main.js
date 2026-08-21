@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.653
+ * NEO SURVIVOR - Core Game Logic - v1.654
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
