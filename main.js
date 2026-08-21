@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.651
+ * NEO SURVIVOR - Core Game Logic - v1.652
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -6066,7 +6066,7 @@ window.softResetToMenu = () => {
     NET.others = {};
 
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    openPlanetModal();
+    document.getElementById('menu-modal').classList.add('active');
 
     document.getElementById('ui-layer').style.display = 'none';
     document.getElementById('menu-anim-canvas').style.display = 'block';
@@ -6759,7 +6759,7 @@ function handleAuth(isLogin) {
                 updateMusicVolume();
 
                 document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-                openPlanetModal();
+                document.getElementById('menu-modal').classList.add('active');
 
                 if (!GAME.loopStarted) {
                     GAME.loopStarted = true;
@@ -6788,7 +6788,7 @@ function handleAuth(isLogin) {
 
         document.getElementById('display-player-name').innerText = nameVal;
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        openPlanetModal();
+        document.getElementById('menu-modal').classList.add('active');
 
         if (!GAME.loopStarted) {
             GAME.loopStarted = true;
@@ -7624,7 +7624,7 @@ function init() {
             });
         }
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        openPlanetModal();
+        document.getElementById('menu-modal').classList.add('active');
 
         if (typeof checkAndShowRotateAnimation === 'function') {
             checkAndShowRotateAnimation();
