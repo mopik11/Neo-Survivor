@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.663
+ * NEO SURVIVOR - Core Game Logic - v1.664
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4123,7 +4123,7 @@ const PlanetVisualEngine = {
         
         this.logicalW = window.innerWidth;
         this.logicalH = window.innerHeight;
-        this.targetY = Math.max(240, this.logicalH - 175);
+        this.targetY = Math.max(220, this.logicalH - 165);
 
         this.stars = [];
         for (let i = 0; i < 80; i++) {
@@ -4143,12 +4143,13 @@ const PlanetVisualEngine = {
         this.mode = mode;
         this.launchCallback = onLaunch;
         this.state = 'landing';
-        this.shipY = -120;
+        this.shipY = -140;
         this.shipVy = 4.0;
         this.flightOffset = 0;
         this.bounce = 0;
         this.particles = [];
         this.ejectedPlayers = [];
+        this.shockwaves = [];
 
         const tag = document.getElementById('planet-status-tag');
         if (tag) {
@@ -4164,7 +4165,7 @@ const PlanetVisualEngine = {
     startTakeoff() {
         if (this.state === 'takeoff' || this.state === 'ejecting') return;
         this.state = 'takeoff';
-        this.shipVy = 1.0;
+        this.shipVy = 1.2;
         this.flightOffset = 0;
 
         const tag = document.getElementById('planet-status-tag');
@@ -4193,11 +4194,14 @@ const PlanetVisualEngine = {
 
     update() {
         const cx = (this.logicalW || window.innerWidth) / 2;
-        const cy = this.targetY;
+        const groundY = this.targetY + 12 + this.flightOffset;
+        const padY = groundY - 2;
+        // The rocket resting height so it sits squarely ON TOP of the landing pad
+        const restY = padY - 38;
 
         // Volcano smoke generator
         if (this.flightOffset < 150 && Math.random() < 0.4) {
-            const volX = Math.max(70, this.logicalW * 0.10);
+            const volX = Math.max(60, this.logicalW * 0.10);
             const volY = this.targetY - 35 + this.flightOffset;
             this.particles.push({
                 x: volX + (Math.random() - 0.5) * 16,
@@ -4216,7 +4220,7 @@ const PlanetVisualEngine = {
             for (let i = 0; i < 4; i++) {
                 this.particles.push({
                     x: cx + (Math.random() - 0.5) * 26,
-                    y: this.shipY + 45,
+                    y: this.shipY + 40,
                     vx: (Math.random() - 0.5) * 2,
                     vy: Math.random() * 4 + 3,
                     size: Math.random() * 6 + 3,
@@ -4226,8 +4230,8 @@ const PlanetVisualEngine = {
                 });
             }
 
-            if (this.shipY >= cy - 2) {
-                this.shipY = cy;
+            if (this.shipY >= restY) {
+                this.shipY = restY;
                 this.state = 'idle';
                 this.bounce = 10;
                 for (let i = 0; i < 35; i++) {
@@ -4235,7 +4239,7 @@ const PlanetVisualEngine = {
                     const spd = Math.random() * 5 + 1.5;
                     this.particles.push({
                         x: cx + (Math.random() - 0.5) * 36,
-                        y: cy + 18,
+                        y: padY + 4,
                         vx: Math.cos(a) * spd,
                         vy: Math.sin(a) * spd * 0.5,
                         size: Math.random() * 8 + 4,
@@ -4254,12 +4258,12 @@ const PlanetVisualEngine = {
             }
         } else if (this.state === 'idle') {
             if (this.bounce > 0) this.bounce *= 0.88;
-            this.shipY = cy + Math.sin(Date.now() / 350) * 1.5;
+            this.shipY = restY + Math.sin(Date.now() / 350) * 0.8;
 
-            if (Math.random() < 0.25) {
+            if (Math.random() < 0.2) {
                 this.particles.push({
                     x: cx + (Math.random() - 0.5) * 20,
-                    y: this.shipY + 44,
+                    y: this.shipY + 42,
                     vx: (Math.random() - 0.5) * 1,
                     vy: Math.random() * 1.5 + 0.6,
                     size: Math.random() * 3 + 1.5,
@@ -4271,16 +4275,16 @@ const PlanetVisualEngine = {
         } else if (this.state === 'takeoff') {
             this.shipVy += 0.55;
             // Panning ground down into space
-            this.flightOffset += this.shipVy * 2.4;
-            this.shipY = Math.max(this.logicalH * 0.42, cy - this.shipVy * 8);
+            this.flightOffset += this.shipVy * 2.5;
+            this.shipY = Math.max(this.logicalH * 0.35, restY - this.shipVy * 9);
 
             // Intense takeoff fire
-            for (let i = 0; i < 14; i++) {
+            for (let i = 0; i < 15; i++) {
                 this.particles.push({
                     x: cx + (Math.random() - 0.5) * 32,
-                    y: this.shipY + 46,
+                    y: this.shipY + 42,
                     vx: (Math.random() - 0.5) * 4,
-                    vy: Math.random() * 9 + 6,
+                    vy: Math.random() * 10 + 6,
                     size: Math.random() * 10 + 5,
                     color: Math.random() > 0.3 ? '#f59e0b' : '#ef4444',
                     alpha: 1,
@@ -4288,28 +4292,33 @@ const PlanetVisualEngine = {
                 });
             }
 
-            // Once the planet completely scrolls off the bottom into pitch black space
+            // Once the planet completely scrolls off the bottom into space
             if (this.flightOffset > this.logicalH * 1.05) {
                 this.state = 'ejecting';
                 this.ejectStartTime = Date.now();
+                this.ejectOrigin = { x: cx, y: this.shipY + 10 };
                 
-                // Spawn explosive ejection ring of particles
-                for (let i = 0; i < 45; i++) {
+                // VYPLIVNUTÍ / SPIT-OUT SHOCKWAVE & BURST
+                if (!this.shockwaves) this.shockwaves = [];
+                this.shockwaves.push({ x: cx, y: this.shipY + 10, r: 5, maxR: 120, alpha: 1 });
+                this.shockwaves.push({ x: cx, y: this.shipY + 10, r: 2, maxR: 80, alpha: 1 });
+
+                for (let i = 0; i < 50; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const spd = Math.random() * 7 + 4;
+                    const spd = Math.random() * 8 + 4;
                     this.particles.push({
                         x: cx,
-                        y: this.shipY,
+                        y: this.shipY + 10,
                         vx: Math.cos(angle) * spd,
-                        vy: Math.sin(angle) * spd,
-                        size: Math.random() * 6 + 3,
-                        color: Math.random() > 0.5 ? '#38bdf8' : '#fbbf24',
+                        vy: Math.sin(angle) * spd + 2,
+                        size: Math.random() * 7 + 4,
+                        color: Math.random() > 0.4 ? '#38bdf8' : (Math.random() > 0.5 ? '#ffffff' : '#fbbf24'),
                         alpha: 1,
-                        life: 1.2
+                        life: 1.3
                     });
                 }
 
-                // Prepare player orbs
+                // Prepare player orb(s) with spit-out ejection trajectory
                 const localName = META.playerName || SecureStorage.getItem('neoSurvivor_user') || "Hráč";
                 const crewList = [{ name: localName, color: '#38bdf8', isLocal: true }];
                 
@@ -4324,7 +4333,9 @@ const PlanetVisualEngine = {
                     const targetY = (this.logicalH / 2);
                     return {
                         x: cx,
-                        y: this.shipY,
+                        y: this.shipY + 15,
+                        vx: (targetX - cx) * 0.12,
+                        vy: 7.5,
                         targetX: targetX,
                         targetY: targetY,
                         name: c.name,
@@ -4341,31 +4352,40 @@ const PlanetVisualEngine = {
                     tag.style.borderColor = 'rgba(56, 189, 248, 0.4)';
                 }
                 if (typeof playSound === 'function') playSound('shoot');
+                if (typeof playSound === 'function') playSound('upgrade');
             }
         } else if (this.state === 'ejecting') {
-            // Rocket speeds away upwards into the cosmos
-            this.shipY -= 12;
+            // Rocket shoots away upwards into deep space
+            this.shipY -= 14;
             
-            // Animate ejected players smoothly landing in center ready to play!
+            // Animate ejected players with spit-out velocity deceleration
             if (this.ejectedPlayers) {
                 this.ejectedPlayers.forEach(p => {
-                    p.x += (p.targetX - p.x) * 0.15;
-                    p.y += (p.targetY - p.y) * 0.15;
-                    p.scale = Math.min(1.0, p.scale + 0.05);
+                    p.x += (p.targetX - p.x) * 0.16;
+                    p.y += (p.targetY - p.y) * 0.16;
+                    p.scale = Math.min(1.0, p.scale + 0.06);
 
-                    // Speed aura particles
-                    if (Math.random() < 0.4) {
+                    // Glowing plasma ejection trail
+                    if (Math.random() < 0.6) {
                         this.particles.push({
-                            x: p.x,
-                            y: p.y,
+                            x: p.x + (Math.random() - 0.5) * 6,
+                            y: p.y + (Math.random() - 0.5) * 6,
                             vx: (Math.random() - 0.5) * 1.5,
-                            vy: (Math.random() - 0.5) * 1.5,
-                            size: 3,
+                            vy: -(Math.random() * 2 + 1),
+                            size: 4,
                             color: p.color,
                             alpha: 0.8,
-                            life: 0.5
+                            life: 0.6
                         });
                     }
+                });
+            }
+
+            // Update shockwaves
+            if (this.shockwaves) {
+                this.shockwaves.forEach(sw => {
+                    sw.r += 6;
+                    sw.alpha = Math.max(0, 1 - sw.r / sw.maxR);
                 });
             }
 
@@ -4394,9 +4414,10 @@ const PlanetVisualEngine = {
     },
 
     // Vector drawing for each individual sci-fi building
-    drawBuildingModel(ctx, x, y, bId, isBuilt, isHovered, time) {
+    drawBuildingModel(ctx, x, y, bId, isBuilt, isHovered, time, scale = 1.0) {
         ctx.save();
         ctx.translate(x, y);
+        if (scale !== 1.0) ctx.scale(scale, scale);
 
         const primaryCol = isBuilt ? '#10b981' : '#64748b';
         const secondaryCol = isBuilt ? '#34d399' : '#475569';
@@ -4662,7 +4683,7 @@ const PlanetVisualEngine = {
         ctx.restore();
     },
 
-    // Big majestic vector-modeled rocket spaceship with crew
+    // Big majestic vector-modeled rocket spaceship with crew and landing gear
     drawRocketModel(ctx, x, y, vy, state, time, isHovered, mode) {
         ctx.save();
         ctx.translate(x, y);
@@ -4673,26 +4694,49 @@ const PlanetVisualEngine = {
 
         // Thruster flame when landing / takeoff / idle
         if (state === 'takeoff' || state === 'landing' || state === 'idle') {
-            const flameLen = (state === 'takeoff') ? 60 + Math.sin(time * 25) * 15 : (state === 'landing') ? 35 + Math.sin(time * 15) * 8 : 16 + Math.sin(time * 10) * 4;
+            const flameLen = (state === 'takeoff') ? 60 + Math.sin(time * 25) * 15 : (state === 'landing') ? 35 + Math.sin(time * 15) * 8 : 14 + Math.sin(time * 10) * 3;
             
             // Outer Fire
             ctx.fillStyle = (state === 'takeoff') ? '#ef4444' : '#0284c7';
             ctx.beginPath();
-            ctx.moveTo(-bodyW * 0.35, bodyH * 0.46);
-            ctx.lineTo(0, bodyH * 0.46 + flameLen);
-            ctx.lineTo(bodyW * 0.35, bodyH * 0.46);
+            ctx.moveTo(-bodyW * 0.35, bodyH * 0.44);
+            ctx.lineTo(0, bodyH * 0.44 + flameLen);
+            ctx.lineTo(bodyW * 0.35, bodyH * 0.44);
             ctx.closePath();
             ctx.fill();
 
             // Inner Core Fire
             ctx.fillStyle = (state === 'takeoff') ? '#fbbf24' : '#38bdf8';
             ctx.beginPath();
-            ctx.moveTo(-bodyW * 0.2, bodyH * 0.46);
-            ctx.lineTo(0, bodyH * 0.46 + flameLen * 0.65);
-            ctx.lineTo(bodyW * 0.2, bodyH * 0.46);
+            ctx.moveTo(-bodyW * 0.2, bodyH * 0.44);
+            ctx.lineTo(0, bodyH * 0.44 + flameLen * 0.65);
+            ctx.lineTo(bodyW * 0.2, bodyH * 0.44);
             ctx.closePath();
             ctx.fill();
         }
+
+        // Mechanical Landing Gear Legs (touching down on the pad!)
+        ctx.fillStyle = '#1e293b';
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        // Left Gear
+        ctx.beginPath();
+        ctx.moveTo(-bodyW * 0.35, bodyH * 0.36);
+        ctx.lineTo(-bodyW * 0.65, bodyH * 0.46);
+        ctx.lineTo(-bodyW * 0.72, bodyH * 0.46);
+        ctx.stroke();
+        // Left Footpad
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(-bodyW * 0.76, bodyH * 0.44, 8, 4);
+
+        // Right Gear
+        ctx.beginPath();
+        ctx.moveTo(bodyW * 0.35, bodyH * 0.36);
+        ctx.lineTo(bodyW * 0.65, bodyH * 0.46);
+        ctx.lineTo(bodyW * 0.72, bodyH * 0.46);
+        ctx.stroke();
+        // Right Footpad
+        ctx.fillRect(bodyW * 0.68, bodyH * 0.44, 8, 4);
 
         // Heavy Left & Right Delta Wings
         ctx.fillStyle = '#334155';
@@ -4732,8 +4776,8 @@ const PlanetVisualEngine = {
         
         ctx.beginPath();
         ctx.moveTo(0, -bodyH * 0.55); // Nose cone tip
-        ctx.bezierCurveTo(-bodyW * 0.65, -bodyH * 0.2, -bodyW * 0.6, bodyH * 0.3, -bodyW * 0.42, bodyH * 0.45);
-        ctx.lineTo(bodyW * 0.42, bodyH * 0.45);
+        ctx.bezierCurveTo(-bodyW * 0.65, -bodyH * 0.2, -bodyW * 0.6, bodyH * 0.3, -bodyW * 0.42, bodyH * 0.44);
+        ctx.lineTo(bodyW * 0.42, bodyH * 0.44);
         ctx.bezierCurveTo(bodyW * 0.6, bodyH * 0.3, bodyW * 0.65, -bodyH * 0.2, 0, -bodyH * 0.55);
         ctx.closePath();
         ctx.fill();
@@ -4764,10 +4808,10 @@ const PlanetVisualEngine = {
         ctx.lineWidth = 1.5;
         [-bodyW * 0.25, 0, bodyW * 0.25].forEach(nx => {
             ctx.beginPath();
-            ctx.moveTo(nx - 4, bodyH * 0.45);
-            ctx.lineTo(nx - 6, bodyH * 0.52);
-            ctx.lineTo(nx + 6, bodyH * 0.52);
-            ctx.lineTo(nx + 4, bodyH * 0.45);
+            ctx.moveTo(nx - 4, bodyH * 0.44);
+            ctx.lineTo(nx - 6, bodyH * 0.50);
+            ctx.lineTo(nx + 6, bodyH * 0.50);
+            ctx.lineTo(nx + 4, bodyH * 0.44);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
@@ -4842,17 +4886,18 @@ const PlanetVisualEngine = {
             const cx = w / 2;
             const flightOff = this.flightOffset || 0;
             const groundY = this.targetY + 12 + flightOff;
+            const padY = groundY - 2;
             const time = Date.now() / 1000;
 
             // Space transition factor (0 = on planet surface, 1 = deep space)
             const spaceAlpha = Math.min(1, Math.max(0, flightOff / (h * 0.75)));
 
-            // 1. Cosmic starry background (fades to deep pitch black space during flight)
+            // 1. Cosmic starry background (matches in-game deep navy blue cosmos)
             const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-            skyGrad.addColorStop(0, '#000000');
-            skyGrad.addColorStop(0.45, spaceAlpha > 0.8 ? '#000000' : '#0b132b');
-            skyGrad.addColorStop(0.85, spaceAlpha > 0.5 ? '#020617' : '#064e3b');
-            skyGrad.addColorStop(1, spaceAlpha > 0.2 ? '#000000' : '#022c22');
+            skyGrad.addColorStop(0, '#020617');
+            skyGrad.addColorStop(0.5, '#050a1e');
+            skyGrad.addColorStop(0.85, spaceAlpha > 0.6 ? '#020617' : '#064e3b');
+            skyGrad.addColorStop(1, spaceAlpha > 0.3 ? '#020617' : '#022c22');
             ctx.fillStyle = skyGrad;
             ctx.fillRect(0, 0, w, h);
 
@@ -4883,7 +4928,7 @@ const PlanetVisualEngine = {
                     ctx.beginPath();
                     if (this.state === 'takeoff') {
                         // Motion streaks
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
                         ctx.lineWidth = 1;
                         ctx.moveTo(s.x, starY);
                         ctx.lineTo(s.x, starY + 8 * s.speed);
@@ -4898,8 +4943,11 @@ const PlanetVisualEngine = {
 
             // ONLY DRAW PLANET SURFACE IF STILL IN VIEW
             if (groundY < h + 200) {
+                // Responsive building scale on mobile
+                const bScale = Math.min(1.0, Math.max(0.68, w / 850));
+
                 // 4. Active Smoking Volcano on left horizon
-                const volX = Math.max(70, w * 0.10);
+                const volX = Math.max(60, w * 0.10);
                 const volY = groundY - 15;
                 ctx.save();
                 ctx.fillStyle = '#1e1b4b';
@@ -4973,17 +5021,17 @@ const PlanetVisualEngine = {
                 ctx.restore();
 
                 // 7. Calculate 8 building plot positions evenly distributed along horizon
-                const spread = Math.min(w * 0.42, 540);
+                const spread = Math.min(w * 0.43, 540);
                 this.plotPositions = [
                     // Left 4 buildings
                     { x: cx - spread * 0.96, y: groundY + 12 },
-                    { x: cx - spread * 0.72, y: groundY + 2 },
-                    { x: cx - spread * 0.48, y: groundY - 5 },
-                    { x: cx - spread * 0.26, y: groundY - 9 },
+                    { x: cx - spread * 0.73, y: groundY + 2 },
+                    { x: cx - spread * 0.50, y: groundY - 5 },
+                    { x: cx - spread * 0.27, y: groundY - 9 },
                     // Right 4 buildings
-                    { x: cx + spread * 0.26, y: groundY - 9 },
-                    { x: cx + spread * 0.48, y: groundY - 5 },
-                    { x: cx + spread * 0.72, y: groundY + 2 },
+                    { x: cx + spread * 0.27, y: groundY - 9 },
+                    { x: cx + spread * 0.50, y: groundY - 5 },
+                    { x: cx + spread * 0.73, y: groundY + 2 },
                     { x: cx + spread * 0.96, y: groundY + 12 }
                 ];
 
@@ -5006,13 +5054,13 @@ const PlanetVisualEngine = {
                     }
 
                     // Draw the custom vector modeled building
-                    this.drawBuildingModel(ctx, pos.x, pos.y, bInfo.id, isBuilt, isHovered, time);
+                    this.drawBuildingModel(ctx, pos.x, pos.y, bInfo.id, isBuilt, isHovered, time, bScale);
 
                     // Draw the clean floating text box / price badge in front
                     ctx.save();
-                    const badgeY = pos.y + 14;
-                    const badgeW = 74;
-                    const badgeH = 26;
+                    const badgeY = pos.y + 12;
+                    const badgeW = 68 * bScale;
+                    const badgeH = 24 * bScale;
 
                     ctx.fillStyle = isHovered ? 'rgba(15, 23, 42, 0.95)' : 'rgba(10, 15, 30, 0.85)';
                     ctx.strokeStyle = isBuilt ? '#10b981' : (isHovered ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)');
@@ -5022,38 +5070,37 @@ const PlanetVisualEngine = {
                         ctx.shadowColor = '#fbbf24';
                     }
                     ctx.beginPath();
-                    ctx.roundRect(pos.x - badgeW / 2, badgeY, badgeW, badgeH, 6);
+                    ctx.roundRect(pos.x - badgeW / 2, badgeY, badgeW, badgeH, 5);
                     ctx.fill();
                     ctx.stroke();
 
                     if (isBuilt) {
                         ctx.fillStyle = '#34d399';
-                        ctx.font = 'bold 9px "Inter", Arial, sans-serif';
+                        ctx.font = `bold ${8 * bScale}px "Inter", Arial, sans-serif`;
                         ctx.textAlign = 'center';
-                        ctx.fillText('AKTIVNÍ', pos.x, badgeY + 11);
+                        ctx.fillText('AKTIVNÍ', pos.x, badgeY + 10 * bScale);
                         ctx.fillStyle = '#fbbf24';
-                        ctx.font = 'bold 8.5px "Inter", Arial, sans-serif';
-                        ctx.fillText('+1 DOGE/m', pos.x, badgeY + 21);
+                        ctx.font = `bold ${7.5 * bScale}px "Inter", Arial, sans-serif`;
+                        ctx.fillText('+1 DOGE/m', pos.x, badgeY + 19 * bScale);
                     } else {
                         ctx.fillStyle = isHovered ? '#fbbf24' : '#cbd5e1';
-                        ctx.font = 'bold 8.5px "Inter", Arial, sans-serif';
+                        ctx.font = `bold ${7.5 * bScale}px "Inter", Arial, sans-serif`;
                         ctx.textAlign = 'center';
-                        ctx.fillText(bInfo.name.split(' #')[0], pos.x, badgeY + 10);
+                        ctx.fillText(bInfo.name.split(' #')[0], pos.x, badgeY + 9 * bScale);
 
                         const canAfford = (META.currency || 0) >= bInfo.cost;
                         ctx.fillStyle = canAfford ? '#10b981' : '#ef4444';
-                        ctx.font = '900 9px "Inter", Arial, sans-serif';
+                        ctx.font = `900 ${8 * bScale}px "Inter", Arial, sans-serif`;
                         const costText = (bInfo.cost >= 1000) ? (bInfo.cost / 1000) + 'k DOGE' : bInfo.cost + ' DOGE';
-                        ctx.fillText(costText, pos.x, badgeY + 21);
+                        ctx.fillText(costText, pos.x, badgeY + 19 * bScale);
                     }
                     ctx.restore();
                 });
 
-                // 9. Futuristic Landing Pad Platform in center
+                // 9. Futuristic Landing Pad Platform in center (Clean Launch Platform)
                 ctx.save();
-                const padW = Math.min(200, w * 0.30);
+                const padW = Math.min(220, w * 0.32);
                 const padH = 26;
-                const padY = groundY - 2;
 
                 // Pad shadow & base
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
@@ -5103,7 +5150,7 @@ const PlanetVisualEngine = {
             });
             ctx.restore();
 
-            // 11. Draw Vector Modelled Rocket Ship
+            // 11. Draw Vector Modelled Rocket Ship (SITTING FLUSH ON THE PAD)
             const shipX = cx;
             const shipY = this.shipY;
 
@@ -5115,7 +5162,6 @@ const PlanetVisualEngine = {
             }
 
             // Ground shadow under rocket (only if near ground)
-            const padY = groundY - 2;
             if (shipY > 0 && shipY <= padY + 20 && groundY < h + 100) {
                 const distRatio = Math.max(0, 1 - Math.abs(padY - shipY) / 180);
                 ctx.fillStyle = `rgba(0, 0, 0, ${0.65 * distRatio})`;
@@ -5126,7 +5172,22 @@ const PlanetVisualEngine = {
 
             this.drawRocketModel(ctx, shipX, shipY, this.shipVy, this.state, time, isRocketHovered, this.mode);
 
-            // 12. Draw Ejected Player(s) deployed in center of space!
+            // 12. Draw Expanding Ejection Shockwave Rings (Efekt vyplivnutí)
+            if (this.shockwaves && this.shockwaves.length > 0) {
+                this.shockwaves.forEach(sw => {
+                    ctx.save();
+                    ctx.strokeStyle = `rgba(56, 189, 248, ${sw.alpha * 0.9})`;
+                    ctx.lineWidth = 3;
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#38bdf8';
+                    ctx.beginPath();
+                    ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                });
+            }
+
+            // 13. Draw Ejected Player(s) deployed in center of space!
             if (this.state === 'ejecting' && this.ejectedPlayers) {
                 this.ejectedPlayers.forEach(ep => {
                     ctx.save();
@@ -5135,7 +5196,7 @@ const PlanetVisualEngine = {
                     
                     // Glowing Player orb (kulička)
                     ctx.fillStyle = ep.color;
-                    ctx.shadowBlur = 18;
+                    ctx.shadowBlur = 20;
                     ctx.shadowColor = ep.color;
                     ctx.beginPath();
                     ctx.arc(0, 0, 14, 0, Math.PI * 2);

@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.663
+            NEO SURVIVOR v1.664
           </div>
         </div>
       </div>
@@ -390,7 +390,7 @@
         <div id="planet-ui-layer" style="position: absolute; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 10; overflow: hidden; background: transparent; border: none; box-shadow: none;">
           
           <!-- TOP UI (Header & Income) - Left Side -->
-          <div style="position: absolute; top: 20px; left: 20px; background: rgba(10, 15, 30, 0.85); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 16px; padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); pointer-events: auto;">
+          <div id="planet-top-card">
             <div style="display: flex; flex-direction: column; gap: 8px;">
               <h2 style="font-size: 1.4rem; margin: 0; color: #10b981; text-transform: uppercase;" data-i18n="DOMOVSKÁ PLANETA">DOMOVSKÁ PLANETA</h2>
               <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
@@ -411,8 +411,8 @@
           </div>
           
           <!-- BOTTOM LEFT UI (Menu Navigation) -->
-          <div style="position: absolute; bottom: 25px; left: 25px; pointer-events: auto; z-index: 20;">
-            <button id="btn-planet-menu-back" class="btn-restart modern-glass-btn" style="padding: 12px 20px; font-size: 0.9rem; font-weight: 800; border-radius: 14px; background: rgba(10, 15, 30, 0.85); border: 1.5px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(0,0,0,0.5); cursor: pointer;">
+          <div id="planet-bottom-menu" style="position: absolute; bottom: 20px; left: 20px; pointer-events: auto; z-index: 20;">
+            <button id="btn-planet-menu-back" class="btn-restart modern-glass-btn" style="padding: 10px 18px; font-size: 0.85rem; font-weight: 800; border-radius: 12px; background: rgba(10, 15, 30, 0.85); border: 1.5px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(0,0,0,0.5); cursor: pointer;">
               <span>🏠</span> <span data-i18n="MENU">HLAVNÍ MENU</span>
             </button>
           </div>
