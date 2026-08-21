@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.671
+ * NEO SURVIVOR - Core Game Logic - v1.672
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4177,6 +4177,11 @@ const PlanetVisualEngine = {
         const statusTag = document.getElementById('planet-status-tag');
         if (statusTag) { statusTag.style.transition = 'opacity 0.3s ease'; statusTag.style.opacity = '0'; }
 
+        // Pre-load solo game in the background so we fly directly into the active game!
+        if (this.mode === 'solo' && !GAME.active) {
+            startSoloGame();
+        }
+
         if (typeof playSound === 'function') playSound('shoot');
     },
 
@@ -4203,53 +4208,61 @@ const PlanetVisualEngine = {
 
         // Volcano smoke generator
         if (this.flightOffset < 150 && Math.random() < 0.4) {
-            const volX = Math.max(60, this.logicalW * 0.10);
-            const volY = this.targetY - 35 + this.flightOffset;
+            const vxBase = cx - 210;
+            const vyBase = groundY - 32;
             this.particles.push({
-                x: volX + (Math.random() - 0.5) * 16,
-                y: volY,
-                vx: (Math.random() - 0.3) * 0.7,
-                vy: -(Math.random() * 1.6 + 0.8),
-                size: Math.random() * 4 + 2,
-                color: Math.random() > 0.5 ? '#f97316' : '#ef4444',
-                alpha: 0.9,
-                life: 1
+                x: vxBase + (Math.random() - 0.5) * 12,
+                y: vyBase,
+                vx: (Math.random() - 0.7) * 1.5,
+                vy: -(Math.random() * 2 + 1),
+                size: Math.random() * 6 + 4,
+                color: Math.random() > 0.4 ? 'rgba(75, 85, 99, 0.7)' : 'rgba(239, 68, 68, 0.8)',
+                alpha: 1,
+                life: 1.5
             });
         }
 
         if (this.state === 'landing') {
             this.shipY += this.shipVy;
-            for (let i = 0; i < 4; i++) {
-                this.particles.push({
-                    x: cx + (Math.random() - 0.5) * 32,
-                    y: this.shipY + 50,
-                    vx: (Math.random() - 0.5) * 2,
-                    vy: Math.random() * 4 + 3,
-                    size: Math.random() * 7 + 3,
-                    color: Math.random() > 0.4 ? '#38bdf8' : '#60a5fa',
-                    alpha: 1,
-                    life: 1
-                });
+            this.shipVy = Math.max(1.0, this.shipVy * 0.96);
+
+            if (this.shipY >= restY - 80) {
+                // Retro thrusters ignition
+                for (let i = 0; i < 4; i++) {
+                    this.particles.push({
+                        x: cx + (Math.random() - 0.5) * 28,
+                        y: this.shipY + 52,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: Math.random() * 5 + 3,
+                        size: Math.random() * 8 + 4,
+                        color: Math.random() > 0.5 ? '#38bdf8' : '#6366f1',
+                        alpha: 1,
+                        life: 1
+                    });
+                }
             }
 
             if (this.shipY >= restY) {
                 this.shipY = restY;
                 this.state = 'idle';
-                this.bounce = 10;
+                this.bounce = 8;
+                
+                // Landing dust / energy burst
                 for (let i = 0; i < 35; i++) {
-                    const a = Math.PI + (Math.random() - 0.5) * 2.2;
-                    const spd = Math.random() * 5 + 1.5;
+                    const angle = Math.random() * Math.PI;
+                    const spd = Math.random() * 7 + 2;
                     this.particles.push({
-                        x: cx + (Math.random() - 0.5) * 44,
-                        y: padY + 2,
-                        vx: Math.cos(a) * spd,
-                        vy: Math.sin(a) * spd * 0.5,
-                        size: Math.random() * 8 + 4,
-                        color: 'rgba(148, 163, 184, 0.8)',
-                        alpha: 0.8,
-                        life: 1
+                        x: cx + (Math.random() - 0.5) * 60,
+                        y: padY,
+                        vx: Math.cos(angle) * spd,
+                        vy: -Math.sin(angle) * (spd * 0.5),
+                        size: Math.random() * 7 + 3,
+                        color: Math.random() > 0.5 ? '#60a5fa' : '#34d399',
+                        alpha: 1,
+                        life: 1.2
                     });
                 }
+
                 const tag = document.getElementById('planet-status-tag');
                 if (tag) {
                     tag.innerHTML = `<span>🟢 RAKETA PŘISTÁLA – KLIKNI NA NI PRO START</span>`;
@@ -4351,11 +4364,14 @@ const PlanetVisualEngine = {
                     };
                 });
 
-                // Start displaying the real in-game HUD layer smoothly in background
+                // Slowly and gracefully fade in the entire in-game HUD (XP bar, level, pause, kills)
                 const uiLayer = document.getElementById('ui-layer');
                 if (uiLayer) {
                     uiLayer.style.display = 'block';
-                    uiLayer.style.opacity = '1';
+                    uiLayer.style.transition = 'opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1)';
+                    setTimeout(() => {
+                        uiLayer.style.opacity = '1';
+                    }, 50);
                 }
 
                 if (typeof playSound === 'function') playSound('shoot');
@@ -4407,7 +4423,7 @@ const PlanetVisualEngine = {
                 
                 const pModal = document.getElementById('planet-modal');
                 if (pModal) {
-                    pModal.style.transition = 'opacity 0.25s ease';
+                    pModal.style.transition = 'opacity 0.4s ease-out';
                     pModal.style.opacity = '0';
                     pModal.style.pointerEvents = 'none';
                     setTimeout(() => {
@@ -5329,7 +5345,7 @@ function openPlanetModal(mode = 'solo') {
             PlanetVisualEngine.startLanding(mode, () => {
                 document.getElementById('planet-modal').classList.remove('active');
                 if (mode === 'solo') {
-                    startSoloGame();
+                    if (!GAME.active) startSoloGame();
                 } else if (mode === 'multiplayer') {
                     document.getElementById('multiplayer-modal').classList.add('active');
                 }
@@ -6830,7 +6846,15 @@ function startGame() {
         NET.socket.emit('playerReady');
     }
     document.querySelectorAll('.modal:not(#planet-modal)').forEach(m => m.classList.remove('active'));
-    document.getElementById('ui-layer').style.display = 'block';
+    const uiLayer = document.getElementById('ui-layer');
+    if (uiLayer) {
+        uiLayer.style.display = 'block';
+        if (window.PlanetVisualEngine && (window.PlanetVisualEngine.state === 'takeoff' || window.PlanetVisualEngine.state === 'ejecting')) {
+            uiLayer.style.opacity = '0';
+        } else {
+            uiLayer.style.opacity = '1';
+        }
+    }
     document.getElementById('menu-anim-canvas').style.display = 'none';
     GAME.startTime = Date.now();
     GAME.lastSpawnTime = Date.now();
