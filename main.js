@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.688
+ * NEO SURVIVOR - Core Game Logic - v1.689
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4806,14 +4806,127 @@ const PlanetVisualEngine = {
                 return;
             }
 
+            // Update shattered asteroid rock debris if any
+            if (this.asteroidDebris && this.asteroidDebris.length > 0) {
+                this.asteroidDebris.forEach(d => {
+                    d.x += d.vx;
+                    d.y += d.vy;
+                    d.rot += d.rotSpeed;
+                    d.alpha = Math.max(0, d.alpha - 0.015);
+                });
+                this.asteroidDebris = this.asteroidDebris.filter(d => d.alpha > 0);
+            }
+
             const elapsed = (Date.now() - this.travelStartTime) / 1000;
             const duration = this.travelDuration || 25.0;
             const progress = Math.min(1.0, elapsed / duration);
             
-            // Check Asteroid Hazard Trigger in mid-space flight
-            if (!this.hazardTriggered && this.willEncounterHazard && progress >= 0.42 && progress <= 0.65) {
-                this.triggerAsteroidHazard();
-                return;
+            // Check Asteroid Hazard Trigger in mid-space flight (Spawn visible incoming rogue meteor!)
+            if (!this.hazardTriggered && this.willEncounterHazard && progress >= 0.35 && progress <= 0.65) {
+                if (!this.incomingHazardAsteroid) {
+                    const rocketBaseX = cx + (this.shipLateralX || 0);
+                    this.incomingHazardAsteroid = {
+                        x: rocketBaseX + (Math.random() - 0.5) * 30,
+                        y: -120,
+                        targetX: rocketBaseX,
+                        size: 40,
+                        speedY: 14.0,
+                        rot: Math.random() * Math.PI,
+                        rotSpeed: 0.08,
+                        points: Array.from({ length: 9 }, (_, idx) => {
+                            const angle = (idx / 9) * Math.PI * 2;
+                            const r = 0.75 + Math.random() * 0.45;
+                            return { x: Math.cos(angle) * r, y: Math.sin(angle) * r };
+                        })
+                    };
+                    if (typeof playSound === 'function') playSound('meteor');
+                }
+            }
+
+            // Update incoming rogue hazard asteroid
+            if (this.incomingHazardAsteroid) {
+                const ha = this.incomingHazardAsteroid;
+                ha.y += ha.speedY;
+                ha.rot += ha.rotSpeed;
+                const rocketBaseX = cx + (this.shipLateralX || 0);
+                ha.x += (rocketBaseX - ha.x) * 0.08;
+
+                // Fiery trail on incoming hazard meteor
+                for (let i = 0; i < 3; i++) {
+                    this.particles.push({
+                        x: ha.x + (Math.random() - 0.5) * 16,
+                        y: ha.y - 12,
+                        vx: (Math.random() - 0.5) * 3,
+                        vy: -Math.random() * 5 - 2,
+                        size: Math.random() * 8 + 3,
+                        color: Math.random() > 0.35 ? '#f97316' : '#ef4444',
+                        alpha: 0.9,
+                        life: 0.5
+                    });
+                }
+
+                // Check direct collision with spaceship
+                const targetShipY = this.shipY || (this.logicalH * 0.45);
+                const distToRocket = Math.hypot(ha.x - rocketBaseX, ha.y - targetShipY);
+
+                if (distToRocket < 45 || ha.y >= targetShipY) {
+                    // 💥 REAL DIRECT IMPACT & SHATTER EXPLOSION!
+                    this.hazardTriggered = true;
+                    this.isTravelPaused = true;
+                    this.pauseStartTime = Date.now();
+
+                    // Shatter asteroid into 16 flying rock fragments
+                    this.asteroidDebris = [];
+                    for (let i = 0; i < 16; i++) {
+                        const a = (i / 16) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+                        const spd = Math.random() * 11 + 4;
+                        this.asteroidDebris.push({
+                            x: ha.x,
+                            y: ha.y,
+                            vx: Math.cos(a) * spd,
+                            vy: Math.sin(a) * spd - 2,
+                            size: Math.random() * 14 + 6,
+                            rot: Math.random() * Math.PI * 2,
+                            rotSpeed: (Math.random() - 0.5) * 0.25,
+                            alpha: 1.0
+                        });
+                    }
+
+                    // Fiery blast explosion particles
+                    for (let i = 0; i < 55; i++) {
+                        const a = Math.random() * Math.PI * 2;
+                        const spd = Math.random() * 14 + 3;
+                        this.particles.push({
+                            x: rocketBaseX,
+                            y: targetShipY,
+                            vx: Math.cos(a) * spd,
+                            vy: Math.sin(a) * spd,
+                            size: Math.random() * 10 + 4,
+                            color: Math.random() > 0.4 ? '#f97316' : (Math.random() > 0.5 ? '#fbbf24' : '#ef4444'),
+                            alpha: 1,
+                            life: 1.2
+                        });
+                    }
+
+                    // Shockwave ring
+                    if (!this.shockwaves) this.shockwaves = [];
+                    this.shockwaves.push({ x: rocketBaseX, y: targetShipY, r: 8, maxR: 140, alpha: 1.0 });
+
+                    // Violent impact knockback & tilt
+                    this.shipTilt = (Math.random() > 0.5 ? 0.42 : -0.42);
+                    this.shipRotation = 0.2;
+                    if (typeof shakeScreen === 'function') shakeScreen(24);
+                    if (typeof playSound === 'function') playSound('explosion');
+                    if (window.triggerGamepadVibration) window.triggerGamepadVibration(650, 1.0, 0.85);
+
+                    this.incomingHazardAsteroid = null;
+
+                    // Open emergency menu after player sees the full impact & debris explosion
+                    setTimeout(() => {
+                        this.triggerAsteroidHazard();
+                    }, 800);
+                    return;
+                }
             }
 
             // Interactive player lateral steering OR smooth autonomous lane holding
@@ -5788,6 +5901,66 @@ const PlanetVisualEngine = {
                     ctx.fill();
                     ctx.stroke();
 
+                    ctx.restore();
+                });
+                ctx.restore();
+            }
+
+            // 3e. Render Incoming Giant Rogue Hazard Asteroid (Direct Visual Impact!)
+            if (this.incomingHazardAsteroid) {
+                const ha = this.incomingHazardAsteroid;
+                ctx.save();
+                ctx.translate(ha.x, ha.y);
+                ctx.rotate(ha.rot);
+
+                // Fiery atmospheric friction glow
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = '#f97316';
+                ctx.fillStyle = 'rgba(234, 88, 12, 0.4)';
+                ctx.beginPath();
+                ctx.arc(0, 0, ha.size * 1.25, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Shaded rock body
+                const haGrad = ctx.createLinearGradient(-ha.size, -ha.size, ha.size, ha.size);
+                haGrad.addColorStop(0, '#f97316');
+                haGrad.addColorStop(0.3, '#78716c');
+                haGrad.addColorStop(1, '#1c1917');
+                ctx.fillStyle = haGrad;
+                ctx.strokeStyle = '#ea580c';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ha.points.forEach((pt, pidx) => {
+                    const px = pt.x * ha.size;
+                    const py = pt.y * ha.size;
+                    if (pidx === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                });
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 3f. Render Shattered Asteroid Debris Fragments in Real-time
+            if (this.asteroidDebris && this.asteroidDebris.length > 0) {
+                ctx.save();
+                this.asteroidDebris.forEach(d => {
+                    ctx.save();
+                    ctx.globalAlpha = d.alpha;
+                    ctx.translate(d.x, d.y);
+                    ctx.rotate(d.rot);
+                    ctx.fillStyle = '#78716c';
+                    ctx.strokeStyle = '#ea580c';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(-d.size / 2, -d.size / 2);
+                    ctx.lineTo(d.size / 2, -d.size / 3);
+                    ctx.lineTo(d.size / 3, d.size / 2);
+                    ctx.lineTo(-d.size / 2, d.size / 3);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
                     ctx.restore();
                 });
                 ctx.restore();
