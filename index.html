@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.655
+            NEO SURVIVOR v1.656
           </div>
         </div>
       </div>
@@ -378,76 +378,55 @@
       </div>
 
       <!-- DOMOVSKÁ PLANETA (HOME PLANET) SCENE -->
-      <div id="planet-modal" class="modal" style="background: transparent;">
+      <div id="planet-modal" class="modal" style="background: transparent; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;">
         <!-- Animated Planet Surface & Landing Pad Canvas (FULL SCREEN) -->
         <canvas id="planet-surface-canvas" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: block; z-index: 1;"></canvas>
         
         <!-- Status floating tag -->
-        <div id="planet-status-tag" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 5; font-size: 0.8rem; font-weight: 800; color: #10b981; background: rgba(0,0,0,0.65); padding: 6px 15px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.4); letter-spacing: 1px; backdrop-filter: blur(4px);">
+        <div id="planet-status-tag" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 5; font-size: 0.8rem; font-weight: 800; color: #10b981; background: rgba(0,0,0,0.65); padding: 6px 15px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.4); letter-spacing: 1px;">
           🟢 ZÁKLADNA PŘIPRAVENA
         </div>
 
-        <div class="modal-content" style="position: relative; z-index: 10; max-width: 900px; width: 95vw; background: transparent; border: none; box-shadow: none; max-height: 100vh; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 20px 0;">
+        <div class="modal-content" style="position: relative; z-index: 10; max-width: 100vw; width: 100vw; background: transparent; border: none; box-shadow: none; max-height: 100vh; height: 100vh; padding: 20px; pointer-events: none;">
           
-          <!-- TOP UI (Header & Income) -->
-          <div style="background: rgba(10, 15, 30, 0.85); backdrop-filter: blur(10px); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 20px; padding: 15px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="font-size: 2.8rem; filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.5)); animation: floatPet 4s ease-in-out infinite;">🪐</div>
-                <div>
-                  <h2 style="font-size: 1.8rem; margin: 0; color: #10b981; text-shadow: 0 0 15px rgba(16, 185, 129, 0.5); letter-spacing: 1.5px; text-transform: uppercase;" data-i18n="DOMOVSKÁ PLANETA">DOMOVSKÁ PLANETA</h2>
-                  <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;" data-i18n="Tvá domovská základna. Každá budova generuje 1 Dogecoin / min.">Tvá domovská základna. Každá budova generuje 1 Dogecoin / min.</div>
-                </div>
-              </div>
-
-              <!-- Currency & Income stats -->
+          <!-- TOP UI (Header & Income) - Left Side -->
+          <div style="position: absolute; top: 20px; left: 20px; background: rgba(10, 15, 30, 0.85); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 16px; padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); pointer-events: auto;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <h2 style="font-size: 1.4rem; margin: 0; color: #10b981; text-transform: uppercase;" data-i18n="DOMOVSKÁ PLANETA">DOMOVSKÁ PLANETA</h2>
               <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                 <div class="stat-chip" style="background: rgba(0,0,0,0.6); border: 1px solid #fbbf24; color: #fbbf24; font-weight: 800; font-size: 0.85rem; padding: 6px 12px;">
                   DOGE: <span id="planet-currency-val">0</span>
                 </div>
                 <div class="stat-chip" style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #10b981; font-weight: 800; font-size: 0.85rem; padding: 6px 12px;">
-                  ⚡ <span id="planet-income-rate">+0 DOGE / min</span>
+                  ⚡ <span id="planet-income-rate">+0 / min</span>
                 </div>
               </div>
-            </div>
-
-            <!-- Revenue claim banner -->
-            <div style="margin-top: 12px; background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 16px; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 1.8rem;">💰</span>
-                <div>
-                  <div style="font-size: 0.7rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px; font-weight: 800;" data-i18n="NAHROMADĚNÝ VÝNOS:">NAHROMADĚNÝ VÝNOS:</div>
-                  <div style="font-size: 1.4rem; font-weight: 900; color: #fbbf24;" id="planet-pending-income">0 DOGE</div>
-                </div>
+              <div style="margin-top: 5px; display: flex; align-items: center; gap: 10px;">
+                <div style="font-size: 1.2rem; font-weight: 900; color: #fbbf24;" id="planet-pending-income">0 DOGE</div>
+                <button id="btn-claim-planet-income" class="btn-restart" style="padding: 6px 12px; font-size: 0.75rem; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); color: #000; font-weight: 900; border: none; border-radius: 8px; cursor: pointer;">
+                  <span data-i18n="VYBRAT">VYBRAT</span>
+                </button>
               </div>
-              <button id="btn-claim-planet-income" class="btn-restart" style="padding: 10px 20px; font-size: 0.85rem; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); color: #000; font-weight: 900; border: none; border-radius: 12px; box-shadow: 0 0 15px rgba(251, 191, 36, 0.4); cursor: pointer; transition: all 0.2s;">
-                <span data-i18n="VYBRAT VÝNOS">VYBRAT VÝNOS</span>
-              </button>
             </div>
           </div>
           
-          <!-- Spacer to let user see the planet -->
-          <div style="flex-grow: 1;"></div>
-
-          <!-- BOTTOM UI (Floating Combat & Navigation) -->
-          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: auto; padding: 0 20px 20px 20px;">
-            <!-- Removed the big blurred background and building HTML grid to let user see the planet and click directly on it -->
-            <button id="btn-planet-fight" class="btn-restart" style="width: 100%; max-width: 400px; margin: 0 auto; padding: 20px; font-size: 1.6rem; font-weight: 900; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #fff; border: 2px solid rgba(255,255,255,0.4); border-radius: 20px; box-shadow: 0 0 40px rgba(239, 68, 68, 0.8); cursor: pointer; letter-spacing: 3px; text-transform: uppercase; transform: scale(1); transition: all 0.2s;">
-              <span>⚔️</span> <span data-i18n="ODSTARTOVAT">ODSTARTOVAT</span> <span>🚀</span>
+          <!-- TOP RIGHT UI (Navigation) -->
+          <div style="position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto;">
+            <button id="btn-planet-menu-back" class="btn-restart modern-glass-btn" style="padding: 10px 15px; font-size: 0.8rem; border-radius: 12px; background: rgba(10, 15, 30, 0.8); border: 1px solid rgba(255,255,255,0.2);">
+              <span>🏠</span> <span data-i18n="MENU">MENU</span>
             </button>
-            
-            <div style="display: flex; justify-content: center; gap: 10px; max-width: 400px; margin: 0 auto; width: 100%;">
-              <button id="btn-planet-ships" class="btn-restart modern-glass-btn" style="flex: 1; padding: 12px 5px; font-size: 0.8rem; border-radius: 12px; background: rgba(10, 15, 30, 0.7); backdrop-filter: blur(5px);">
-                <span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span>
-              </button>
-              <button id="btn-planet-tree" class="btn-restart modern-glass-btn" style="flex: 1; padding: 12px 5px; font-size: 0.8rem; border-radius: 12px; background: rgba(10, 15, 30, 0.7); backdrop-filter: blur(5px);">
-                <span>🌌</span> <span data-i18n="SKILL TREE">SKILL TREE</span>
-              </button>
-              <button id="btn-planet-menu-back" class="btn-restart modern-glass-btn" style="flex: 1; padding: 12px 5px; font-size: 0.8rem; border-radius: 12px; background: rgba(10, 15, 30, 0.7); backdrop-filter: blur(5px);">
-                <span>🏠</span> <span data-i18n="MENU">MENU</span>
-              </button>
-            </div>
+            <button id="btn-planet-ships" class="btn-restart modern-glass-btn" style="padding: 10px 15px; font-size: 0.8rem; border-radius: 12px; background: rgba(10, 15, 30, 0.8); border: 1px solid rgba(255,255,255,0.2);">
+              <span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span>
+            </button>
+            <button id="btn-planet-tree" class="btn-restart modern-glass-btn" style="padding: 10px 15px; font-size: 0.8rem; border-radius: 12px; background: rgba(10, 15, 30, 0.8); border: 1px solid rgba(255,255,255,0.2);">
+              <span>🌌</span> <span data-i18n="SKILL TREE">SKILL TREE</span>
+            </button>
           </div>
+
+          <!-- FLOATING FIGHT BUTTON (Bottom Right) -->
+          <button id="btn-planet-fight" class="btn-restart" style="position: absolute; bottom: 30px; right: 30px; padding: 20px 30px; font-size: 1.4rem; font-weight: 900; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #fff; border: 2px solid rgba(255,255,255,0.4); border-radius: 20px; box-shadow: 0 0 40px rgba(239, 68, 68, 0.8); cursor: pointer; pointer-events: auto;">
+            <span>⚔️</span> <span data-i18n="ODSTARTOVAT">ODSTARTOVAT</span> <span>🚀</span>
+          </button>
         </div>
 
       <div id="ships-modal" class="modal">

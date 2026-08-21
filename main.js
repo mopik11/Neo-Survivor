@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.655
+ * NEO SURVIVOR - Core Game Logic - v1.656
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4146,7 +4146,7 @@ const PlanetVisualEngine = {
         if (fightBtn) {
             fightBtn.disabled = false;
             fightBtn.style.opacity = '1';
-            fightBtn.innerHTML = `<span>⚔️</span> <span>${this.mode === 'multiplayer' ? window.T("PŘIPOJIT DO BITVY") : window.T("BOJOVAT (ODSTARTOVAT)")}</span>`;
+            fightBtn.innerHTML = `<span>⚔️</span> <span>${this.mode === 'multiplayer' ? window.T("MULTI BITVA") : window.T("ODSTARTOVAT")}</span> <span>🚀</span>`;
         }
 
         if (typeof playSound === 'function') playSound('menuOpen');
@@ -4360,21 +4360,23 @@ const PlanetVisualEngine = {
             ctx.restore();
 
             // Store plotPositions for click detection
+            const gap = Math.min(70, (w / 2 - 60) / 4);
             this.plotPositions = [
-                { x: cx - 350, y: groundY - 16 },
-                { x: cx - 280, y: groundY - 12 },
-                { x: cx - 210, y: groundY - 8 },
-                { x: cx - 140, y: groundY - 4 },
-                { x: cx + 140, y: groundY - 4 },
-                { x: cx + 210, y: groundY - 8 },
-                { x: cx + 280, y: groundY - 12 },
-                { x: cx + 350, y: groundY - 16 }
+                { x: cx - (gap * 5), y: groundY - 16 },
+                { x: cx - (gap * 4), y: groundY - 12 },
+                { x: cx - (gap * 3), y: groundY - 8 },
+                { x: cx - (gap * 2), y: groundY - 4 },
+                { x: cx + (gap * 2), y: groundY - 4 },
+                { x: cx + (gap * 3), y: groundY - 8 },
+                { x: cx + (gap * 4), y: groundY - 12 },
+                { x: cx + (gap * 5), y: groundY - 16 }
             ];
 
             // 6. Draw Built Base Structures & Empty Plots
-            if (META.planet) {
-                if (!META.planet.buildings) META.planet.buildings = {};
-                PLANET_BUILDINGS.forEach((bInfo, idx) => {
+            if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
+            if (!META.planet.buildings) META.planet.buildings = {};
+            
+            PLANET_BUILDINGS.forEach((bInfo, idx) => {
                     const pos = this.plotPositions[idx];
                     if (!pos) return;
                     
@@ -4433,7 +4435,6 @@ const PlanetVisualEngine = {
                     }
                     ctx.restore();
                 });
-            }
 
         // 7. Futuristic Landing Pad Platform in center
         ctx.save();
@@ -4496,6 +4497,7 @@ const PlanetVisualEngine = {
         // Shadow under rocket on landing pad
         if (shipY > 0 && shipY <= padY + 10) {
             const distRatio = Math.max(0, 1 - Math.abs(padY - shipY) / 150);
+            ctx.shadowBlur = 0;
             ctx.fillStyle = `rgba(0, 0, 0, ${0.5 * distRatio})`;
             ctx.beginPath();
             ctx.ellipse(shipX, padY, (25 * distRatio), (8 * distRatio), 0, 0, Math.PI * 2);
@@ -4514,23 +4516,24 @@ const PlanetVisualEngine = {
         ];
         const activeShip = shipsList.find(s => s.id === parseInt(META.selectedShip)) || shipsList[0];
 
-        // Draw Ship Body & Glow
+        // Draw Ship Body Glow Background
         ctx.translate(shipX, shipY);
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 15;
         ctx.shadowColor = '#6366f1';
-        ctx.fillStyle = '#f8fafc';
+        ctx.fillStyle = '#1e293b';
         ctx.strokeStyle = '#6366f1';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.arc(0, 0, 20, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
         // Ship Icon
-        ctx.font = '22px Arial';
+        ctx.shadowBlur = 0;
+        ctx.font = '26px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(activeShip.icon, 0, 0);
+        ctx.fillText(activeShip.icon, 0, 2);
 
         // Equipped Hat
         if (META.upgrades && META.upgrades.hat) {
