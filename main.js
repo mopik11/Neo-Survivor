@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.656
+ * NEO SURVIVOR - Core Game Logic - v1.657
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4114,12 +4114,12 @@ const PlanetVisualEngine = {
         this.targetY = this.logicalH - 180; // Land closer to bottom
 
         this.stars = [];
-        for (let i = 0; i < 40; i++) {
+        for (let i = 0; i < 50; i++) {
             this.stars.push({
                 x: Math.random() * this.logicalW,
-                y: Math.random() * (this.logicalH * 0.7),
-                size: Math.random() * 1.8 + 0.5,
-                opacity: Math.random() * 0.6 + 0.3
+                y: Math.random() * (this.logicalH * 0.75),
+                size: Math.random() * 2.2 + 0.8,
+                opacity: Math.random() * 0.7 + 0.5
             });
         }
     },
@@ -4400,7 +4400,7 @@ const PlanetVisualEngine = {
 
                         // Building Icon (Animated if built)
                         const bobY = Math.sin(Date.now() / 300 + idx) * 3;
-                        ctx.font = '24px Arial';
+                        ctx.font = '24px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
                         ctx.fillText(bInfo.icon, pos.x, pos.y + 4 + bobY);
@@ -4414,17 +4414,16 @@ const PlanetVisualEngine = {
                         }
                     } else {
                         // Empty Plot Outline
-                        ctx.fillStyle = isHovered ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)';
-                        ctx.strokeStyle = isHovered ? 'rgba(16, 185, 129, 0.8)' : 'rgba(255, 255, 255, 0.2)';
-                        ctx.lineWidth = 1;
+                        ctx.fillStyle = isHovered ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.1)';
+                        ctx.strokeStyle = isHovered ? 'rgba(16, 185, 129, 0.9)' : 'rgba(255, 255, 255, 0.35)';
+                        ctx.lineWidth = 1.5;
                         ctx.beginPath();
                         ctx.ellipse(pos.x, pos.y + 10, 18, 5, 0, 0, Math.PI * 2);
                         ctx.fill();
                         ctx.stroke();
 
-                        // Ghost icon & Cost
                         ctx.globalAlpha = isHovered ? 0.8 : 0.4;
-                        ctx.font = '18px Arial';
+                        ctx.font = '18px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
                         ctx.fillText(bInfo.icon, pos.x, pos.y + 4);
@@ -4530,26 +4529,26 @@ const PlanetVisualEngine = {
 
         // Ship Icon
         ctx.shadowBlur = 0;
-        ctx.font = '26px Arial';
+        ctx.font = '26px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(activeShip.icon, 0, 2);
 
         // Equipped Hat
-        if (META.upgrades && META.upgrades.hat) {
+        if (META.upgrades && META.upgrades.hat && typeof EMOJIS !== 'undefined') {
             const hatObj = EMOJIS.find(e => e.id === META.upgrades.hat);
             if (hatObj) {
-                ctx.font = '16px Arial';
+                ctx.font = '16px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
                 ctx.fillText(hatObj.icon, 0, -18);
             }
         }
 
         // Equipped Pet floating near ship
-        if ((META.maxLevel || 1) >= 15 && META.selectedPet) {
+        if ((META.maxLevel || 1) >= 15 && META.selectedPet && typeof EMOJIS !== 'undefined') {
             const petObj = EMOJIS.find(e => e.id === META.selectedPet);
             if (petObj) {
                 const petOffset = Math.sin(Date.now() / 250) * 4;
-                ctx.font = '18px Arial';
+                ctx.font = '18px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
                 ctx.fillText(petObj.icon, 24, -10 + petOffset);
             }
         }
@@ -7873,7 +7872,13 @@ function init() {
             if (e.key.toLowerCase() === 'm') GAME.largeMap = !GAME.largeMap;
         }
         if (e.key === ' ') { GAME.input[' '] = true; }
-        if (e.key === 'Escape') togglePause(false);
+        if (e.key === 'Escape') {
+            if (document.getElementById('planet-modal')?.classList.contains('active')) {
+                document.getElementById('btn-planet-menu-back')?.click();
+            } else {
+                togglePause(false);
+            }
+        }
     });
     window.addEventListener('keyup', (e) => {
         if (e.key) GAME.input[e.key.toLowerCase()] = false;
