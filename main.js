@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.695
+ * NEO SURVIVOR - Core Game Logic - v1.696
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.695'
+    version: window.GAME_VERSION || '1.696'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.695";
+const GAME_VERSION = window.GAME_VERSION || "1.696";
 const GAME = {
     active: false,
     paused: false,
@@ -8264,7 +8264,14 @@ function initSocket() {
                 }
             }
 
-            document.querySelectorAll('.modal:not(#planet-modal)').forEach(m => m.classList.remove('active'));
+            // Close ALL modals – including planet-modal – so MP starts directly in arena
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            const menuAnim = document.getElementById('menu-anim-canvas');
+            if (menuAnim) menuAnim.style.display = 'none';
+            if (window.PlanetVisualEngine && window.PlanetVisualEngine.animFrame) {
+                cancelAnimationFrame(window.PlanetVisualEngine.animFrame);
+                window.PlanetVisualEngine.animFrame = null;
+            }
             if (NET.serverPollingInterval) clearInterval(NET.serverPollingInterval);
 
             // Session logic moved below startGame to ensure player exists
@@ -8301,6 +8308,21 @@ function initSocket() {
             }
             
             NET.socket.emit('upgradePicked');
+        });
+
+        NET.socket.on('teamTakeoff', () => {
+            // Synced takeoff signal from host – hide planet view and start directly
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            const menuAnimEl = document.getElementById('menu-anim-canvas');
+            if (menuAnimEl) menuAnimEl.style.display = 'none';
+            if (window.PlanetVisualEngine && window.PlanetVisualEngine.animFrame) {
+                cancelAnimationFrame(window.PlanetVisualEngine.animFrame);
+                window.PlanetVisualEngine.animFrame = null;
+            }
+            if (GAME.active) {
+                const uiEl = document.getElementById('ui-layer');
+                if (uiEl) { uiEl.style.display = 'block'; uiEl.style.opacity = '1'; }
+            }
         });
 
         NET.socket.on('dailyGiftClaimed', (data) => {
@@ -10163,7 +10185,22 @@ function init() {
             btnStartHosted.onclick = () => {
                 document.getElementById('multiplayer-modal').classList.remove('active');
                 tryFullscreen();
-                window.joinCloudServer(roomName);
+                AudioEngine.init();
+                AudioEngine.stopMenuMusic();
+                // Join the room directly – planet screen is skipped for multiplayer
+                initSocket();
+                const curPlanet = window.PlanetVisualEngine?.currentPlanetId || localStorage.getItem('neoSurvivor_planet') || 'terra';
+                NET.socket.emit('joinRoom', {
+                    roomId: roomName,
+                    playerId: myPlayerId,
+                    planet: curPlanet,
+                    username: META.playerName || SecureStorage.getItem('neoSurvivor_user'),
+                    name: META.playerName || SecureStorage.getItem('neoSurvivor_user')
+                });
+                // Notify all already-connected players in this room to skip planet too
+                setTimeout(() => {
+                    if (NET.socket) NET.socket.emit('teamLaunch');
+                }, 800);
             };
         }
 

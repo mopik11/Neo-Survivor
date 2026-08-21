@@ -2189,6 +2189,21 @@ io.on('connection', (socket) => {
         });
     });
 
+    socket.on('teamLaunch', () => {
+        const r = socket.roomId;
+        if (r && ROOMS[r]) {
+            io.to(r).emit('teamTakeoff');
+        }
+    });
+
+    socket.on('setRoomPlanet', (data) => {
+        const r = socket.roomId;
+        if (r && ROOMS[r] && data && typeof data.planet === 'string') {
+            ROOMS[r].planet = data.planet;
+            io.to(r).emit('roomPlanetChanged', { planet: data.planet });
+        }
+    });
+
     socket.on('playerUpdate', (data) => {
         const r = socket.roomId;
         const p = socket.playerId;
