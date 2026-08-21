@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.691
+ * NEO SURVIVOR - Core Game Logic - v1.692
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.691'
+    version: window.GAME_VERSION || '1.692'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.691";
+const GAME_VERSION = window.GAME_VERSION || "1.692";
 const GAME = {
     active: false,
     paused: false,
@@ -4032,6 +4032,7 @@ window.renderPlanetUI = renderPlanetUI;
 function openPlanetSelectModal() {
     const modal = document.getElementById('planet-select-modal');
     if (!modal) return;
+    const openedAt = Date.now();
     const grid = document.getElementById('planet-destination-grid');
     if (grid) {
         grid.innerHTML = '';
@@ -4055,7 +4056,9 @@ function openPlanetSelectModal() {
                 </button>
             `;
             if (!isCur) {
-                card.onclick = () => {
+                card.onclick = (e) => {
+                    // Prevent synthetic touch-ghost-clicks right after tapping the rocket
+                    if (Date.now() - openedAt < 350) return;
                     closePlanetSelectModal();
                     if (window.PlanetVisualEngine) {
                         window.PlanetVisualEngine.travelTo(world.id);
@@ -4378,10 +4381,16 @@ const PlanetVisualEngine = {
         if (!this.canvas) return;
         this.ctx = this.canvas.getContext('2d');
         
+        const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+        this.dpr = dpr;
         this.logicalW = window.innerWidth;
         this.logicalH = window.innerHeight;
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+        
+        this.canvas.width = Math.round(this.logicalW * dpr);
+        this.canvas.height = Math.round(this.logicalH * dpr);
+        this.canvas.style.width = this.logicalW + 'px';
+        this.canvas.style.height = this.logicalH + 'px';
+        
         this.targetY = (this.logicalH <= 500) ? Math.max(160, this.logicalH - 95) : Math.max(220, this.logicalH - 165);
     },
 
@@ -4875,79 +4884,97 @@ const PlanetVisualEngine = {
                 const distToRocket = Math.hypot(ha.x - rocketBaseX, ha.y - targetShipY);
 
                 if (distToRocket < 45 || ha.y >= targetShipY) {
-                    // 💥 REAL DIRECT IMPACT & SHATTER EXPLOSION!
-                    this.hazardTriggered = true;
+                    // 💥 SPECTACULAR IMPACT & SHATTER EXPLOSION!
                     this.isTravelPaused = true;
                     this.pauseStartTime = Date.now();
+                    this.screenFlash = 1.0;
 
-                    // Shatter asteroid into 16 flying rock fragments
+                    // 20 flying jagged rock debris shards with polygon points
                     this.asteroidDebris = [];
-                    for (let i = 0; i < 16; i++) {
-                        const a = (i / 16) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
-                        const spd = Math.random() * 11 + 4;
+                    for (let i = 0; i < 20; i++) {
+                        const a = (i / 20) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+                        const spd = Math.random() * 12 + 5;
                         this.asteroidDebris.push({
                             x: ha.x,
                             y: ha.y,
                             vx: Math.cos(a) * spd,
-                            vy: Math.sin(a) * spd - 2,
-                            size: Math.random() * 14 + 6,
+                            vy: Math.sin(a) * spd - 2.5,
+                            size: Math.random() * 15 + 6,
                             rot: Math.random() * Math.PI * 2,
-                            rotSpeed: (Math.random() - 0.5) * 0.25,
+                            rotSpeed: (Math.random() - 0.5) * 0.35,
+                            points: Array.from({ length: 6 }, (_, idx) => {
+                                const angle = (idx / 6) * Math.PI * 2;
+                                const r = 0.65 + Math.random() * 0.55;
+                                return { x: Math.cos(angle) * r, y: Math.sin(angle) * r };
+                            }),
                             alpha: 1.0
                         });
                     }
 
-                    // Fiery blast explosion particles
-                    for (let i = 0; i < 55; i++) {
+                    // Intense fiery blast explosion particles
+                    for (let i = 0; i < 65; i++) {
                         const a = Math.random() * Math.PI * 2;
-                        const spd = Math.random() * 14 + 3;
+                        const spd = Math.random() * 15 + 3;
                         this.particles.push({
                             x: rocketBaseX,
                             y: targetShipY,
                             vx: Math.cos(a) * spd,
                             vy: Math.sin(a) * spd,
-                            size: Math.random() * 10 + 4,
+                            size: Math.random() * 11 + 4,
                             color: Math.random() > 0.4 ? '#f97316' : (Math.random() > 0.5 ? '#fbbf24' : '#ef4444'),
                             alpha: 1,
-                            life: 1.2
+                            life: 1.3
                         });
                     }
 
-                    // Shockwave ring
+                    // Multi-layered expanding shockwave blast rings
                     if (!this.shockwaves) this.shockwaves = [];
-                    this.shockwaves.push({ x: rocketBaseX, y: targetShipY, r: 8, maxR: 140, alpha: 1.0 });
+                    this.shockwaves.push({ x: rocketBaseX, y: targetShipY, r: 8, maxR: 150, alpha: 1.0 });
+                    this.shockwaves.push({ x: rocketBaseX, y: targetShipY, r: 4, maxR: 90, alpha: 1.0 });
 
                     // Violent impact knockback & tilt
-                    this.shipTilt = (Math.random() > 0.5 ? 0.42 : -0.42);
-                    this.shipRotation = 0.2;
-                    if (typeof shakeScreen === 'function') shakeScreen(24);
+                    this.shipTilt = (Math.random() > 0.5 ? 0.45 : -0.45);
+                    this.shipRotation = 0.25;
+                    if (typeof shakeScreen === 'function') shakeScreen(28);
                     if (typeof playSound === 'function') playSound('explosion');
-                    if (window.triggerGamepadVibration) window.triggerGamepadVibration(650, 1.0, 0.85);
+                    if (window.triggerGamepadVibration) window.triggerGamepadVibration(700, 1.0, 0.9);
 
                     this.incomingHazardAsteroid = null;
 
                     // Open emergency menu after player sees the full impact & debris explosion
                     setTimeout(() => {
                         this.triggerAsteroidHazard();
-                    }, 600);
+                    }, 650);
                     return;
                 }
             }
 
-            // Interactive player lateral steering OR smooth autonomous lane holding
+            // Interactive lateral steering: hold steady during first 3 seconds & smoothly center on landing
             const now = Date.now();
-            if (this.userLateralX !== undefined) {
-                const diffX = this.userLateralX - (this.shipLateralX || 0);
-                this.shipLateralX = (this.shipLateralX || 0) + diffX * 0.08;
-                this.shipTilt = Math.max(-0.25, Math.min(0.25, diffX * 0.0035));
+            if (elapsed < 3.0) {
+                // Steady initial climb: zero lateral drift
+                this.shipLateralX = (this.shipLateralX || 0) * 0.92;
+                this.shipTilt = (this.shipTilt || 0) * 0.90;
+                this.userLateralX = undefined;
+            } else if (progress > 0.85) {
+                // Final descent alignment: smooth centering directly to landing pad
+                this.shipLateralX = (this.shipLateralX || 0) * 0.90;
+                this.shipTilt = (this.shipTilt || 0) * 0.88;
+                this.userLateralX = undefined;
             } else {
-                if (!this.lastLaneChange || now - this.lastLaneChange > 4500) {
-                    this.lastLaneChange = now;
-                    this.targetLaneX = (Math.random() - 0.5) * Math.min(220, w * 0.45);
+                if (this.userLateralX !== undefined) {
+                    const diffX = this.userLateralX - (this.shipLateralX || 0);
+                    this.shipLateralX = (this.shipLateralX || 0) + diffX * 0.08;
+                    this.shipTilt = Math.max(-0.25, Math.min(0.25, diffX * 0.0035));
+                } else {
+                    if (!this.lastLaneChange || now - this.lastLaneChange > 4500) {
+                        this.lastLaneChange = now;
+                        this.targetLaneX = (Math.random() - 0.5) * Math.min(220, w * 0.45);
+                    }
+                    const laneDiff = (this.targetLaneX - (this.shipLateralX || 0));
+                    this.shipLateralX = (this.shipLateralX || 0) + laneDiff * 0.038;
+                    this.shipTilt = Math.max(-0.18, Math.min(0.18, laneDiff * 0.0028));
                 }
-                const laneDiff = (this.targetLaneX - (this.shipLateralX || 0));
-                this.shipLateralX = (this.shipLateralX || 0) + laneDiff * 0.038;
-                this.shipTilt = Math.max(-0.18, Math.min(0.18, laneDiff * 0.0028));
             }
 
             // 180° Retrograde turn (retro-burn) during descent phase (progress 0.60 to 0.88)
@@ -5708,8 +5735,22 @@ const PlanetVisualEngine = {
             const padY = groundY - 2;
             const time = Date.now() / 1000;
 
-            if (ctx.resetTransform) ctx.resetTransform();
+            const dpr = this.dpr || (window.devicePixelRatio || 1);
+            if (ctx.setTransform) {
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
             ctx.clearRect(0, 0, w, h);
+
+            // Impact screen flash effect
+            if (this.screenFlash > 0) {
+                ctx.save();
+                ctx.fillStyle = `rgba(255, 140, 20, ${this.screenFlash * 0.5})`;
+                ctx.fillRect(0, 0, w, h);
+                ctx.restore();
+                this.screenFlash = Math.max(0, this.screenFlash - 0.04);
+            }
 
             const curPan = (this.state === 'idle' ? (this.panOffset || 0) : 0);
             const isMobileHeight = (h <= 500);
@@ -5957,14 +5998,23 @@ const PlanetVisualEngine = {
                     ctx.globalAlpha = d.alpha;
                     ctx.translate(d.x, d.y);
                     ctx.rotate(d.rot);
-                    ctx.fillStyle = '#78716c';
-                    ctx.strokeStyle = '#ea580c';
+                    ctx.fillStyle = '#64748b';
+                    ctx.strokeStyle = '#f97316';
                     ctx.lineWidth = 1.5;
                     ctx.beginPath();
-                    ctx.moveTo(-d.size / 2, -d.size / 2);
-                    ctx.lineTo(d.size / 2, -d.size / 3);
-                    ctx.lineTo(d.size / 3, d.size / 2);
-                    ctx.lineTo(-d.size / 2, d.size / 3);
+                    if (d.points && d.points.length > 0) {
+                        d.points.forEach((pt, pidx) => {
+                            const px = pt.x * d.size;
+                            const py = pt.y * d.size;
+                            if (pidx === 0) ctx.moveTo(px, py);
+                            else ctx.lineTo(px, py);
+                        });
+                    } else {
+                        ctx.moveTo(-d.size / 2, -d.size / 2);
+                        ctx.lineTo(d.size / 2, -d.size / 3);
+                        ctx.lineTo(d.size / 3, d.size / 2);
+                        ctx.lineTo(-d.size / 2, d.size / 3);
+                    }
                     ctx.closePath();
                     ctx.fill();
                     ctx.stroke();
