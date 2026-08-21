@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.648
+ * NEO SURVIVOR - Core Game Logic - v1.649
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -473,7 +473,8 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.648'
+    planet: { buildings: {}, lastIncomeTime: Date.now() },
+    version: window.GAME_VERSION || '1.649'
 };
 
 let achievementsInitialized = false;
@@ -631,12 +632,12 @@ const updateProgressionLocks = () => {
         if (!isSkillTreeUnlocked) {
             btnMeta.classList.remove('special-glow');
             btnMeta.style.opacity = '0.75';
-            btnMeta.innerHTML = `<span>🔒</span> <span>SKILL TREE (${META.maxLevel || 1}/10)</span>`;
+            btnMeta.innerHTML = `<span>🔒</span><span>SKILL TREE <span style="color:#f87171; font-size:0.62rem; font-weight:900;">(${META.maxLevel || 1}/10)</span></span>`;
             btnMeta.title = (typeof window.T === 'function' ? window.T("Odemkne se po dosažení Levelu 10") : "Odemkne se po dosažení Levelu 10");
         } else {
             btnMeta.classList.add('special-glow');
             btnMeta.style.opacity = '1';
-            btnMeta.innerHTML = `<span>🌌</span> <span>SKILL TREE</span>`;
+            btnMeta.innerHTML = `<span>🌌</span><span>SKILL TREE</span>`;
             btnMeta.title = "";
         }
     }
@@ -659,6 +660,9 @@ const updateCurrencyUI = () => {
     
     const metaCurrency = document.getElementById('meta-currency');
     if (metaCurrency) metaCurrency.innerText = full;
+
+    const planetCurrency = document.getElementById('planet-currency-val');
+    if (planetCurrency) planetCurrency.innerText = full;
     
     if (window.updateMarketUI) window.updateMarketUI();
     updateProgressionLocks();
@@ -769,6 +773,18 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
         Object.assign(META.petLevels, serverMeta.petLevels);
     }
     
+    // 5C. Domovská planeta (Planet & Buildings)
+    if (serverMeta.planet) {
+        if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
+        if (serverMeta.planet.buildings) {
+            if (!META.planet.buildings) META.planet.buildings = {};
+            Object.assign(META.planet.buildings, serverMeta.planet.buildings);
+        }
+        if (serverMeta.planet.lastIncomeTime !== undefined) {
+            META.planet.lastIncomeTime = serverMeta.planet.lastIncomeTime;
+        }
+    }
+    
     // 6. Upgrades & Skill Tree
     if (serverMeta.upgrades) {
         if (!META.upgrades) META.upgrades = {};
@@ -823,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.648";
+const GAME_VERSION = window.GAME_VERSION || "1.649";
 const GAME = {
     active: false,
     paused: false,
@@ -3861,6 +3877,174 @@ function toggleFullscreen(element, force = false) {
     }
 }
 
+const PLANET_BUILDINGS = [
+    { id: 1, name: 'Těžební Vrt #1', cost: 100, icon: '⛏️', desc: 'Základní těžba Dogecoinů z povrchu' },
+    { id: 2, name: 'Solární Kolektor #2', cost: 250, icon: '☀️', desc: 'Čerpá sluneční energii pro těžbu' },
+    { id: 3, name: 'Krystalový Důl #3', cost: 500, icon: '💎', desc: 'Hloubkový důl na cenné rudy' },
+    { id: 4, name: 'Doge Reaktor #4', cost: 1000, icon: '⚡', desc: 'Generuje energii pro automatizaci' },
+    { id: 5, name: 'Termální Generátor #5', cost: 2500, icon: '🌋', desc: 'Využívá geotermální energii jádra' },
+    { id: 6, name: 'Atómová Elektrárna #6', cost: 5000, icon: '☢️', desc: 'Vysokovýkonný zdroj pro masivní těžbu' },
+    { id: 7, name: 'Fúzní Komora #7', cost: 10000, icon: '🌀', desc: 'Plazmová fúze pro pokročilý zisk' },
+    { id: 8, name: 'Kvantový Důl #8', cost: 25000, icon: '🌌', desc: 'Kvantová těžba napříč dimenzemi' }
+];
+
+function getPlanetIncomePerMinute() {
+    if (!META.planet || !META.planet.buildings) return 0;
+    return Object.values(META.planet.buildings).filter(Boolean).length;
+}
+
+function getPendingPlanetIncome() {
+    const rate = getPlanetIncomePerMinute();
+    if (rate <= 0) return 0;
+    const last = META.planet?.lastIncomeTime || Date.now();
+    const minutes = Math.max(0, (Date.now() - last) / 60000);
+    // Cap at 24 hours (1440 minutes)
+    return Math.min(1440 * rate, Math.floor(minutes * rate));
+}
+
+function claimPlanetIncome() {
+    const earned = getPendingPlanetIncome();
+    if (earned <= 0) {
+        if (typeof playSound === 'function') playSound('error');
+        window.showCustomAlert(window.T("Zatím nemáš žádný nasbíraný výnos k vybrání."));
+        return;
+    }
+    META.currency += earned;
+    if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
+    META.planet.lastIncomeTime = Date.now();
+    if (typeof playSound === 'function') playSound('upgrade');
+    window.showCustomAlert(window.T("Úspěšně vybráno ") + formatNumberFull(earned) + " DOGE!");
+    updateCurrencyUI();
+    renderPlanetUI();
+    
+    if (NET.socket && NET.socket.connected) {
+        NET.socket.emit('claimPlanetIncome', { token: NET.sessionToken });
+    } else {
+        saveMeta();
+    }
+}
+window.claimPlanetIncome = claimPlanetIncome;
+
+function renderPlanetUI() {
+    const curEl = document.getElementById('planet-currency-val');
+    if (curEl) curEl.innerText = formatNumberFull(META.currency);
+
+    const rate = getPlanetIncomePerMinute();
+    const rateEl = document.getElementById('planet-income-rate');
+    if (rateEl) rateEl.innerText = `+${rate} DOGE / min`;
+
+    const pending = getPendingPlanetIncome();
+    const pendingEl = document.getElementById('planet-pending-income');
+    if (pendingEl) pendingEl.innerText = `${formatNumberFull(pending)} DOGE`;
+
+    const claimBtn = document.getElementById('btn-claim-planet-income');
+    if (claimBtn) {
+        if (pending > 0) {
+            claimBtn.classList.remove('disabled');
+            claimBtn.style.opacity = '1';
+            claimBtn.style.filter = 'brightness(1.1)';
+        } else {
+            claimBtn.classList.add('disabled');
+            claimBtn.style.opacity = '0.5';
+            claimBtn.style.filter = 'none';
+        }
+    }
+
+    const grid = document.getElementById('planet-plots-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
+    if (!META.planet.buildings) META.planet.buildings = {};
+
+    PLANET_BUILDINGS.forEach(b => {
+        const isBuilt = !!META.planet.buildings[b.id];
+        const card = document.createElement('div');
+        card.className = 'upgrade-card';
+        card.style.minHeight = '140px';
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.alignItems = 'center';
+        card.style.justifyContent = 'space-between';
+        card.style.padding = '12px 10px';
+        card.style.borderRadius = '14px';
+        card.style.background = isBuilt 
+            ? 'linear-gradient(160deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 78, 59, 0.25) 100%)' 
+            : 'linear-gradient(160deg, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.3) 100%)';
+        card.style.border = isBuilt ? '1.5px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)';
+        card.style.boxShadow = isBuilt ? '0 0 15px rgba(16, 185, 129, 0.2)' : 'none';
+
+        if (isBuilt) {
+            card.innerHTML = `
+                <div style="font-size: 2rem; filter: drop-shadow(0 0 8px #10b981);">${b.icon}</div>
+                <div style="text-align: center; margin: 4px 0;">
+                    <div style="font-size: 0.8rem; font-weight: 800; color: #f8fafc;">${window.T(b.name)}</div>
+                    <div style="font-size: 0.65rem; color: #94a3b8; line-height: 1.2; margin-top: 2px;">${window.T(b.desc)}</div>
+                </div>
+                <div style="font-size: 0.7rem; font-weight: 900; color: #10b981; background: rgba(16, 185, 129, 0.2); padding: 3px 8px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.4);">
+                    🟢 ${window.T('V PROVOZU (+1 Doge/min)')}
+                </div>
+            `;
+        } else {
+            const canAfford = META.currency >= b.cost;
+            card.innerHTML = `
+                <div style="font-size: 2rem; opacity: 0.6; filter: grayscale(0.5);">${b.icon}</div>
+                <div style="text-align: center; margin: 4px 0;">
+                    <div style="font-size: 0.8rem; font-weight: 800; color: #cbd5e1;">${window.T(b.name)}</div>
+                    <div style="font-size: 0.65rem; color: #64748b; line-height: 1.2; margin-top: 2px;">${window.T(b.desc)}</div>
+                </div>
+                <button class="btn-buy-building btn-restart" style="width: 100%; padding: 6px 4px; font-size: 0.72rem; font-weight: 800; background: ${canAfford ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'rgba(255,255,255,0.05)'}; color: ${canAfford ? '#fff' : '#64748b'}; border: ${canAfford ? 'none' : '1px solid rgba(255,255,255,0.1)'}; border-radius: 8px; cursor: ${canAfford ? 'pointer' : 'not-allowed'}; box-shadow: ${canAfford ? '0 0 10px rgba(16,185,129,0.3)' : 'none'};">
+                    🔨 ${window.T('POSTAVIT')} (${formatNumberFull(b.cost)} DOGE)
+                </button>
+            `;
+            
+            const buyBtn = card.querySelector('.btn-buy-building');
+            if (buyBtn) {
+                buyBtn.onclick = () => {
+                    if (META.currency >= b.cost) {
+                        META.currency -= b.cost;
+                        META.planet.buildings[b.id] = true;
+                        if (!META.planet.lastIncomeTime) META.planet.lastIncomeTime = Date.now();
+                        playSound('upgrade');
+                        updateCurrencyUI();
+                        renderPlanetUI();
+                        if (NET.socket && NET.socket.connected) {
+                            NET.socket.emit('purchase', { type: 'building', id: b.id, token: NET.sessionToken });
+                        } else {
+                            saveMeta();
+                        }
+                    } else {
+                        if (typeof playSound === 'function') playSound('error');
+                        window.showCustomAlert(window.T("Nedostatek Dogecoinů na stavbu této budovy!"));
+                    }
+                };
+            }
+        }
+        grid.appendChild(card);
+    });
+}
+window.renderPlanetUI = renderPlanetUI;
+
+function openPlanetModal() {
+    playSound('menuOpen');
+    switchMusic('menu');
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    const modal = document.getElementById('planet-modal');
+    if (modal) {
+        modal.classList.add('active');
+        renderPlanetUI();
+    }
+}
+window.openPlanetModal = openPlanetModal;
+
+function closePlanetModal() {
+    const modal = document.getElementById('planet-modal');
+    if (modal) modal.classList.remove('active');
+    const menu = document.getElementById('menu-modal');
+    if (menu) menu.classList.add('active');
+}
+window.closePlanetModal = closePlanetModal;
+
 function showShipsMenu() {
     playSound('menuOpen');
     switchMusic('upgrades');
@@ -5410,7 +5594,7 @@ window.softResetToMenu = () => {
     NET.others = {};
 
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('menu-modal').classList.add('active');
+    openPlanetModal();
 
     document.getElementById('ui-layer').style.display = 'none';
     document.getElementById('menu-anim-canvas').style.display = 'block';
@@ -6103,7 +6287,7 @@ function handleAuth(isLogin) {
                 updateMusicVolume();
 
                 document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-                document.getElementById('menu-modal').classList.add('active');
+                openPlanetModal();
 
                 if (!GAME.loopStarted) {
                     GAME.loopStarted = true;
@@ -6132,7 +6316,7 @@ function handleAuth(isLogin) {
 
         document.getElementById('display-player-name').innerText = nameVal;
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        document.getElementById('menu-modal').classList.add('active');
+        openPlanetModal();
 
         if (!GAME.loopStarted) {
             GAME.loopStarted = true;
@@ -6751,7 +6935,34 @@ function init() {
             "Odemkne se po dosažení Levelu 10": "Unlocks at Level 10",
             "VYŽADUJE LEVEL 10": "REQUIRES LEVEL 10",
             "VYŽADUJE LEVEL 15": "REQUIRES LEVEL 15",
-            "ZDARMA (Level 10 splněn)": "FREE (Level 10 reached)"
+            "ZDARMA (Level 10 splněn)": "FREE (Level 10 reached)",
+            "DOMOVSKÁ PLANETA": "HOME PLANET",
+            "Tvá domovská základna. Každá budova generuje 1 Dogecoin / min.": "Your home base. Each building generates 1 Dogecoin / min.",
+            "NAHROMADĚNÝ VÝNOS:": "ACCUMULATED INCOME:",
+            "VYBRAT VÝNOS": "COLLECT REVENUE",
+            "STAVEBNÍ PARCELY ZÁKLADNY": "BASE BUILDING PLOTS",
+            "BOJOVAT": "FIGHT",
+            "V PROVOZU (+1 Doge/min)": "OPERATIONAL (+1 Doge/min)",
+            "POSTAVIT": "BUILD",
+            "Těžební Vrt #1": "Mining Rig #1",
+            "Základní těžba Dogecoinů z povrchu": "Basic surface Dogecoin mining",
+            "Solární Kolektor #2": "Solar Collector #2",
+            "Čerpá sluneční energii pro těžbu": "Harnesses solar energy for mining",
+            "Krystalový Důl #3": "Crystal Mine #3",
+            "Hloubkový důl na cenné rudy": "Deep mine for precious ores",
+            "Doge Reaktor #4": "Doge Reactor #4",
+            "Generuje energii pro automatizaci": "Generates energy for automation",
+            "Termální Generátor #5": "Thermal Generator #5",
+            "Využívá geotermální energii jádra": "Harvests core geothermal heat",
+            "Atómová Elektrárna #6": "Atomic Powerplant #6",
+            "Vysokovýkonný zdroj pro masivní těžbu": "High-output source for mass mining",
+            "Fúzní Komora #7": "Fusion Chamber #7",
+            "Plazmová fúze pro pokročilý zisk": "Plasma fusion for advanced revenue",
+            "Kvantový Důl #8": "Quantum Mine #8",
+            "Kvantová těžba napříč dimenzemi": "Quantum mining across dimensions",
+            "Zatím nemáš žádný nasbíraný výnos k vybrání.": "No accumulated income to collect yet.",
+            "Úspěšně vybráno ": "Successfully collected ",
+            "Nedostatek Dogecoinů na stavbu této budovy!": "Not enough Dogecoins to construct this building!"
         }
     };
 
@@ -6935,7 +7146,7 @@ function init() {
             });
         }
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        document.getElementById('menu-modal').classList.add('active');
+        openPlanetModal();
 
         if (typeof checkAndShowRotateAnimation === 'function') {
             checkAndShowRotateAnimation();
@@ -7309,6 +7520,73 @@ function init() {
         NET.serverPollingInterval = setInterval(window.requestServerList, 2000);
         window.requestServerList();
     };
+
+    const btnPlanet = document.getElementById('btn-planet-menu');
+    if (btnPlanet) btnPlanet.onclick = () => {
+        openPlanetModal();
+    };
+
+    const btnClaimPlanet = document.getElementById('btn-claim-planet-income');
+    if (btnClaimPlanet) btnClaimPlanet.onclick = () => {
+        claimPlanetIncome();
+    };
+
+    const btnPlanetFight = document.getElementById('btn-planet-fight');
+    if (btnPlanetFight) btnPlanetFight.onclick = () => {
+        document.getElementById('planet-modal').classList.remove('active');
+        document.getElementById('menu-modal').classList.add('active');
+    };
+
+    const btnPlanetShips = document.getElementById('btn-planet-ships');
+    if (btnPlanetShips) btnPlanetShips.onclick = () => {
+        document.getElementById('planet-modal').classList.remove('active');
+        if (!NET.socket) initSocket();
+        showShipsMenu();
+        document.getElementById('ships-modal').classList.add('active');
+    };
+
+    const btnPlanetTree = document.getElementById('btn-planet-tree');
+    if (btnPlanetTree) btnPlanetTree.onclick = () => {
+        const isSkillTreeUnlocked = (META.maxLevel || 1) >= 10;
+        if (!isSkillTreeUnlocked) {
+            if (typeof playSound === 'function') playSound('error');
+            window.showCustomAlert(window.T("Skill Tree se odemkne po dosažení Levelu 10! (Tvůj nej. level: ") + (META.maxLevel || 1) + "/10)");
+            return;
+        }
+        document.getElementById('planet-modal').classList.remove('active');
+        if (!NET.socket) initSocket();
+        showSkillTreeMenu();
+        if (window.updateMarketUI) window.updateMarketUI();
+        document.getElementById('meta-modal').classList.add('active');
+        if (window.drawMarketChart) setTimeout(window.drawMarketChart, 100);
+    };
+
+    const btnPlanetMenuBack = document.getElementById('btn-planet-menu-back');
+    if (btnPlanetMenuBack) btnPlanetMenuBack.onclick = () => {
+        closePlanetModal();
+    };
+
+    // Live refresh for planet income timer
+    setInterval(() => {
+        const pModal = document.getElementById('planet-modal');
+        if (pModal && pModal.classList.contains('active')) {
+            const pending = getPendingPlanetIncome();
+            const pendingEl = document.getElementById('planet-pending-income');
+            if (pendingEl) pendingEl.innerText = `${formatNumberFull(pending)} DOGE`;
+            const claimBtn = document.getElementById('btn-claim-planet-income');
+            if (claimBtn) {
+                if (pending > 0) {
+                    claimBtn.classList.remove('disabled');
+                    claimBtn.style.opacity = '1';
+                    claimBtn.style.filter = 'brightness(1.1)';
+                } else {
+                    claimBtn.classList.add('disabled');
+                    claimBtn.style.opacity = '0.5';
+                    claimBtn.style.filter = 'none';
+                }
+            }
+        }
+    }, 2000);
 
     const btnShips = document.getElementById('btn-ships-menu');
     if (btnShips) btnShips.onclick = () => {

@@ -597,14 +597,28 @@ canvas {
 .btn-sub {
   font-size: 0.8rem !important;
   font-weight: 600 !important;
-  padding: 0.8rem 0.5rem !important;
-  gap: 8px !important;
+  padding: 0.6rem 0.4rem !important;
+  gap: 4px !important;
   flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
 }
 
-.btn-sub span {
-  font-size: 1.1rem !important;
+.btn-sub span:first-child {
+  font-size: 1.3rem !important;
   margin-bottom: 2px;
+  line-height: 1;
+}
+
+.btn-sub span:last-child {
+  font-size: 0.72rem !important;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.2;
 }
 
 .btn-mini {
@@ -2230,24 +2244,37 @@ canvas {
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 4px !important;
-    padding: 6px !important;
+    gap: 3px !important;
+    padding: 6px 4px !important;
     height: 60px !important;
     font-size: 0.75rem !important;
     font-weight: 800 !important;
-    text-align: left !important;
+    text-align: center !important;
     border-radius: 8px !important;
     margin: 0 !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
     transition: all 0.2s ease !important;
+    overflow: hidden !important;
   }
   
   #menu-group-progression .menu-actions-grid button:active {
     transform: scale(0.95) !important;
   }
   
-  #menu-group-progression .menu-actions-grid button span {
-    font-size: 1rem !important;
+  #menu-group-progression .menu-actions-grid button span:first-child {
+    font-size: 1.25rem !important;
+    line-height: 1 !important;
+  }
+
+  #menu-group-progression .menu-actions-grid button span:last-child {
+    font-size: 0.68rem !important;
+    line-height: 1.15 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+    display: block !important;
   }
 
   #btn-hamburger {

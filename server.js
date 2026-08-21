@@ -1615,6 +1615,23 @@ io.on('connection', (socket) => {
                     cost = 0;
                     success = true;
                 }
+            } else if (data.type === 'building') {
+                const buildingId = parseInt(data.id);
+                const PLANET_BUILDING_COSTS = {
+                    1: 100, 2: 250, 3: 500, 4: 1000, 5: 2500, 6: 5000, 7: 10000, 8: 25000
+                };
+                const bCost = PLANET_BUILDING_COSTS[buildingId];
+                if (bCost) {
+                    if (!meta.planet) meta.planet = { buildings: {}, lastIncomeTime: Date.now() };
+                    if (!meta.planet.buildings) meta.planet.buildings = {};
+                    
+                    if (!meta.planet.buildings[buildingId] && row.currency >= bCost) {
+                        cost = bCost;
+                        meta.planet.buildings[buildingId] = true;
+                        if (!meta.planet.lastIncomeTime) meta.planet.lastIncomeTime = Date.now();
+                        success = true;
+                    }
+                }
             }
 
             if (success) {
@@ -1627,6 +1644,37 @@ io.on('connection', (socket) => {
                 });
             } else {
                 socket.emit('purchaseError', "Nedostatek Dogecoinu nebo neplatná položka.");
+            }
+        });
+    });
+
+    socket.on('claimPlanetIncome', (data) => {
+        const user = socket.authenticatedUser;
+        if (!user) return;
+        if (!socket.sessionToken || !timingSafeCompare(String(data?.token), socket.sessionToken)) return;
+
+        db.get(`SELECT currency, meta FROM accounts WHERE username = ?`, [user], (err, row) => {
+            if (err || !row) return;
+            let meta;
+            try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
+            if (!meta || !meta.planet || !meta.planet.buildings) return;
+
+            const count = Object.values(meta.planet.buildings).filter(Boolean).length;
+            if (count <= 0) return;
+
+            const now = Date.now();
+            const last = meta.planet.lastIncomeTime || now;
+            const minutes = Math.max(0, (now - last) / 60000);
+            const earned = Math.min(1440 * count, Math.floor(minutes * count));
+
+            if (earned > 0) {
+                meta.planet.lastIncomeTime = now;
+                const newCurrency = row.currency + earned;
+                meta.currency = newCurrency;
+                const encrypted = Security.encrypt(JSON.stringify(meta));
+                db.run(`UPDATE accounts SET currency = ?, meta = ? WHERE username = ?`, [newCurrency, encrypted, user], () => {
+                    socket.emit('syncSuccess', { meta: meta });
+                });
             }
         });
     });
@@ -1904,6 +1952,13 @@ io.on('connection', (socket) => {
                 if (!merged.skillTree.nodes) merged.skillTree.nodes = {};
                 if ((merged.maxLevel || 1) < 10) {
                     merged.skillTree.unlocked = false;
+                }
+
+                // Domovská planeta (Planet & Buildings)
+                if (!merged.planet) merged.planet = { buildings: {}, lastIncomeTime: Date.now() };
+                if (serverMeta.planet) {
+                    merged.planet.buildings = Object.assign({}, serverMeta.planet.buildings || {}, meta.planet?.buildings || {});
+                    merged.planet.lastIncomeTime = serverMeta.planet.lastIncomeTime || Date.now();
                 }
                 
                 // NOTE: selectedShip, selectedAbility, autoSelect, autoUpgrade, settings

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.648" />
+    <link rel="stylesheet" href="style.css?v=1.649" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.648
+            NEO SURVIVOR v1.649
           </div>
         </div>
       </div>
@@ -126,6 +126,7 @@
             <div class="menu-sections" id="menu-sections-container">
             <div class="menu-group" id="menu-group-game">
               <h3 class="menu-group-title">HRA</h3>
+              <button class="btn-restart btn-main modern-glass-btn" id="btn-planet-menu" style="width: 100%; margin-bottom: 8px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.4) 100%) !important; border: 1.5px solid #10b981 !important; box-shadow: 0 0 20px rgba(16, 185, 129, 0.3) !important;"><span>🪐</span> <span data-i18n="DOMOVSKÁ PLANETA">DOMOVSKÁ PLANETA</span></button>
               <div class="menu-actions-row">
                 <button class="btn-restart btn-main desktop-play-btn modern-glass-btn premium-btn-solo" id="btn-start"><span>🕹️</span> SOLO</button>
                 <button class="btn-restart btn-main btn-mp desktop-play-btn modern-glass-btn premium-btn-multi" id="btn-multiplayer"><span>🌐</span> MULTIPLAYER</button>
@@ -177,7 +178,7 @@
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
             <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.648</span>
+              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.649</span>
             </div>
 
             <div id="menu-links" class="mobile-stack-links" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 15px;">
@@ -373,6 +374,79 @@
           <div style="width: 100%; padding-top: 10px; margin-top: auto; padding-bottom: 10px; flex-shrink: 0;">
               <p style="color: #ef4444; font-size: 0.8rem; margin-bottom: 10px;" data-i18n="NEBEZPEČNÁ ZÓNA:">NEBEZPEČNÁ ZÓNA:</p>
               <button id="btn-reset-progress" class="btn-restart" style="width: 100%; background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #fca5a5; white-space: normal; font-size: 1rem; padding: 0.8rem 1rem;" data-i18n="ODHLÁSIT SE A SMAZAT POSTUP">ODHLÁSIT SE A SMAZAT POSTUP</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DOMOVSKÁ PLANETA (HOME PLANET) MODAL -->
+      <div id="planet-modal" class="modal">
+        <div class="modal-content" style="max-width: 780px; width: 95vw; background: radial-gradient(circle at top center, rgba(30, 45, 75, 0.98) 0%, rgba(10, 15, 30, 0.99) 100%); border: 1.5px solid rgba(16, 185, 129, 0.4); box-shadow: 0 0 50px rgba(16, 185, 129, 0.25); border-radius: 24px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;">
+          <button class="btn-close-x" onclick="document.getElementById('planet-modal').classList.remove('active'); document.getElementById('menu-modal').classList.add('active');">×</button>
+          
+          <div class="modal-body" style="padding: 15px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;">
+            
+            <!-- Planet Header & Atmosphere -->
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="font-size: 2.8rem; filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.5)); animation: floatPet 4s ease-in-out infinite;">🪐</div>
+                <div>
+                  <h2 style="font-size: 1.8rem; margin: 0; color: #10b981; text-shadow: 0 0 15px rgba(16, 185, 129, 0.5); letter-spacing: 1.5px; text-transform: uppercase;" data-i18n="DOMOVSKÁ PLANETA">DOMOVSKÁ PLANETA</h2>
+                  <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;" data-i18n="Tvá domovská základna. Každá budova generuje 1 Dogecoin / min.">Tvá domovská základna. Každá budova generuje 1 Dogecoin / min.</div>
+                </div>
+              </div>
+
+              <!-- Currency & Income stats -->
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <div class="stat-chip" style="background: rgba(0,0,0,0.6); border: 1px solid #fbbf24; color: #fbbf24; font-weight: 800; font-size: 0.85rem; padding: 6px 12px;">
+                  DOGE: <span id="planet-currency-val">0</span>
+                </div>
+                <div class="stat-chip" style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #10b981; font-weight: 800; font-size: 0.85rem; padding: 6px 12px;">
+                  ⚡ <span id="planet-income-rate">+0 DOGE / min</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Revenue claim banner -->
+            <div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 16px; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.8rem;">💰</span>
+                <div>
+                  <div style="font-size: 0.7rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px; font-weight: 800;" data-i18n="NAHROMADĚNÝ VÝNOS:">NAHROMADĚNÝ VÝNOS:</div>
+                  <div style="font-size: 1.4rem; font-weight: 900; color: #fbbf24;" id="planet-pending-income">0 DOGE</div>
+                </div>
+              </div>
+              <button id="btn-claim-planet-income" class="btn-restart" style="padding: 10px 20px; font-size: 0.85rem; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); color: #000; font-weight: 900; border: none; border-radius: 12px; box-shadow: 0 0 15px rgba(251, 191, 36, 0.4); cursor: pointer; transition: all 0.2s;">
+                <span data-i18n="VYBRAT VÝNOS">VYBRAT VÝNOS</span>
+              </button>
+            </div>
+
+            <!-- Building Plots Section -->
+            <div>
+              <h3 style="margin: 0 0 10px 0; font-size: 1rem; color: #a5b4fc; letter-spacing: 1px; text-transform: uppercase;" data-i18n="STAVEBNÍ PARCELY ZÁKLADNY">STAVEBNÍ PARCELY ZÁKLADNY</h3>
+              <div id="planet-plots-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px;">
+                <!-- Dynamically generated plots -->
+              </div>
+            </div>
+
+            <!-- Bottom Combat & Hub Navigation Row -->
+            <div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+              <button id="btn-planet-fight" class="btn-restart" style="width: 100%; padding: 15px; font-size: 1.3rem; font-weight: 900; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #fff; border: 2px solid rgba(255,255,255,0.3); border-radius: 16px; box-shadow: 0 0 25px rgba(239, 68, 68, 0.5); cursor: pointer; letter-spacing: 2px; text-transform: uppercase;">
+                <span>⚔️</span> <span data-i18n="BOJOVAT">BOJOVAT</span>
+              </button>
+              
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                <button id="btn-planet-ships" class="btn-restart modern-glass-btn" style="padding: 10px 5px; font-size: 0.75rem; border-radius: 10px;">
+                  <span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span>
+                </button>
+                <button id="btn-planet-tree" class="btn-restart modern-glass-btn" style="padding: 10px 5px; font-size: 0.75rem; border-radius: 10px;">
+                  <span>🌌</span> <span data-i18n="SKILL TREE">SKILL TREE</span>
+                </button>
+                <button id="btn-planet-menu-back" class="btn-restart modern-glass-btn" style="padding: 10px 5px; font-size: 0.75rem; border-radius: 10px;">
+                  <span>🏠</span> <span data-i18n="MENU">MENU</span>
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -794,7 +868,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>window.GAME_VERSION = '1.648';</script>
-    <script type="module" src="./main.js?v=1.648"></script>
+    <script>window.GAME_VERSION = '1.649';</script>
+    <script type="module" src="./main.js?v=1.649"></script>
   </body>
 </html>
