@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.687
+ * NEO SURVIVOR - Core Game Logic - v1.688
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4095,7 +4095,10 @@ const PLANET_WORLDS = [
         beaconColor: '#10b981',
         accentColor: '#10b981',
         travelDuration: 12.0,
-        skipCost: 100
+        skipCost: 100,
+        hazardChance: 0.0,
+        continueCost: 100,
+        returnCost: 20
     },
     {
         id: 'ignis',
@@ -4115,7 +4118,10 @@ const PLANET_WORLDS = [
         beaconColor: '#f97316',
         accentColor: '#f97316',
         travelDuration: 22.0,
-        skipCost: 500
+        skipCost: 500,
+        hazardChance: 0.35,
+        continueCost: 350,
+        returnCost: 80
     },
     {
         id: 'cryo',
@@ -4135,7 +4141,10 @@ const PLANET_WORLDS = [
         beaconColor: '#38bdf8',
         accentColor: '#38bdf8',
         travelDuration: 38.0,
-        skipCost: 2500
+        skipCost: 2500,
+        hazardChance: 0.60,
+        continueCost: 1200,
+        returnCost: 250
     },
     {
         id: 'cyber',
@@ -4155,7 +4164,10 @@ const PLANET_WORLDS = [
         beaconColor: '#c084fc',
         accentColor: '#c084fc',
         travelDuration: 55.0,
-        skipCost: 10000
+        skipCost: 10000,
+        hazardChance: 0.85,
+        continueCost: 4500,
+        returnCost: 900
     }
 ];
 
@@ -4214,10 +4226,17 @@ const PlanetVisualEngine = {
         }, { passive: true });
 
         this.canvas.addEventListener('touchmove', (e) => {
-            if (this.state !== 'idle') return;
             const t = e.touches[0];
             const rect = this.canvas.getBoundingClientRect();
             const curX = t.clientX - rect.left;
+
+            if (this.state === 'traveling') {
+                const cx = (this.logicalW || window.innerWidth) / 2;
+                this.userLateralX = Math.max(-cx * 0.85, Math.min(cx * 0.85, (curX - cx) * 1.3));
+                return;
+            }
+
+            if (this.state !== 'idle') return;
             const dx = curX - this.dragStartX;
             if (Math.abs(dx) > 8) {
                 this.isDragging = true;
@@ -4248,11 +4267,17 @@ const PlanetVisualEngine = {
         });
 
         this.canvas.addEventListener('mousemove', (e) => {
-            if (this.state !== 'idle') return;
             const rect = this.canvas.getBoundingClientRect();
             this.mouseX = e.clientX - rect.left;
             this.mouseY = e.clientY - rect.top;
 
+            if (this.state === 'traveling') {
+                const cx = (this.logicalW || window.innerWidth) / 2;
+                this.userLateralX = Math.max(-cx * 0.85, Math.min(cx * 0.85, (this.mouseX - cx) * 1.3));
+                return;
+            }
+
+            if (this.state !== 'idle') return;
             if (this.isMouseDown) {
                 const dx = this.mouseX - this.dragStartX;
                 if (Math.abs(dx) > 5) {
@@ -4388,25 +4413,29 @@ const PlanetVisualEngine = {
         this.travelStartTime = Date.now();
         this.travelDuration = targetWorld.travelDuration || 25.0;
         this.shipLateralX = 0;
+        this.userLateralX = undefined;
         this.shipTilt = 0;
         this.shipRotation = 0;
         this.targetLaneX = 0;
         this.lastLaneChange = Date.now();
         this.panOffset = 0;
         this.panVelocity = 0;
+        this.hazardTriggered = false;
+        this.isTravelPaused = false;
+        this.willEncounterHazard = (Math.random() < (targetWorld.hazardChance || 0.35));
         
         // Generate traveling asteroids
         this.travelAsteroids = [];
-        for (let i = 0; i < 22; i++) {
+        for (let i = 0; i < 28; i++) {
             this.travelAsteroids.push({
                 x: Math.random() * (this.logicalW || window.innerWidth),
                 y: -Math.random() * (this.logicalH * 4) - 100,
-                size: Math.random() * 22 + 8,
-                speed: Math.random() * 3 + 1.8,
+                size: Math.random() * 26 + 10,
+                speed: Math.random() * 3.5 + 2.0,
                 rot: Math.random() * Math.PI * 2,
-                rotSpeed: (Math.random() - 0.5) * 0.04,
-                points: Array.from({ length: 7 }, (_, idx) => {
-                    const angle = (idx / 7) * Math.PI * 2;
+                rotSpeed: (Math.random() - 0.5) * 0.05,
+                points: Array.from({ length: 8 }, (_, idx) => {
+                    const angle = (idx / 8) * Math.PI * 2;
                     const r = 0.7 + Math.random() * 0.5;
                     return { x: Math.cos(angle) * r, y: Math.sin(angle) * r };
                 }),
@@ -4447,6 +4476,113 @@ const PlanetVisualEngine = {
         if (typeof playSound === 'function') playSound('shoot');
     },
 
+    triggerAsteroidHazard() {
+        if (this.hazardTriggered || this.state !== 'traveling') return;
+        this.hazardTriggered = true;
+        this.isTravelPaused = true;
+        this.pauseStartTime = Date.now();
+        const targetWorld = this.targetPlanet || PLANET_WORLDS[0];
+        const originWorld = this.sourcePlanet || PLANET_WORLDS[0];
+
+        // Shockwave explosion effect on rocket
+        const cx = (this.logicalW || window.innerWidth) / 2;
+        const shipX = cx + (this.shipLateralX || 0);
+        const shipY = this.shipY || (this.logicalH * 0.45);
+        for (let i = 0; i < 40; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const spd = Math.random() * 8 + 3;
+            this.particles.push({
+                x: shipX,
+                y: shipY,
+                vx: Math.cos(angle) * spd,
+                vy: Math.sin(angle) * spd,
+                size: Math.random() * 8 + 4,
+                color: Math.random() > 0.4 ? '#f97316' : '#ef4444',
+                alpha: 1,
+                life: 1.2
+            });
+        }
+        if (typeof shakeScreen === 'function') shakeScreen(15);
+        if (typeof playSound === 'function') playSound('explosion');
+
+        const modal = document.getElementById('asteroid-emergency-modal');
+        const desc = document.getElementById('asteroid-hazard-desc');
+        const costContEl = document.getElementById('asteroid-continue-cost');
+        const costRetEl = document.getElementById('asteroid-return-cost');
+
+        const contCost = targetWorld.continueCost || 350;
+        const retCost = targetWorld.returnCost || 80;
+
+        if (costContEl) costContEl.innerText = formatNumberFull(contCost);
+        if (costRetEl) costRetEl.innerText = formatNumberFull(retCost);
+        if (desc) {
+            desc.innerHTML = `Raketka narazila na pás asteroidů při cestě na <b>${targetWorld.name}</b>!<br>Opravte loď pro pokračování na cíl, nebo zvolte nouzový návrat na <b>${originWorld.name}</b>.`;
+        }
+
+        const btnCont = document.getElementById('btn-asteroid-continue');
+        const btnRet = document.getElementById('btn-asteroid-return');
+
+        if (btnCont) {
+            btnCont.onclick = () => {
+                if ((META.currency || 0) >= contCost) {
+                    addCurrency(-contCost);
+                    showCurrencyNotification(-contCost, "OPRAVA LODI V LETU");
+                }
+                modal.classList.remove('active');
+                this.resumeTravelAfterHazard(true);
+            };
+        }
+
+        if (btnRet) {
+            btnRet.onclick = () => {
+                if ((META.currency || 0) >= retCost) {
+                    addCurrency(-retCost);
+                    showCurrencyNotification(-retCost, "NOUZOVÝ NÁVRAT");
+                }
+                modal.classList.remove('active');
+                this.resumeTravelAfterHazard(false);
+            };
+        }
+
+        if (modal) modal.classList.add('active');
+    },
+
+    resumeTravelAfterHazard(continueToTarget = true) {
+        this.isTravelPaused = false;
+        const pauseDuration = (Date.now() - (this.pauseStartTime || Date.now()));
+        this.travelStartTime += pauseDuration; // Adjust timer so duration remains accurate
+
+        if (!continueToTarget) {
+            // Reverse course back to current origin planet
+            const temp = this.targetPlanet;
+            this.targetPlanet = this.sourcePlanet || PLANET_WORLDS[0];
+            this.sourcePlanet = temp;
+            this.currentPlanet = this.targetPlanet;
+            this.currentPlanetId = this.targetPlanet.id;
+            this.travelDuration = 6.0; // Quick return descent
+            this.travelStartTime = Date.now() - (this.travelDuration * 0.75 * 1000); // jump straight to descent!
+        }
+
+        // Energy shield flare
+        const cx = (this.logicalW || window.innerWidth) / 2;
+        const shipX = cx + (this.shipLateralX || 0);
+        for (let i = 0; i < 30; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const spd = Math.random() * 6 + 2;
+            this.particles.push({
+                x: shipX,
+                y: this.shipY || (this.logicalH * 0.45),
+                vx: Math.cos(angle) * spd,
+                vy: Math.sin(angle) * spd,
+                size: Math.random() * 6 + 3,
+                color: '#38bdf8',
+                alpha: 1,
+                life: 1.0
+            });
+        }
+        if (typeof playSound === 'function') playSound('shield');
+    },
+
     startLanding(mode = 'solo', onLaunch = null) {
         if (!this.isInitialized) this.init();
         this.resize();
@@ -4484,6 +4620,7 @@ const PlanetVisualEngine = {
         if (centerAct) { centerAct.style.opacity = '1'; centerAct.style.pointerEvents = 'auto'; }
 
         const curWorld = this.currentPlanet || PLANET_WORLDS[0];
+        if (typeof applyPlanetTheme === 'function') applyPlanetTheme(this.currentPlanetId || 'terra');
         const statusTag = document.getElementById('planet-status-tag');
         if (statusTag) {
             statusTag.style.opacity = '1';
@@ -4651,19 +4788,49 @@ const PlanetVisualEngine = {
                 });
             }
         } else if (this.state === 'traveling') {
+            if (this.isTravelPaused) {
+                // Rocket idles with burning embers during hazard event pause
+                const rocketBaseX = cx + (this.shipLateralX || 0);
+                if (Math.random() < 0.3) {
+                    this.particles.push({
+                        x: rocketBaseX + (Math.random() - 0.5) * 36,
+                        y: (this.shipY || this.logicalH * 0.45) + (Math.random() - 0.5) * 30,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: (Math.random() - 0.5) * 2,
+                        size: Math.random() * 5 + 2,
+                        color: Math.random() > 0.4 ? '#f97316' : '#ef4444',
+                        alpha: 0.9,
+                        life: 0.8
+                    });
+                }
+                return;
+            }
+
             const elapsed = (Date.now() - this.travelStartTime) / 1000;
             const duration = this.travelDuration || 25.0;
             const progress = Math.min(1.0, elapsed / duration);
             
-            // Smooth Waypoint Lane Holding (Steady course with intentional smooth lane maneuvers)
-            const now = Date.now();
-            if (!this.lastLaneChange || now - this.lastLaneChange > 5000) {
-                this.lastLaneChange = now;
-                this.targetLaneX = (Math.random() - 0.5) * 110;
+            // Check Asteroid Hazard Trigger in mid-space flight
+            if (!this.hazardTriggered && this.willEncounterHazard && progress >= 0.42 && progress <= 0.65) {
+                this.triggerAsteroidHazard();
+                return;
             }
-            const laneDiff = (this.targetLaneX - (this.shipLateralX || 0));
-            this.shipLateralX = (this.shipLateralX || 0) + laneDiff * 0.032;
-            this.shipTilt = Math.max(-0.15, Math.min(0.15, laneDiff * 0.0025));
+
+            // Interactive player lateral steering OR smooth autonomous lane holding
+            const now = Date.now();
+            if (this.userLateralX !== undefined) {
+                const diffX = this.userLateralX - (this.shipLateralX || 0);
+                this.shipLateralX = (this.shipLateralX || 0) + diffX * 0.08;
+                this.shipTilt = Math.max(-0.25, Math.min(0.25, diffX * 0.0035));
+            } else {
+                if (!this.lastLaneChange || now - this.lastLaneChange > 4500) {
+                    this.lastLaneChange = now;
+                    this.targetLaneX = (Math.random() - 0.5) * Math.min(220, w * 0.45);
+                }
+                const laneDiff = (this.targetLaneX - (this.shipLateralX || 0));
+                this.shipLateralX = (this.shipLateralX || 0) + laneDiff * 0.038;
+                this.shipTilt = Math.max(-0.18, Math.min(0.18, laneDiff * 0.0028));
+            }
 
             // 180° Retrograde turn (retro-burn) during descent phase (progress 0.60 to 0.88)
             if (progress >= 0.60 && progress <= 0.88) {
@@ -4689,7 +4856,7 @@ const PlanetVisualEngine = {
             }
 
             // Thruster trail in space
-            const rocketBaseX = cx + this.shipLateralX;
+            const rocketBaseX = cx + (this.shipLateralX || 0);
             for (let i = 0; i < 8; i++) {
                 this.particles.push({
                     x: rocketBaseX + (Math.random() - 0.5) * 28,
@@ -5571,16 +5738,22 @@ const PlanetVisualEngine = {
                 }
             }
 
-            // 3d. Render Traveling Asteroids in Deep Space!
+            // 3d. Render Detailed 3D Vector Asteroids in Deep Space!
             if (this.state === 'traveling' && this.travelAsteroids && this.travelAsteroids.length > 0) {
                 ctx.save();
                 this.travelAsteroids.forEach(ast => {
                     ctx.save();
                     ctx.translate(ast.x, ast.y);
                     ctx.rotate(ast.rot);
-                    ctx.fillStyle = ast.color;
+
+                    // Outer shaded rock hull
+                    const astGrad = ctx.createLinearGradient(-ast.size, -ast.size, ast.size, ast.size);
+                    astGrad.addColorStop(0, '#64748b');
+                    astGrad.addColorStop(0.5, '#334155');
+                    astGrad.addColorStop(1, '#0f172a');
+                    ctx.fillStyle = astGrad;
                     ctx.strokeStyle = '#1e293b';
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = 2.5;
                     ctx.beginPath();
                     ast.points.forEach((pt, pidx) => {
                         const px = pt.x * ast.size;
@@ -5592,11 +5765,29 @@ const PlanetVisualEngine = {
                     ctx.fill();
                     ctx.stroke();
                     
-                    // Crater detail
-                    ctx.fillStyle = 'rgba(15, 23, 42, 0.5)';
+                    // Shaded internal rock facets
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
                     ctx.beginPath();
-                    ctx.arc(ast.size * 0.2, -ast.size * 0.1, ast.size * 0.25, 0, Math.PI * 2);
+                    ctx.moveTo(ast.points[0].x * ast.size * 0.8, ast.points[0].y * ast.size * 0.8);
+                    ctx.lineTo(ast.points[1].x * ast.size * 0.7, ast.points[1].y * ast.size * 0.7);
+                    ctx.lineTo(0, 0);
+                    ctx.closePath();
                     ctx.fill();
+
+                    // Craters with shadows
+                    ctx.fillStyle = 'rgba(2, 6, 23, 0.7)';
+                    ctx.beginPath();
+                    ctx.arc(ast.size * 0.22, -ast.size * 0.15, ast.size * 0.22, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(-ast.size * 0.25, ast.size * 0.2, ast.size * 0.15, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
                     ctx.restore();
                 });
                 ctx.restore();
@@ -5604,80 +5795,7 @@ const PlanetVisualEngine = {
 
             // ONLY DRAW PLANET SURFACE IF STILL IN VIEW
             if (groundY < h + 200) {
-                // 4. Planet-Specific Horizon Landmark & Background Biome
-                if (curWorld.id === 'terra' || curWorld.id === 'ignis') {
-                    // Active Smoking Volcano
-                    const volX = Math.max(60, w * 0.10) + curPan;
-                    const volY = groundY - 15;
-                    ctx.save();
-                    ctx.fillStyle = curWorld.volcanoBody || '#1e1b4b';
-                    ctx.beginPath();
-                    ctx.moveTo(volX - 65, groundY + 40);
-                    ctx.lineTo(volX - 14, volY - 26);
-                    ctx.lineTo(volX + 14, volY - 26);
-                    ctx.lineTo(volX + 65, groundY + 40);
-                    ctx.closePath();
-                    ctx.fill();
-
-                    ctx.fillStyle = curWorld.volcanoLava || '#ef4444';
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = curWorld.lavaGlow || '#f97316';
-                    ctx.beginPath();
-                    ctx.ellipse(volX, volY - 26, 14, 4, 0, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    ctx.strokeStyle = curWorld.lavaGlow ? `${curWorld.lavaGlow}bb` : 'rgba(249, 115, 22, 0.75)';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(volX - 5, volY - 24);
-                    ctx.lineTo(volX - 12, volY + 6);
-                    ctx.lineTo(volX - 22, groundY + 15);
-                    ctx.moveTo(volX + 5, volY - 24);
-                    ctx.lineTo(volX + 12, volY + 2);
-                    ctx.lineTo(volX + 20, groundY + 20);
-                    ctx.stroke();
-                    ctx.restore();
-                } else if (curWorld.id === 'cryo') {
-                    // Frozen Ice Spikes / Spires
-                    ctx.save();
-                    ctx.fillStyle = '#082f49';
-                    ctx.strokeStyle = '#38bdf8';
-                    ctx.lineWidth = 1.5;
-                    const spX = Math.max(70, w * 0.12) + curPan;
-                    ctx.beginPath();
-                    ctx.moveTo(spX - 45, groundY + 30);
-                    ctx.lineTo(spX - 15, groundY - 55);
-                    ctx.lineTo(spX, groundY - 20);
-                    ctx.lineTo(spX + 20, groundY - 70);
-                    ctx.lineTo(spX + 50, groundY + 30);
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.stroke();
-                    ctx.restore();
-                } else if (curWorld.id === 'cyber') {
-                    // Futuristic Neon Skyscrapers in Background
-                    ctx.save();
-                    const bldgCount = 6;
-                    const startX = Math.max(30, w * 0.05) + curPan;
-                    for (let i = 0; i < bldgCount; i++) {
-                        const bx = startX + i * 28;
-                        const bh = 50 + (i % 3) * 25;
-                        ctx.fillStyle = '#1e1035';
-                        ctx.strokeStyle = '#c084fc';
-                        ctx.lineWidth = 1;
-                        ctx.fillRect(bx, groundY - bh, 22, bh + 40);
-                        ctx.strokeRect(bx, groundY - bh, 22, bh + 40);
-                        // Glowing windows
-                        ctx.fillStyle = '#e879f9';
-                        for (let wy = groundY - bh + 6; wy < groundY; wy += 8) {
-                            ctx.fillRect(bx + 4, wy, 4, 4);
-                            ctx.fillRect(bx + 14, wy, 4, 4);
-                        }
-                    }
-                    ctx.restore();
-                }
-
-                // 5. Distant hills / mountains terrain with parallax pan
+                // 4. Distant hills / mountains terrain with parallax pan (Drawn FIRST in background!)
                 ctx.save();
                 const hillsPan = curPan * 0.35;
                 ctx.fillStyle = curWorld.hillsGrad || '#064e3b';
@@ -5699,6 +5817,81 @@ const PlanetVisualEngine = {
                 ctx.lineTo(-100, h + 200);
                 ctx.fill();
                 ctx.restore();
+
+                // 5. Planet-Specific Horizon Landmark & Biome (Volcano anchored seamlessly deep into surface)
+                if (curWorld.id === 'terra' || curWorld.id === 'ignis') {
+                    // Active Smoking Volcano (Firmly anchored into terrain)
+                    const volX = Math.max(70, w * 0.12) + curPan;
+                    const volY = groundY - 15;
+                    ctx.save();
+                    ctx.fillStyle = curWorld.volcanoBody || '#1e1b4b';
+                    ctx.beginPath();
+                    ctx.moveTo(volX - 75, groundY + 120);
+                    ctx.lineTo(volX - 16, volY - 26);
+                    ctx.lineTo(volX + 16, volY - 26);
+                    ctx.lineTo(volX + 75, groundY + 120);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Glowing Volcano Lava Caldera Top
+                    ctx.fillStyle = curWorld.volcanoLava || '#ef4444';
+                    ctx.shadowBlur = 18;
+                    ctx.shadowColor = curWorld.lavaGlow || '#f97316';
+                    ctx.beginPath();
+                    ctx.ellipse(volX, volY - 26, 16, 4.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Lava rivers down mountainside
+                    ctx.strokeStyle = curWorld.lavaGlow ? `${curWorld.lavaGlow}bb` : 'rgba(249, 115, 22, 0.85)';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(volX - 6, volY - 24);
+                    ctx.lineTo(volX - 14, volY + 10);
+                    ctx.lineTo(volX - 26, groundY + 30);
+                    ctx.moveTo(volX + 6, volY - 24);
+                    ctx.lineTo(volX + 14, volY + 6);
+                    ctx.lineTo(volX + 24, groundY + 35);
+                    ctx.stroke();
+                    ctx.restore();
+                } else if (curWorld.id === 'cryo') {
+                    // Frozen Ice Spikes / Spires
+                    ctx.save();
+                    ctx.fillStyle = '#082f49';
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 1.5;
+                    const spX = Math.max(70, w * 0.12) + curPan;
+                    ctx.beginPath();
+                    ctx.moveTo(spX - 45, groundY + 60);
+                    ctx.lineTo(spX - 15, groundY - 55);
+                    ctx.lineTo(spX, groundY - 20);
+                    ctx.lineTo(spX + 20, groundY - 70);
+                    ctx.lineTo(spX + 50, groundY + 60);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.restore();
+                } else if (curWorld.id === 'cyber') {
+                    // Futuristic Neon Skyscrapers in Background
+                    ctx.save();
+                    const bldgCount = 6;
+                    const startX = Math.max(30, w * 0.05) + curPan;
+                    for (let i = 0; i < bldgCount; i++) {
+                        const bx = startX + i * 28;
+                        const bh = 50 + (i % 3) * 25;
+                        ctx.fillStyle = '#1e1035';
+                        ctx.strokeStyle = '#c084fc';
+                        ctx.lineWidth = 1;
+                        ctx.fillRect(bx, groundY - bh, 22, bh + 60);
+                        ctx.strokeRect(bx, groundY - bh, 22, bh + 60);
+                        // Glowing windows
+                        ctx.fillStyle = '#e879f9';
+                        for (let wy = groundY - bh + 6; wy < groundY; wy += 8) {
+                            ctx.fillRect(bx + 4, wy, 4, 4);
+                            ctx.fillRect(bx + 14, wy, 4, 4);
+                        }
+                    }
+                    ctx.restore();
+                }
 
                 // 6. Foreground Planet Surface with crisp glowing boundary
                 ctx.save();
@@ -6001,6 +6194,39 @@ const PlanetVisualEngine = {
 };
 window.PlanetVisualEngine = PlanetVisualEngine;
 
+function applyPlanetTheme(planetId = 'terra') {
+    const root = document.documentElement;
+    document.body.classList.remove('theme-terra', 'theme-ignis', 'theme-cryo', 'theme-cyber');
+    document.body.classList.add(`theme-${planetId}`);
+
+    if (planetId === 'ignis') {
+        root.style.setProperty('--accent-color', '#ef4444');
+        root.style.setProperty('--accent-glow', 'rgba(239, 68, 68, 0.6)');
+        root.style.setProperty('--secondary-color', '#f97316');
+        root.style.setProperty('--xp-color', '#f97316');
+        root.style.setProperty('--glass-border', 'rgba(249, 115, 22, 0.35)');
+    } else if (planetId === 'cryo') {
+        root.style.setProperty('--accent-color', '#06b6d4');
+        root.style.setProperty('--accent-glow', 'rgba(6, 182, 212, 0.6)');
+        root.style.setProperty('--secondary-color', '#38bdf8');
+        root.style.setProperty('--xp-color', '#38bdf8');
+        root.style.setProperty('--glass-border', 'rgba(56, 189, 248, 0.35)');
+    } else if (planetId === 'cyber') {
+        root.style.setProperty('--accent-color', '#d946ef');
+        root.style.setProperty('--accent-glow', 'rgba(217, 70, 239, 0.6)');
+        root.style.setProperty('--secondary-color', '#a855f7');
+        root.style.setProperty('--xp-color', '#c084fc');
+        root.style.setProperty('--glass-border', 'rgba(217, 70, 239, 0.35)');
+    } else { // terra
+        root.style.setProperty('--accent-color', '#10b981');
+        root.style.setProperty('--accent-glow', 'rgba(16, 185, 129, 0.6)');
+        root.style.setProperty('--secondary-color', '#059669');
+        root.style.setProperty('--xp-color', '#10b981');
+        root.style.setProperty('--glass-border', 'rgba(16, 185, 129, 0.35)');
+    }
+}
+window.applyPlanetTheme = applyPlanetTheme;
+
 function openPlanetModal(mode = 'solo') {
     switchMusic('menu');
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -6009,6 +6235,7 @@ function openPlanetModal(mode = 'solo') {
     const modal = document.getElementById('planet-modal');
     if (modal) {
         modal.classList.add('active');
+        applyPlanetTheme(PlanetVisualEngine.currentPlanetId || 'terra');
         renderPlanetUI();
         setTimeout(() => {
             PlanetVisualEngine.startLanding(mode, () => {
@@ -11472,12 +11699,21 @@ function render() {
         const startX = isLargeMap ? (GAME.canvas.width - mapSize) / 2 : GAME.canvas.width - mapSize - padding;
         const startY = isLargeMap ? (GAME.canvas.height - mapSize) / 2 : 80;
 
+        const curWorldId = (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || 'terra';
+        let mapBorderColor = 'rgba(16, 185, 129, 0.7)';
+        if (curWorldId === 'ignis') mapBorderColor = 'rgba(249, 115, 22, 0.8)';
+        else if (curWorldId === 'cryo') mapBorderColor = 'rgba(56, 189, 248, 0.8)';
+        else if (curWorldId === 'cyber') mapBorderColor = 'rgba(217, 70, 239, 0.8)';
+
         ctx.save();
         ctx.fillStyle = isLargeMap ? 'rgba(0, 0, 0, 0.85)' : 'rgba(0, 0, 0, 0.6)';
-        ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = mapBorderColor;
+        ctx.lineWidth = 2.5;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = mapBorderColor;
         ctx.fillRect(startX, startY, mapSize, mapSize);
         ctx.strokeRect(startX, startY, mapSize, mapSize);
+        ctx.shadowBlur = 0;
 
         const viewDist = isLargeMap ? 15000 : 4000;
         const scale = mapSize / viewDist;

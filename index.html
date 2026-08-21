@@ -108,7 +108,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.687
+            NEO SURVIVOR v1.688
           </div>
         </div>
       </div>
@@ -848,6 +848,24 @@
           </div>
         </div>
       </div>
+
+    <div id="asteroid-emergency-modal" class="modal" style="z-index: 1000035; background: rgba(5, 7, 18, 0.88); backdrop-filter: blur(12px);">
+      <div class="modal-content" style="max-width: 480px; text-align: center; border: 2px solid #f97316; box-shadow: 0 0 50px rgba(249, 115, 22, 0.4); padding: 2rem;">
+        <div style="font-size: 3.5rem; margin-bottom: 0.5rem; animation: pulse 1s infinite;">💥🚀</div>
+        <h2 style="font-size: 1.8rem; color: #fbbf24; font-weight: 900; margin-bottom: 0.8rem; letter-spacing: 1px;">KOLIZE S ASTEROIDEM!</h2>
+        <p id="asteroid-hazard-desc" style="color: #cbd5e1; font-size: 0.95rem; margin-bottom: 1.6rem; line-height: 1.5;">
+          Raketka byla zasažena asteroidem v hlubokém vesmíru! Zvolte postup:
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+          <button id="btn-asteroid-continue" class="btn-restart" style="background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #fbbf24; color: #020617; font-weight: 900; box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);">
+            🛠️ OPRAVIT A LETĚT NA CÍL (<span id="asteroid-continue-cost">600</span> DOGE)
+          </button>
+          <button id="btn-asteroid-return" class="btn-restart" style="background: rgba(30, 41, 59, 0.9); border-color: #64748b; font-weight: 800; color: #e2e8f0;">
+            🏠 NOUZOVÝ NÁVRAT DOMŮ (<span id="asteroid-return-cost">150</span> DOGE)
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div id="custom-alert-modal" class="modal" style="z-index: 1000030;">
       <div class="modal-content" style="text-align: center;">

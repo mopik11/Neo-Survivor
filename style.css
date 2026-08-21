@@ -2,15 +2,64 @@
 
 :root {
   --bg-color: #020617;
-  --accent-color: #6366f1;
-  --accent-glow: rgba(99, 102, 241, 0.6);
-  --secondary-color: #8b5cf6;
+  --accent-color: #10b981;
+  --accent-glow: rgba(16, 185, 129, 0.6);
+  --secondary-color: #059669;
   --text-main: #f8fafc;
   --glass-bg: rgba(15, 23, 42, 0.8);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(16, 185, 129, 0.25);
   --xp-color: #10b981;
   --hp-color: #ef4444;
   --modal-z: 999999;
+}
+
+/* Planet Themed Dynamic Classes */
+body.theme-terra {
+  --accent-color: #10b981;
+  --accent-glow: rgba(16, 185, 129, 0.6);
+  --secondary-color: #059669;
+  --xp-color: #10b981;
+  --glass-border: rgba(16, 185, 129, 0.25);
+}
+
+body.theme-ignis {
+  --accent-color: #ef4444;
+  --accent-glow: rgba(239, 68, 68, 0.6);
+  --secondary-color: #f97316;
+  --xp-color: #f97316;
+  --glass-border: rgba(249, 115, 22, 0.35);
+}
+
+body.theme-cryo {
+  --accent-color: #06b6d4;
+  --accent-glow: rgba(6, 182, 212, 0.6);
+  --secondary-color: #38bdf8;
+  --xp-color: #38bdf8;
+  --glass-border: rgba(56, 189, 248, 0.35);
+}
+
+body.theme-cyber {
+  --accent-color: #d946ef;
+  --accent-glow: rgba(217, 70, 239, 0.6);
+  --secondary-color: #a855f7;
+  --xp-color: #c084fc;
+  --glass-border: rgba(217, 70, 239, 0.35);
+}
+
+.theme-terra .modal-content, .theme-terra .upgrade-card, .theme-terra .stat-chip {
+  border-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+.theme-ignis .modal-content, .theme-ignis .upgrade-card, .theme-ignis .stat-chip {
+  border-color: rgba(249, 115, 22, 0.35) !important;
+}
+
+.theme-cryo .modal-content, .theme-cryo .upgrade-card, .theme-cryo .stat-chip {
+  border-color: rgba(56, 189, 248, 0.35) !important;
+}
+
+.theme-cyber .modal-content, .theme-cyber .upgrade-card, .theme-cyber .stat-chip {
+  border-color: rgba(217, 70, 239, 0.35) !important;
 }
 
 * {
