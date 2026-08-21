@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.666
+ * NEO SURVIVOR - Core Game Logic - v1.667
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4150,12 +4150,24 @@ const PlanetVisualEngine = {
         this.particles = [];
         this.ejectedPlayers = [];
         this.shockwaves = [];
+        this.hasLaunched = false;
 
-        const tag = document.getElementById('planet-status-tag');
-        if (tag) {
-            tag.innerHTML = `<span>🚀 PŘISTÁVÁNÍ NA DOMOVSKÉ PLANETĚ...</span>`;
-            tag.style.color = '#38bdf8';
-            tag.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+        const modal = document.getElementById('planet-modal');
+        if (modal) {
+            modal.style.opacity = '1';
+            modal.style.pointerEvents = 'auto';
+        }
+
+        const topCard = document.getElementById('planet-top-card');
+        if (topCard) { topCard.style.opacity = '1'; topCard.style.pointerEvents = 'auto'; topCard.style.transform = 'none'; }
+        const botMenu = document.getElementById('planet-bottom-menu');
+        if (botMenu) { botMenu.style.opacity = '1'; botMenu.style.pointerEvents = 'auto'; botMenu.style.transform = 'none'; }
+        const statusTag = document.getElementById('planet-status-tag');
+        if (statusTag) {
+            statusTag.style.opacity = '1';
+            statusTag.innerHTML = `<span>🚀 PŘISTÁVÁNÍ NA DOMOVSKÉ PLANETĚ...</span>`;
+            statusTag.style.color = '#38bdf8';
+            statusTag.style.borderColor = 'rgba(56, 189, 248, 0.4)';
         }
 
         if (typeof playSound === 'function') playSound('menuOpen');
@@ -4169,12 +4181,13 @@ const PlanetVisualEngine = {
         this.shipVy = 1.2;
         this.flightOffset = 0;
 
-        const tag = document.getElementById('planet-status-tag');
-        if (tag) {
-            tag.innerHTML = `<span>🔥 ZÁŽEH MOTORŮ & VZLET DO VESMÍRU!</span>`;
-            tag.style.color = '#fbbf24';
-            tag.style.borderColor = 'rgba(251, 191, 36, 0.4)';
-        }
+        // Instantly fade out the planet menus so they don't block the cinematic view
+        const topCard = document.getElementById('planet-top-card');
+        if (topCard) { topCard.style.transition = 'opacity 0.3s ease, transform 0.3s ease'; topCard.style.opacity = '0'; topCard.style.pointerEvents = 'none'; topCard.style.transform = 'translateY(-15px)'; }
+        const botMenu = document.getElementById('planet-bottom-menu');
+        if (botMenu) { botMenu.style.transition = 'opacity 0.3s ease, transform 0.3s ease'; botMenu.style.opacity = '0'; botMenu.style.pointerEvents = 'none'; botMenu.style.transform = 'translateY(15px)'; }
+        const statusTag = document.getElementById('planet-status-tag');
+        if (statusTag) { statusTag.style.transition = 'opacity 0.3s ease'; statusTag.style.opacity = '0'; }
 
         if (typeof playSound === 'function') playSound('shoot');
     },
@@ -4275,7 +4288,8 @@ const PlanetVisualEngine = {
             }
         } else if (this.state === 'takeoff') {
             const elapsed = (Date.now() - this.takeoffStartTime) / 1000;
-            const progress = Math.min(1.0, elapsed / 2.0);
+            // Snappy and dynamic liftoff (1.35s duration)
+            const progress = Math.min(1.0, elapsed / 1.35);
             const easeP = progress * progress;
             
             // Ground altitude smoothly drops down into space
@@ -4299,7 +4313,7 @@ const PlanetVisualEngine = {
                 });
             }
 
-            // At 2.0s, when the planet has completely scrolled into deep space -> trigger Ejection!
+            // At 1.35s, when the planet has scrolled into deep space -> trigger Ejection!
             if (progress >= 1.0) {
                 this.state = 'ejecting';
                 this.ejectStartTime = Date.now();
@@ -4344,17 +4358,18 @@ const PlanetVisualEngine = {
                         targetX: targetX,
                         targetY: targetY,
                         name: c.name,
-                        scale: 0.2,
+                        scale: 0.3,
                         isLocal: c.isLocal
                     };
                 });
 
-                const tag = document.getElementById('planet-status-tag');
-                if (tag) {
-                    tag.innerHTML = `<span>💥 VÝSADEK POSÁDKY DO BOJE!</span>`;
-                    tag.style.color = '#38bdf8';
-                    tag.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+                // Start displaying the real in-game HUD layer smoothly in background
+                const uiLayer = document.getElementById('ui-layer');
+                if (uiLayer) {
+                    uiLayer.style.display = 'block';
+                    uiLayer.style.opacity = '1';
                 }
+
                 if (typeof playSound === 'function') playSound('shoot');
                 if (typeof playSound === 'function') playSound('upgrade');
             }
@@ -4363,14 +4378,14 @@ const PlanetVisualEngine = {
             
             // Rocket flies past the player and accelerates upwards into deep space
             const targetCamY = this.logicalH * 0.44;
-            this.shipY = targetCamY - (ejectElapsed * ejectElapsed) * (this.logicalH * 1.1) - (ejectElapsed * 20);
+            this.shipY = targetCamY - (ejectElapsed * ejectElapsed) * (this.logicalH * 1.5) - (ejectElapsed * 30);
             
             // Animate ejected players smoothly landing in center ready to play!
             if (this.ejectedPlayers) {
                 this.ejectedPlayers.forEach(p => {
-                    p.x += (p.targetX - p.x) * 0.16;
-                    p.y += (p.targetY - p.y) * 0.16;
-                    p.scale = Math.min(1.0, p.scale + 0.08);
+                    p.x += (p.targetX - p.x) * 0.2;
+                    p.y += (p.targetY - p.y) * 0.2;
+                    p.scale = Math.min(1.0, p.scale + 0.1);
 
                     // Glowing plasma ejection trail
                     if (Math.random() < 0.7) {
@@ -4396,11 +4411,24 @@ const PlanetVisualEngine = {
                 });
             }
 
-            // Finish after ~1.2s and start the game instantly with the player orb!
-            if (Date.now() - this.ejectStartTime > 1200) {
+            // Early & seamless launch: Start game at 0.75s with zero delay!
+            if (Date.now() - this.ejectStartTime > 750 && !this.hasLaunched) {
+                this.hasLaunched = true;
                 this.state = 'done';
                 if (this.animFrame) cancelAnimationFrame(this.animFrame);
-                document.getElementById('planet-modal').classList.remove('active');
+                
+                const pModal = document.getElementById('planet-modal');
+                if (pModal) {
+                    pModal.style.transition = 'opacity 0.25s ease';
+                    pModal.style.opacity = '0';
+                    pModal.style.pointerEvents = 'none';
+                    setTimeout(() => {
+                        pModal.classList.remove('active');
+                        pModal.style.opacity = '1';
+                        pModal.style.pointerEvents = 'auto';
+                    }, 250);
+                }
+
                 if (typeof this.launchCallback === 'function') {
                     this.launchCallback();
                 }
@@ -5201,7 +5229,7 @@ const PlanetVisualEngine = {
                 });
             }
 
-            // 13. Draw Authentic In-Game Player Orb(s) Deployed in Center of Arena! (FULL SCALE!)
+            // 13. Draw Authentic In-Game Player Orb(s) Deployed in Center of Arena! (FULL SCALE + PET & HAT!)
             if (this.state === 'ejecting' && this.ejectedPlayers) {
                 this.ejectedPlayers.forEach(ep => {
                     ctx.save();
@@ -5231,12 +5259,45 @@ const PlanetVisualEngine = {
                     ctx.strokeRect(-5, -5, 12, 10);
                     ctx.restore();
 
+                    // Authentic Hat (if equipped)
+                    if (ep.isLocal && META.upgrades && META.upgrades.hat) {
+                        const hatId = META.upgrades.hat;
+                        const hatObj = (typeof UPGRADES !== 'undefined' && UPGRADES.find(u => u.id === hatId)) || (typeof EMOJIS !== 'undefined' && EMOJIS.find(e => e.id === hatId));
+                        const hatIcon = hatObj ? hatObj.icon : hatId;
+                        ctx.save();
+                        ctx.font = '24px "Segoe UI Emoji", "Apple Color Emoji", Arial, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(hatIcon, 0, -26);
+                        ctx.restore();
+                    }
+
+                    // Authentic Companion Pet / Drone (if unlocked/equipped)
+                    if (ep.isLocal) {
+                        const petId = ((META.maxLevel || 1) >= 15) ? (META.selectedPet || null) : null;
+                        if (petId && typeof EMOJIS !== 'undefined') {
+                            const petObj = EMOJIS.find(e => e.id === petId);
+                            if (petObj) {
+                                const petPx = -42;
+                                const petPy = -20 + Math.sin(Date.now() / 180) * 8;
+                                ctx.save();
+                                ctx.font = '24px "Segoe UI Emoji", "Apple Color Emoji", Arial, sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.filter = 'drop-shadow(0px 0px 8px rgba(56, 189, 248, 0.85))';
+                                ctx.fillText(petObj.icon, petPx, petPy);
+                                ctx.restore();
+                            }
+                        }
+                    }
+
                     // Authentic player nickname tag
                     ctx.fillStyle = ep.isLocal ? '#818cf8' : '#fb7185';
                     ctx.font = 'bold 15px "Outfit", Arial, sans-serif';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
-                    ctx.fillText(ep.name, 0, -28);
+                    const nameOffsetY = (ep.isLocal && META.upgrades && META.upgrades.hat) ? -42 : -28;
+                    ctx.fillText(ep.name, 0, nameOffsetY);
 
                     ctx.restore();
                 });
