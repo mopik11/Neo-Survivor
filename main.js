@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.669
+ * NEO SURVIVOR - Core Game Logic - v1.670
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4042,7 +4042,7 @@ const PlanetVisualEngine = {
     isInitialized: false,
 
     init() {
-        this.canvas = document.getElementById('game-canvas');
+        this.canvas = document.getElementById('planet-surface-canvas');
         if (!this.canvas) return;
         this.ctx = this.canvas.getContext('2d');
         this.resize();
@@ -4053,16 +4053,11 @@ const PlanetVisualEngine = {
         });
         
         // Handle clicks for buying buildings or clicking the rocket
-        window.addEventListener('click', (e) => {
-            const modal = document.getElementById('planet-modal');
-            if (!modal || !modal.classList.contains('active')) return;
+        this.canvas.addEventListener('click', (e) => {
             if (this.state !== 'idle') return;
-            
-            // If click was on top card or bottom menu button, let native click handler handle it
-            if (e.target.closest('#planet-top-card') || e.target.closest('#planet-bottom-menu')) return;
-
-            const clickX = e.clientX;
-            const clickY = e.clientY;
+            const rect = this.canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
             const cx = (this.logicalW || window.innerWidth) / 2;
             const shipY = this.shipY;
             
@@ -4087,12 +4082,11 @@ const PlanetVisualEngine = {
             }
         });
         
-        window.addEventListener('mousemove', (e) => {
-            const modal = document.getElementById('planet-modal');
-            if (!modal || !modal.classList.contains('active')) return;
+        this.canvas.addEventListener('mousemove', (e) => {
             if (this.state !== 'idle') return;
-            this.mouseX = e.clientX;
-            this.mouseY = e.clientY;
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouseX = e.clientX - rect.left;
+            this.mouseY = e.clientY - rect.top;
         });
 
         this.isInitialized = true;
@@ -4120,7 +4114,7 @@ const PlanetVisualEngine = {
     },
 
     resize() {
-        if (!this.canvas) this.canvas = document.getElementById('game-canvas');
+        this.canvas = document.getElementById('planet-surface-canvas');
         if (!this.canvas) return;
         this.ctx = this.canvas.getContext('2d');
         
@@ -5330,6 +5324,8 @@ window.PlanetVisualEngine = PlanetVisualEngine;
 function openPlanetModal(mode = 'solo') {
     switchMusic('menu');
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    const menuAnim = document.getElementById('menu-anim-canvas');
+    if (menuAnim) menuAnim.style.display = 'none';
     const modal = document.getElementById('planet-modal');
     if (modal) {
         modal.classList.add('active');
@@ -5371,6 +5367,8 @@ window.startSoloGame = startSoloGame;
 function closePlanetModal() {
     const modal = document.getElementById('planet-modal');
     if (modal) modal.classList.remove('active');
+    const menuAnim = document.getElementById('menu-anim-canvas');
+    if (menuAnim) menuAnim.style.display = 'block';
     const menu = document.getElementById('menu-modal');
     if (menu) menu.classList.add('active');
 }
