@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.672
+ * NEO SURVIVOR - Core Game Logic - v1.673
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4131,8 +4131,8 @@ const PlanetVisualEngine = {
         this.mode = mode;
         this.launchCallback = onLaunch;
         this.state = 'landing';
+        this.landingStartTime = Date.now();
         this.shipY = -140;
-        this.shipVy = 4.0;
         this.flightOffset = 0;
         this.bounce = 0;
         this.particles = [];
@@ -4223,26 +4223,26 @@ const PlanetVisualEngine = {
         }
 
         if (this.state === 'landing') {
-            this.shipY += this.shipVy;
-            this.shipVy = Math.max(1.0, this.shipVy * 0.96);
+            const elapsed = (Date.now() - this.landingStartTime) / 1000;
+            const progress = Math.min(1.0, elapsed / 0.75); // Fast 0.75s landing!
+            const easeP = Math.sin(progress * Math.PI / 2); // Smooth deceleration onto pad
+            this.shipY = -140 + easeP * (restY - (-140));
 
-            if (this.shipY >= restY - 80) {
-                // Retro thrusters ignition
-                for (let i = 0; i < 4; i++) {
-                    this.particles.push({
-                        x: cx + (Math.random() - 0.5) * 28,
-                        y: this.shipY + 52,
-                        vx: (Math.random() - 0.5) * 4,
-                        vy: Math.random() * 5 + 3,
-                        size: Math.random() * 8 + 4,
-                        color: Math.random() > 0.5 ? '#38bdf8' : '#6366f1',
-                        alpha: 1,
-                        life: 1
-                    });
-                }
+            // Thrusters brake firing
+            for (let i = 0; i < 4; i++) {
+                this.particles.push({
+                    x: cx + (Math.random() - 0.5) * 28,
+                    y: this.shipY + 52,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: Math.random() * 6 + 4,
+                    size: Math.random() * 8 + 4,
+                    color: Math.random() > 0.5 ? '#38bdf8' : '#6366f1',
+                    alpha: 1,
+                    life: 0.8
+                });
             }
 
-            if (this.shipY >= restY) {
+            if (progress >= 1.0) {
                 this.shipY = restY;
                 this.state = 'idle';
                 this.bounce = 8;
@@ -4289,8 +4289,8 @@ const PlanetVisualEngine = {
             }
         } else if (this.state === 'takeoff') {
             const elapsed = (Date.now() - this.takeoffStartTime) / 1000;
-            // Snappy and dynamic liftoff (1.35s duration)
-            const progress = Math.min(1.0, elapsed / 1.35);
+            // Snappy liftoff (0.85s duration)
+            const progress = Math.min(1.0, elapsed / 0.85);
             const easeP = progress * progress;
             
             // Ground altitude smoothly drops down into space
@@ -4314,7 +4314,7 @@ const PlanetVisualEngine = {
                 });
             }
 
-            // At 1.35s, when the planet has scrolled into deep space -> trigger Ejection!
+            // At 0.85s, when the planet has scrolled into deep space -> trigger Ejection!
             if (progress >= 1.0) {
                 this.state = 'ejecting';
                 this.ejectStartTime = Date.now();
@@ -4382,14 +4382,14 @@ const PlanetVisualEngine = {
             
             // Rocket flies past the player and accelerates upwards into deep space
             const targetCamY = this.logicalH * 0.44;
-            this.shipY = targetCamY - (ejectElapsed * ejectElapsed) * (this.logicalH * 1.5) - (ejectElapsed * 30);
+            this.shipY = targetCamY - (ejectElapsed * ejectElapsed) * (this.logicalH * 1.8) - (ejectElapsed * 50);
             
             // Animate ejected players smoothly landing in center ready to play!
             if (this.ejectedPlayers) {
                 this.ejectedPlayers.forEach(p => {
-                    p.x += (p.targetX - p.x) * 0.2;
-                    p.y += (p.targetY - p.y) * 0.2;
-                    p.scale = Math.min(1.0, p.scale + 0.1);
+                    p.x += (p.targetX - p.x) * 0.25;
+                    p.y += (p.targetY - p.y) * 0.25;
+                    p.scale = Math.min(1.0, p.scale + 0.12);
 
                     // Glowing plasma ejection trail
                     if (Math.random() < 0.7) {
@@ -4415,22 +4415,22 @@ const PlanetVisualEngine = {
                 });
             }
 
-            // Early & seamless launch: Start game at 0.75s with zero delay!
-            if (Date.now() - this.ejectStartTime > 750 && !this.hasLaunched) {
+            // Early & seamless launch: Start game at 0.65s with zero delay!
+            if (Date.now() - this.ejectStartTime > 650 && !this.hasLaunched) {
                 this.hasLaunched = true;
                 this.state = 'done';
                 if (this.animFrame) cancelAnimationFrame(this.animFrame);
                 
                 const pModal = document.getElementById('planet-modal');
                 if (pModal) {
-                    pModal.style.transition = 'opacity 0.4s ease-out';
+                    pModal.style.transition = 'opacity 0.3s ease-out';
                     pModal.style.opacity = '0';
                     pModal.style.pointerEvents = 'none';
                     setTimeout(() => {
                         pModal.classList.remove('active');
                         pModal.style.opacity = '1';
                         pModal.style.pointerEvents = 'auto';
-                    }, 250);
+                    }, 300);
                 }
 
                 if (typeof this.launchCallback === 'function') {
@@ -7583,12 +7583,45 @@ window.connectToId = (id) => {
     if (input) input.value = id;
 };
 
+let currentCaptchaAnswer = 0;
+function generateCaptcha() {
+    const op = Math.random() > 0.4 ? '+' : (Math.random() > 0.5 ? '-' : '*');
+    let a = 0, b = 0;
+    if (op === '+') {
+        a = Math.floor(Math.random() * 15) + 3;
+        b = Math.floor(Math.random() * 15) + 2;
+        currentCaptchaAnswer = a + b;
+    } else if (op === '-') {
+        a = Math.floor(Math.random() * 20) + 10;
+        b = Math.floor(Math.random() * (a - 1)) + 1;
+        currentCaptchaAnswer = a - b;
+    } else {
+        a = Math.floor(Math.random() * 8) + 2;
+        b = Math.floor(Math.random() * 6) + 2;
+        currentCaptchaAnswer = a * b;
+    }
+    const el = document.getElementById('captcha-question');
+    if (el) el.innerText = `${a} ${op} ${b} = ?`;
+    const input = document.getElementById('input-captcha-answer');
+    if (input) input.value = '';
+}
+window.generateCaptcha = generateCaptcha;
+
 function handleAuth(isLogin) {
     const nameVal = document.getElementById('input-login-name').value.trim();
     const passVal = document.getElementById('input-login-pass').value.trim();
+    const captchaInput = document.getElementById('input-captcha-answer');
+    const userCaptcha = parseInt(captchaInput ? captchaInput.value.trim() : '', 10);
 
     if (nameVal.length < 3) { window.showCustomAlert(window.T("Jméno musí mít alespoň 3 znaky!")); return; }
     if (passVal.length < 1) { window.showCustomAlert(window.T("Zadej heslo!")); return; }
+    if (isNaN(userCaptcha) || userCaptcha !== currentCaptchaAnswer) {
+        generateCaptcha();
+        window.showCustomAlert(window.T("Nesprávně vyřešená CAPTCHA ochrana! Zkus to znovu."));
+        const errorEl = document.getElementById('login-error');
+        if (errorEl) errorEl.innerText = window.T("Nesprávný výsledek CAPTCHA!");
+        return;
+    }
 
     const loader = document.getElementById('login-loader');
     const errorEl = document.getElementById('login-error');
@@ -8515,6 +8548,10 @@ function init() {
 
     const btnRegister = document.getElementById('btn-register');
     if (btnRegister) btnRegister.onclick = () => handleAuth(false);
+
+    const btnRefreshCaptcha = document.getElementById('btn-refresh-captcha');
+    if (btnRefreshCaptcha) btnRefreshCaptcha.onclick = () => generateCaptcha();
+    generateCaptcha();
 
     // Daily Gift Logic (Streak based)
     const btnDaily = document.getElementById('btn-daily-gift');
