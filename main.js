@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.694
+ * NEO SURVIVOR - Core Game Logic - v1.695
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.694'
+    version: window.GAME_VERSION || '1.695'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.694";
+const GAME_VERSION = window.GAME_VERSION || "1.695";
 const GAME = {
     active: false,
     paused: false,
@@ -5884,36 +5884,7 @@ const PlanetVisualEngine = {
                 ctx.restore();
             }
 
-            // 3c. Approaching Destination Planet in Center Background (Scales Up in Deep Space)
-            if (this.state === 'traveling') {
-                if (progress > 0.25) {
-                    const pAppr = (progress - 0.25) / 0.75;
-                    const targetWorld = this.targetPlanet || PLANET_WORLDS[0];
-                    const pRad = 20 + pAppr * (Math.min(w, h) * 0.34);
-                    ctx.save();
-                    ctx.translate(cx, h * 0.45 + (1 - pAppr) * 140);
-                    
-                    // Atmospheric aura
-                    ctx.shadowBlur = 35;
-                    ctx.shadowColor = targetWorld.accentColor || '#38bdf8';
-                    ctx.fillStyle = targetWorld.surfaceLine || '#38bdf8';
-                    ctx.globalAlpha = Math.min(1.0, pAppr * 1.4);
-                    ctx.beginPath();
-                    ctx.arc(0, 0, pRad * 1.06, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Planet sphere body
-                    const pGrad = ctx.createRadialGradient(-pRad * 0.3, -pRad * 0.3, pRad * 0.1, 0, 0, pRad);
-                    pGrad.addColorStop(0, targetWorld.accentColor || '#38bdf8');
-                    pGrad.addColorStop(0.6, targetWorld.hillsGrad || '#064e3b');
-                    pGrad.addColorStop(1, targetWorld.skyTop || '#020617');
-                    ctx.fillStyle = pGrad;
-                    ctx.beginPath();
-                    ctx.arc(0, 0, pRad, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
-                }
-            }
+            // 3c. (Approaching planet handled smoothly via surface horizon ascent)
 
             // 3d. Render Detailed 3D Vector Asteroids in Deep Space!
             if (this.state === 'traveling' && this.travelAsteroids && this.travelAsteroids.length > 0) {
@@ -6507,10 +6478,12 @@ function startSoloGame() {
     // Join a private server-side room even for solo to enable authoritative rewards
     const soloRoomId = "SOLO_" + Math.random().toString(36).substr(2, 6).toUpperCase();
     initSocket();
+    const curPlanet = window.PlanetVisualEngine?.currentPlanetId || localStorage.getItem('neoSurvivor_planet') || 'terra';
     NET.socket.emit('joinRoom', { 
         roomId: soloRoomId, 
         playerId: myPlayerId, 
         isSolo: true,
+        planet: curPlanet,
         username: (META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč'),
         name: (META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč')
     });
@@ -8275,10 +8248,22 @@ function initSocket() {
         });
 
         NET.socket.on('joined', (data) => {
-            const { roomId, playerState } = data;
+            const { roomId, playerState, planet } = data;
             console.log("=== NEO SURVIVOR v1.492 ===");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
+
+            // Synchronize active planet and UI styling for all players in room!
+            if (planet) {
+                window.activeMultiplayerPlanet = planet;
+                if (typeof applyPlanetTheme === 'function') applyPlanetTheme(planet);
+                if (window.PlanetVisualEngine) {
+                    window.PlanetVisualEngine.currentPlanetId = planet;
+                    const w = PLANET_WORLDS.find(p => p.id === planet);
+                    if (w) window.PlanetVisualEngine.currentPlanet = w;
+                }
+            }
+
             document.querySelectorAll('.modal:not(#planet-modal)').forEach(m => m.classList.remove('active'));
             if (NET.serverPollingInterval) clearInterval(NET.serverPollingInterval);
 
@@ -8341,6 +8326,17 @@ function initSocket() {
                 GAME.entities.player.level = data.roomInfo.level;
                 GAME.entities.player.xp = data.roomInfo.xp;
                 GAME.entities.player.nextLevelXp = data.roomInfo.nextLevelXp;
+
+                // Sync planet across all connected clients in real-time
+                if (data.roomInfo.planet && window.activeMultiplayerPlanet !== data.roomInfo.planet) {
+                    window.activeMultiplayerPlanet = data.roomInfo.planet;
+                    if (typeof applyPlanetTheme === 'function') applyPlanetTheme(data.roomInfo.planet);
+                    if (window.PlanetVisualEngine) {
+                        window.PlanetVisualEngine.currentPlanetId = data.roomInfo.planet;
+                        const w = PLANET_WORLDS.find(p => p.id === data.roomInfo.planet);
+                        if (w) window.PlanetVisualEngine.currentPlanet = w;
+                    }
+                }
             }
 
             if (data.frozen) {
@@ -8764,9 +8760,11 @@ window.joinCloudServer = (roomName) => {
         return;
     }
     initSocket();
+    const curPlanet = window.PlanetVisualEngine?.currentPlanetId || localStorage.getItem('neoSurvivor_planet') || 'terra';
     NET.socket.emit('joinRoom', { 
         roomId: roomName.trim().toUpperCase(), 
         playerId: myPlayerId,
+        planet: curPlanet,
         username: META.playerName || SecureStorage.getItem('neoSurvivor_user'),
         name: META.playerName || SecureStorage.getItem('neoSurvivor_user')
     });

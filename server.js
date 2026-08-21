@@ -647,19 +647,24 @@ function rewardPlayer(socket, amount) {
     const p = socket.playerId;
     if (!r || !ROOMS[r] || !ROOMS[r].players[p]) return;
 
-    const player = ROOMS[r].players[p];
+    const room = ROOMS[r];
+    const player = room.players[p];
     
+    // Apply Planet Doge Multiplier in Multiplayer (Ignis +40%, Cryo +75%, Cyber +120%)
+    const planetMult = (room.planet === 'ignis') ? 1.4 : (room.planet === 'cryo') ? 1.75 : (room.planet === 'cyber') ? 2.2 : 1.0;
+    const finalAmount = Math.max(1, Math.round(amount * planetMult));
+
     // 1. Memory tracking for Game Over stats (FOR EVERYONE)
-    if (!ROOMS[r].dogeEarned) ROOMS[r].dogeEarned = {};
-    ROOMS[r].dogeEarned[p] = (ROOMS[r].dogeEarned[p] || 0) + amount;
+    if (!room.dogeEarned) room.dogeEarned = {};
+    room.dogeEarned[p] = (room.dogeEarned[p] || 0) + finalAmount;
 
     // 2. Accumulate in memory (ONLY if logged in)
     if (player.username) {
-        player.pendingRewards = (player.pendingRewards || 0) + amount;
+        player.pendingRewards = (player.pendingRewards || 0) + finalAmount;
     }
 
     // 3. Notify client for responsive UI (v1.431)
-    socket.emit('killConfirmed', { amount: amount, totalSessionDoge: ROOMS[r].dogeEarned[p] });
+    socket.emit('killConfirmed', { amount: finalAmount, totalSessionDoge: room.dogeEarned[p] });
 }
 
 function killEnemy(room, enemyId, rewardTarget = null) {
@@ -2101,9 +2106,14 @@ io.on('connection', (socket) => {
         socket.roomId = roomId;
         socket.playerId = playerId;
 
+        const safePlayerName = (typeof data.name === 'string') ? data.name.replace(/[<>]/g, '').trim().substring(0, 16) : "Hráč";
+        const safeUsername = (typeof data.username === 'string') ? data.username.toLowerCase().trim().substring(0, 16) : null;
+        const reqPlanet = (typeof data.planet === 'string' && ['terra', 'ignis', 'cryo', 'cyber'].includes(data.planet)) ? data.planet : 'terra';
+
         if (!ROOMS[roomId]) {
             ROOMS[roomId] = {
                 id: roomId,
+                planet: reqPlanet,
                 players: {},
                 enemies: [],
                 gems: [],
@@ -2132,9 +2142,6 @@ io.on('connection', (socket) => {
                 ROOMS[roomId].cleanupTimer = null;
             }
         }
-
-        const safePlayerName = (typeof data.name === 'string') ? data.name.replace(/[<>]/g, '').trim().substring(0, 16) : "Hráč";
-        const safeUsername = (typeof data.username === 'string') ? data.username.toLowerCase().trim().substring(0, 16) : null;
 
         if (!ROOMS[roomId].players[playerId]) {
             // AUTHORITATIVE STAT LOADING (v1.430)
@@ -2177,7 +2184,8 @@ io.on('connection', (socket) => {
 
         socket.emit('joined', {
             roomId: roomId,
-            playerState: ROOMS[roomId].players[playerId]
+            playerState: ROOMS[roomId].players[playerId],
+            planet: ROOMS[roomId].planet || 'terra'
         });
     });
 
@@ -2656,7 +2664,7 @@ setInterval(() => {
                     tombstones: room.tombstones,
                     envObjects: room.envObjects,
                     time: room.time,
-                    roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp },
+                    roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp, planet: room.planet || 'terra' },
                     frozen: true
                 });
                 continue;
@@ -2879,7 +2887,7 @@ setInterval(() => {
                 tombstones: room.tombstones,
                 envObjects: room.envObjects,
                 time: room.time,
-                roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp },
+                roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp, planet: room.planet || 'terra' },
                 frozen: false
             });
         } catch (err) {
