@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.686
+ * NEO SURVIVOR - Core Game Logic - v1.687
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -2099,13 +2099,14 @@ class Enemy {
 
         // Planeta obtížnost (škálování síly nepřátel a odměn)
         const curWorldId = (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || 'terra';
-        let pHpMult = 1.0, pSpdMult = 1.0, pXpMult = 1.0, pDogeMult = 1;
-        if (curWorldId === 'ignis') { pHpMult = 2.2; pSpdMult = 1.12; pXpMult = 2.5; pDogeMult = 3; }
-        else if (curWorldId === 'cryo') { pHpMult = 4.8; pSpdMult = 1.22; pXpMult = 6.0; pDogeMult = 8; }
-        else if (curWorldId === 'cyber') { pHpMult = 11.0; pSpdMult = 1.38; pXpMult = 18.0; pDogeMult = 25; }
+        let pHpMult = 1.0, pSpdMult = 1.0, pDmgMult = 1.0, pXpMult = 1.0, pDogeMult = 1;
+        if (curWorldId === 'ignis') { pHpMult = 2.2; pSpdMult = 1.12; pDmgMult = 1.4; pXpMult = 2.5; pDogeMult = 3; }
+        else if (curWorldId === 'cryo') { pHpMult = 4.8; pSpdMult = 1.22; pDmgMult = 2.0; pXpMult = 6.0; pDogeMult = 8; }
+        else if (curWorldId === 'cyber') { pHpMult = 11.0; pSpdMult = 1.38; pDmgMult = 3.2; pXpMult = 18.0; pDogeMult = 25; }
 
         this.planetXpMult = pXpMult;
         this.planetDogeMult = pDogeMult;
+        this.damage = (0.5 + (level * 0.05)) * pDmgMult;
         this.maxHp = CONFIG.ENEMY_BASE_HEALTH * level * pHpMult;
         this.speed = (CONFIG.ENEMY_BASE_SPEED + (level * 0.15)) * pSpdMult;
         
@@ -7545,10 +7546,20 @@ function startGame() {
             if (window.innerWidth <= 850) chatBtn.style.display = 'flex';
             else chatBtn.style.display = 'none';
         }
-    } else {
         if (chat) chat.style.display = 'none';
         if (chatBtn) chatBtn.style.display = 'none';
     }
+
+    // Notify player of planet difficulty & rewards in battle
+    const curWorld = (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanet) || PLANET_WORLDS[0];
+    const curWorldId = curWorld.id || 'terra';
+    let pDiffTag = "1.0x Obtížnost";
+    if (curWorldId === 'ignis') pDiffTag = "🔴 2.2x Síla nepřátel • 3x DOGE";
+    else if (curWorldId === 'cryo') pDiffTag = "❄️ 4.8x Síla nepřátel • 8x DOGE";
+    else if (curWorldId === 'cyber') pDiffTag = "🟣 11x Síla nepřátel • 25x DOGE";
+    setTimeout(() => {
+        showCurrencyNotification(0, `${curWorld.name} (${pDiffTag})`);
+    }, 400);
 }
 
 function resetGame() {
