@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NEO SURVIVOR</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛸</text></svg>">
-    <link rel="stylesheet" href="style.css?v=1.650" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Outfit:wght@400;600;700;800;900&display=swap&subset=latin,latin-ext" rel="stylesheet">
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body oncontextmenu="return false;">
     <div id="portrait-lock-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; cursor: pointer;">
@@ -105,7 +108,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.676
+            NEO SURVIVOR v1.677
           </div>
         </div>
       </div>
@@ -170,23 +173,22 @@
             </div>
 
             <div class="menu-group" id="menu-group-progression">
-              <h3 class="menu-group-title">POSTUP</h3>
+              <h3 class="menu-group-title" data-i18n="POSTUP">POSTUP</h3>
               <div class="menu-actions-grid">
                 <button class="btn-restart btn-sub modern-glass-btn" id="btn-ships-menu"><span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span></button>
                 <button class="btn-restart btn-sub modern-glass-btn special-glow" id="btn-meta-menu"><span>🌌</span> <span>SKILL TREE</span></button>
-
                 <button class="btn-restart btn-sub modern-glass-btn" id="btn-leaderboard"><span>🏆</span> <span data-i18n="ŽEBŘÍČEK">ŽEBŘÍČEK</span></button>
                 <button class="btn-restart btn-sub modern-glass-btn" id="btn-achievements"><span>🌟</span> <span data-i18n="ÚSPĚCHY">ÚSPĚCHY</span></button>
               </div>
             </div>
 
             <div class="menu-group" id="menu-group-other">
-              <h3 class="menu-group-title">OSTATNÍ</h3>
-              <div class="menu-actions-grid secondary">
-                <button class="btn-restart btn-mini modern-glass-btn" id="btn-tutorial"><span>📖</span> <span data-i18n="NÁVOD">NÁVOD</span></button>
-                <button class="btn-restart btn-mini modern-glass-btn" id="btn-feedback"><span>💬</span> <span data-i18n="FEEDBACK">FEEDBACK</span></button>
-                <button class="btn-restart btn-mini modern-glass-btn" id="btn-settings"><span>⚙️</span> <span data-i18n="NASTAVENÍ">NASTAVENÍ</span></button>
-                <button class="btn-restart btn-mini modern-glass-btn premium-btn-quit" id="btn-main-quit"><span>🚪</span> <span data-i18n="ODHLÁSIT">ODHLÁSIT</span></button>
+              <h3 class="menu-group-title" data-i18n="OSTATNÍ">OSTATNÍ</h3>
+              <div class="menu-actions-grid">
+                <button class="btn-restart btn-sub modern-glass-btn" id="btn-tutorial"><span>📖</span> <span data-i18n="NÁVOD">NÁVOD</span></button>
+                <button class="btn-restart btn-sub modern-glass-btn" id="btn-feedback"><span>💬</span> <span data-i18n="FEEDBACK">FEEDBACK</span></button>
+                <button class="btn-restart btn-sub modern-glass-btn" id="btn-settings"><span>⚙️</span> <span data-i18n="NASTAVENÍ">NASTAVENÍ</span></button>
+                <button class="btn-restart btn-sub modern-glass-btn premium-btn-quit" id="btn-main-quit"><span>🚪</span> <span data-i18n="ODHLÁSIT">ODHLÁSIT</span></button>
               </div>
             </div>
           </div>
