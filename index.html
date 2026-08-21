@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.652
+            NEO SURVIVOR v1.653
           </div>
         </div>
       </div>
@@ -372,19 +372,20 @@
           </div>
           <div style="width: 100%; padding-top: 10px; margin-top: auto; padding-bottom: 10px; flex-shrink: 0;">
               <p style="color: #ef4444; font-size: 0.8rem; margin-bottom: 10px;" data-i18n="NEBEZPEČNÁ ZÓNA:">NEBEZPEČNÁ ZÓNA:</p>
-              <button id="btn-reset-progress" class="btn-restart" style="width: 100%; background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #fca5a5; white-space: normal; font-size: 1rem; padding: 0.8rem 1rem;" data-i18n="ODHLÁSIT SE A SMAZAT POSTUP">ODHLÁSIT SE A SMAZAT POSTUP</button>
-          </div>
+              <button id="btn-reset-progress" class="btn-restart" style="width: 100%; background: rgba(239, 68, 68, 0.2); bord      <!-- DOMOVSKÁ PLANETA (HOME PLANET) SCENE -->
+      <div id="planet-modal" class="modal" style="background: transparent;">
+        <!-- Animated Planet Surface & Landing Pad Canvas (FULL SCREEN) -->
+        <canvas id="planet-surface-canvas" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: block; z-index: 1;"></canvas>
+        
+        <!-- Status floating tag -->
+        <div id="planet-status-tag" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 5; font-size: 0.8rem; font-weight: 800; color: #10b981; background: rgba(0,0,0,0.65); padding: 6px 15px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.4); letter-spacing: 1px; backdrop-filter: blur(4px);">
+          🟢 ZÁKLADNA PŘIPRAVENA
         </div>
-      </div>
 
-      <!-- DOMOVSKÁ PLANETA (HOME PLANET) MODAL -->
-      <div id="planet-modal" class="modal">
-        <div class="modal-content" style="max-width: 780px; width: 95vw; background: radial-gradient(circle at top center, rgba(30, 45, 75, 0.98) 0%, rgba(10, 15, 30, 0.99) 100%); border: 1.5px solid rgba(16, 185, 129, 0.4); box-shadow: 0 0 50px rgba(16, 185, 129, 0.25); border-radius: 24px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;">
-          <button class="btn-close-x" onclick="document.getElementById('planet-modal').classList.remove('active'); document.getElementById('menu-modal').classList.add('active');">×</button>
+        <div class="modal-content" style="position: relative; z-index: 10; max-width: 900px; width: 95vw; background: transparent; border: none; box-shadow: none; max-height: 100vh; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 20px 0;">
           
-          <div class="modal-body" style="padding: 15px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;">
-            
-            <!-- Planet Header & Atmosphere -->
+          <!-- TOP UI (Header & Income) -->
+          <div style="background: rgba(10, 15, 30, 0.85); backdrop-filter: blur(10px); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 20px; padding: 15px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
             <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
               <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="font-size: 2.8rem; filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.5)); animation: floatPet 4s ease-in-out infinite;">🪐</div>
@@ -405,16 +406,8 @@
               </div>
             </div>
 
-            <!-- Animated Planet Surface & Landing Pad Canvas -->
-            <div style="position: relative; width: 100%; height: 180px; border-radius: 18px; overflow: hidden; border: 1.5px solid rgba(16, 185, 129, 0.4); box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);">
-              <canvas id="planet-surface-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
-              <div id="planet-status-tag" style="position: absolute; top: 10px; left: 12px; font-size: 0.68rem; font-weight: 800; color: #10b981; background: rgba(0,0,0,0.65); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.4); letter-spacing: 1px; backdrop-filter: blur(4px);">
-                🟢 ZÁKLADNA PŘIPRAVENA
-              </div>
-            </div>
-
             <!-- Revenue claim banner -->
-            <div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 16px; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div style="margin-top: 12px; background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 16px; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
               <div style="display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 1.8rem;">💰</span>
                 <div>
@@ -426,18 +419,24 @@
                 <span data-i18n="VYBRAT VÝNOS">VYBRAT VÝNOS</span>
               </button>
             </div>
+          </div>
+          
+          <!-- Spacer to let user see the planet -->
+          <div style="flex-grow: 1;"></div>
 
+          <!-- BOTTOM UI (Buildings & Actions) -->
+          <div style="background: rgba(10, 15, 30, 0.85); backdrop-filter: blur(10px); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 20px; padding: 15px 20px; box-shadow: 0 -10px 30px rgba(0,0,0,0.5);">
             <!-- Building Plots Section -->
-            <div>
+            <div style="max-height: 200px; overflow-y: auto; padding-right: 5px;">
               <h3 style="margin: 0 0 10px 0; font-size: 1rem; color: #a5b4fc; letter-spacing: 1px; text-transform: uppercase;" data-i18n="STAVEBNÍ PARCELY ZÁKLADNY">STAVEBNÍ PARCELY ZÁKLADNY</h3>
-              <div id="planet-plots-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px;">
+              <div id="planet-plots-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;">
                 <!-- Dynamically generated plots -->
               </div>
             </div>
 
             <!-- Bottom Combat & Hub Navigation Row -->
-            <div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; display: flex; flex-direction: column; gap: 10px;">
-              <button id="btn-planet-fight" class="btn-restart" style="width: 100%; padding: 15px; font-size: 1.3rem; font-weight: 900; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #fff; border: 2px solid rgba(255,255,255,0.3); border-radius: 16px; box-shadow: 0 0 25px rgba(239, 68, 68, 0.5); cursor: pointer; letter-spacing: 2px; text-transform: uppercase;">
+            <div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+              <button id="btn-planet-fight" class="btn-restart" style="width: 100%; padding: 18px; font-size: 1.5rem; font-weight: 900; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #fff; border: 2px solid rgba(255,255,255,0.3); border-radius: 16px; box-shadow: 0 0 30px rgba(239, 68, 68, 0.6); cursor: pointer; letter-spacing: 3px; text-transform: uppercase;">
                 <span>⚔️</span> <span data-i18n="BOJOVAT">BOJOVAT</span>
               </button>
               
@@ -453,10 +452,8 @@
                 </button>
               </div>
             </div>
-
           </div>
         </div>
-      </div>
 
       <div id="ships-modal" class="modal">
         <div class="modal-content">

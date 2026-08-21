@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.652
+ * NEO SURVIVOR - Core Game Logic - v1.653
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4055,10 +4055,10 @@ const PlanetVisualEngine = {
 
     resize() {
         if (!this.canvas) return;
-        // Statically lock the canvas resolution to prevent 0-width bugs from CSS display: none
-        this.canvas.width = 800;
-        this.canvas.height = 200;
-        this.targetY = this.canvas.height - 48;
+        // Full screen dynamically
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.targetY = this.canvas.height - 180; // Land closer to bottom
 
         this.stars = [];
         for (let i = 0; i < 40; i++) {
@@ -4247,7 +4247,7 @@ const PlanetVisualEngine = {
         const w = this.canvas.width;
         const h = this.canvas.height;
         const cx = w / 2;
-        const groundY = h - 25;
+        const groundY = this.targetY + 12;
 
         // 1. Alien cosmic sky gradient
         const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
@@ -4284,7 +4284,7 @@ const PlanetVisualEngine = {
         ctx.save();
         ctx.fillStyle = 'rgba(6, 78, 59, 0.4)';
         ctx.beginPath();
-        ctx.moveTo(0, groundY);
+        ctx.moveTo(0, groundY + 50);
         ctx.lineTo(0, groundY - 30);
         ctx.bezierCurveTo(w * 0.25, groundY - 60, w * 0.4, groundY - 20, w * 0.6, groundY - 45);
         ctx.bezierCurveTo(w * 0.75, groundY - 70, w * 0.9, groundY - 30, w, groundY - 35);
@@ -4298,8 +4298,8 @@ const PlanetVisualEngine = {
         foreGrad.addColorStop(1, '#022c22');
         ctx.fillStyle = foreGrad;
         ctx.beginPath();
-        ctx.moveTo(0, groundY);
-        ctx.bezierCurveTo(w * 0.3, groundY - 12, w * 0.7, groundY - 12, w, groundY);
+        ctx.moveTo(0, groundY + 50);
+        ctx.bezierCurveTo(w * 0.3, groundY - 12, w * 0.7, groundY - 12, w, groundY + 50);
         ctx.lineTo(w, h);
         ctx.lineTo(0, h);
         ctx.fill();
@@ -4309,14 +4309,14 @@ const PlanetVisualEngine = {
         if (META.planet && META.planet.buildings) {
             const builtIds = Object.keys(META.planet.buildings).filter(k => META.planet.buildings[k]);
             const plotPositions = [
-                { x: cx - 180, y: groundY - 12 },
-                { x: cx - 130, y: groundY - 8 },
-                { x: cx - 85,  y: groundY - 4 },
-                { x: cx + 85,  y: groundY - 4 },
-                { x: cx + 130, y: groundY - 8 },
-                { x: cx + 180, y: groundY - 12 },
-                { x: cx - 225, y: groundY - 16 },
-                { x: cx + 225, y: groundY - 16 }
+                { x: cx - 280, y: groundY - 12 },
+                { x: cx - 210, y: groundY - 8 },
+                { x: cx - 140, y: groundY - 4 },
+                { x: cx + 140, y: groundY - 4 },
+                { x: cx + 210, y: groundY - 8 },
+                { x: cx + 280, y: groundY - 12 },
+                { x: cx - 350, y: groundY - 16 },
+                { x: cx + 350, y: groundY - 16 }
             ];
 
             builtIds.forEach((bId, idx) => {
