@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.673
+ * NEO SURVIVOR - Core Game Logic - v1.674
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -7583,43 +7583,64 @@ window.connectToId = (id) => {
     if (input) input.value = id;
 };
 
-let currentCaptchaAnswer = 0;
-function generateCaptcha() {
-    const op = Math.random() > 0.4 ? '+' : (Math.random() > 0.5 ? '-' : '*');
-    let a = 0, b = 0;
-    if (op === '+') {
-        a = Math.floor(Math.random() * 15) + 3;
-        b = Math.floor(Math.random() * 15) + 2;
-        currentCaptchaAnswer = a + b;
-    } else if (op === '-') {
-        a = Math.floor(Math.random() * 20) + 10;
-        b = Math.floor(Math.random() * (a - 1)) + 1;
-        currentCaptchaAnswer = a - b;
-    } else {
-        a = Math.floor(Math.random() * 8) + 2;
-        b = Math.floor(Math.random() * 6) + 2;
-        currentCaptchaAnswer = a * b;
-    }
-    const el = document.getElementById('captcha-question');
-    if (el) el.innerText = `${a} ${op} ${b} = ?`;
-    const input = document.getElementById('input-captcha-answer');
-    if (input) input.value = '';
+let isCaptchaVerified = false;
+function initRecaptchaWidget() {
+    isCaptchaVerified = false;
+    const widget = document.getElementById('recaptcha-widget');
+    const checkbox = document.getElementById('recaptcha-checkbox');
+    const spinner = document.getElementById('recaptcha-spinner');
+    const check = document.getElementById('recaptcha-check');
+    if (!widget || !checkbox) return;
+
+    // Reset visual state
+    if (spinner) spinner.style.display = 'none';
+    if (check) check.style.display = 'none';
+    checkbox.style.borderColor = '#64748b';
+    checkbox.style.background = 'rgba(0,0,0,0.4)';
+    widget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+
+    widget.onclick = () => {
+        if (isCaptchaVerified) return;
+        if (spinner) spinner.style.display = 'block';
+        if (check) check.style.display = 'none';
+        checkbox.style.borderColor = '#38bdf8';
+
+        setTimeout(() => {
+            if (spinner) spinner.style.display = 'none';
+            if (check) {
+                check.style.display = 'block';
+                check.style.animation = 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            }
+            checkbox.style.borderColor = '#10b981';
+            checkbox.style.background = 'rgba(16, 185, 129, 0.2)';
+            widget.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+            isCaptchaVerified = true;
+            if (typeof playSound === 'function') playSound('coin');
+        }, 400);
+    };
 }
-window.generateCaptcha = generateCaptcha;
+window.initRecaptchaWidget = initRecaptchaWidget;
 
 function handleAuth(isLogin) {
     const nameVal = document.getElementById('input-login-name').value.trim();
     const passVal = document.getElementById('input-login-pass').value.trim();
-    const captchaInput = document.getElementById('input-captcha-answer');
-    const userCaptcha = parseInt(captchaInput ? captchaInput.value.trim() : '', 10);
 
     if (nameVal.length < 3) { window.showCustomAlert(window.T("Jméno musí mít alespoň 3 znaky!")); return; }
     if (passVal.length < 1) { window.showCustomAlert(window.T("Zadej heslo!")); return; }
-    if (isNaN(userCaptcha) || userCaptcha !== currentCaptchaAnswer) {
-        generateCaptcha();
-        window.showCustomAlert(window.T("Nesprávně vyřešená CAPTCHA ochrana! Zkus to znovu."));
+    
+    if (!isCaptchaVerified) {
+        const widget = document.getElementById('recaptcha-widget');
+        if (widget) {
+            widget.style.borderColor = '#ef4444';
+            widget.style.boxShadow = '0 0 15px rgba(239, 68, 68, 0.4)';
+            setTimeout(() => {
+                widget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                widget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+            }, 1500);
+        }
+        window.showCustomAlert(window.T("Prosím zaškrtni pole: Nejsem robot!"));
         const errorEl = document.getElementById('login-error');
-        if (errorEl) errorEl.innerText = window.T("Nesprávný výsledek CAPTCHA!");
+        if (errorEl) errorEl.innerText = window.T("Potvrď ochranu reCAPTCHA!");
         return;
     }
 
@@ -8549,9 +8570,7 @@ function init() {
     const btnRegister = document.getElementById('btn-register');
     if (btnRegister) btnRegister.onclick = () => handleAuth(false);
 
-    const btnRefreshCaptcha = document.getElementById('btn-refresh-captcha');
-    if (btnRefreshCaptcha) btnRefreshCaptcha.onclick = () => generateCaptcha();
-    generateCaptcha();
+    initRecaptchaWidget();
 
     // Daily Gift Logic (Streak based)
     const btnDaily = document.getElementById('btn-daily-gift');
