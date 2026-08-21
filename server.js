@@ -2069,7 +2069,7 @@ io.on('connection', (socket) => {
             })
             .map(r => {
                 const activePlayersCount = Object.values(r.players).filter(p => !p.disconnected).length;
-                return { id: r.id, players: activePlayersCount, level: r.level };
+                return { id: r.id, players: activePlayersCount, maxPlayers: 32, level: r.level };
             });
         socket.emit('roomList', activeRooms);
     });

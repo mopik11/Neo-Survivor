@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.659
+ * NEO SURVIVOR - Core Game Logic - v1.660
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4060,10 +4060,10 @@ const PlanetVisualEngine = {
             
             if (this.plotPositions) {
                 this.plotPositions.forEach((pos, idx) => {
+                    // Check click in building area or price badge
                     const dx = clickX - pos.x;
-                    const dy = clickY - pos.y;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    if (dist < 45) {
+                    const dy = clickY - (pos.y - 15);
+                    if (Math.abs(dx) < 38 && Math.abs(dy) < 48) {
                         const bInfo = PLANET_BUILDINGS[idx];
                         if (bInfo) this.attemptBuyBuilding(bInfo.id);
                     }
@@ -4085,18 +4085,20 @@ const PlanetVisualEngine = {
         if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
         if (META.planet.buildings[id]) return; // Already built
         const b = PLANET_BUILDINGS.find(x => x.id == id);
-        if (b && (META.dogeCoins || 0) >= b.cost) {
+        if (b && (META.currency || 0) >= b.cost) {
             if (NET.socket && NET.socket.connected) {
                 NET.socket.emit('purchase', { type: 'building', id: b.id, token: NET.sessionToken });
             } else {
-                META.dogeCoins -= b.cost;
+                META.currency -= b.cost;
                 META.planet.buildings[b.id] = true;
+                if (!META.planet.lastIncomeTime) META.planet.lastIncomeTime = Date.now();
                 saveMetaLocalOnly();
                 updateCurrencyUI();
-                if (typeof playSound === 'function') playSound('buy');
+                if (typeof playSound === 'function') playSound('upgrade');
             }
         } else {
             if (typeof playSound === 'function') playSound('error');
+            if (window.showCustomAlert) window.showCustomAlert(window.T("Nedostatek Dogecoinů na stavbu této budovy!"));
         }
     },
 
@@ -4105,19 +4107,19 @@ const PlanetVisualEngine = {
         const dpr = window.devicePixelRatio || 1;
         this.canvas.width = window.innerWidth * dpr;
         this.canvas.height = window.innerHeight * dpr;
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform before scale
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.scale(dpr, dpr);
         
         this.logicalW = window.innerWidth;
         this.logicalH = window.innerHeight;
-        this.targetY = Math.max(220, this.logicalH - 170);
+        this.targetY = Math.max(220, this.logicalH - 165);
 
         this.stars = [];
-        for (let i = 0; i < 60; i++) {
+        for (let i = 0; i < 70; i++) {
             this.stars.push({
                 x: Math.random() * this.logicalW,
                 y: Math.random() * (this.logicalH * 0.75),
-                size: Math.random() * 2 + 1,
+                size: Math.random() * 2 + 0.8,
                 opacity: Math.random() * 0.7 + 0.3
             });
         }
@@ -4129,7 +4131,7 @@ const PlanetVisualEngine = {
         this.mode = mode;
         this.launchCallback = onLaunch;
         this.state = 'landing';
-        this.shipY = -60;
+        this.shipY = -80;
         this.shipVy = 3.5;
         this.bounce = 0;
         this.particles = [];
@@ -4192,15 +4194,15 @@ const PlanetVisualEngine = {
         const cx = (this.logicalW || window.innerWidth) / 2;
         const cy = this.targetY;
 
-        // Volcano smoke / ember generator
-        if (Math.random() < 0.35) {
-            const volX = Math.max(70, this.logicalW * 0.12);
-            const volY = this.targetY - 40;
+        // Volcano smoke / ember generator on left horizon
+        if (Math.random() < 0.4) {
+            const volX = Math.max(70, this.logicalW * 0.10);
+            const volY = this.targetY - 35;
             this.particles.push({
-                x: volX + (Math.random() - 0.5) * 20,
+                x: volX + (Math.random() - 0.5) * 16,
                 y: volY,
-                vx: (Math.random() - 0.3) * 0.8,
-                vy: -(Math.random() * 1.5 + 0.8),
+                vx: (Math.random() - 0.3) * 0.7,
+                vy: -(Math.random() * 1.6 + 0.8),
                 size: Math.random() * 4 + 2,
                 color: Math.random() > 0.5 ? '#f97316' : '#ef4444',
                 alpha: 0.9,
@@ -4212,11 +4214,11 @@ const PlanetVisualEngine = {
             this.shipY += this.shipVy;
             for (let i = 0; i < 3; i++) {
                 this.particles.push({
-                    x: cx + (Math.random() - 0.5) * 16,
-                    y: this.shipY + 16,
+                    x: cx + (Math.random() - 0.5) * 18,
+                    y: this.shipY + 22,
                     vx: (Math.random() - 0.5) * 1.5,
                     vy: Math.random() * 3 + 2,
-                    size: Math.random() * 4 + 3,
+                    size: Math.random() * 5 + 3,
                     color: Math.random() > 0.4 ? '#38bdf8' : '#60a5fa',
                     alpha: 1,
                     life: 1
@@ -4232,7 +4234,7 @@ const PlanetVisualEngine = {
                     const spd = Math.random() * 4 + 1;
                     this.particles.push({
                         x: cx + (Math.random() - 0.5) * 24,
-                        y: cy + 10,
+                        y: cy + 12,
                         vx: Math.cos(a) * spd,
                         vy: Math.sin(a) * spd * 0.5,
                         size: Math.random() * 6 + 4,
@@ -4251,38 +4253,38 @@ const PlanetVisualEngine = {
             }
         } else if (this.state === 'idle') {
             if (this.bounce > 0) this.bounce *= 0.88;
-            this.shipY = cy + Math.sin(Date.now() / 350) * 1.2;
+            this.shipY = cy + Math.sin(Date.now() / 350) * 1.5;
 
             if (Math.random() < 0.2) {
                 this.particles.push({
                     x: cx + (Math.random() - 0.5) * 14,
-                    y: this.shipY + 14,
+                    y: this.shipY + 18,
                     vx: (Math.random() - 0.5) * 0.8,
                     vy: Math.random() * 1.2 + 0.5,
-                    size: Math.random() * 2 + 1,
+                    size: Math.random() * 2.5 + 1,
                     color: '#34d399',
                     alpha: 0.7,
                     life: 1
                 });
             }
         } else if (this.state === 'takeoff') {
-            this.shipVy += 0.45;
+            this.shipVy += 0.5;
             this.shipY -= this.shipVy;
 
-            for (let i = 0; i < 8; i++) {
+            for (let i = 0; i < 9; i++) {
                 this.particles.push({
                     x: cx + (Math.random() - 0.5) * 20,
-                    y: this.shipY + 15,
-                    vx: (Math.random() - 0.5) * 3,
-                    vy: Math.random() * 6 + 4,
-                    size: Math.random() * 7 + 4,
+                    y: this.shipY + 22,
+                    vx: (Math.random() - 0.5) * 3.5,
+                    vy: Math.random() * 7 + 4,
+                    size: Math.random() * 8 + 4,
                     color: Math.random() > 0.3 ? '#f59e0b' : '#ef4444',
                     alpha: 1,
                     life: 1
                 });
             }
 
-            if (this.shipY < -80) {
+            if (this.shipY < -120) {
                 this.state = 'done';
                 if (this.animFrame) cancelAnimationFrame(this.animFrame);
                 if (typeof this.launchCallback === 'function') {
@@ -4304,6 +4306,436 @@ const PlanetVisualEngine = {
         }
     },
 
+    // Vector drawing for each individual sci-fi building
+    drawBuildingModel(ctx, x, y, bId, isBuilt, isHovered, time) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        const primaryCol = isBuilt ? '#10b981' : '#64748b';
+        const secondaryCol = isBuilt ? '#34d399' : '#475569';
+        const darkBodyCol = isBuilt ? '#0f172a' : '#1e293b';
+        const glowCol = isBuilt ? '#10b981' : 'transparent';
+        const lightGlow = isBuilt ? 8 : 0;
+
+        // Draw Foundation base plate
+        ctx.fillStyle = isBuilt ? '#1e293b' : '#0f172a';
+        ctx.strokeStyle = primaryCol;
+        ctx.lineWidth = isHovered ? 2 : 1;
+        ctx.beginPath();
+        ctx.roundRect(-24, 0, 48, 6, 3);
+        ctx.fill();
+        ctx.stroke();
+
+        switch(bId) {
+            case 1: { // Těžební Vrt #1 (Mining Drill)
+                // Drill Derrick Tower Frame
+                ctx.strokeStyle = primaryCol;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-16, 0);
+                ctx.lineTo(-4, -36);
+                ctx.lineTo(4, -36);
+                ctx.lineTo(16, 0);
+                ctx.stroke();
+
+                // Cross braces
+                ctx.strokeStyle = secondaryCol;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(-13, -12); ctx.lineTo(13, -12);
+                ctx.moveTo(-9, -24); ctx.lineTo(9, -24);
+                ctx.moveTo(-13, -12); ctx.lineTo(9, -24);
+                ctx.moveTo(13, -12); ctx.lineTo(-9, -24);
+                ctx.stroke();
+
+                // Center animated drill rod
+                const drillOffset = isBuilt ? Math.sin(time * 8) * 4 : 0;
+                ctx.fillStyle = isBuilt ? '#fbbf24' : '#94a3b8';
+                ctx.fillRect(-2, -32 + drillOffset, 4, 30);
+                // Top beacon light
+                ctx.fillStyle = isBuilt ? '#ef4444' : '#64748b';
+                ctx.beginPath();
+                ctx.arc(0, -38, 3, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+
+            case 2: { // Solární Kolektor #2 (Solar Array)
+                // Support pillar
+                ctx.fillStyle = secondaryCol;
+                ctx.fillRect(-3, -16, 6, 16);
+                
+                // Rotated solar panel array
+                ctx.save();
+                ctx.translate(0, -18);
+                const tilt = isBuilt ? Math.sin(time * 0.5) * 0.15 - 0.2 : -0.2;
+                ctx.rotate(tilt);
+                ctx.fillStyle = isBuilt ? '#0284c7' : '#334155';
+                ctx.strokeStyle = isBuilt ? '#38bdf8' : '#64748b';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.roundRect(-22, -8, 44, 16, 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Solar grid lines
+                ctx.strokeStyle = isBuilt ? '#7dd3fc' : '#475569';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(-11, -8); ctx.lineTo(-11, 8);
+                ctx.moveTo(0, -8); ctx.lineTo(0, 8);
+                ctx.moveTo(11, -8); ctx.lineTo(11, 8);
+                ctx.moveTo(-22, 0); ctx.lineTo(22, 0);
+                ctx.stroke();
+                ctx.restore();
+                break;
+            }
+
+            case 3: { // Krystalový Důl #3 (Crystal Mine)
+                // Cave / Mine structure dome
+                ctx.fillStyle = darkBodyCol;
+                ctx.strokeStyle = primaryCol;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(0, 0, 18, Math.PI, 0);
+                ctx.fill();
+                ctx.stroke();
+
+                // Mine entrance
+                ctx.fillStyle = '#020617';
+                ctx.beginPath();
+                ctx.arc(0, 0, 9, Math.PI, 0);
+                ctx.fill();
+
+                // Glowing purple/cyan crystals emerging from top
+                const crystalPulse = isBuilt ? (Math.sin(time * 4) * 0.3 + 0.7) : 0.4;
+                ctx.fillStyle = isBuilt ? `rgba(192, 132, 252, ${crystalPulse})` : '#475569';
+                ctx.strokeStyle = isBuilt ? '#a855f7' : '#64748b';
+                ctx.lineWidth = 1;
+                // Main crystal
+                ctx.beginPath();
+                ctx.moveTo(0, -32);
+                ctx.lineTo(5, -16);
+                ctx.lineTo(-5, -16);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                // Left crystal
+                ctx.beginPath();
+                ctx.moveTo(-8, -26);
+                ctx.lineTo(-4, -14);
+                ctx.lineTo(-12, -14);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                // Right crystal
+                ctx.beginPath();
+                ctx.moveTo(8, -24);
+                ctx.lineTo(12, -14);
+                ctx.lineTo(4, -14);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+            }
+
+            case 4: { // Doge Reaktor #4 (Doge Reactor)
+                // Reactor cylinder body
+                ctx.fillStyle = darkBodyCol;
+                ctx.strokeStyle = isBuilt ? '#eab308' : '#64748b';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.roundRect(-16, -26, 32, 26, 4);
+                ctx.fill();
+                ctx.stroke();
+
+                // Reactor window / core with pulsing Doge logo or lightning
+                ctx.fillStyle = isBuilt ? '#fef08a' : '#334155';
+                ctx.beginPath();
+                ctx.arc(0, -13, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Lightning / energy symbol
+                ctx.fillStyle = isBuilt ? '#ca8a04' : '#1e293b';
+                ctx.beginPath();
+                ctx.moveTo(0, -18);
+                ctx.lineTo(-3, -13);
+                ctx.lineTo(1, -13);
+                ctx.lineTo(-1, -8);
+                ctx.lineTo(3, -14);
+                ctx.lineTo(-1, -14);
+                ctx.closePath();
+                ctx.fill();
+
+                // Magnetic top coil rings
+                ctx.strokeStyle = isBuilt ? '#facc15' : '#475569';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-12, -29); ctx.lineTo(12, -29);
+                ctx.moveTo(-8, -32); ctx.lineTo(8, -32);
+                ctx.stroke();
+                break;
+            }
+
+            case 5: { // Termální Generátor #5 (Thermal Generator)
+                // Geothermal furnace cylinder
+                ctx.fillStyle = darkBodyCol;
+                ctx.strokeStyle = isBuilt ? '#f97316' : '#64748b';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.roundRect(-15, -28, 30, 28, 3);
+                ctx.fill();
+                ctx.stroke();
+
+                // Glowing lava/heat pipes
+                ctx.fillStyle = isBuilt ? '#ea580c' : '#334155';
+                ctx.beginPath();
+                ctx.roundRect(-11, -20, 22, 10, 2);
+                ctx.fill();
+
+                // Steam chimneys on top
+                ctx.fillStyle = secondaryCol;
+                ctx.fillRect(-10, -34, 6, 7);
+                ctx.fillRect(4, -34, 6, 7);
+                break;
+            }
+
+            case 6: { // Atómová Elektrárna #6 (Nuclear Cooling Tower)
+                // Hyperboloid Cooling Tower shape
+                ctx.fillStyle = darkBodyCol;
+                ctx.strokeStyle = isBuilt ? '#22c55e' : '#64748b';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(-16, 0);
+                ctx.quadraticCurveTo(-10, -18, -12, -34);
+                ctx.lineTo(12, -34);
+                ctx.quadraticCurveTo(10, -18, 16, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Radiation Warning Icon
+                ctx.fillStyle = isBuilt ? '#4ade80' : '#475569';
+                ctx.beginPath();
+                ctx.arc(0, -16, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Green radiation ring glow at the top
+                if (isBuilt) {
+                    ctx.strokeStyle = '#86efac';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.ellipse(0, -34, 12, 3, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                break;
+            }
+
+            case 7: { // Fúzní Komora #7 (Fusion Chamber)
+                // Tokamak spherical magnetic chamber
+                ctx.fillStyle = darkBodyCol;
+                ctx.strokeStyle = isBuilt ? '#06b6d4' : '#64748b';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, -16, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Orbital Magnetic Containment Rings
+                ctx.strokeStyle = isBuilt ? '#22d3ee' : '#475569';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.ellipse(0, -16, 20, 6, time * 2, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Pulsing glowing blue plasma core
+                const plasmaSize = isBuilt ? 6 + Math.sin(time * 6) * 1.5 : 4;
+                ctx.fillStyle = isBuilt ? '#67e8f9' : '#334155';
+                ctx.beginPath();
+                ctx.arc(0, -16, plasmaSize, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+
+            case 8: { // Kvantový Důl #8 (Quantum Spire)
+                // Quantum Obelisk base
+                ctx.fillStyle = darkBodyCol;
+                ctx.strokeStyle = isBuilt ? '#a855f7' : '#64748b';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(-14, 0);
+                ctx.lineTo(-8, -14);
+                ctx.lineTo(8, -14);
+                ctx.lineTo(14, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Floating Levitation Crystal Spire
+                const floatY = isBuilt ? Math.sin(time * 3) * 3 : 0;
+                ctx.save();
+                ctx.translate(0, -22 + floatY);
+                ctx.fillStyle = isBuilt ? '#c084fc' : '#334155';
+                ctx.strokeStyle = isBuilt ? '#e879f9' : '#64748b';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(0, -22);
+                ctx.lineTo(6, 0);
+                ctx.lineTo(0, 6);
+                ctx.lineTo(-6, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+
+                // Vertical laser beam upwards into space
+                if (isBuilt) {
+                    ctx.strokeStyle = 'rgba(192, 132, 252, 0.4)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -44);
+                    ctx.lineTo(0, -120);
+                    ctx.stroke();
+                }
+                break;
+            }
+        }
+
+        ctx.restore();
+    },
+
+    // Vector modeled rocket spaceship (No emojis!)
+    drawRocketModel(ctx, x, y, vy, state, time) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Rocket body dimensions
+        const bodyW = 22;
+        const bodyH = 46;
+
+        // Thruster flame when landing / takeoff / idle
+        if (state === 'takeoff' || state === 'landing' || state === 'idle') {
+            const flameLen = (state === 'takeoff') ? 35 + Math.sin(time * 20) * 8 : (state === 'landing') ? 22 + Math.sin(time * 15) * 5 : 10 + Math.sin(time * 10) * 3;
+            
+            // Outer Orange/Red Flame
+            ctx.fillStyle = (state === 'takeoff') ? '#ef4444' : '#0284c7';
+            ctx.beginPath();
+            ctx.moveTo(-bodyW * 0.35, bodyH * 0.45);
+            ctx.lineTo(0, bodyH * 0.45 + flameLen);
+            ctx.lineTo(bodyW * 0.35, bodyH * 0.45);
+            ctx.closePath();
+            ctx.fill();
+
+            // Inner Bright Yellow/Cyan Core Flame
+            ctx.fillStyle = (state === 'takeoff') ? '#fbbf24' : '#38bdf8';
+            ctx.beginPath();
+            ctx.moveTo(-bodyW * 0.2, bodyH * 0.45);
+            ctx.lineTo(0, bodyH * 0.45 + flameLen * 0.65);
+            ctx.lineTo(bodyW * 0.2, bodyH * 0.45);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Left & Right Delta Wings / Fins
+        ctx.fillStyle = '#475569';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 1.5;
+        // Left Wing
+        ctx.beginPath();
+        ctx.moveTo(-bodyW * 0.4, 0);
+        ctx.lineTo(-bodyW * 1.1, bodyH * 0.42);
+        ctx.lineTo(-bodyW * 0.4, bodyH * 0.38);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Right Wing
+        ctx.beginPath();
+        ctx.moveTo(bodyW * 0.4, 0);
+        ctx.lineTo(bodyW * 1.1, bodyH * 0.42);
+        ctx.lineTo(bodyW * 0.4, bodyH * 0.38);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Wingtip beacon lights
+        ctx.fillStyle = '#ef4444'; // Red on left
+        ctx.beginPath(); ctx.arc(-bodyW * 1.05, bodyH * 0.4, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#22c55e'; // Green on right
+        ctx.beginPath(); ctx.arc(bodyW * 1.05, bodyH * 0.4, 2, 0, Math.PI * 2); ctx.fill();
+
+        // Rocket Main Fuselage Hull
+        const hullGrad = ctx.createLinearGradient(-bodyW / 2, 0, bodyW / 2, 0);
+        hullGrad.addColorStop(0, '#e2e8f0');
+        hullGrad.addColorStop(0.5, '#f8fafc');
+        hullGrad.addColorStop(1, '#94a3b8');
+        ctx.fillStyle = hullGrad;
+        ctx.strokeStyle = '#4338ca';
+        ctx.lineWidth = 2;
+        
+        ctx.beginPath();
+        ctx.moveTo(0, -bodyH * 0.55); // Nose cone tip
+        ctx.bezierCurveTo(-bodyW * 0.6, -bodyH * 0.2, -bodyW * 0.55, bodyH * 0.3, -bodyW * 0.4, bodyH * 0.42);
+        ctx.lineTo(bodyW * 0.4, bodyH * 0.42);
+        ctx.bezierCurveTo(bodyW * 0.55, bodyH * 0.3, bodyW * 0.6, -bodyH * 0.2, 0, -bodyH * 0.55);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Center fuselage racing stripe
+        ctx.fillStyle = '#6366f1';
+        ctx.fillRect(-3, -bodyH * 0.25, 6, bodyH * 0.62);
+
+        // Cockpit Glass Canopy
+        ctx.fillStyle = '#06b6d4';
+        ctx.strokeStyle = '#0891b2';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(0, -bodyH * 0.15, bodyW * 0.24, bodyH * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // Glass specular sheen
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.beginPath();
+        ctx.ellipse(-1.5, -bodyH * 0.18, 2, 4, -Math.PI / 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rocket Thruster Engine Bell Nozzle
+        ctx.fillStyle = '#1e293b';
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-bodyW * 0.3, bodyH * 0.42);
+        ctx.lineTo(-bodyW * 0.35, bodyH * 0.48);
+        ctx.lineTo(bodyW * 0.35, bodyH * 0.48);
+        ctx.lineTo(bodyW * 0.3, bodyH * 0.42);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Equipped Hat (if unlocked/selected)
+        if (META.upgrades && META.upgrades.hat && typeof EMOJIS !== 'undefined') {
+            const hatObj = EMOJIS.find(e => e.id === META.upgrades.hat);
+            if (hatObj) {
+                ctx.font = '18px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(hatObj.icon, 0, -bodyH * 0.58);
+            }
+        }
+
+        // Equipped Pet (if unlocked/selected)
+        if ((META.maxLevel || 1) >= 15 && META.selectedPet && typeof EMOJIS !== 'undefined') {
+            const petObj = EMOJIS.find(e => e.id === META.selectedPet);
+            if (petObj) {
+                const petOffset = Math.sin(time * 4) * 4;
+                ctx.font = '20px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(petObj.icon, 28, -10 + petOffset);
+            }
+        }
+
+        ctx.restore();
+    },
+
     draw() {
         try {
             const ctx = this.ctx;
@@ -4311,28 +4743,30 @@ const PlanetVisualEngine = {
             const w = this.logicalW || window.innerWidth;
             const h = this.logicalH || window.innerHeight;
             const cx = w / 2;
-            const groundY = this.targetY + 14;
+            const groundY = this.targetY + 12;
+            const time = Date.now() / 1000;
 
-            // 1. Alien cosmic sky gradient
+            // 1. Deep cosmic starry background
             const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-            skyGrad.addColorStop(0, '#030712');
-            skyGrad.addColorStop(0.5, '#0b132b');
-            skyGrad.addColorStop(1, '#064e3b');
+            skyGrad.addColorStop(0, '#020617');
+            skyGrad.addColorStop(0.45, '#0b132b');
+            skyGrad.addColorStop(0.85, '#064e3b');
+            skyGrad.addColorStop(1, '#022c22');
             ctx.fillStyle = skyGrad;
             ctx.fillRect(0, 0, w, h);
 
             // 2. Distant planetary moon / ring glow
             ctx.save();
             ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
-            ctx.lineWidth = 10;
+            ctx.lineWidth = 8;
             ctx.beginPath();
-            ctx.ellipse(w * 0.82, Math.min(100, h * 0.18), 75, 18, Math.PI / 6, 0, Math.PI * 2);
+            ctx.ellipse(w * 0.84, Math.min(100, h * 0.18), 70, 16, Math.PI / 6, 0, Math.PI * 2);
             ctx.stroke();
             ctx.fillStyle = '#fbbf24';
             ctx.shadowBlur = 20;
             ctx.shadowColor = '#fbbf24';
             ctx.beginPath();
-            ctx.arc(w * 0.82, Math.min(100, h * 0.18), 24, 0, Math.PI * 2);
+            ctx.arc(w * 0.84, Math.min(100, h * 0.18), 22, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
 
@@ -4340,7 +4774,7 @@ const PlanetVisualEngine = {
             ctx.save();
             if (this.stars) {
                 this.stars.forEach(s => {
-                    ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity * (0.8 + 0.2 * Math.sin(Date.now() / 400 + s.x))})`;
+                    ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity * (0.8 + 0.2 * Math.sin(time * 2 + s.x))})`;
                     ctx.beginPath();
                     ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
                     ctx.fill();
@@ -4348,16 +4782,16 @@ const PlanetVisualEngine = {
             }
             ctx.restore();
 
-            // 4. Horizon Volcano (Requested by user)
-            const volX = Math.max(70, w * 0.12);
-            const volY = groundY - 20;
+            // 4. Active Smoking Volcano on left horizon
+            const volX = Math.max(70, w * 0.10);
+            const volY = groundY - 15;
             ctx.save();
             ctx.fillStyle = '#1e1b4b';
             ctx.beginPath();
-            ctx.moveTo(volX - 70, groundY + 40);
-            ctx.lineTo(volX - 16, volY - 30);
-            ctx.lineTo(volX + 16, volY - 30);
-            ctx.lineTo(volX + 70, groundY + 40);
+            ctx.moveTo(volX - 65, groundY + 40);
+            ctx.lineTo(volX - 14, volY - 26);
+            ctx.lineTo(volX + 14, volY - 26);
+            ctx.lineTo(volX + 65, groundY + 40);
             ctx.closePath();
             ctx.fill();
 
@@ -4366,29 +4800,29 @@ const PlanetVisualEngine = {
             ctx.shadowBlur = 15;
             ctx.shadowColor = '#f97316';
             ctx.beginPath();
-            ctx.ellipse(volX, volY - 30, 16, 5, 0, 0, Math.PI * 2);
+            ctx.ellipse(volX, volY - 26, 14, 4, 0, 0, Math.PI * 2);
             ctx.fill();
 
             // Magma Vein lines
-            ctx.strokeStyle = 'rgba(249, 115, 22, 0.7)';
+            ctx.strokeStyle = 'rgba(249, 115, 22, 0.75)';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(volX - 6, volY - 28);
-            ctx.lineTo(volX - 12, volY + 10);
-            ctx.lineTo(volX - 25, groundY + 20);
-            ctx.moveTo(volX + 6, volY - 28);
-            ctx.lineTo(volX + 14, volY + 5);
-            ctx.lineTo(volX + 22, groundY + 25);
+            ctx.moveTo(volX - 5, volY - 24);
+            ctx.lineTo(volX - 12, volY + 6);
+            ctx.lineTo(volX - 22, groundY + 15);
+            ctx.moveTo(volX + 5, volY - 24);
+            ctx.lineTo(volX + 12, volY + 2);
+            ctx.lineTo(volX + 20, groundY + 20);
             ctx.stroke();
             ctx.restore();
 
-            // 5. Midground Hills
+            // 5. Distant hills terrain
             ctx.save();
             ctx.fillStyle = '#064e3b';
             ctx.beginPath();
             ctx.moveTo(0, groundY + 30);
-            ctx.bezierCurveTo(w * 0.25, groundY - 50, w * 0.45, groundY - 15, w * 0.65, groundY - 40);
-            ctx.bezierCurveTo(w * 0.8, groundY - 60, w * 0.95, groundY - 20, w, groundY - 25);
+            ctx.bezierCurveTo(w * 0.25, groundY - 40, w * 0.45, groundY - 15, w * 0.65, groundY - 35);
+            ctx.bezierCurveTo(w * 0.8, groundY - 50, w * 0.95, groundY - 20, w, groundY - 20);
             ctx.lineTo(w, h);
             ctx.lineTo(0, h);
             ctx.fill();
@@ -4399,7 +4833,7 @@ const PlanetVisualEngine = {
             const fgGrad = ctx.createLinearGradient(0, groundY - 10, 0, h);
             fgGrad.addColorStop(0, '#042f2e');
             fgGrad.addColorStop(0.3, '#022c22');
-            fgGrad.addColorStop(1, '#021a14');
+            fgGrad.addColorStop(1, '#011c16');
             ctx.fillStyle = fgGrad;
             ctx.strokeStyle = '#10b981';
             ctx.lineWidth = 3;
@@ -4412,7 +4846,7 @@ const PlanetVisualEngine = {
             ctx.fill();
             ctx.stroke();
 
-            // Surface sci-fi grid lines
+            // Surface sci-fi cybernetic lines
             ctx.strokeStyle = 'rgba(16, 185, 129, 0.15)';
             ctx.lineWidth = 1;
             for (let i = 0; i < 7; i++) {
@@ -4424,119 +4858,90 @@ const PlanetVisualEngine = {
             }
             ctx.restore();
 
-            // 7. Calculate plot positions along the terrain curve
-            const gap = Math.min(75, (w / 2 - 70) / 4);
+            // 7. Calculate 8 building plot positions evenly distributed along the horizon
+            // Leaving a large clear space in the center for the launchpad
+            const spread = Math.min(w * 0.42, 520);
             this.plotPositions = [
-                { x: cx - (gap * 4.2), y: groundY - 10 },
-                { x: cx - (gap * 3.1), y: groundY - 14 },
-                { x: cx - (gap * 2.0), y: groundY - 16 },
-                { x: cx - (gap * 1.0), y: groundY - 17 },
-                { x: cx + (gap * 1.0), y: groundY - 17 },
-                { x: cx + (gap * 2.0), y: groundY - 16 },
-                { x: cx + (gap * 3.1), y: groundY - 14 },
-                { x: cx + (gap * 4.2), y: groundY - 10 }
+                // Left 4 buildings
+                { x: cx - spread * 0.96, y: groundY + 12 },
+                { x: cx - spread * 0.72, y: groundY + 2 },
+                { x: cx - spread * 0.48, y: groundY - 5 },
+                { x: cx - spread * 0.25, y: groundY - 9 },
+                // Right 4 buildings
+                { x: cx + spread * 0.25, y: groundY - 9 },
+                { x: cx + spread * 0.48, y: groundY - 5 },
+                { x: cx + spread * 0.72, y: groundY + 2 },
+                { x: cx + spread * 0.96, y: groundY + 12 }
             ];
 
-            // 8. Draw Built Base Structures & Empty Plots
+            // 8. Draw Vector Buildings & Clean Floating Price Badges
             if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
             if (!META.planet.buildings) META.planet.buildings = {};
-            
+
             PLANET_BUILDINGS.forEach((bInfo, idx) => {
                 const pos = this.plotPositions[idx];
                 if (!pos) return;
                 
-                const isBuilt = META.planet.buildings[bInfo.id];
+                const isBuilt = !!META.planet.buildings[bInfo.id];
                 
-                // Hover check
+                // Hover detection
                 let isHovered = false;
                 if (this.mouseX !== undefined && this.mouseY !== undefined) {
                     const dx = this.mouseX - pos.x;
-                    const dy = this.mouseY - pos.y;
-                    if (Math.sqrt(dx*dx + dy*dy) < 42) isHovered = true;
+                    const dy = this.mouseY - (pos.y - 15);
+                    if (Math.abs(dx) < 38 && Math.abs(dy) < 48) isHovered = true;
                 }
 
+                // Draw the custom vector modeled building
+                this.drawBuildingModel(ctx, pos.x, pos.y, bInfo.id, isBuilt, isHovered, time);
+
+                // Draw the clean floating text box / price badge in front
                 ctx.save();
+                const badgeY = pos.y + 14;
+                const badgeW = 74;
+                const badgeH = 26;
+
+                // Badge container box
+                ctx.fillStyle = isHovered ? 'rgba(15, 23, 42, 0.95)' : 'rgba(10, 15, 30, 0.85)';
+                ctx.strokeStyle = isBuilt ? '#10b981' : (isHovered ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)');
+                ctx.lineWidth = isHovered ? 1.5 : 1;
+                if (isHovered && !isBuilt) {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#fbbf24';
+                }
+                ctx.beginPath();
+                ctx.roundRect(pos.x - badgeW / 2, badgeY, badgeW, badgeH, 6);
+                ctx.fill();
+                ctx.stroke();
+
                 if (isBuilt) {
-                    // Structure Base Platform
-                    ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
-                    ctx.strokeStyle = '#10b981';
-                    ctx.lineWidth = isHovered ? 2.5 : 1.5;
-                    ctx.beginPath();
-                    ctx.ellipse(pos.x, pos.y + 12, 28, 9, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
-
-                    // Building Dome Silhouette
-                    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-                    ctx.strokeStyle = '#34d399';
-                    ctx.lineWidth = 1.5;
-                    ctx.beginPath();
-                    ctx.arc(pos.x, pos.y - 4, 18, Math.PI, 0);
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.stroke();
-
-                    // Animated Floating Building Icon
-                    const bobY = Math.sin(Date.now() / 300 + idx) * 3;
-                    ctx.font = '24px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+                    // Status text inside badge
+                    ctx.fillStyle = '#34d399';
+                    ctx.font = 'bold 9px "Inter", Arial, sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(bInfo.icon, pos.x, pos.y - 10 + bobY);
-
-                    // Income Badge (+1 DOGE/min)
+                    ctx.fillText('AKTIVNÍ', pos.x, badgeY + 11);
                     ctx.fillStyle = '#fbbf24';
-                    ctx.font = 'bold 9px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('+1/m', pos.x, pos.y + 24);
-
-                    // Particle emissions
-                    if (Math.random() < 0.25) {
-                        this.particles.push({
-                            x: pos.x + (Math.random() - 0.5) * 12,
-                            y: pos.y - 15,
-                            vx: (Math.random() - 0.5) * 0.6,
-                            vy: -(Math.random() * 1.2 + 0.4),
-                            size: Math.random() * 3 + 1.5,
-                            color: (bInfo.icon === '☢️' || bInfo.icon === '⚡') ? '#38bdf8' : '#34d399',
-                            alpha: 0.9,
-                            life: 0.8
-                        });
-                    }
+                    ctx.font = 'bold 8.5px "Inter", Arial, sans-serif';
+                    ctx.fillText('+1 DOGE/m', pos.x, badgeY + 21);
                 } else {
-                    // Empty Construction Hologram Pad
-                    ctx.fillStyle = isHovered ? 'rgba(251, 191, 36, 0.25)' : 'rgba(255, 255, 255, 0.08)';
-                    ctx.strokeStyle = isHovered ? '#fbbf24' : 'rgba(255, 255, 255, 0.35)';
-                    ctx.lineWidth = isHovered ? 2 : 1;
-                    if (isHovered) {
-                        ctx.shadowBlur = 12;
-                        ctx.shadowColor = '#fbbf24';
-                    }
-                    ctx.beginPath();
-                    ctx.ellipse(pos.x, pos.y + 10, 26, 8, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
-
-                    // Semi-transparent prospective building icon
-                    ctx.globalAlpha = isHovered ? 0.95 : 0.45;
-                    ctx.font = '22px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+                    // Building Name & Price text inside badge
+                    ctx.fillStyle = isHovered ? '#fbbf24' : '#cbd5e1';
+                    ctx.font = 'bold 8.5px "Inter", Arial, sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(bInfo.icon, pos.x, pos.y - 8);
+                    ctx.fillText(bInfo.name.split(' #')[0], pos.x, badgeY + 10);
 
-                    // Cost button badge
-                    ctx.globalAlpha = 1.0;
-                    ctx.fillStyle = (META.dogeCoins >= bInfo.cost) ? '#10b981' : '#ef4444';
-                    ctx.font = 'bold 9px Arial';
-                    ctx.textAlign = 'center';
-                    const label = (bInfo.cost >= 1000) ? (bInfo.cost / 1000) + 'k D' : bInfo.cost + ' D';
-                    ctx.fillText(label, pos.x, pos.y + 24);
+                    const canAfford = (META.currency || 0) >= bInfo.cost;
+                    ctx.fillStyle = canAfford ? '#10b981' : '#ef4444';
+                    ctx.font = '900 9px "Inter", Arial, sans-serif';
+                    const costText = (bInfo.cost >= 1000) ? (bInfo.cost / 1000) + 'k DOGE' : bInfo.cost + ' DOGE';
+                    ctx.fillText(costText, pos.x, badgeY + 21);
                 }
                 ctx.restore();
             });
 
             // 9. Futuristic Landing Pad Platform in center
             ctx.save();
-            const padW = Math.min(130, w * 0.22);
+            const padW = Math.min(140, w * 0.22);
             const padH = 22;
             const padY = this.targetY + 8;
 
@@ -4587,8 +4992,7 @@ const PlanetVisualEngine = {
             });
             ctx.restore();
 
-            // 11. Draw Player's Space Rocket Ship
-            ctx.save();
+            // 11. Draw Vector Modelled Rocket Ship (No emoji!)
             const shipX = cx;
             const shipY = this.shipY;
 
@@ -4601,56 +5005,8 @@ const PlanetVisualEngine = {
                 ctx.fill();
             }
 
-            // Determine Player's ship icon
-            const shipsList = [
-                { id: 1, name: 'Průzkumník', icon: '🚀' },
-                { id: 2, name: 'Laserová Loď', icon: '🩸' },
-                { id: 3, name: 'Drtivá Zeď', icon: '🌊' },
-                { id: 4, name: 'Brokovnice', icon: '💥' },
-                { id: 5, name: 'Nekromancer', icon: '💀' },
-                { id: 6, name: 'Assassin', icon: '🥷' },
-                { id: 7, name: 'Zvukař', icon: '🎧' }
-            ];
-            const activeShip = shipsList.find(s => s.id === parseInt(META.selectedShip)) || shipsList[0];
+            this.drawRocketModel(ctx, shipX, shipY, this.shipVy, this.state, time);
 
-            // Draw Rocket Hull
-            ctx.translate(shipX, shipY);
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#6366f1';
-            ctx.fillStyle = '#0f172a';
-            ctx.strokeStyle = '#6366f1';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.arc(0, 0, 22, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            // Ship Icon Emoji
-            ctx.shadowBlur = 0;
-            ctx.font = '28px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(activeShip.icon, 0, 2);
-
-            // Equipped Hat
-            if (META.upgrades && META.upgrades.hat && typeof EMOJIS !== 'undefined') {
-                const hatObj = EMOJIS.find(e => e.id === META.upgrades.hat);
-                if (hatObj) {
-                    ctx.font = '18px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
-                    ctx.fillText(hatObj.icon, 0, -22);
-                }
-            }
-
-            // Equipped Pet floating near ship
-            if ((META.maxLevel || 1) >= 15 && META.selectedPet && typeof EMOJIS !== 'undefined') {
-                const petObj = EMOJIS.find(e => e.id === META.selectedPet);
-                if (petObj) {
-                    const petOffset = Math.sin(Date.now() / 250) * 4;
-                    ctx.font = '20px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
-                    ctx.fillText(petObj.icon, 26, -12 + petOffset);
-                }
-            }
-            ctx.restore();
         } catch (e) {
             console.error("PlanetDraw Error:", e);
         }
@@ -6386,7 +6742,7 @@ function initSocket() {
                 btn.innerHTML = `
                     <div>
                         <strong style="color: #a5b4fc; font-size: 1.1rem; letter-spacing: 2px;">${room.id}</strong>
-                        <div style="font-size: 0.75rem; color: gray; margin-top: 4px;">LVL ${room.level} | Hráči: ${room.players}</div>
+                        <div style="font-size: 0.75rem; color: gray; margin-top: 4px;">LVL ${room.level} | Hráči: ${room.players} / ${room.maxPlayers || 32}</div>
                     </div>
                     <button class="btn-restart" style="padding: 8px 15px; font-size: 0.8rem; background: #10b981; margin: 0;" onclick="window.joinCloudServer('${room.id}')">HRÁT</button>
                 `;
