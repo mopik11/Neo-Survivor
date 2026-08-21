@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.662
+ * NEO SURVIVOR - Core Game Logic - v1.663
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4061,23 +4061,11 @@ const PlanetVisualEngine = {
             const cx = (this.logicalW || window.innerWidth) / 2;
             const shipY = this.shipY;
             
-            // 1. Check click on the Rocket itself
+            // 1. Direct click on the Rocket immediately launches into space!
             const dxRocket = clickX - cx;
             const dyRocket = clickY - shipY;
-            if (Math.abs(dxRocket) < 45 && Math.abs(dyRocket) < 65) {
-                if (typeof playSound === 'function') playSound('btnClick');
-                this.rocketSelected = true;
-                const fightBtn = document.getElementById('btn-planet-fight');
-                if (fightBtn) {
-                    fightBtn.style.display = 'block';
-                    fightBtn.style.animation = 'pulseGlow 1.5s infinite alternate';
-                }
-                const tag = document.getElementById('planet-status-tag');
-                if (tag) {
-                    tag.innerHTML = `<span>🚀 RAKETA PŘIPRAVENA KE STARTU!</span>`;
-                    tag.style.color = '#fbbf24';
-                    tag.style.borderColor = 'rgba(251, 191, 36, 0.4)';
-                }
+            if (Math.abs(dxRocket) < 48 && Math.abs(dyRocket) < 65) {
+                this.startTakeoff();
                 return;
             }
 
@@ -4138,12 +4126,13 @@ const PlanetVisualEngine = {
         this.targetY = Math.max(240, this.logicalH - 175);
 
         this.stars = [];
-        for (let i = 0; i < 75; i++) {
+        for (let i = 0; i < 80; i++) {
             this.stars.push({
                 x: Math.random() * this.logicalW,
-                y: Math.random() * (this.logicalH * 0.75),
+                y: Math.random() * this.logicalH,
                 size: Math.random() * 2 + 0.8,
-                opacity: Math.random() * 0.7 + 0.3
+                opacity: Math.random() * 0.7 + 0.3,
+                speed: Math.random() * 1.5 + 0.5
             });
         }
     },
@@ -4156,25 +4145,16 @@ const PlanetVisualEngine = {
         this.state = 'landing';
         this.shipY = -120;
         this.shipVy = 4.0;
+        this.flightOffset = 0;
         this.bounce = 0;
         this.particles = [];
         this.ejectedPlayers = [];
-        this.rocketSelected = false;
 
         const tag = document.getElementById('planet-status-tag');
         if (tag) {
             tag.innerHTML = `<span>🚀 PŘISTÁVÁNÍ NA DOMOVSKÉ PLANETĚ...</span>`;
             tag.style.color = '#38bdf8';
             tag.style.borderColor = 'rgba(56, 189, 248, 0.4)';
-        }
-
-        const fightBtn = document.getElementById('btn-planet-fight');
-        if (fightBtn) {
-            fightBtn.style.display = 'none'; // Hidden until rocket is clicked!
-            fightBtn.disabled = false;
-            fightBtn.style.opacity = '1';
-            const fightText = document.getElementById('btn-planet-fight-text');
-            if (fightText) fightText.innerText = (this.mode === 'multiplayer' ? window.T("MULTI BITVA") : window.T("ODSTARTOVAT"));
         }
 
         if (typeof playSound === 'function') playSound('menuOpen');
@@ -4184,21 +4164,14 @@ const PlanetVisualEngine = {
     startTakeoff() {
         if (this.state === 'takeoff' || this.state === 'ejecting') return;
         this.state = 'takeoff';
-        this.shipVy = 0.6;
+        this.shipVy = 1.0;
+        this.flightOffset = 0;
 
         const tag = document.getElementById('planet-status-tag');
         if (tag) {
             tag.innerHTML = `<span>🔥 ZÁŽEH MOTORŮ & VZLET DO VESMÍRU!</span>`;
             tag.style.color = '#fbbf24';
             tag.style.borderColor = 'rgba(251, 191, 36, 0.4)';
-        }
-
-        const fightBtn = document.getElementById('btn-planet-fight');
-        if (fightBtn) {
-            fightBtn.disabled = true;
-            fightBtn.style.opacity = '0.7';
-            const fightText = document.getElementById('btn-planet-fight-text');
-            if (fightText) fightText.innerText = window.T("ODSTARTOVÁVÁM...");
         }
 
         if (typeof playSound === 'function') playSound('shoot');
@@ -4223,9 +4196,9 @@ const PlanetVisualEngine = {
         const cy = this.targetY;
 
         // Volcano smoke generator
-        if (Math.random() < 0.4) {
+        if (this.flightOffset < 150 && Math.random() < 0.4) {
             const volX = Math.max(70, this.logicalW * 0.10);
-            const volY = this.targetY - 35;
+            const volY = this.targetY - 35 + this.flightOffset;
             this.particles.push({
                 x: volX + (Math.random() - 0.5) * 16,
                 y: volY,
@@ -4297,15 +4270,17 @@ const PlanetVisualEngine = {
             }
         } else if (this.state === 'takeoff') {
             this.shipVy += 0.55;
-            this.shipY -= this.shipVy;
+            // Panning ground down into space
+            this.flightOffset += this.shipVy * 2.4;
+            this.shipY = Math.max(this.logicalH * 0.42, cy - this.shipVy * 8);
 
             // Intense takeoff fire
-            for (let i = 0; i < 12; i++) {
+            for (let i = 0; i < 14; i++) {
                 this.particles.push({
                     x: cx + (Math.random() - 0.5) * 32,
                     y: this.shipY + 46,
-                    vx: (Math.random() - 0.5) * 4.5,
-                    vy: Math.random() * 8 + 5,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: Math.random() * 9 + 6,
                     size: Math.random() * 10 + 5,
                     color: Math.random() > 0.3 ? '#f59e0b' : '#ef4444',
                     alpha: 1,
@@ -4313,15 +4288,15 @@ const PlanetVisualEngine = {
                 });
             }
 
-            // Once rocket reaches upper atmosphere, start ejection sequence!
-            if (this.shipY < this.logicalH * 0.3) {
+            // Once the planet completely scrolls off the bottom into pitch black space
+            if (this.flightOffset > this.logicalH * 1.05) {
                 this.state = 'ejecting';
                 this.ejectStartTime = Date.now();
                 
                 // Spawn explosive ejection ring of particles
-                for (let i = 0; i < 40; i++) {
+                for (let i = 0; i < 45; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const spd = Math.random() * 6 + 3;
+                    const spd = Math.random() * 7 + 4;
                     this.particles.push({
                         x: cx,
                         y: this.shipY,
@@ -4334,7 +4309,7 @@ const PlanetVisualEngine = {
                     });
                 }
 
-                // Prepare players to be ejected
+                // Prepare player orbs
                 const localName = META.playerName || SecureStorage.getItem('neoSurvivor_user') || "Hráč";
                 const crewList = [{ name: localName, color: '#38bdf8', isLocal: true }];
                 
@@ -4345,55 +4320,57 @@ const PlanetVisualEngine = {
                 }
 
                 this.ejectedPlayers = crewList.map((c, i) => {
-                    const spreadAngle = (i / crewList.length) * Math.PI * 2 - Math.PI / 2;
+                    const targetX = (crewList.length === 1) ? cx : cx + (i - (crewList.length - 1) / 2) * 60;
+                    const targetY = (this.logicalH / 2);
                     return {
                         x: cx,
                         y: this.shipY,
-                        vx: Math.cos(spreadAngle) * (Math.random() * 3 + 4),
-                        vy: Math.sin(spreadAngle) * (Math.random() * 3 + 3) - 2,
+                        targetX: targetX,
+                        targetY: targetY,
                         name: c.name,
                         color: c.color,
-                        scale: 0.4
+                        scale: 0.3,
+                        isLocal: c.isLocal
                     };
                 });
 
                 const tag = document.getElementById('planet-status-tag');
                 if (tag) {
-                    tag.innerHTML = `<span>💥 VÝSADEK POSÁDKY DO BOJOVÉ ZÓNY!</span>`;
+                    tag.innerHTML = `<span>💥 VÝSADEK POSÁDKY DO BOJE!</span>`;
                     tag.style.color = '#38bdf8';
                     tag.style.borderColor = 'rgba(56, 189, 248, 0.4)';
                 }
                 if (typeof playSound === 'function') playSound('shoot');
             }
         } else if (this.state === 'ejecting') {
-            // Rocket continues rising
-            this.shipY -= 8;
+            // Rocket speeds away upwards into the cosmos
+            this.shipY -= 12;
             
-            // Animate ejected players flying into space
+            // Animate ejected players smoothly landing in center ready to play!
             if (this.ejectedPlayers) {
                 this.ejectedPlayers.forEach(p => {
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.scale = Math.min(1.2, p.scale + 0.04);
+                    p.x += (p.targetX - p.x) * 0.15;
+                    p.y += (p.targetY - p.y) * 0.15;
+                    p.scale = Math.min(1.0, p.scale + 0.05);
 
-                    // Player trail particles
-                    if (Math.random() < 0.5) {
+                    // Speed aura particles
+                    if (Math.random() < 0.4) {
                         this.particles.push({
                             x: p.x,
                             y: p.y,
-                            vx: (Math.random() - 0.5) * 0.8,
-                            vy: (Math.random() - 0.5) * 0.8,
+                            vx: (Math.random() - 0.5) * 1.5,
+                            vy: (Math.random() - 0.5) * 1.5,
                             size: 3,
                             color: p.color,
                             alpha: 0.8,
-                            life: 0.6
+                            life: 0.5
                         });
                     }
                 });
             }
 
-            // Finish after 1.2s
-            if (Date.now() - this.ejectStartTime > 1200) {
+            // Finish after ~1.1s and start the game instantly with the player orb!
+            if (Date.now() - this.ejectStartTime > 1100) {
                 this.state = 'done';
                 if (this.animFrame) cancelAnimationFrame(this.animFrame);
                 document.getElementById('planet-modal').classList.remove('active');
@@ -4686,25 +4663,13 @@ const PlanetVisualEngine = {
     },
 
     // Big majestic vector-modeled rocket spaceship with crew
-    drawRocketModel(ctx, x, y, vy, state, time, isHovered, isSelected, mode) {
+    drawRocketModel(ctx, x, y, vy, state, time, isHovered, mode) {
         ctx.save();
         ctx.translate(x, y);
 
-        // Big Majestic Rocket Dimensions (scaled up ~2x)
+        // Big Majestic Rocket Dimensions
         const bodyW = 44;
         const bodyH = 92;
-
-        // Selection / Hover Aura
-        if (isHovered || isSelected) {
-            ctx.strokeStyle = isSelected ? '#fbbf24' : '#38bdf8';
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = isSelected ? '#fbbf24' : '#38bdf8';
-            ctx.beginPath();
-            ctx.ellipse(0, 0, bodyW * 1.3, bodyH * 0.65, 0, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.shadowBlur = 0;
-        }
 
         // Thruster flame when landing / takeoff / idle
         if (state === 'takeoff' || state === 'landing' || state === 'idle') {
@@ -4809,67 +4774,60 @@ const PlanetVisualEngine = {
         });
 
         // DRAW CREW ORBS INSIDE / AROUND ROCKET WITH NICKNAMES!
-        const localName = META.playerName || SecureStorage.getItem('neoSurvivor_user') || "Hráč";
-        
-        // Local Player Orb in main cockpit
-        const playerOrbY = -bodyH * 0.16;
-        ctx.fillStyle = '#38bdf8';
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#38bdf8';
-        ctx.beginPath();
-        ctx.arc(0, playerOrbY, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        
-        // Visor eyes
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(-4, playerOrbY - 2, 8, 3);
+        if (state !== 'ejecting' && state !== 'done') {
+            const localName = META.playerName || SecureStorage.getItem('neoSurvivor_user') || "Hráč";
+            
+            // Local Player Orb in main cockpit
+            const playerOrbY = -bodyH * 0.16;
+            ctx.fillStyle = '#38bdf8';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#38bdf8';
+            ctx.beginPath();
+            ctx.arc(0, playerOrbY, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Visor eyes
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(-4, playerOrbY - 2, 8, 3);
 
-        // Nickname badge floating above cockpit
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.roundRect(-35, playerOrbY - 25, 70, 15, 4);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 8.5px "Inter", Arial, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(localName, 0, playerOrbY - 14);
-
-        // In Multiplayer: Draw additional party crew members embarking / seated!
-        if (mode === 'multiplayer') {
-            const crewMembers = [
-                { x: -bodyW * 0.75, y: bodyH * 0.15, name: "Pilot #2", col: '#34d399' },
-                { x: bodyW * 0.75, y: bodyH * 0.15, name: "Pilot #3", col: '#fbbf24' }
-            ];
-            crewMembers.forEach(m => {
-                ctx.fillStyle = m.col;
-                ctx.beginPath();
-                ctx.arc(m.x, m.y, 7, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Mini nameplate
-                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-                ctx.strokeStyle = m.col;
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.roundRect(m.x - 24, m.y - 18, 48, 12, 3);
-                ctx.fill();
-                ctx.stroke();
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 7.5px "Inter", Arial, sans-serif';
-                ctx.fillText(m.name, m.x, m.y - 9);
-            });
-        }
-
-        // Hover prompt beacon when idle
-        if (isHovered && state === 'idle') {
-            ctx.fillStyle = '#fbbf24';
-            ctx.font = 'bold 10px "Inter", Arial, sans-serif';
+            // Nickname badge floating above cockpit
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(-32, playerOrbY - 24, 64, 14, 4);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 8px "Inter", Arial, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('🚀 KLIKNI PRO START', 0, -bodyH * 0.65);
+            ctx.fillText(localName, 0, playerOrbY - 14);
+
+            // In Multiplayer: Draw additional party crew members embarking / seated!
+            if (mode === 'multiplayer') {
+                const crewMembers = [
+                    { x: -bodyW * 0.75, y: bodyH * 0.15, name: "Pilot #2", col: '#34d399' },
+                    { x: bodyW * 0.75, y: bodyH * 0.15, name: "Pilot #3", col: '#fbbf24' }
+                ];
+                crewMembers.forEach(m => {
+                    ctx.fillStyle = m.col;
+                    ctx.beginPath();
+                    ctx.arc(m.x, m.y, 7, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                    ctx.strokeStyle = m.col;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.roundRect(m.x - 22, m.y - 17, 44, 12, 3);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 7.5px "Inter", Arial, sans-serif';
+                    ctx.fillText(m.name, m.x, m.y - 8);
+                });
+            }
         }
 
         ctx.restore();
@@ -4882,236 +4840,255 @@ const PlanetVisualEngine = {
             const w = this.logicalW || window.innerWidth;
             const h = this.logicalH || window.innerHeight;
             const cx = w / 2;
-            const groundY = this.targetY + 12;
+            const flightOff = this.flightOffset || 0;
+            const groundY = this.targetY + 12 + flightOff;
             const time = Date.now() / 1000;
 
-            // 1. Deep cosmic starry background
+            // Space transition factor (0 = on planet surface, 1 = deep space)
+            const spaceAlpha = Math.min(1, Math.max(0, flightOff / (h * 0.75)));
+
+            // 1. Cosmic starry background (fades to deep pitch black space during flight)
             const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-            skyGrad.addColorStop(0, '#020617');
-            skyGrad.addColorStop(0.45, '#0b132b');
-            skyGrad.addColorStop(0.85, '#064e3b');
-            skyGrad.addColorStop(1, '#022c22');
+            skyGrad.addColorStop(0, '#000000');
+            skyGrad.addColorStop(0.45, spaceAlpha > 0.8 ? '#000000' : '#0b132b');
+            skyGrad.addColorStop(0.85, spaceAlpha > 0.5 ? '#020617' : '#064e3b');
+            skyGrad.addColorStop(1, spaceAlpha > 0.2 ? '#000000' : '#022c22');
             ctx.fillStyle = skyGrad;
             ctx.fillRect(0, 0, w, h);
 
-            // 2. Distant planetary moon / ring glow
-            ctx.save();
-            ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
-            ctx.lineWidth = 8;
-            ctx.beginPath();
-            ctx.ellipse(w * 0.84, Math.min(100, h * 0.18), 70, 16, Math.PI / 6, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.fillStyle = '#fbbf24';
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = '#fbbf24';
-            ctx.beginPath();
-            ctx.arc(w * 0.84, Math.min(100, h * 0.18), 22, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
+            // 2. Distant planetary moon / ring glow (pans down with space depth)
+            if (spaceAlpha < 0.9) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, 1 - spaceAlpha * 1.2);
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+                ctx.lineWidth = 8;
+                ctx.beginPath();
+                ctx.ellipse(w * 0.84, Math.min(100, h * 0.18) + flightOff * 0.3, 70, 16, Math.PI / 6, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.fillStyle = '#fbbf24';
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#fbbf24';
+                ctx.beginPath();
+                ctx.arc(w * 0.84, Math.min(100, h * 0.18) + flightOff * 0.3, 22, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
 
-            // 3. Bright twinkling stars
+            // 3. Bright twinkling stars & streak lines when rocketing up
             ctx.save();
             if (this.stars) {
                 this.stars.forEach(s => {
+                    const starY = (s.y + (this.state === 'takeoff' ? (flightOff * s.speed * 0.8) : 0)) % h;
                     ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity * (0.8 + 0.2 * Math.sin(time * 2 + s.x))})`;
                     ctx.beginPath();
-                    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-                    ctx.fill();
+                    if (this.state === 'takeoff') {
+                        // Motion streaks
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                        ctx.lineWidth = 1;
+                        ctx.moveTo(s.x, starY);
+                        ctx.lineTo(s.x, starY + 8 * s.speed);
+                        ctx.stroke();
+                    } else {
+                        ctx.arc(s.x, starY, s.size, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
                 });
             }
             ctx.restore();
 
-            // 4. Active Smoking Volcano on left horizon
-            const volX = Math.max(70, w * 0.10);
-            const volY = groundY - 15;
-            ctx.save();
-            ctx.fillStyle = '#1e1b4b';
-            ctx.beginPath();
-            ctx.moveTo(volX - 65, groundY + 40);
-            ctx.lineTo(volX - 14, volY - 26);
-            ctx.lineTo(volX + 14, volY - 26);
-            ctx.lineTo(volX + 65, groundY + 40);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.fillStyle = '#ef4444';
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#f97316';
-            ctx.beginPath();
-            ctx.ellipse(volX, volY - 26, 14, 4, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.strokeStyle = 'rgba(249, 115, 22, 0.75)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(volX - 5, volY - 24);
-            ctx.lineTo(volX - 12, volY + 6);
-            ctx.lineTo(volX - 22, groundY + 15);
-            ctx.moveTo(volX + 5, volY - 24);
-            ctx.lineTo(volX + 12, volY + 2);
-            ctx.lineTo(volX + 20, groundY + 20);
-            ctx.stroke();
-            ctx.restore();
-
-            // 5. Distant hills terrain
-            ctx.save();
-            ctx.fillStyle = '#064e3b';
-            ctx.beginPath();
-            ctx.moveTo(0, groundY + 30);
-            ctx.bezierCurveTo(w * 0.25, groundY - 40, w * 0.45, groundY - 15, w * 0.65, groundY - 35);
-            ctx.bezierCurveTo(w * 0.8, groundY - 50, w * 0.95, groundY - 20, w, groundY - 20);
-            ctx.lineTo(w, h);
-            ctx.lineTo(0, h);
-            ctx.fill();
-            ctx.restore();
-
-            // 6. Foreground Planet Surface with crisp glowing boundary
-            ctx.save();
-            const fgGrad = ctx.createLinearGradient(0, groundY - 10, 0, h);
-            fgGrad.addColorStop(0, '#042f2e');
-            fgGrad.addColorStop(0.3, '#022c22');
-            fgGrad.addColorStop(1, '#011c16');
-            ctx.fillStyle = fgGrad;
-            ctx.strokeStyle = '#10b981';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(0, groundY + 40);
-            ctx.bezierCurveTo(w * 0.3, groundY - 10, w * 0.7, groundY - 10, w, groundY + 40);
-            ctx.lineTo(w, h);
-            ctx.lineTo(0, h);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            // Surface sci-fi cybernetic lines
-            ctx.strokeStyle = 'rgba(16, 185, 129, 0.15)';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < 7; i++) {
-                const gx = (w / 8) * (i + 1);
-                ctx.beginPath();
-                ctx.moveTo(gx, groundY);
-                ctx.lineTo(gx + (gx - cx) * 0.4, h);
-                ctx.stroke();
-            }
-            ctx.restore();
-
-            // 7. Calculate 8 building plot positions evenly distributed along horizon
-            const spread = Math.min(w * 0.42, 540);
-            this.plotPositions = [
-                // Left 4 buildings
-                { x: cx - spread * 0.96, y: groundY + 12 },
-                { x: cx - spread * 0.72, y: groundY + 2 },
-                { x: cx - spread * 0.48, y: groundY - 5 },
-                { x: cx - spread * 0.26, y: groundY - 9 },
-                // Right 4 buildings
-                { x: cx + spread * 0.26, y: groundY - 9 },
-                { x: cx + spread * 0.48, y: groundY - 5 },
-                { x: cx + spread * 0.72, y: groundY + 2 },
-                { x: cx + spread * 0.96, y: groundY + 12 }
-            ];
-
-            // 8. Draw Vector Buildings & Clean Floating Price Badges
-            if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
-            if (!META.planet.buildings) META.planet.buildings = {};
-
-            PLANET_BUILDINGS.forEach((bInfo, idx) => {
-                const pos = this.plotPositions[idx];
-                if (!pos) return;
-                
-                const isBuilt = !!META.planet.buildings[bInfo.id];
-                
-                // Hover detection
-                let isHovered = false;
-                if (this.mouseX !== undefined && this.mouseY !== undefined) {
-                    const dx = this.mouseX - pos.x;
-                    const dy = this.mouseY - (pos.y - 15);
-                    if (Math.abs(dx) < 38 && Math.abs(dy) < 48) isHovered = true;
-                }
-
-                // Draw the custom vector modeled building
-                this.drawBuildingModel(ctx, pos.x, pos.y, bInfo.id, isBuilt, isHovered, time);
-
-                // Draw the clean floating text box / price badge in front
+            // ONLY DRAW PLANET SURFACE IF STILL IN VIEW
+            if (groundY < h + 200) {
+                // 4. Active Smoking Volcano on left horizon
+                const volX = Math.max(70, w * 0.10);
+                const volY = groundY - 15;
                 ctx.save();
-                const badgeY = pos.y + 14;
-                const badgeW = 74;
-                const badgeH = 26;
-
-                // Badge container box
-                ctx.fillStyle = isHovered ? 'rgba(15, 23, 42, 0.95)' : 'rgba(10, 15, 30, 0.85)';
-                ctx.strokeStyle = isBuilt ? '#10b981' : (isHovered ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)');
-                ctx.lineWidth = isHovered ? 1.5 : 1;
-                if (isHovered && !isBuilt) {
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = '#fbbf24';
-                }
+                ctx.fillStyle = '#1e1b4b';
                 ctx.beginPath();
-                ctx.roundRect(pos.x - badgeW / 2, badgeY, badgeW, badgeH, 6);
+                ctx.moveTo(volX - 65, groundY + 40);
+                ctx.lineTo(volX - 14, volY - 26);
+                ctx.lineTo(volX + 14, volY - 26);
+                ctx.lineTo(volX + 65, groundY + 40);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#ef4444';
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#f97316';
+                ctx.beginPath();
+                ctx.ellipse(volX, volY - 26, 14, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = 'rgba(249, 115, 22, 0.75)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(volX - 5, volY - 24);
+                ctx.lineTo(volX - 12, volY + 6);
+                ctx.lineTo(volX - 22, groundY + 15);
+                ctx.moveTo(volX + 5, volY - 24);
+                ctx.lineTo(volX + 12, volY + 2);
+                ctx.lineTo(volX + 20, groundY + 20);
+                ctx.stroke();
+                ctx.restore();
+
+                // 5. Distant hills terrain
+                ctx.save();
+                ctx.fillStyle = '#064e3b';
+                ctx.beginPath();
+                ctx.moveTo(0, groundY + 30);
+                ctx.bezierCurveTo(w * 0.25, groundY - 40, w * 0.45, groundY - 15, w * 0.65, groundY - 35);
+                ctx.bezierCurveTo(w * 0.8, groundY - 50, w * 0.95, groundY - 20, w, groundY - 20);
+                ctx.lineTo(w, h + 200);
+                ctx.lineTo(0, h + 200);
+                ctx.fill();
+                ctx.restore();
+
+                // 6. Foreground Planet Surface with crisp glowing boundary
+                ctx.save();
+                const fgGrad = ctx.createLinearGradient(0, groundY - 10, 0, h + 200);
+                fgGrad.addColorStop(0, '#042f2e');
+                fgGrad.addColorStop(0.3, '#022c22');
+                fgGrad.addColorStop(1, '#011c16');
+                ctx.fillStyle = fgGrad;
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0, groundY + 40);
+                ctx.bezierCurveTo(w * 0.3, groundY - 10, w * 0.7, groundY - 10, w, groundY + 40);
+                ctx.lineTo(w, h + 200);
+                ctx.lineTo(0, h + 200);
+                ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
 
-                if (isBuilt) {
-                    ctx.fillStyle = '#34d399';
-                    ctx.font = 'bold 9px "Inter", Arial, sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('AKTIVNÍ', pos.x, badgeY + 11);
-                    ctx.fillStyle = '#fbbf24';
-                    ctx.font = 'bold 8.5px "Inter", Arial, sans-serif';
-                    ctx.fillText('+1 DOGE/m', pos.x, badgeY + 21);
-                } else {
-                    ctx.fillStyle = isHovered ? '#fbbf24' : '#cbd5e1';
-                    ctx.font = 'bold 8.5px "Inter", Arial, sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(bInfo.name.split(' #')[0], pos.x, badgeY + 10);
-
-                    const canAfford = (META.currency || 0) >= bInfo.cost;
-                    ctx.fillStyle = canAfford ? '#10b981' : '#ef4444';
-                    ctx.font = '900 9px "Inter", Arial, sans-serif';
-                    const costText = (bInfo.cost >= 1000) ? (bInfo.cost / 1000) + 'k DOGE' : bInfo.cost + ' DOGE';
-                    ctx.fillText(costText, pos.x, badgeY + 21);
+                // Surface cybernetic lines
+                ctx.strokeStyle = 'rgba(16, 185, 129, 0.15)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 7; i++) {
+                    const gx = (w / 8) * (i + 1);
+                    ctx.beginPath();
+                    ctx.moveTo(gx, groundY);
+                    ctx.lineTo(gx + (gx - cx) * 0.4, h + 200);
+                    ctx.stroke();
                 }
                 ctx.restore();
-            });
 
-            // 9. Futuristic Landing Pad Platform in center (Larger for big rocket)
-            ctx.save();
-            const padW = Math.min(200, w * 0.30);
-            const padH = 26;
-            const padY = this.targetY + 14;
+                // 7. Calculate 8 building plot positions evenly distributed along horizon
+                const spread = Math.min(w * 0.42, 540);
+                this.plotPositions = [
+                    // Left 4 buildings
+                    { x: cx - spread * 0.96, y: groundY + 12 },
+                    { x: cx - spread * 0.72, y: groundY + 2 },
+                    { x: cx - spread * 0.48, y: groundY - 5 },
+                    { x: cx - spread * 0.26, y: groundY - 9 },
+                    // Right 4 buildings
+                    { x: cx + spread * 0.26, y: groundY - 9 },
+                    { x: cx + spread * 0.48, y: groundY - 5 },
+                    { x: cx + spread * 0.72, y: groundY + 2 },
+                    { x: cx + spread * 0.96, y: groundY + 12 }
+                ];
 
-            // Pad shadow & base
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-            ctx.beginPath();
-            ctx.ellipse(cx, padY + 8, padW / 2 + 12, padH / 2 + 6, 0, 0, Math.PI * 2);
-            ctx.fill();
+                // 8. Draw Vector Buildings & Clean Floating Price Badges
+                if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
+                if (!META.planet.buildings) META.planet.buildings = {};
 
-            // Metallic Launchpad Plate
-            const padGrad = ctx.createLinearGradient(cx - padW / 2, 0, cx + padW / 2, 0);
-            padGrad.addColorStop(0, '#1e293b');
-            padGrad.addColorStop(0.5, '#334155');
-            padGrad.addColorStop(1, '#1e293b');
-            ctx.fillStyle = padGrad;
-            ctx.strokeStyle = this.rocketSelected ? '#fbbf24' : '#10b981';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.ellipse(cx, padY, padW / 2, padH / 2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
+                PLANET_BUILDINGS.forEach((bInfo, idx) => {
+                    const pos = this.plotPositions[idx];
+                    if (!pos) return;
+                    
+                    const isBuilt = !!META.planet.buildings[bInfo.id];
+                    
+                    // Hover detection
+                    let isHovered = false;
+                    if (this.state === 'idle' && this.mouseX !== undefined && this.mouseY !== undefined) {
+                        const dx = this.mouseX - pos.x;
+                        const dy = this.mouseY - (pos.y - 15);
+                        if (Math.abs(dx) < 38 && Math.abs(dy) < 48) isHovered = true;
+                    }
 
-            // Runway Beacon LEDs
-            const ledCount = 10;
-            for (let i = 0; i < ledCount; i++) {
-                const angle = (i / ledCount) * Math.PI * 2;
-                const lx = cx + Math.cos(angle) * (padW / 2 - 10);
-                const ly = padY + Math.sin(angle) * (padH / 2 - 5);
-                ctx.fillStyle = (Date.now() % 800 < 400) ? '#10b981' : '#34d399';
-                ctx.shadowBlur = 6;
-                ctx.shadowColor = '#10b981';
+                    // Draw the custom vector modeled building
+                    this.drawBuildingModel(ctx, pos.x, pos.y, bInfo.id, isBuilt, isHovered, time);
+
+                    // Draw the clean floating text box / price badge in front
+                    ctx.save();
+                    const badgeY = pos.y + 14;
+                    const badgeW = 74;
+                    const badgeH = 26;
+
+                    ctx.fillStyle = isHovered ? 'rgba(15, 23, 42, 0.95)' : 'rgba(10, 15, 30, 0.85)';
+                    ctx.strokeStyle = isBuilt ? '#10b981' : (isHovered ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)');
+                    ctx.lineWidth = isHovered ? 1.5 : 1;
+                    if (isHovered && !isBuilt) {
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = '#fbbf24';
+                    }
+                    ctx.beginPath();
+                    ctx.roundRect(pos.x - badgeW / 2, badgeY, badgeW, badgeH, 6);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    if (isBuilt) {
+                        ctx.fillStyle = '#34d399';
+                        ctx.font = 'bold 9px "Inter", Arial, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('AKTIVNÍ', pos.x, badgeY + 11);
+                        ctx.fillStyle = '#fbbf24';
+                        ctx.font = 'bold 8.5px "Inter", Arial, sans-serif';
+                        ctx.fillText('+1 DOGE/m', pos.x, badgeY + 21);
+                    } else {
+                        ctx.fillStyle = isHovered ? '#fbbf24' : '#cbd5e1';
+                        ctx.font = 'bold 8.5px "Inter", Arial, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(bInfo.name.split(' #')[0], pos.x, badgeY + 10);
+
+                        const canAfford = (META.currency || 0) >= bInfo.cost;
+                        ctx.fillStyle = canAfford ? '#10b981' : '#ef4444';
+                        ctx.font = '900 9px "Inter", Arial, sans-serif';
+                        const costText = (bInfo.cost >= 1000) ? (bInfo.cost / 1000) + 'k DOGE' : bInfo.cost + ' DOGE';
+                        ctx.fillText(costText, pos.x, badgeY + 21);
+                    }
+                    ctx.restore();
+                });
+
+                // 9. Futuristic Landing Pad Platform in center
+                ctx.save();
+                const padW = Math.min(200, w * 0.30);
+                const padH = 26;
+                const padY = groundY - 2;
+
+                // Pad shadow & base
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
                 ctx.beginPath();
-                ctx.arc(lx, ly, 3, 0, Math.PI * 2);
+                ctx.ellipse(cx, padY + 8, padW / 2 + 12, padH / 2 + 6, 0, 0, Math.PI * 2);
                 ctx.fill();
+
+                // Metallic Launchpad Plate
+                const padGrad = ctx.createLinearGradient(cx - padW / 2, 0, cx + padW / 2, 0);
+                padGrad.addColorStop(0, '#1e293b');
+                padGrad.addColorStop(0.5, '#334155');
+                padGrad.addColorStop(1, '#1e293b');
+                ctx.fillStyle = padGrad;
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.ellipse(cx, padY, padW / 2, padH / 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Runway Beacon LEDs
+                const ledCount = 10;
+                for (let i = 0; i < ledCount; i++) {
+                    const angle = (i / ledCount) * Math.PI * 2;
+                    const lx = cx + Math.cos(angle) * (padW / 2 - 10);
+                    const ly = padY + Math.sin(angle) * (padH / 2 - 5);
+                    ctx.fillStyle = (Date.now() % 800 < 400) ? '#10b981' : '#34d399';
+                    ctx.shadowBlur = 6;
+                    ctx.shadowColor = '#10b981';
+                    ctx.beginPath();
+                    ctx.arc(lx, ly, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
             }
-            ctx.restore();
 
             // 10. Draw Thruster Particles & Smoke
             ctx.save();
@@ -5126,20 +5103,20 @@ const PlanetVisualEngine = {
             });
             ctx.restore();
 
-            // 11. Draw Big Vector Modelled Rocket Ship & Crew
+            // 11. Draw Vector Modelled Rocket Ship
             const shipX = cx;
             const shipY = this.shipY;
 
-            // Check if mouse hovers over rocket
             let isRocketHovered = false;
-            if (this.mouseX !== undefined && this.mouseY !== undefined) {
+            if (this.state === 'idle' && this.mouseX !== undefined && this.mouseY !== undefined) {
                 const dxR = this.mouseX - shipX;
                 const dyR = this.mouseY - shipY;
-                if (Math.abs(dxR) < 45 && Math.abs(dyR) < 65) isRocketHovered = true;
+                if (Math.abs(dxR) < 48 && Math.abs(dyR) < 65) isRocketHovered = true;
             }
 
-            // Ground shadow under rocket
-            if (shipY > 0 && shipY <= padY + 20) {
+            // Ground shadow under rocket (only if near ground)
+            const padY = groundY - 2;
+            if (shipY > 0 && shipY <= padY + 20 && groundY < h + 100) {
                 const distRatio = Math.max(0, 1 - Math.abs(padY - shipY) / 180);
                 ctx.fillStyle = `rgba(0, 0, 0, ${0.65 * distRatio})`;
                 ctx.beginPath();
@@ -5147,40 +5124,40 @@ const PlanetVisualEngine = {
                 ctx.fill();
             }
 
-            this.drawRocketModel(ctx, shipX, shipY, this.shipVy, this.state, time, isRocketHovered, this.rocketSelected, this.mode);
+            this.drawRocketModel(ctx, shipX, shipY, this.shipVy, this.state, time, isRocketHovered, this.mode);
 
-            // 12. Draw Ejected Players in Space during Ejection Animation
+            // 12. Draw Ejected Player(s) deployed in center of space!
             if (this.state === 'ejecting' && this.ejectedPlayers) {
                 this.ejectedPlayers.forEach(ep => {
                     ctx.save();
                     ctx.translate(ep.x, ep.y);
                     ctx.scale(ep.scale, ep.scale);
                     
-                    // Player orb
+                    // Glowing Player orb (kulička)
                     ctx.fillStyle = ep.color;
-                    ctx.shadowBlur = 15;
+                    ctx.shadowBlur = 18;
                     ctx.shadowColor = ep.color;
                     ctx.beginPath();
-                    ctx.arc(0, 0, 12, 0, Math.PI * 2);
+                    ctx.arc(0, 0, 14, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.shadowBlur = 0;
 
-                    // Visor
+                    // Inner cute visor / eyes
                     ctx.fillStyle = '#0f172a';
-                    ctx.fillRect(-6, -3, 12, 4);
+                    ctx.fillRect(-6, -3, 12, 5);
 
                     // Name plate
                     ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
                     ctx.strokeStyle = ep.color;
                     ctx.lineWidth = 1;
                     ctx.beginPath();
-                    ctx.roundRect(-30, -26, 60, 14, 4);
+                    ctx.roundRect(-30, -28, 60, 14, 4);
                     ctx.fill();
                     ctx.stroke();
                     ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 8px "Inter", Arial, sans-serif';
+                    ctx.font = 'bold 8.5px "Inter", Arial, sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText(ep.name, 0, -16);
+                    ctx.fillText(ep.name, 0, -17);
 
                     ctx.restore();
                 });
