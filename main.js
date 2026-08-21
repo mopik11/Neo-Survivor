@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.649
+ * NEO SURVIVOR - Core Game Logic - v1.650
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.649'
+    version: window.GAME_VERSION || '1.650'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.649";
+const GAME_VERSION = window.GAME_VERSION || "1.650";
 const GAME = {
     active: false,
     paused: false,
@@ -4025,17 +4025,487 @@ function renderPlanetUI() {
 }
 window.renderPlanetUI = renderPlanetUI;
 
-function openPlanetModal() {
-    playSound('menuOpen');
+const PlanetVisualEngine = {
+    canvas: null,
+    ctx: null,
+    animFrame: null,
+    state: 'idle', // 'landing', 'idle', 'takeoff'
+    shipY: 100,
+    shipVy: 0,
+    targetY: 100,
+    bounce: 0,
+    particles: [],
+    stars: [],
+    mode: 'solo',
+    launchCallback: null,
+    isInitialized: false,
+
+    init() {
+        this.canvas = document.getElementById('planet-surface-canvas');
+        if (!this.canvas) return;
+        this.ctx = this.canvas.getContext('2d');
+        this.resize();
+        window.addEventListener('resize', () => {
+            if (document.getElementById('planet-modal')?.classList.contains('active')) {
+                this.resize();
+            }
+        });
+        this.isInitialized = true;
+    },
+
+    resize() {
+        if (!this.canvas) return;
+        const rect = this.canvas.getBoundingClientRect();
+        this.canvas.width = rect.width || 700;
+        this.canvas.height = rect.height || 180;
+        this.targetY = this.canvas.height - 48;
+
+        this.stars = [];
+        for (let i = 0; i < 40; i++) {
+            this.stars.push({
+                x: Math.random() * this.canvas.width,
+                y: Math.random() * (this.canvas.height * 0.7),
+                size: Math.random() * 1.8 + 0.5,
+                opacity: Math.random() * 0.6 + 0.3
+            });
+        }
+    },
+
+    startLanding(mode = 'solo', onLaunch = null) {
+        if (!this.isInitialized) this.init();
+        this.resize();
+        this.mode = mode;
+        this.launchCallback = onLaunch;
+        this.state = 'landing';
+        this.shipY = -60;
+        this.shipVy = 3.5;
+        this.bounce = 0;
+        this.particles = [];
+
+        const tag = document.getElementById('planet-status-tag');
+        if (tag) {
+            tag.innerHTML = `<span>🚀 PŘISTÁVÁNÍ NA DOMOVSKÉ PLANETĚ...</span>`;
+            tag.style.color = '#38bdf8';
+            tag.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+        }
+
+        const fightBtn = document.getElementById('btn-planet-fight');
+        if (fightBtn) {
+            fightBtn.disabled = false;
+            fightBtn.style.opacity = '1';
+            fightBtn.innerHTML = `<span>⚔️</span> <span>${this.mode === 'multiplayer' ? window.T("PŘIPOJIT DO BITVY") : window.T("BOJOVAT (ODSTARTOVAT)")}</span>`;
+        }
+
+        if (typeof playSound === 'function') playSound('menuOpen');
+        this.runLoop();
+    },
+
+    startTakeoff() {
+        if (this.state === 'takeoff') return;
+        this.state = 'takeoff';
+        this.shipVy = 0.5;
+
+        const tag = document.getElementById('planet-status-tag');
+        if (tag) {
+            tag.innerHTML = `<span>🔥 ZÁŽEH MOTORŮ & ODLET DO VESMÍRU!</span>`;
+            tag.style.color = '#fbbf24';
+            tag.style.borderColor = 'rgba(251, 191, 36, 0.4)';
+        }
+
+        const fightBtn = document.getElementById('btn-planet-fight');
+        if (fightBtn) {
+            fightBtn.disabled = true;
+            fightBtn.style.opacity = '0.7';
+            fightBtn.innerHTML = `<span>🚀</span> <span>${window.T("ODSTARTOVÁVÁM...")}</span>`;
+        }
+
+        if (typeof playSound === 'function') playSound('shoot');
+    },
+
+    runLoop() {
+        if (this.animFrame) cancelAnimationFrame(this.animFrame);
+        const loop = () => {
+            const modal = document.getElementById('planet-modal');
+            if (!modal || !modal.classList.contains('active')) {
+                return;
+            }
+            this.update();
+            this.draw();
+            this.animFrame = requestAnimationFrame(loop);
+        };
+        this.animFrame = requestAnimationFrame(loop);
+    },
+
+    update() {
+        const cx = this.canvas.width / 2;
+        const cy = this.targetY;
+
+        if (this.state === 'landing') {
+            this.shipY += this.shipVy;
+            // Spawn landing thruster fire pointing down
+            for (let i = 0; i < 3; i++) {
+                this.particles.push({
+                    x: cx + (Math.random() - 0.5) * 16,
+                    y: this.shipY + 16,
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: Math.random() * 3 + 2,
+                    size: Math.random() * 4 + 3,
+                    color: Math.random() > 0.4 ? '#38bdf8' : '#60a5fa',
+                    alpha: 1,
+                    life: 1
+                });
+            }
+
+            if (this.shipY >= cy - 2) {
+                this.shipY = cy;
+                this.state = 'idle';
+                this.bounce = 8;
+                // Landing dust cloud burst
+                for (let i = 0; i < 25; i++) {
+                    const a = Math.PI + (Math.random() - 0.5) * 2;
+                    const spd = Math.random() * 4 + 1;
+                    this.particles.push({
+                        x: cx + (Math.random() - 0.5) * 24,
+                        y: cy + 10,
+                        vx: Math.cos(a) * spd,
+                        vy: Math.sin(a) * spd * 0.5,
+                        size: Math.random() * 6 + 4,
+                        color: 'rgba(148, 163, 184, 0.8)',
+                        alpha: 0.8,
+                        life: 1
+                    });
+                }
+                const tag = document.getElementById('planet-status-tag');
+                if (tag) {
+                    tag.innerHTML = `<span>🟢 PŘISTÁNÍ ÚSPĚŠNÉ – ZÁKLADNA PŘIPRAVENA</span>`;
+                    tag.style.color = '#10b981';
+                    tag.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                }
+                if (typeof playSound === 'function') playSound('upgrade');
+            }
+        } else if (this.state === 'idle') {
+            if (this.bounce > 0) this.bounce *= 0.88;
+            this.shipY = cy + Math.sin(Date.now() / 350) * 1.2;
+
+            // Occasional idle engine ember
+            if (Math.random() < 0.3) {
+                this.particles.push({
+                    x: cx + (Math.random() - 0.5) * 14,
+                    y: this.shipY + 14,
+                    vx: (Math.random() - 0.5) * 0.8,
+                    vy: Math.random() * 1.2 + 0.5,
+                    size: Math.random() * 2 + 1,
+                    color: '#34d399',
+                    alpha: 0.7,
+                    life: 1
+                });
+            }
+        } else if (this.state === 'takeoff') {
+            this.shipVy += 0.45;
+            this.shipY -= this.shipVy;
+
+            // Intense takeoff engine fire & smoke blast
+            for (let i = 0; i < 8; i++) {
+                this.particles.push({
+                    x: cx + (Math.random() - 0.5) * 20,
+                    y: this.shipY + 15,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: Math.random() * 6 + 4,
+                    size: Math.random() * 7 + 4,
+                    color: Math.random() > 0.3 ? '#f59e0b' : '#ef4444',
+                    alpha: 1,
+                    life: 1
+                });
+            }
+
+            if (this.shipY < -80) {
+                // Done takeoff!
+                this.state = 'done';
+                if (this.animFrame) cancelAnimationFrame(this.animFrame);
+                if (typeof this.launchCallback === 'function') {
+                    this.launchCallback();
+                }
+            }
+        }
+
+        // Update particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.04;
+            p.alpha = Math.max(0, p.life);
+            if (p.life <= 0) {
+                this.particles.splice(i, 1);
+            }
+        }
+    },
+
+    draw() {
+        const ctx = this.ctx;
+        if (!ctx) return;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const cx = w / 2;
+        const groundY = h - 25;
+
+        // 1. Alien cosmic sky gradient
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+        skyGrad.addColorStop(0, '#040714');
+        skyGrad.addColorStop(0.5, '#0b162c');
+        skyGrad.addColorStop(1, '#064e3b');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // 2. Distant planetary ring / celestial glow
+        ctx.save();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+        ctx.lineWidth = 14;
+        ctx.beginPath();
+        ctx.ellipse(w * 0.8, 30, 90, 20, Math.PI / 6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.2)';
+        ctx.beginPath();
+        ctx.arc(w * 0.8, 30, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 3. Stars
+        ctx.save();
+        this.stars.forEach(s => {
+            ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity * (0.8 + 0.2 * Math.sin(Date.now() / 500 + s.x))})`;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.restore();
+
+        // 4. Background terrain silhouette
+        ctx.save();
+        ctx.fillStyle = 'rgba(6, 78, 59, 0.4)';
+        ctx.beginPath();
+        ctx.moveTo(0, groundY);
+        ctx.lineTo(0, groundY - 30);
+        ctx.bezierCurveTo(w * 0.25, groundY - 60, w * 0.4, groundY - 20, w * 0.6, groundY - 45);
+        ctx.bezierCurveTo(w * 0.75, groundY - 70, w * 0.9, groundY - 30, w, groundY - 35);
+        ctx.lineTo(w, h);
+        ctx.lineTo(0, h);
+        ctx.fill();
+
+        // 5. Foreground terrain
+        const foreGrad = ctx.createLinearGradient(0, groundY - 15, 0, h);
+        foreGrad.addColorStop(0, '#064e3b');
+        foreGrad.addColorStop(1, '#022c22');
+        ctx.fillStyle = foreGrad;
+        ctx.beginPath();
+        ctx.moveTo(0, groundY);
+        ctx.bezierCurveTo(w * 0.3, groundY - 12, w * 0.7, groundY - 12, w, groundY);
+        ctx.lineTo(w, h);
+        ctx.lineTo(0, h);
+        ctx.fill();
+        ctx.restore();
+
+        // 6. Draw Built Base Structures along the terrain
+        if (META.planet && META.planet.buildings) {
+            const builtIds = Object.keys(META.planet.buildings).filter(k => META.planet.buildings[k]);
+            const plotPositions = [
+                { x: cx - 180, y: groundY - 12 },
+                { x: cx - 130, y: groundY - 8 },
+                { x: cx - 85,  y: groundY - 4 },
+                { x: cx + 85,  y: groundY - 4 },
+                { x: cx + 130, y: groundY - 8 },
+                { x: cx + 180, y: groundY - 12 },
+                { x: cx - 225, y: groundY - 16 },
+                { x: cx + 225, y: groundY - 16 }
+            ];
+
+            builtIds.forEach((bId, idx) => {
+                const bInfo = PLANET_BUILDINGS.find(b => b.id == bId);
+                const pos = plotPositions[idx % plotPositions.length];
+                if (bInfo && pos && pos.x > 15 && pos.x < w - 15) {
+                    ctx.save();
+                    // Foundation aura
+                    ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+                    ctx.beginPath();
+                    ctx.ellipse(pos.x, pos.y + 4, 14, 4, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Structure Icon
+                    ctx.font = '18px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText(bInfo.icon, pos.x, pos.y + 2);
+
+                    // Ambient energy beam / particle
+                    if (Math.random() < 0.15) {
+                        ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
+                        ctx.beginPath();
+                        ctx.arc(pos.x + (Math.random() - 0.5) * 10, pos.y - 15 - Math.random() * 10, 1.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                }
+            });
+        }
+
+        // 7. Futuristic Landing Pad Platform in center
+        ctx.save();
+        const padW = 100;
+        const padH = 16;
+        const padY = this.targetY + 8;
+
+        // Pad shadow & base
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.beginPath();
+        ctx.ellipse(cx, padY + 4, padW / 2 + 8, padH / 2 + 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Metallic Pad Plate
+        const padGrad = ctx.createLinearGradient(cx - padW / 2, 0, cx + padW / 2, 0);
+        padGrad.addColorStop(0, '#1e293b');
+        padGrad.addColorStop(0.5, '#334155');
+        padGrad.addColorStop(1, '#1e293b');
+        ctx.fillStyle = padGrad;
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(cx, padY, padW / 2, padH / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Runway Beacon LEDs
+        const ledCount = 6;
+        for (let i = 0; i < ledCount; i++) {
+            const angle = (i / ledCount) * Math.PI * 2;
+            const lx = cx + Math.cos(angle) * (padW / 2 - 6);
+            const ly = padY + Math.sin(angle) * (padH / 2 - 3);
+            ctx.fillStyle = (Date.now() % 1000 < 500) ? '#10b981' : '#34d399';
+            ctx.shadowBlur = 6;
+            ctx.shadowColor = '#10b981';
+            ctx.beginPath();
+            ctx.arc(lx, ly, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+
+        // 8. Draw Thruster Particles
+        ctx.save();
+        this.particles.forEach(p => {
+            ctx.globalAlpha = p.alpha;
+            ctx.fillStyle = p.color;
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.restore();
+
+        // 9. Draw Player's Space Rocket
+        ctx.save();
+        const shipX = cx;
+        const shipY = this.shipY;
+
+        // Shadow under rocket on landing pad
+        if (shipY > 0 && shipY <= padY + 10) {
+            const distRatio = Math.max(0, 1 - Math.abs(padY - shipY) / 150);
+            ctx.fillStyle = `rgba(0, 0, 0, ${0.5 * distRatio})`;
+            ctx.beginPath();
+            ctx.ellipse(shipX, padY, (25 * distRatio), (8 * distRatio), 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Determine Player's ship icon
+        const shipsList = [
+            { id: 1, name: 'Průzkumník', icon: '🚀' },
+            { id: 2, name: 'Laserová Loď', icon: '🩸' },
+            { id: 3, name: 'Drtivá Zeď', icon: '🌊' },
+            { id: 4, name: 'Brokovnice', icon: '💥' },
+            { id: 5, name: 'Nekromancer', icon: '💀' },
+            { id: 6, name: 'Assassin', icon: '🥷' },
+            { id: 7, name: 'Zvukař', icon: '🎧' }
+        ];
+        const activeShip = shipsList.find(s => s.id === parseInt(META.selectedShip)) || shipsList[0];
+
+        // Draw Ship Body & Glow
+        ctx.translate(shipX, shipY);
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#6366f1';
+        ctx.fillStyle = '#f8fafc';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Ship Icon
+        ctx.font = '22px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(activeShip.icon, 0, 0);
+
+        // Equipped Hat
+        if (META.upgrades && META.upgrades.hat) {
+            const hatObj = EMOJIS.find(e => e.id === META.upgrades.hat);
+            if (hatObj) {
+                ctx.font = '16px Arial';
+                ctx.fillText(hatObj.icon, 0, -18);
+            }
+        }
+
+        // Equipped Pet floating near ship
+        if ((META.maxLevel || 1) >= 15 && META.selectedPet) {
+            const petObj = EMOJIS.find(e => e.id === META.selectedPet);
+            if (petObj) {
+                const petOffset = Math.sin(Date.now() / 250) * 4;
+                ctx.font = '18px Arial';
+                ctx.fillText(petObj.icon, 24, -10 + petOffset);
+            }
+        }
+        ctx.restore();
+    }
+};
+window.PlanetVisualEngine = PlanetVisualEngine;
+
+function openPlanetModal(mode = 'solo') {
     switchMusic('menu');
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     const modal = document.getElementById('planet-modal');
     if (modal) {
         modal.classList.add('active');
         renderPlanetUI();
+        PlanetVisualEngine.startLanding(mode, () => {
+            document.getElementById('planet-modal').classList.remove('active');
+            if (mode === 'solo') {
+                startSoloGame();
+            } else if (mode === 'multiplayer') {
+                document.getElementById('multiplayer-modal').classList.add('active');
+            }
+        });
     }
 }
 window.openPlanetModal = openPlanetModal;
+
+function startSoloGame() {
+    NET.isMultiplayer = false;
+    tryFullscreen();
+    AudioEngine.init(); 
+    AudioEngine.stopMenuMusic();
+    
+    // --- ZERO TRUST SOLO PLAY (v1.408.7) ---
+    // Join a private server-side room even for solo to enable authoritative rewards
+    const soloRoomId = "SOLO_" + Math.random().toString(36).substr(2, 6).toUpperCase();
+    initSocket();
+    NET.socket.emit('joinRoom', { 
+        roomId: soloRoomId, 
+        playerId: myPlayerId, 
+        isSolo: true,
+        username: localStorage.getItem('neoSurvivor_user'),
+        name: localStorage.getItem('neoSurvivor_user')
+    });
+}
+window.startSoloGame = startSoloGame;
 
 function closePlanetModal() {
     const modal = document.getElementById('planet-modal');
@@ -6962,7 +7432,13 @@ function init() {
             "Kvantová těžba napříč dimenzemi": "Quantum mining across dimensions",
             "Zatím nemáš žádný nasbíraný výnos k vybrání.": "No accumulated income to collect yet.",
             "Úspěšně vybráno ": "Successfully collected ",
-            "Nedostatek Dogecoinů na stavbu této budovy!": "Not enough Dogecoins to construct this building!"
+            "Nedostatek Dogecoinů na stavbu této budovy!": "Not enough Dogecoins to construct this building!",
+            "PŘIPOJIT DO BITVY": "JOIN BATTLE",
+            "BOJOVAT (ODSTARTOVAT)": "FIGHT (LAUNCH)",
+            "ODSTARTOVÁVÁM...": "LAUNCHING...",
+            "🚀 PŘISTÁVÁNÍ NA DOMOVSKÉ PLANETĚ...": "🚀 LANDING ON HOME PLANET...",
+            "🟢 PŘISTÁNÍ ÚSPĚŠNÉ – ZÁKLADNA PŘIPRAVENA": "🟢 LANDING SUCCESSFUL – BASE READY",
+            "🔥 ZÁŽEH MOTORŮ & ODLET DO VESMÍRU!": "🔥 ENGINE IGNITION & SPACE TAKEOFF!"
         }
     };
 
@@ -7455,21 +7931,7 @@ function init() {
     }
 
     if (btnStart) btnStart.onclick = () => {
-        NET.isMultiplayer = false;
-        tryFullscreen();
-        AudioEngine.init(); AudioEngine.stopMenuMusic();
-        
-        // --- ZERO TRUST SOLO PLAY (v1.408.7) ---
-        // Join a private server-side room even for solo to enable authoritative rewards
-        const soloRoomId = "SOLO_" + Math.random().toString(36).substr(2, 6).toUpperCase();
-        initSocket();
-        NET.socket.emit('joinRoom', { 
-            roomId: soloRoomId, 
-            playerId: myPlayerId, 
-            isSolo: true,
-            username: localStorage.getItem('neoSurvivor_user'),
-            name: localStorage.getItem('neoSurvivor_user')
-        });
+        openPlanetModal('solo');
     };
 
     const btnMP = document.getElementById('btn-multiplayer');
@@ -7523,7 +7985,7 @@ function init() {
 
     const btnPlanet = document.getElementById('btn-planet-menu');
     if (btnPlanet) btnPlanet.onclick = () => {
-        openPlanetModal();
+        openPlanetModal('solo');
     };
 
     const btnClaimPlanet = document.getElementById('btn-claim-planet-income');
@@ -7533,8 +7995,7 @@ function init() {
 
     const btnPlanetFight = document.getElementById('btn-planet-fight');
     if (btnPlanetFight) btnPlanetFight.onclick = () => {
-        document.getElementById('planet-modal').classList.remove('active');
-        document.getElementById('menu-modal').classList.add('active');
+        PlanetVisualEngine.startTakeoff();
     };
 
     const btnPlanetShips = document.getElementById('btn-planet-ships');
