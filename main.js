@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.674
+ * NEO SURVIVOR - Core Game Logic - v1.675
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -7584,22 +7584,30 @@ window.connectToId = (id) => {
 };
 
 let isCaptchaVerified = false;
+let recaptchaMouseTrail = [];
+window.addEventListener('mousemove', (e) => {
+    recaptchaMouseTrail.push({ x: e.clientX, y: e.clientY, t: Date.now() });
+    if (recaptchaMouseTrail.length > 40) recaptchaMouseTrail.shift();
+});
+
 function initRecaptchaWidget() {
     isCaptchaVerified = false;
     const widget = document.getElementById('recaptcha-widget');
     const checkbox = document.getElementById('recaptcha-checkbox');
     const spinner = document.getElementById('recaptcha-spinner');
     const check = document.getElementById('recaptcha-check');
+    const label = document.getElementById('recaptcha-label');
     if (!widget || !checkbox) return;
 
     // Reset visual state
     if (spinner) spinner.style.display = 'none';
     if (check) check.style.display = 'none';
+    if (label) { label.innerText = 'Nejsem robot'; label.style.color = '#f1f5f9'; }
     checkbox.style.borderColor = '#64748b';
     checkbox.style.background = 'rgba(0,0,0,0.4)';
     widget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
 
-    widget.onclick = () => {
+    widget.onclick = (e) => {
         if (isCaptchaVerified) return;
         if (spinner) spinner.style.display = 'block';
         if (check) check.style.display = 'none';
@@ -7607,9 +7615,58 @@ function initRecaptchaWidget() {
 
         setTimeout(() => {
             if (spinner) spinner.style.display = 'none';
+
+            // --- REAL ANTIBOT ANALYSIS ---
+            let isBot = false;
+            let botReason = "";
+
+            // 1. Detect automation frameworks (Puppeteer, Selenium, Playwright)
+            if (navigator.webdriver) {
+                isBot = true;
+                botReason = "Detekován automatizovaný prohlížeč (navigator.webdriver).";
+            }
+            // 2. Detect synthetic programmatic click events
+            else if (e && !e.isTrusted) {
+                isBot = true;
+                botReason = "Kliknutí vyvoláno programově (isTrusted = false).";
+            }
+            // 3. Detect zero mouse trail telemetry (teleportation without movement)
+            else if (recaptchaMouseTrail.length < 2 && !('ontouchstart' in window)) {
+                isBot = true;
+                botReason = "Žádná přirozená trajektorie myši před kliknutím.";
+            }
+
+            if (isBot) {
+                isCaptchaVerified = false;
+                checkbox.style.borderColor = '#ef4444';
+                checkbox.style.background = 'rgba(239, 68, 68, 0.25)';
+                widget.style.borderColor = 'rgba(239, 68, 68, 0.6)';
+                if (check) {
+                    check.innerText = '✕';
+                    check.style.color = '#ef4444';
+                    check.style.display = 'block';
+                }
+                if (label) {
+                    label.innerText = 'Detekován robot!';
+                    label.style.color = '#ef4444';
+                }
+                if (typeof playSound === 'function') playSound('error');
+                if (window.showCustomAlert) {
+                    window.showCustomAlert(`🤖 BOT DETEKOVÁN!\n${botReason}\nPřístup zamítnut.`);
+                }
+                return;
+            }
+
+            // --- REAL HUMAN VERIFIED ---
             if (check) {
+                check.innerText = '✓';
+                check.style.color = '#10b981';
                 check.style.display = 'block';
                 check.style.animation = 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            }
+            if (label) {
+                label.innerText = 'Nejsem robot';
+                label.style.color = '#f1f5f9';
             }
             checkbox.style.borderColor = '#10b981';
             checkbox.style.background = 'rgba(16, 185, 129, 0.2)';
