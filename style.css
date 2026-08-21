@@ -198,7 +198,7 @@ canvas {
   background: rgba(2, 6, 23, 0.65);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  display: flex;
+  display: none;
   justify-content: center;
   align-items: center;
   z-index: var(--modal-z);
@@ -209,8 +209,23 @@ canvas {
 }
 
 .modal.active {
+  display: flex !important;
   opacity: 1;
   visibility: visible;
+}
+
+#planet-modal {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+#planet-modal.active {
+  display: flex !important;
+}
+#planet-modal:not(.active) {
+  display: none !important;
 }
 
 #menu-anim-canvas {
@@ -1965,9 +1980,13 @@ canvas {
     background: rgba(10, 15, 29, 0.98) !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
-    display: flex !important;
+    display: none !important;
     justify-content: stretch !important;
     align-items: stretch !important;
+  }
+
+  .modal.active {
+    display: flex !important;
   }
   
   #menu-modal .modal-content {
@@ -3081,11 +3100,15 @@ input.gamepad-focus,
     background: rgba(10, 15, 29, 0.98) !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
-    display: flex !important;
+    display: none !important;
     justify-content: stretch !important;
     align-items: stretch !important;
     overflow: hidden !important;
     z-index: var(--modal-z) !important;
+  }
+
+  .modal.active {
+    display: flex !important;
   }
 
   .modal-content,
