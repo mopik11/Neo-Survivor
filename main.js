@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.685
+ * NEO SURVIVOR - Core Game Logic - v1.686
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -5423,6 +5423,14 @@ const PlanetVisualEngine = {
             if (ctx.resetTransform) ctx.resetTransform();
             ctx.clearRect(0, 0, w, h);
 
+            const curPan = (this.state === 'idle' ? (this.panOffset || 0) : 0);
+            const isMobileHeight = (h <= 500);
+            const bScale = Math.min(1.0, Math.max(0.72, Math.min(w / 800, h / 460)));
+            const normDx = curPan / Math.max(1, w * 0.48);
+            const curveYDrop = (normDx * normDx) * 32;
+            const currentPadY = padY + (this.state === 'idle' ? curveYDrop : 0);
+            const restY = currentPadY - 52;
+
             const elapsed = (this.state === 'traveling') ? (Date.now() - this.travelStartTime) / 1000 : 0;
             const progress = (this.state === 'traveling') ? Math.min(1.0, elapsed / (this.travelDuration || 25.0)) : 0;
 
@@ -5595,12 +5603,7 @@ const PlanetVisualEngine = {
 
             // ONLY DRAW PLANET SURFACE IF STILL IN VIEW
             if (groundY < h + 200) {
-                // Responsive building scale on mobile
-                const isMobileHeight = (h <= 500);
-                const bScale = Math.min(1.0, Math.max(0.72, Math.min(w / 800, h / 460)));
-
                 // 4. Planet-Specific Horizon Landmark & Background Biome
-                const curPan = (this.state === 'idle' ? (this.panOffset || 0) : 0);
                 if (curWorld.id === 'terra' || curWorld.id === 'ignis') {
                     // Active Smoking Volcano
                     const volX = Math.max(60, w * 0.10) + curPan;
@@ -5673,25 +5676,26 @@ const PlanetVisualEngine = {
                     ctx.restore();
                 }
 
-                // 5. Distant hills / mountains terrain
+                // 5. Distant hills / mountains terrain with parallax pan
                 ctx.save();
+                const hillsPan = curPan * 0.35;
                 ctx.fillStyle = curWorld.hillsGrad || '#064e3b';
                 ctx.beginPath();
-                ctx.moveTo(0, groundY + 30);
+                ctx.moveTo(-100, groundY + 30);
                 if (curWorld.id === 'ignis') {
                     // Angular jagged volcanic ridge
-                    ctx.lineTo(w * 0.2, groundY - 35);
-                    ctx.lineTo(w * 0.35, groundY - 10);
-                    ctx.lineTo(w * 0.55, groundY - 45);
-                    ctx.lineTo(w * 0.75, groundY - 15);
-                    ctx.lineTo(w * 0.9, groundY - 40);
-                    ctx.lineTo(w, groundY - 20);
+                    ctx.lineTo(w * 0.2 + hillsPan, groundY - 35);
+                    ctx.lineTo(w * 0.35 + hillsPan, groundY - 10);
+                    ctx.lineTo(w * 0.55 + hillsPan, groundY - 45);
+                    ctx.lineTo(w * 0.75 + hillsPan, groundY - 15);
+                    ctx.lineTo(w * 0.9 + hillsPan, groundY - 40);
+                    ctx.lineTo(w + 100, groundY - 20);
                 } else {
-                    ctx.bezierCurveTo(w * 0.25, groundY - 40, w * 0.45, groundY - 15, w * 0.65, groundY - 35);
-                    ctx.bezierCurveTo(w * 0.8, groundY - 50, w * 0.95, groundY - 20, w, groundY - 20);
+                    ctx.bezierCurveTo(w * 0.25 + hillsPan, groundY - 40, w * 0.45 + hillsPan, groundY - 15, w * 0.65 + hillsPan, groundY - 35);
+                    ctx.bezierCurveTo(w * 0.8 + hillsPan, groundY - 50, w * 0.95 + hillsPan, groundY - 20, w + 100, groundY - 20);
                 }
-                ctx.lineTo(w, h + 200);
-                ctx.lineTo(0, h + 200);
+                ctx.lineTo(w + 100, h + 200);
+                ctx.lineTo(-100, h + 200);
                 ctx.fill();
                 ctx.restore();
 
@@ -5714,15 +5718,19 @@ const PlanetVisualEngine = {
                 ctx.fill();
                 ctx.stroke();
 
-                // Surface cybernetic / fissure lines
-                ctx.strokeStyle = curWorld.surfaceLine ? `${curWorld.surfaceLine}26` : 'rgba(16, 185, 129, 0.15)';
-                ctx.lineWidth = 1;
-                for (let i = 0; i < 7; i++) {
-                    const gx = (w / 8) * (i + 1);
-                    ctx.beginPath();
-                    ctx.moveTo(gx, groundY);
-                    ctx.lineTo(gx + (gx - cx) * 0.4, h + 200);
-                    ctx.stroke();
+                // Surface cybernetic / fissure lines with continuous rotating panOffset
+                ctx.strokeStyle = curWorld.surfaceLine ? `${curWorld.surfaceLine}40` : 'rgba(16, 185, 129, 0.25)';
+                ctx.lineWidth = 1.5;
+                const stripeSpacing = Math.max(65, w / 9);
+                const numStripes = 16;
+                for (let i = -numStripes; i <= numStripes; i++) {
+                    const gx = cx + (i * stripeSpacing) + (curPan % stripeSpacing);
+                    if (gx >= -80 && gx <= w + 80) {
+                        ctx.beginPath();
+                        ctx.moveTo(gx, groundY);
+                        ctx.lineTo(gx + (gx - cx) * 0.45, h + 200);
+                        ctx.stroke();
+                    }
                 }
                 ctx.restore();
 
@@ -5815,12 +5823,9 @@ const PlanetVisualEngine = {
                 ctx.save();
                 const padH = isMobileHeight ? 22 : 28;
                 const padX = cx + curPan;
-                const normDx = (padX - cx) / (w * 0.48);
-                const curveYDrop = (normDx * normDx) * 32;
-                const padCurvedY = padY + curveYDrop;
                 const padTilt = normDx * 0.20;
 
-                ctx.translate(padX, padCurvedY);
+                ctx.translate(padX, currentPadY);
                 ctx.rotate(padTilt);
 
                 // Pad shadow & base
@@ -5873,8 +5878,8 @@ const PlanetVisualEngine = {
 
             // 11. Draw Vector Modelled Rocket Ship (SITTING FLUSH ON THE PAD & ROTATING WITH PLANET)
             const shipX = (this.state === 'traveling') ? cx + (this.shipLateralX || 0) : (cx + curPan);
-            const shipY = this.shipY;
-            const normShipDx = (shipX - cx) / (w * 0.48);
+            const shipY = (typeof this.shipY === 'number' && !isNaN(this.shipY)) ? this.shipY : restY;
+            const normShipDx = (shipX - cx) / Math.max(1, w * 0.48);
             const shipTilt = (this.state === 'idle') 
                 ? (normShipDx * 0.20 + (this.panVelocity || 0) * 0.04) 
                 : (this.shipTilt || 0);
@@ -5886,13 +5891,12 @@ const PlanetVisualEngine = {
                 if (Math.abs(dxR) < 55 && Math.abs(dyR) < 75) isRocketHovered = true;
             }
 
-            const currentPadCurvedY = padY + ((normShipDx * normShipDx) * 32);
             // Ground shadow under rocket (only if near ground)
-            if (shipY > 0 && shipY <= currentPadCurvedY + 20 && groundY < h + 100) {
-                const distRatio = Math.max(0, 1 - Math.abs(currentPadCurvedY - shipY) / 180);
+            if (shipY > 0 && shipY <= currentPadY + 20 && groundY < h + 100) {
+                const distRatio = Math.max(0, 1 - Math.abs(currentPadY - shipY) / 180);
                 ctx.fillStyle = `rgba(0, 0, 0, ${0.65 * distRatio})`;
                 ctx.beginPath();
-                ctx.ellipse(shipX, currentPadCurvedY, (44 * distRatio), (14 * distRatio), shipTilt, 0, Math.PI * 2);
+                ctx.ellipse(shipX, currentPadY, (44 * distRatio), (14 * distRatio), shipTilt, 0, Math.PI * 2);
                 ctx.fill();
             }
 
@@ -7613,6 +7617,44 @@ window.softResetToMenu = () => {
     switchMusic('menu');
     resetGame();
     saveMeta();
+};
+
+window.softResetToPlanet = () => {
+    if (GAME.active && GAME.dogeGained > 0) {
+        addCurrency(GAME.dogeGained);
+        showCurrencyNotification(GAME.dogeGained, "VÝNOS Z BITVY (Základna)");
+    }
+    GAME.active = false;
+    GAME.paused = false;
+    
+    const chat = document.getElementById('global-chat');
+    if (chat) chat.style.display = 'none';
+    const chatBtn = document.getElementById('btn-chat-mobile');
+    if (chatBtn) chatBtn.style.display = 'none';
+    if (chat) chat.classList.remove('mobile-active');
+
+    if (NET.socket) {
+        NET.socket.disconnect();
+        NET.socket = null;
+    }
+
+    if (NET.serverPollingInterval) {
+        clearInterval(NET.serverPollingInterval);
+        NET.serverPollingInterval = null;
+    }
+
+    NET.isMultiplayer = false;
+    NET.roomId = null;
+    NET.others = {};
+
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('ui-layer').style.display = 'none';
+    const menuAnim = document.getElementById('menu-anim-canvas');
+    if (menuAnim) menuAnim.style.display = 'none';
+    switchMusic('menu');
+    resetGame();
+    saveMeta();
+    openPlanetModal('solo');
 };
 
 
@@ -10022,10 +10064,10 @@ function init() {
     };
 
     const btnPauseMenu = document.getElementById('btn-pause-menu');
-    if (btnPauseMenu) btnPauseMenu.onclick = () => window.softResetToMenu();
+    if (btnPauseMenu) btnPauseMenu.onclick = () => window.softResetToPlanet();
 
     const btnGameOverMenu = document.getElementById('btn-gameover-menu');
-    if (btnGameOverMenu) btnGameOverMenu.onclick = () => window.softResetToMenu();
+    if (btnGameOverMenu) btnGameOverMenu.onclick = () => window.softResetToPlanet();
 
     const btnMainQuit = document.getElementById('btn-main-quit');
     if (btnMainQuit) btnMainQuit.onclick = () => {
@@ -11090,8 +11132,88 @@ function render() {
     ctx.shadowBlur = 0;
 
     try {
-        ctx.save(); ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height); ctx.scale(GAME.zoom, GAME.zoom);
+        ctx.save();
+        
+        // Planet-specific atmospheric battle background colors!
+        const curWorldId = (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || 'terra';
+        let bgGradTop = '#020617', bgGradBot = '#042f2e', gridCol = 'rgba(16, 185, 129, 0.09)';
+        
+        if (curWorldId === 'ignis') {
+            bgGradTop = '#150202';
+            bgGradBot = '#3a0808';
+            gridCol = 'rgba(249, 115, 22, 0.13)';
+        } else if (curWorldId === 'cryo') {
+            bgGradTop = '#020c1a';
+            bgGradBot = '#052a42';
+            gridCol = 'rgba(56, 189, 248, 0.13)';
+        } else if (curWorldId === 'cyber') {
+            bgGradTop = '#090214';
+            bgGradBot = '#23063b';
+            gridCol = 'rgba(192, 132, 252, 0.15)';
+        }
+
+        const bgGrad = ctx.createRadialGradient(GAME.canvas.width / 2, GAME.canvas.height / 2, 50, GAME.canvas.width / 2, GAME.canvas.height / 2, Math.max(GAME.canvas.width, GAME.canvas.height) * 0.8);
+        bgGrad.addColorStop(0, bgGradBot);
+        bgGrad.addColorStop(1, bgGradTop);
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
+        
+        ctx.scale(GAME.zoom, GAME.zoom);
         const camX = cam.x / GAME.zoom, camY = cam.y / GAME.zoom;
+
+        // Draw atmospheric arena grid lines with planet tint
+        const gridSize = 140;
+        const startGX = Math.floor(camX / gridSize) * gridSize;
+        const startGY = Math.floor(camY / gridSize) * gridSize;
+        const viewW = GAME.canvas.width / GAME.zoom;
+        const viewH = GAME.canvas.height / GAME.zoom;
+        ctx.save();
+        ctx.strokeStyle = gridCol;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (let gx = startGX - gridSize; gx <= startGX + viewW + gridSize; gx += gridSize) {
+            ctx.moveTo(gx - camX, -50);
+            ctx.lineTo(gx - camX, viewH + 50);
+        }
+        for (let gy = startGY - gridSize; gy <= startGY + viewH + gridSize; gy += gridSize) {
+            ctx.moveTo(-50, gy - camY);
+            ctx.lineTo(viewW + 50, gy - camY);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // Planet-specific floating atmospheric particles (embers for Ignis, ice frost for Cryo, cyber motes for Cyber)
+        if (!GAME.planetAtmoParticles) {
+            GAME.planetAtmoParticles = [];
+            for (let i = 0; i < 45; i++) {
+                GAME.planetAtmoParticles.push({
+                    x: Math.random() * 2500,
+                    y: Math.random() * 2500,
+                    size: Math.random() * 3.5 + 1.2,
+                    vx: (Math.random() - 0.5) * 0.8,
+                    vy: Math.random() * 1.4 + 0.5,
+                    alpha: Math.random() * 0.5 + 0.2
+                });
+            }
+        }
+        GAME.planetAtmoParticles.forEach(p => {
+            p.x += p.vx;
+            p.y += (curWorldId === 'ignis' ? -p.vy : p.vy);
+            if (p.y < 0) p.y = 2500;
+            if (p.y > 2500) p.y = 0;
+            if (p.x < 0) p.x = 2500;
+            if (p.x > 2500) p.x = 0;
+            const px = (p.x - camX * 0.15) % (GAME.canvas.width / GAME.zoom);
+            const py = (p.y - camY * 0.15) % (GAME.canvas.height / GAME.zoom);
+            const drawPX = px < 0 ? px + (GAME.canvas.width / GAME.zoom) : px;
+            const drawPY = py < 0 ? py + (GAME.canvas.height / GAME.zoom) : py;
+            ctx.fillStyle = curWorldId === 'ignis' 
+                ? `rgba(251, 146, 60, ${p.alpha})` 
+                : (curWorldId === 'cryo' ? `rgba(165, 243, 252, ${p.alpha})` : (curWorldId === 'cyber' ? `rgba(232, 121, 249, ${p.alpha})` : `rgba(52, 211, 153, ${p.alpha * 0.6})`));
+            ctx.beginPath();
+            ctx.arc(drawPX, drawPY, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
 
         if (GAME.stars) {
             GAME.stars.forEach(s => {
