@@ -4052,48 +4052,48 @@ const PlanetVisualEngine = {
             }
         });
         
-        // Handle clicks for buying buildings or clicking the rocket directly on planet-modal overlay
-        const modal = document.getElementById('planet-modal');
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (this.state !== 'idle') return;
-                // Ignore clicks on top card and bottom menu buttons
-                if (e.target.closest('#planet-top-card') || e.target.closest('#planet-bottom-menu')) return;
-                
-                const rect = this.canvas.getBoundingClientRect();
-                const clickX = e.clientX - rect.left;
-                const clickY = e.clientY - rect.top;
-                const cx = (this.logicalW || window.innerWidth) / 2;
-                const shipY = this.shipY;
-                
-                // 1. Direct click on the Rocket immediately launches into space!
-                const dxRocket = clickX - cx;
-                const dyRocket = clickY - shipY;
-                if (Math.abs(dxRocket) < 55 && Math.abs(dyRocket) < 75) {
-                    this.startTakeoff();
-                    return;
-                }
-
-                // 2. Check click on buildings / price badges
-                if (this.plotPositions) {
-                    this.plotPositions.forEach((pos, idx) => {
-                        const dx = clickX - pos.x;
-                        const dy = clickY - (pos.y - 15);
-                        if (Math.abs(dx) < 38 && Math.abs(dy) < 48) {
-                            const bInfo = PLANET_BUILDINGS[idx];
-                            if (bInfo) this.attemptBuyBuilding(bInfo.id);
-                        }
-                    });
-                }
-            });
+        // Handle clicks for buying buildings or clicking the rocket
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('planet-modal');
+            if (!modal || !modal.classList.contains('active')) return;
+            if (this.state !== 'idle') return;
             
-            modal.addEventListener('mousemove', (e) => {
-                if (this.state !== 'idle') return;
-                const rect = this.canvas.getBoundingClientRect();
-                this.mouseX = e.clientX - rect.left;
-                this.mouseY = e.clientY - rect.top;
-            });
-        }
+            // If click was on top card or bottom menu button, let native click handler handle it
+            if (e.target.closest('#planet-top-card') || e.target.closest('#planet-bottom-menu')) return;
+
+            const clickX = e.clientX;
+            const clickY = e.clientY;
+            const cx = (this.logicalW || window.innerWidth) / 2;
+            const shipY = this.shipY;
+            
+            // 1. Direct click on the Rocket immediately launches into space!
+            const dxRocket = clickX - cx;
+            const dyRocket = clickY - shipY;
+            if (Math.abs(dxRocket) < 55 && Math.abs(dyRocket) < 75) {
+                this.startTakeoff();
+                return;
+            }
+
+            // 2. Check click on buildings / price badges
+            if (this.plotPositions) {
+                this.plotPositions.forEach((pos, idx) => {
+                    const dx = clickX - pos.x;
+                    const dy = clickY - (pos.y - 15);
+                    if (Math.abs(dx) < 45 && Math.abs(dy) < 55) {
+                        const bInfo = PLANET_BUILDINGS[idx];
+                        if (bInfo) this.attemptBuyBuilding(bInfo.id);
+                    }
+                });
+            }
+        });
+        
+        window.addEventListener('mousemove', (e) => {
+            const modal = document.getElementById('planet-modal');
+            if (!modal || !modal.classList.contains('active')) return;
+            if (this.state !== 'idle') return;
+            this.mouseX = e.clientX;
+            this.mouseY = e.clientY;
+        });
 
         this.isInitialized = true;
     },
@@ -4120,25 +4120,15 @@ const PlanetVisualEngine = {
     },
 
     resize() {
+        if (!this.canvas) this.canvas = document.getElementById('game-canvas');
         if (!this.canvas) return;
+        this.ctx = this.canvas.getContext('2d');
+        
         this.logicalW = window.innerWidth;
         this.logicalH = window.innerHeight;
-        this.canvas.width = this.logicalW;
-        this.canvas.height = this.logicalH;
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
         this.targetY = Math.max(220, this.logicalH - 165);
-
-        if (!this.stars || this.stars.length === 0) {
-            this.stars = [];
-            for (let i = 0; i < 80; i++) {
-                this.stars.push({
-                    x: Math.random() * this.logicalW,
-                    y: Math.random() * this.logicalH,
-                    size: Math.random() * 2 + 0.8,
-                    opacity: Math.random() * 0.7 + 0.3,
-                    speed: Math.random() * 1.5 + 0.5
-                });
-            }
-        }
     },
 
     startLanding(mode = 'solo', onLaunch = null) {
@@ -4940,27 +4930,29 @@ const PlanetVisualEngine = {
             const padY = groundY - 2;
             const time = Date.now() / 1000;
 
+            if (ctx.resetTransform) ctx.resetTransform();
             ctx.clearRect(0, 0, w, h);
 
             // Space transition factor (0 = on planet surface, 1 = deep space)
             const spaceAlpha = Math.min(1, Math.max(0, flightOff / (h * 0.75)));
 
-            // 1. Cosmic starry background (seamless crossfade into live game canvas!)
-            ctx.save();
-            if (this.state === 'ejecting' && this.ejectStartTime) {
-                const ejectTime = (Date.now() - this.ejectStartTime) / 1000;
-                if (ejectTime > 0.35) {
-                    ctx.globalAlpha = Math.max(0, 1 - (ejectTime - 0.35) / 0.35);
-                }
-            }
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-            skyGrad.addColorStop(0, '#020617');
-            skyGrad.addColorStop(0.5, '#050a1e');
-            skyGrad.addColorStop(0.85, spaceAlpha > 0.6 ? '#020617' : '#064e3b');
-            skyGrad.addColorStop(1, spaceAlpha > 0.3 ? '#020617' : '#022c22');
-            ctx.fillStyle = skyGrad;
+            // 1. Cosmic background (exact game cosmos #020617)
+            ctx.fillStyle = '#020617';
             ctx.fillRect(0, 0, w, h);
-            ctx.restore();
+
+            // Atmospheric sky gradient when near planet
+            if (spaceAlpha < 1.0) {
+                ctx.save();
+                ctx.globalAlpha = 1.0 - spaceAlpha;
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+                skyGrad.addColorStop(0, '#020617');
+                skyGrad.addColorStop(0.5, '#050a1e');
+                skyGrad.addColorStop(0.85, '#064e3b');
+                skyGrad.addColorStop(1, '#022c22');
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(0, 0, w, h);
+                ctx.restore();
+            }
 
             // 2. Distant planetary moon / ring glow (pans down with space depth)
             if (spaceAlpha < 0.9) {
@@ -4980,26 +4972,32 @@ const PlanetVisualEngine = {
                 ctx.restore();
             }
 
-            // 3. Bright twinkling stars & streak lines when rocketing up
+            // 3. Render the EXACT in-game stars from GAME.stars (1 SINGLE ROOM!)
             ctx.save();
-            if (this.stars) {
-                this.stars.forEach(s => {
-                    const starY = (s.y + (this.state === 'takeoff' ? (flightOff * s.speed * 0.8) : 0)) % h;
-                    ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity * (0.8 + 0.2 * Math.sin(time * 2 + s.x))})`;
-                    ctx.beginPath();
-                    if (this.state === 'takeoff') {
-                        // Motion streaks
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-                        ctx.lineWidth = 1;
-                        ctx.moveTo(s.x, starY);
-                        ctx.lineTo(s.x, starY + 8 * s.speed);
-                        ctx.stroke();
-                    } else {
-                        ctx.arc(s.x, starY, s.size, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                });
+            if (!GAME.stars || GAME.stars.length === 0) {
+                GAME.stars = [];
+                for (let i = 0; i < 150; i++) {
+                    GAME.stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, size: Math.random() * 2, opacity: Math.random() * 0.5 });
+                }
             }
+            GAME.stars.forEach(s => {
+                const sx = (s.x) % (w / (GAME.zoom || 1));
+                const sy = (s.y + (this.state === 'takeoff' ? (flightOff * 0.4) : 0)) % (h / (GAME.zoom || 1));
+                const drawX = sx < 0 ? sx + (w / (GAME.zoom || 1)) : sx;
+                const drawY = sy < 0 ? sy + (h / (GAME.zoom || 1)) : sy;
+                ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity || 0.6})`;
+                ctx.beginPath();
+                if (this.state === 'takeoff') {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+                    ctx.lineWidth = 1;
+                    ctx.moveTo(drawX, drawY);
+                    ctx.lineTo(drawX, drawY + 8);
+                    ctx.stroke();
+                } else {
+                    ctx.arc(drawX, drawY, s.size || 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
             ctx.restore();
 
             // ONLY DRAW PLANET SURFACE IF STILL IN VIEW
