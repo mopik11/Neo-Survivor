@@ -2089,10 +2089,14 @@ io.on('connection', (socket) => {
             return socket.emit('error', { msg: "Neplatný formát místnosti nebo ID hráče." });
         }
 
-        // Prevent joining if room is finished or in game over state (v1.426)
+        // Prevent joining if room is finished, game over, or already locked/started (v1.697)
         if (ROOMS[roomId]) {
             if (ROOMS[roomId].isGameOver || ROOMS[roomId].isFinished) {
                 socket.emit('error', { msg: "Místnost je již uzavřena nebo hra skončila. Vytvoř novou." });
+                return;
+            }
+            if (ROOMS[roomId].isLocked && !ROOMS[roomId].players[playerId]) {
+                socket.emit('error', { msg: "Hra již začala. Nelze se připojit – počkej na nové kolo." });
                 return;
             }
         }
@@ -2182,16 +2186,22 @@ io.on('connection', (socket) => {
             ROOMS[roomId].players[playerId].name = safePlayerName;
         }
 
+        // isHost: first player who created the room becomes host
+        const isHostPlayer = (Object.keys(ROOMS[roomId].players).length === 1);
+
         socket.emit('joined', {
             roomId: roomId,
             playerState: ROOMS[roomId].players[playerId],
-            planet: ROOMS[roomId].planet || 'terra'
+            planet: ROOMS[roomId].planet || 'terra',
+            isHost: isHostPlayer
         });
     });
 
     socket.on('teamLaunch', () => {
         const r = socket.roomId;
         if (r && ROOMS[r]) {
+            // Lock room – no new players can join once game starts
+            ROOMS[r].isLocked = true;
             io.to(r).emit('teamTakeoff');
         }
     });

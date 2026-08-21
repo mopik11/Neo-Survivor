@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.696
+ * NEO SURVIVOR - Core Game Logic - v1.697
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.696'
+    version: window.GAME_VERSION || '1.697'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.696";
+const GAME_VERSION = window.GAME_VERSION || "1.697";
 const GAME = {
     active: false,
     paused: false,
@@ -4678,9 +4678,12 @@ const PlanetVisualEngine = {
         const skipBtn = document.getElementById('btn-planet-skip-travel');
         if (skipBtn) skipBtn.style.display = 'none';
 
-        // Pre-load solo game in the background so we fly directly into the active game!
+        // Pre-load game in the background so we fly directly into the active game!
         if (this.mode === 'solo' && !GAME.active) {
             startSoloGame();
+        } else if (this.mode === 'multiplayer' && !GAME.active) {
+            // For MP: game was already socket-joined, just call startGame
+            if (typeof startGame === 'function') startGame();
         }
 
         if (typeof playSound === 'function') playSound('shoot');
@@ -8248,10 +8251,11 @@ function initSocket() {
         });
 
         NET.socket.on('joined', (data) => {
-            const { roomId, playerState, planet } = data;
+            const { roomId, playerState, planet, isHost } = data;
             console.log("=== NEO SURVIVOR v1.492 ===");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
+            NET.isHost = isHost || false;
 
             // Synchronize active planet and UI styling for all players in room!
             if (planet) {
@@ -8264,62 +8268,88 @@ function initSocket() {
                 }
             }
 
-            // Close ALL modals – including planet-modal – so MP starts directly in arena
-            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-            const menuAnim = document.getElementById('menu-anim-canvas');
-            if (menuAnim) menuAnim.style.display = 'none';
-            if (window.PlanetVisualEngine && window.PlanetVisualEngine.animFrame) {
-                cancelAnimationFrame(window.PlanetVisualEngine.animFrame);
-                window.PlanetVisualEngine.animFrame = null;
-            }
             if (NET.serverPollingInterval) clearInterval(NET.serverPollingInterval);
 
-            // Session logic moved below startGame to ensure player exists
-            const wasNotActive = !GAME.active;
-            if (wasNotActive) {
-                startGame();
+            // Show the planet screen with landing animation for ALL multiplayer players!
+            // The game itself starts only when the host clicks "SPUSTIT HRU" (which fires teamTakeoff)
+            const menuAnim = document.getElementById('menu-anim-canvas');
+            if (menuAnim) menuAnim.style.display = 'none';
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
 
-                if (playerState && (playerState.x !== 0 || playerState.y !== 0)) {
-                    GAME.entities.player.x = playerState.x;
-                    GAME.entities.player.y = playerState.y;
-                    GAME.entities.player.hp = playerState.hp;
-                    GAME.entities.player.maxHp = playerState.maxHp;
-                    GAME.entities.player.level = playerState.level;
+            // Inject a host-only "START GAME" button into planet UI
+            setTimeout(() => {
+                // Show the MP waiting lobby on the planet
+                renderPlanetUI();
+                applyPlanetTheme(planet || PlanetVisualEngine.currentPlanetId || 'terra');
+
+                const modal = document.getElementById('planet-modal');
+                if (modal) modal.classList.add('active');
+
+                PlanetVisualEngine.startLanding('multiplayer', null);
+
+                // Inject MP lobby overlay with player list + host start button
+                let mpOverlay = document.getElementById('mp-lobby-overlay');
+                if (!mpOverlay) {
+                    mpOverlay = document.createElement('div');
+                    mpOverlay.id = 'mp-lobby-overlay';
+                    mpOverlay.style.cssText = `
+                        position: absolute; top: 14px; right: 14px; z-index: 50;
+                        background: rgba(10,15,30,0.88); border: 1.5px solid rgba(99,102,241,0.4);
+                        border-radius: 16px; padding: 14px 18px; min-width: 200px;
+                        font-family: 'Outfit', sans-serif; pointer-events: auto;
+                        box-shadow: 0 0 25px rgba(99,102,241,0.25);
+                    `;
+                    const planetModal = document.getElementById('planet-modal');
+                    if (planetModal) planetModal.appendChild(mpOverlay);
                 }
-            }
 
-            // Restore session ONLY if we just started the game (fresh connect/refresh)
-            // If we were already active (just resuming from AFK), we DON'T re-apply upgrades
-            if (wasNotActive && META.lastSession && META.lastSession.roomId === roomId) {
-                console.log('[REJOIN] Restoring session for room:', roomId);
-                const session = META.lastSession;
-                if (GAME.entities && GAME.entities.player) {
-                    GAME.entities.player.level = session.level || 1;
-                    GAME.entities.player.xp = session.xp || 0;
-                    GAME.entities.player.nextLevelXp = session.nextLevelXp || 100;
-                    if (session.upgrades && session.upgrades.length > 0) {
-                        session.upgrades.forEach(u => {
-                            try { applyUpgrade(u, false); } catch(e) {}
-                        });
+                const isHostPlayer = NET.isHost;
+                mpOverlay.innerHTML = `
+                    <div style="font-size:0.72rem; color:#94a3b8; letter-spacing:2px; margin-bottom:8px; font-weight:800;">🎮 MULTIPLAYER – LOBBY</div>
+                    <div style="font-size:0.8rem; color:#a5b4fc; margin-bottom:4px;">Místnost: <b style="color:#f1f5f9;">${roomId}</b></div>
+                    <div id="mp-lobby-players" style="font-size:0.78rem; color:#64748b; margin-bottom:10px;">Čekám na hráče…</div>
+                    ${isHostPlayer ? `<button id="btn-mp-start-all" style="
+                        width:100%; padding:10px 0; background:linear-gradient(135deg,#6366f1,#4f46e5);
+                        color:#fff; font-weight:900; font-size:0.88rem; border:none; border-radius:10px;
+                        cursor:pointer; letter-spacing:1px; box-shadow:0 0 18px rgba(99,102,241,0.5);
+                    ">🚀 SPUSTIT HRU PRO VŠECHNY</button>` : `<div style="font-size:0.76rem; color:#64748b; text-align:center; margin-top:4px;">⏳ Čekám na start od hostitele…</div>`}
+                `;
+
+                if (isHostPlayer) {
+                    const btnMPStart = document.getElementById('btn-mp-start-all');
+                    if (btnMPStart) {
+                        btnMPStart.onclick = () => {
+                            btnMPStart.disabled = true;
+                            btnMPStart.innerText = '🚀 Startujeme!';
+                            if (NET.socket) NET.socket.emit('teamLaunch');
+                        };
                     }
                 }
-                META.lastSession = null; 
-                saveMeta();
-            }
-            
+            }, 80);
+
             NET.socket.emit('upgradePicked');
         });
 
         NET.socket.on('teamTakeoff', () => {
-            // Synced takeoff signal from host – hide planet view and start directly
-            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-            const menuAnimEl = document.getElementById('menu-anim-canvas');
-            if (menuAnimEl) menuAnimEl.style.display = 'none';
-            if (window.PlanetVisualEngine && window.PlanetVisualEngine.animFrame) {
-                cancelAnimationFrame(window.PlanetVisualEngine.animFrame);
-                window.PlanetVisualEngine.animFrame = null;
-            }
-            if (GAME.active) {
+            // All players: trigger the cinematic takeoff from the planet, then game begins
+            const pModal = document.getElementById('planet-modal');
+            if (pModal && pModal.classList.contains('active')) {
+                // Remove lobby overlay so UI is clean during takeoff
+                const lo = document.getElementById('mp-lobby-overlay');
+                if (lo) lo.remove();
+                // Trigger takeoff – startTakeoff will call startGame for MP mode
+                if (window.PlanetVisualEngine && window.PlanetVisualEngine.state === 'idle') {
+                    window.PlanetVisualEngine.startTakeoff();
+                } else {
+                    // Fallback if still landing – delay slightly then takeoff
+                    setTimeout(() => {
+                        if (window.PlanetVisualEngine) window.PlanetVisualEngine.startTakeoff();
+                    }, 1200);
+                }
+            } else {
+                // Planet not visible – start game directly (edge case: player had it hidden)
+                document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+                if (!GAME.active && typeof startGame === 'function') startGame();
                 const uiEl = document.getElementById('ui-layer');
                 if (uiEl) { uiEl.style.display = 'block'; uiEl.style.opacity = '1'; }
             }
@@ -10187,20 +10217,9 @@ function init() {
                 tryFullscreen();
                 AudioEngine.init();
                 AudioEngine.stopMenuMusic();
-                // Join the room directly – planet screen is skipped for multiplayer
-                initSocket();
+                // Join the room → the 'joined' socket event will show the planet lobby
                 const curPlanet = window.PlanetVisualEngine?.currentPlanetId || localStorage.getItem('neoSurvivor_planet') || 'terra';
-                NET.socket.emit('joinRoom', {
-                    roomId: roomName,
-                    playerId: myPlayerId,
-                    planet: curPlanet,
-                    username: META.playerName || SecureStorage.getItem('neoSurvivor_user'),
-                    name: META.playerName || SecureStorage.getItem('neoSurvivor_user')
-                });
-                // Notify all already-connected players in this room to skip planet too
-                setTimeout(() => {
-                    if (NET.socket) NET.socket.emit('teamLaunch');
-                }, 800);
+                window.joinCloudServer(roomName);
             };
         }
 
