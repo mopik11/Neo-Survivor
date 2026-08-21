@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.692
+ * NEO SURVIVOR - Core Game Logic - v1.693
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.692'
+    version: window.GAME_VERSION || '1.693'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.692";
+const GAME_VERSION = window.GAME_VERSION || "1.693";
 const GAME = {
     active: false,
     paused: false,
@@ -3650,10 +3650,20 @@ function showCrateNotification(name, icon) {
 }
 
 function showCurrencyNotification(amount, source = "") {
-    const titles = ["PARÁDA!", "SKVĚLÉ!", "ÚSPĚCH!", "ZÍSKAL JSI!", "VÝBORNĚ!"];
+    const isNegative = (amount < 0);
+    const absAmount = Math.abs(amount);
+    const titles = isNegative 
+        ? ["VÝDAJ", "OPRAVA LODI", "POPLATEK", "PLATBA"] 
+        : ["PARÁDA!", "SKVĚLÉ!", "ÚSPĚCH!", "ZÍSKAL JSI!", "VÝBORNĚ!"];
     const title = window.T(titles[Math.floor(Math.random() * titles.length)]);
     const translatedSource = source ? window.T(source) : "";
     
+    const borderColor = isNegative ? '#ef4444' : '#fbbf24';
+    const shadowColor = isNegative ? 'rgba(239, 68, 68, 0.45)' : 'rgba(251, 191, 36, 0.4)';
+    const titleColor = isNegative ? '#f87171' : '#fbbf24';
+    const amountColor = isNegative ? '#ef4444' : '#fff';
+    const prefix = isNegative ? '-' : '+';
+
     const notification = document.createElement('div');
     notification.style.position = 'fixed';
     notification.style.top = '20%';
@@ -3665,10 +3675,10 @@ function showCurrencyNotification(amount, source = "") {
     notification.style.animation = 'achievementPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
     
     notification.innerHTML = `
-        <div style="background: rgba(15, 23, 42, 0.9); border: 2px solid #fbbf24; padding: 20px 40px; border-radius: 20px; box-shadow: 0 0 50px rgba(251, 191, 36, 0.4); backdrop-filter: blur(10px);">
-            <div style="color: #fbbf24; font-weight: 900; font-size: 1.5rem; letter-spacing: 2px; margin-bottom: 5px;">${title}</div>
-            <div style="color: #fff; font-size: 2rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <span style="font-size: 1.5rem;">🪙</span> +${formatNumberFull(amount)} DOGE
+        <div style="background: rgba(15, 23, 42, 0.94); border: 2px solid ${borderColor}; padding: 18px 36px; border-radius: 20px; box-shadow: 0 0 50px ${shadowColor}; backdrop-filter: blur(12px);">
+            <div style="color: ${titleColor}; font-weight: 900; font-size: 1.3rem; letter-spacing: 2px; margin-bottom: 5px;">${title}</div>
+            <div style="color: ${amountColor}; font-size: 1.85rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <span style="font-size: 1.4rem;">🪙</span> ${prefix}${formatNumberFull(absAmount)} DOGE
             </div>
             ${source ? `<div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px; text-transform: uppercase;">${translatedSource}</div>` : ''}
         </div>
@@ -4840,19 +4850,25 @@ const PlanetVisualEngine = {
                 if (!this.incomingHazardAsteroid) {
                     const rocketBaseX = cx + (this.shipLateralX || 0);
                     this.incomingHazardAsteroid = {
-                        x: rocketBaseX + (Math.random() - 0.5) * 30,
-                        y: -120,
+                        x: rocketBaseX + (Math.random() - 0.5) * 40,
+                        y: -140,
                         targetX: rocketBaseX,
-                        size: 40,
-                        speedY: 14.0,
+                        size: 45,
+                        speedY: 4.6,
                         rot: Math.random() * Math.PI,
-                        rotSpeed: 0.08,
+                        rotSpeed: 0.045,
                         points: Array.from({ length: 9 }, (_, idx) => {
                             const angle = (idx / 9) * Math.PI * 2;
                             const r = 0.75 + Math.random() * 0.45;
                             return { x: Math.cos(angle) * r, y: Math.sin(angle) * r };
                         })
                     };
+                    const tag = document.getElementById('planet-status-tag');
+                    if (tag) {
+                        tag.innerHTML = `<span>⚠️ POZOR! PÁS ASTEROIDŮ – KOLIZNÍ KURZ!</span>`;
+                        tag.style.color = '#ef4444';
+                        tag.style.borderColor = 'rgba(239, 68, 68, 0.7)';
+                    }
                     if (typeof playSound === 'function') playSound('meteor');
                 }
             }
@@ -10555,8 +10571,24 @@ function init() {
         });
     };
 
+    window.switchTutorialTab = function(tabId) {
+        document.querySelectorAll('.tutorial-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tutorial-tab-content').forEach(c => c.style.display = 'none');
+        
+        const activeBtn = document.querySelector(`.tutorial-tab-btn[onclick*="${tabId}"]`);
+        if (activeBtn) activeBtn.classList.add('active');
+        
+        const activeContent = document.getElementById(`tut-tab-${tabId}`);
+        if (activeContent) activeContent.style.display = 'grid';
+        
+        if (typeof playSound === 'function') playSound('select');
+    };
+
     const btnTutorial = document.getElementById('btn-tutorial');
-    if (btnTutorial) btnTutorial.onclick = () => document.getElementById('tutorial-modal').classList.add('active');
+    if (btnTutorial) btnTutorial.onclick = () => {
+        if (window.switchTutorialTab) window.switchTutorialTab('basics');
+        document.getElementById('tutorial-modal').classList.add('active');
+    };
     const btnCloseTutorial = document.getElementById('btn-close-tutorial');
     if (btnCloseTutorial) btnCloseTutorial.onclick = () => document.getElementById('tutorial-modal').classList.remove('active');
 

@@ -802,6 +802,40 @@ canvas {
   font-size: 1.5em;
 }
 
+.tutorial-tabs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.tutorial-tab-btn {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  padding: 7px 14px;
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tutorial-tab-btn:hover {
+  border-color: #38bdf8;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.tutorial-tab-btn.active {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(99, 102, 241, 0.25));
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.35);
+}
+
 .tutorial-card {
   background: linear-gradient(135deg, rgba(22, 32, 60, 0.85) 0%, rgba(12, 18, 40, 0.9) 100%);
   border: 1px solid rgba(56, 189, 248, 0.12);

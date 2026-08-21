@@ -108,7 +108,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.692
+            NEO SURVIVOR v1.693
           </div>
         </div>
       </div>
@@ -197,7 +197,7 @@
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
             <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.692</span>
+              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.693</span>
             </div>
 
             <div id="menu-links" class="mobile-stack-links" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 15px;">
@@ -624,104 +624,187 @@
       </div>
 
       <div id="tutorial-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 820px; width: 95%; max-height: 90vh;">
           <button class="btn-close-x" onclick="closeModal()">×</button>
-          <div class="modal-body">
-            <h2 style="font-size: 2.8rem; color: #38bdf8; margin-bottom: 0.5rem; letter-spacing: 3px; text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);" data-i18n="VESMÍRNÝ MANUÁL">VESMÍRNÝ MANUÁL</h2>
-            <p style="color: #94a3b8; margin-bottom: 2rem; font-size: 0.9rem;" data-i18n="Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.">Vše, co potřebuješ vědět k přežití v hlubokém vesmíru.</p>
+          <div class="modal-body" style="padding-top: 10px;">
+            <h2 style="font-size: 2.2rem; color: #38bdf8; margin-bottom: 0.3rem; letter-spacing: 2px; text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);" data-i18n="VESMÍRNÝ MANUÁL">VESMÍRNÝ MANUÁL</h2>
+            <p style="color: #94a3b8; margin-bottom: 1.2rem; font-size: 0.85rem;" data-i18n="Vše, co potřebuješ vědět k přežití a kolonizaci vesmíru.">Vše, co potřebuješ vědět k přežití a kolonizaci vesmíru.</p>
             
-            <div style="text-align: left; width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; padding-right: 5px; padding-bottom: 20px;">
+            <!-- Category Tabs -->
+            <div class="tutorial-tabs" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 1.5rem;">
+              <button class="tutorial-tab-btn active" onclick="switchTutorialTab('basics')">🎮 Základy & Boj</button>
+              <button class="tutorial-tab-btn" onclick="switchTutorialTab('planets')">🌌 Planety & Těžba</button>
+              <button class="tutorial-tab-btn" onclick="switchTutorialTab('flight')">🚀 Raketka & Lety</button>
+              <button class="tutorial-tab-btn" onclick="switchTutorialTab('enemies')">👾 Nepřátelé & Bossové</button>
+              <button class="tutorial-tab-btn" onclick="switchTutorialTab('loot')">💎 Výbava & Mazlíčci</button>
+            </div>
+
+            <!-- Tab 1: Basics -->
+            <div id="tut-tab-basics" class="tutorial-tab-content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; text-align: left;">
               <div class="tutorial-card">
-                <h3 data-i18n="🕹️ ZÁKLADNÍ OVLÁDÁNÍ">🕹️ ZÁKLADNÍ OVLÁDÁNÍ</h3>
-                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                  <li><strong style="color:white">Pohyb:</strong> Klávesy <span style="color:#6366f1">WASD</span> nebo <span style="color:#6366f1">Joystick</span> na mobilu.</li>
-                  <li><strong style="color:white">Schopnost:</strong> <span style="color:#6366f1">Levý klik</span> nebo <span style="color:#6366f1">Klepnutí</span> (pravá strana mobilu).</li>
-                  <li><strong style="color:white">Pauza:</strong> Klávesa <span style="color:#6366f1">ESC</span> pro statistiky a pauzu.</li>
+                <h3>🕹️ ZÁKLADNÍ OVLÁDÁNÍ</h3>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem; line-height: 1.6;">
+                  <li><strong style="color:white">Pohyb:</strong> Klávesy <span style="color:#6366f1">WASD</span> nebo virtuální joystick na mobilu.</li>
+                  <li><strong style="color:white">Střelba:</strong> Zbraně pálí automaticky na nejbližší hrozby.</li>
+                  <li><strong style="color:white">Schopnost:</strong> <span style="color:#6366f1">Levý klik</span> / <span style="color:#6366f1">Klepnutí vpravo</span> na mobilu.</li>
+                  <li><strong style="color:white">Pauza:</strong> Klávesa <span style="color:#6366f1">ESC</span> pro zobrazení statistik.</li>
                 </ul>
               </div>
 
               <div class="tutorial-card">
-                <h3 data-i18n="🧬 VÝVOJ A LEVELY">🧬 VÝVOJ A LEVELY</h3>
-                <p data-i18n="Zabíjej nepřátele a sbírej XP Gemy. Každý nový level ti nabídne 3 náhodná vylepšení.">Zabíjej nepřátele a sbírej <strong style="color:#10b981">XP Gemy</strong>. Každý nový level ti nabídne 3 náhodná vylepšení.</p>
+                <h3>🧬 VÝVOJ & LEVELOVÁNÍ</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5;">
+                  Likviduj vlny vetřelců a sbírej zářivé <strong style="color:#10b981">XP Gemy</strong>.<br>
+                  Každé navýšení úrovně ti nabídne 3 náhodné karty vylepšení (projektily, štíty, aury a drony).
+                </p>
               </div>
 
               <div class="tutorial-card">
-                <h3 data-i18n="👾 ATLAS MIMOZEMŠŤANŮ">👾 ATLAS MIMOZEMŠŤANŮ</h3>
-                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                  <li><span style="color:#ef4444">▲</span> <strong style="color:white" data-i18n="Dron:">Dron:</strong> <span data-i18n="Základní útočník.">Základní útočník.</span></li>
-                  <li><span style="color:#a855f7">■</span> <strong style="color:white" data-i18n="Střelec:">Střelec:</strong> <span data-i18n="Vypouští projektily.">Vypouští projektily.</span></li>
-                  <li><span style="color:#eab308">★</span> <strong style="color:white" data-i18n="Zloděj:">Zloděj:</strong> <span data-i18n="Krade tvou kořist.">Krade tvou kořist.</span></li>
-                  <li><span style="color:#f97316">◆</span> <strong style="color:white" data-i18n="Kamikadze:">Kamikadze:</strong> <span data-i18n="Při kontaktu vybuchuje.">Při kontaktu vybuchuje.</span></li>
+                <h3>☢️ TAKTICKÉ PŘEDMĚTY V ARÉNĚ</h3>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem; line-height: 1.6;">
+                  <li><strong style="color:#f87171">☢️ Nuke:</strong> Okamžitě vyhladí všechny běžné nepřátele.</li>
+                  <li><strong style="color:#38bdf8">🧲 Magnet:</strong> Přitáhne všechny XP gemy z celé mapy.</li>
+                  <li><strong style="color:#22c55e">➕ Lékárna:</strong> Opraví poškozený trup a obnoví životy.</li>
                 </ul>
-              </div>
-
-              <div class="tutorial-card">
-                <h3 data-i18n="🛡️ ELITNÍ NEPŘÁTELÉ">🛡️ ELITNÍ NEPŘÁTELÉ</h3>
-                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                  <li><span style="color:#38bdf8">◓</span> <strong style="color:white" data-i18n="Štítonoš:">Štítonoš:</strong> <span data-i18n="Má odolný přední štít.">Má odolný přední štít.</span></li>
-                  <li><span style="color:#0ea5e9">✚</span> <strong style="color:white" data-i18n="Support:">Support:</strong> <span data-i18n="Léčí a zpomaluje.">Léčí a zpomaluje.</span></li>
-                  <li><span style="color:#f87171">▲</span> <strong style="color:white" data-i18n="Sebevrah:">Sebevrah:</strong> <span data-i18n="Rychlý a smrtící.">Rychlý a smrtící.</span></li>
-                  <li><span style="color:#f43f5e">▼</span> <strong style="color:white" data-i18n="Skokan:">Skokan:</strong> <span data-i18n="Nepředvídatelné skoky.">Nepředvídatelné skoky.</span></li>
-                </ul>
-              </div>
-
-              <div class="tutorial-card">
-                <h3 data-i18n="👹 BOSS ARÉNA">👹 BOSS ARÉNA</h3>
-                <p style="font-size: 0.85rem; color: #94a3b8;" data-i18n="Každých 5 LEVELŮ se objeví NÁHODNÝ BOSS s unikátními schopnostmi:">Každých 5 LEVELŮ se objeví NÁHODNÝ BOSS s unikátními schopnostmi:</p>
-                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">
-                  <li><strong style="color:#ef4444" data-i18n="Vlastnosti:">Vlastnosti:</strong> <span data-i18n="3x větší, 50x HP, 2x rychlejší, 3x DMG.">3x větší, 50x HP, 2x rychlejší, 3x DMG.</span></li>
-                  <li><strong style="color:#fbbf24" data-i18n="Odměna:">Odměna:</strong> <span data-i18n="Speciální UPGRADE (bez Common) + BEDNA zdarma!">Speciální UPGRADE (bez Common) + BEDNA zdarma!</span></li>
-                  <li><strong style="color:#fbbf24" data-i18n="Možní bossové:">Možní bossové:</strong></li>
-                  <ul style="list-style: none; padding-left: 10px; font-size: 0.75rem; color: #94a3b8;">
-                    <li><strong style="color:#ef4444">Dron</strong>, <strong style="color:#f43f5e">Kostka</strong>, <strong style="color:#f97316">Kamikadze</strong>, <strong style="color:#eab308">Goblin</strong></li>
-                    <li><strong style="color:#0ea5e9">Support</strong>, <strong style="color:#94a3b8">Štítonoš</strong>, <strong style="color:#10b981">Skokan</strong></li>
-                  </ul>
-                  <li><strong style="color:#38bdf8" data-i18n="Mechanika:">Mechanika:</strong> <span data-i18n="Dokud žije boss, spawn běžných vln je o 50% pomalejší.">Dokud žije boss, spawn běžných vln je o 50% pomalejší.</span></li>
-                </ul>
-              </div>
-
-              <div class="tutorial-card">
-                <h3 data-i18n="🎁 TAKTICKÁ VÝBAVA">🎁 TAKTICKÁ VÝBAVA</h3>
-                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                  <li><strong style="color:white" data-i18n="☢️ Nuke:">☢️ Nuke:</strong> <span data-i18n="Vymaže vše na obrazovce.">Vymaže vše na obrazovce.</span></li>
-                  <li><strong style="color:white" data-i18n="🧲 Magnet:">🧲 Magnet:</strong> <span data-i18n="Přitáhne všechny gemy z dálky.">Přitáhne všechny gemy z dálky.</span></li>
-                  <li><strong style="color:white" data-i18n="➕ Lékárna:">➕ Lékárna:</strong> <span data-i18n="Opraví poškozený trup lodi.">Opraví poškozený trup lodi.</span></li>
-                </ul>
-              </div>
-
-              <div class="tutorial-card">
-                <h3 data-i18n="📦 LOOTBOXY A BEDNY">📦 LOOTBOXY A BEDNY</h3>
-                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                  <li><strong style="color:white" data-i18n="Získávání:">Získávání:</strong> <span data-i18n="Bedny padají z bossů nebo je lze koupit v menu.">Bedny padají z bossů nebo je lze koupit v menu.</span></li>
-                  <li><strong style="color:white" data-i18n="Otevírání:">Otevírání:</strong> <span data-i18n="V menu 'VYLEPŠENÍ' klikni na bednu.">V menu "VYLEPŠENÍ" klikni na bednu.</span></li>
-                </ul>
-              </div>
-
-              <div class="tutorial-card">
-                <h3 data-i18n="💎 VZÁCNÉ NÁLEZY">💎 VZÁCNÉ NÁLEZY</h3>
-                <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;" data-i18n="Předměty z beden můžeš prodat za Dogecoiny:">Předměty z beden můžeš prodat za Dogecoiny:</p>
-                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.8rem;">
-                  <li><strong style="color:#94a3b8">Common:</strong> 10-25 Doge</li>
-                  <li><strong style="color:#38bdf8">Uncommon:</strong> 30-70 Doge</li>
-                  <li><strong style="color:#22c55e">Rare:</strong> 80-400 Doge</li>
-                  <li><strong style="color:#a855f7">Epic:</strong> 250-800 Doge</li>
-                  <li><strong style="color:#fbbf24">Legendary:</strong> 1000-6000 Doge</li>
-                </ul>
-                <div style="margin-top: 10px; padding: 10px; background: rgba(251, 191, 36, 0.1); border-radius: 10px; border: 1px solid rgba(251, 191, 36, 0.2);">
-                  <p style="margin: 0; color: #fbbf24; font-weight: bold; font-size: 0.85rem;" data-i18n="💎 EXTRÉMNÍ NÁLEZ!">💎 EXTRÉMNÍ NÁLEZ!</p>
-                  <p style="margin: 5px 0 0 0; font-size: 0.75rem;" data-i18n="Diamant (💎) má hodnotu 20 000 Doge a šanci 1% (padá z JAKÉKOLIV bedny!)">Diamant (💎) má hodnotu 20 000 Doge a šanci 1% (padá z JAKÉKOLIV bedny!)</p>
-                </div>
               </div>
 
               <div class="tutorial-card" style="border: 1px solid rgba(251, 191, 36, 0.3); background: rgba(251, 191, 36, 0.05);">
-                <h3 style="color: #fbbf24;" data-i18n="💡 PRO TIPY">💡 PRO TIPY</h3>
-                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem;">
-                  <li>• <strong style="color:white" data-i18n="Doge je základ:">Doge je základ:</strong> <span data-i18n="Kupuj trvalá vylepšení v menu 'VYLEPŠENÍ'.">Kupuj trvalá vylepšení v menu "VYLEPŠENÍ".</span></li>
-                  <li>• <strong style="color:white" data-i18n="Multiplayer:">Multiplayer:</strong> <span data-i18n="Spolupracujte! Sdílené levely znamenají víc síly.">Spolupracujte! Sdílené levely znamenají víc síly.</span></li>
-                  <li>• <strong style="color:white" data-i18n="Synergie:">Synergie:</strong> <span data-i18n="Aura + Zpětný odhoz (Knockback) tvoří neprostupnou zeď.">Aura + Zpětný odhoz (Knockback) tvoří neprostupnou zeď.</span></li>
+                <h3 style="color: #fbbf24;">💡 PRO TIPY DO BITVY</h3>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem; line-height: 1.6;">
+                  <li>• <strong style="color:white">Obranná zeď:</strong> Kombinace Aury a Odhozu (Knockback) vytvoří neprostupnou bariéru.</li>
+                  <li>• <strong style="color:white">Kooperace v MP:</strong> Sdílené levely a vzájemné krytí drasticky zvyšují šanci na přežití.</li>
                 </ul>
               </div>
             </div>
+
+            <!-- Tab 2: Planets -->
+            <div id="tut-tab-planets" class="tutorial-tab-content" style="display: none; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; text-align: left;">
+              <div class="tutorial-card" style="border-color: rgba(16, 185, 129, 0.35);">
+                <h3 style="color: #10b981;">🌍 TERRA (DOMOVSKÁ BIOSFÉRA)</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5;">
+                  Základní mírumilovný svět vhodný pro start. Poskytuje stabilní těžbu Dogecoinů a mírné vlny nepřátel.
+                </p>
+              </div>
+
+              <div class="tutorial-card" style="border-color: rgba(239, 68, 68, 0.35);">
+                <h3 style="color: #ef4444;">🔴 VULKÁN IGNIS</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5;">
+                  Svět sopek a tekoucí lávy. Rychlejší nepřátelé, ale o <strong style="color:#f97316">+40 % vyšší výnos</strong> Dogecoinů ze všech zdrojů!
+                </p>
+              </div>
+
+              <div class="tutorial-card" style="border-color: rgba(6, 182, 212, 0.35);">
+                <h3 style="color: #06b6d4;">❄️ LEDOVÝ CRYO</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5;">
+                  Mrazivá planeta se zákeřnými ledovými hrotovými nepřáteli. Bonus k odměnám činí <strong style="color:#38bdf8">+75 % Doge</strong>.
+                </p>
+              </div>
+
+              <div class="tutorial-card" style="border-color: rgba(217, 70, 239, 0.35);">
+                <h3 style="color: #d946ef;">🟣 NEON CITADEL</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5;">
+                  Kyberpunková metropole budoucnosti s elitními útočníky a obřím bonusem <strong style="color:#c084fc">+120 % Doge</strong>.
+                </p>
+              </div>
+
+              <div class="tutorial-card" style="grid-column: 1 / -1; border: 1px solid rgba(251, 191, 36, 0.3);">
+                <h3 style="color: #fbbf24;">🏗️ TĚŽBA A STAVBA BUDOV</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5;">
+                  Přímo na povrchu každé planety můžeš za Dogecoiny postavit specializované budovy (generátory, solární panely, radary, terraformátory). Tyto stavby generují stálý pasivní příjem Dogecoinů i v době, kdy nejsi v bitvě!
+                </p>
+              </div>
+            </div>
+
+            <!-- Tab 3: Flight -->
+            <div id="tut-tab-flight" class="tutorial-tab-content" style="display: none; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; text-align: left;">
+              <div class="tutorial-card">
+                <h3>🛸 INTERAKTIVNÍ MEZIPLANETÁRNÍ LET</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5;">
+                  Při přeletu mezi planetami můžeš raketku ovládat tahem prstu po obrazovce na mobilu nebo myší na PC. Raketka se plynule naklání a reaguje na tvé řízení.
+                </p>
+              </div>
+
+              <div class="tutorial-card">
+                <h3>☄️ PÁS ASTEROIDŮ & RIZIKO KOLIZE</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5;">
+                  Čím vzdálenější je cílová planeta, tím vyšší je šance na srážku s asteroidem (Terra 0%, Ignis 35%, Cryo 60%, Neon Citadel 85%).
+                </p>
+              </div>
+
+              <div class="tutorial-card">
+                <h3>🛠️ KRIZOVÝ PROTOKOL PŘI SRÁŽCE</h3>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem; line-height: 1.6;">
+                  <li><strong style="color:#fbbf24">🛠️ Oprava v letu:</strong> Zaplatíš opravu lodi v Dogecoinech a pokračuješ k cíli.</li>
+                  <li><strong style="color:#94a3b8">🏠 Nouzový návrat:</strong> Bezpečně otočíš raketku a vrátíš se na výchozí planetu za zlomek ceny.</li>
+                </ul>
+              </div>
+
+              <div class="tutorial-card">
+                <h3>⏩ RYCHLÝ SKOK (SKIP TRAVEL)</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5;">
+                  Pokud spěcháš do bitvy, tlačítko vpravo dole ti umožní let okamžitě přeskočit a přistát přímo na cílové planetě.
+                </p>
+              </div>
+            </div>
+
+            <!-- Tab 4: Enemies -->
+            <div id="tut-tab-enemies" class="tutorial-tab-content" style="display: none; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; text-align: left;">
+              <div class="tutorial-card">
+                <h3>👾 BĚŽNÍ VETŘELCI</h3>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem; line-height: 1.6;">
+                  <li><span style="color:#ef4444">▲</span> <strong style="color:white">Útočný Dron:</strong> Rychlý základní pěšák.</li>
+                  <li><span style="color:#a855f7">■</span> <strong style="color:white">Střelec:</strong> Pálí projektily na dálku.</li>
+                  <li><span style="color:#eab308">★</span> <strong style="color:white">Zloděj:</strong> Krade upuštěné XP gemy a Dogecoiny!</li>
+                  <li><span style="color:#f97316">◆</span> <strong style="color:white">Kamikadze:</strong> Při kontaktu způsobí obří výbuch.</li>
+                </ul>
+              </div>
+
+              <div class="tutorial-card">
+                <h3>🛡️ ELITNÍ NEPŘÁTELÉ</h3>
+                <ul style="list-style: none; padding: 0; color: #94a3b8; font-size: 0.85rem; line-height: 1.6;">
+                  <li><span style="color:#38bdf8">◓</span> <strong style="color:white">Štítonoš:</strong> Blokuje čelní útoky, střílej do zad.</li>
+                  <li><span style="color:#0ea5e9">✚</span> <strong style="color:white">Support:</strong> Léčí a zrychluje okolní vetřelce.</li>
+                  <li><span style="color:#f43f5e">▼</span> <strong style="color:white">Skokan:</strong> Provádí nečekané skoky přímo na hráče.</li>
+                </ul>
+              </div>
+
+              <div class="tutorial-card" style="grid-column: 1 / -1; border-color: rgba(239, 68, 68, 0.4);">
+                <h3 style="color: #ef4444;">👹 BOSS ARÉNA (KAŽDÝCH 5 LEVELŮ)</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5;">
+                  Obří bossové mají 50x více životů a ničivé útoky. Po jejich poražení získáš <strong style="color:#fbbf24">speciální vzácné vylepšení bez Common karet</strong> a <strong style="color:#38bdf8">bednu s kořistí zdarma</strong>!
+                </p>
+              </div>
+            </div>
+
+            <!-- Tab 5: Loot -->
+            <div id="tut-tab-loot" class="tutorial-tab-content" style="display: none; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; text-align: left;">
+              <div class="tutorial-card">
+                <h3>📦 BEDNY A LOOTBOXY</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5;">
+                  Získávej bedny z bossů nebo v obchodě. Obsahují vzácné emotikony, klobouky a sběratelské předměty.
+                </p>
+              </div>
+
+              <div class="tutorial-card">
+                <h3>🐾 MAZLÍČCI & BOJOVÍ DRONI</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5;">
+                  Od 15. úrovně si můžeš vybrat mazlíčka/drona, který létá po tvém boku a poskytuje podporu v bitvě.
+                </p>
+              </div>
+
+              <div class="tutorial-card" style="grid-column: 1 / -1; border: 1px solid rgba(251, 191, 36, 0.3);">
+                <h3 style="color: #fbbf24;">💎 VÝKUPNÍ CENY PŘEDMĚTŮ V INVENTÁŘI</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 8px; font-size: 0.82rem;">
+                  <div style="color: #94a3b8;">Common: <b>10–25 DOGE</b></div>
+                  <div style="color: #38bdf8;">Uncommon: <b>30–70 DOGE</b></div>
+                  <div style="color: #22c55e;">Rare: <b>80–400 DOGE</b></div>
+                  <div style="color: #a855f7;">Epic: <b>250–800 DOGE</b></div>
+                  <div style="color: #fbbf24;">Legendary: <b>1000–6000 DOGE</b></div>
+                  <div style="color: #f43f5e; font-weight: 900;">💎 Diamant: 20 000 DOGE</div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -850,18 +933,20 @@
       </div>
 
     <div id="asteroid-emergency-modal" class="modal" style="z-index: 1000035; background: rgba(5, 7, 18, 0.90); backdrop-filter: blur(14px);">
-      <div class="modal-content" style="max-width: 390px; width: 92%; text-align: center; border: 1.5px solid #f97316; box-shadow: 0 0 35px rgba(249, 115, 22, 0.35); padding: 1.25rem 1.1rem; border-radius: 16px;">
-        <div style="font-size: 2.2rem; margin-bottom: 0.25rem; animation: pulse 0.9s infinite;">💥☄️</div>
-        <h2 style="font-size: 1.25rem; color: #fbbf24; font-weight: 900; margin-bottom: 0.45rem; letter-spacing: 0.5px;">KOLIZE S ASTEROIDEM!</h2>
-        <p id="asteroid-hazard-desc" style="color: #cbd5e1; font-size: 0.80rem; margin-bottom: 1.1rem; line-height: 1.45;">
+      <div class="modal-content" style="max-width: 360px; width: 92%; text-align: center; border: 1.5px solid #f97316; box-shadow: 0 0 35px rgba(249, 115, 22, 0.35); padding: 1.25rem 1rem; border-radius: 18px;">
+        <div style="font-size: 2.2rem; margin-bottom: 0.2rem; animation: pulse 0.9s infinite;">💥☄️</div>
+        <h2 style="font-size: 1.2rem; color: #fbbf24; font-weight: 900; margin-bottom: 0.35rem; letter-spacing: 0.5px;">KOLIZE S ASTEROIDEM!</h2>
+        <p id="asteroid-hazard-desc" style="color: #cbd5e1; font-size: 0.78rem; margin-bottom: 1.1rem; line-height: 1.45;">
           Raketka byla poškozena průletem polem asteroidů.
         </p>
         <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
-          <button id="btn-asteroid-continue" class="btn-restart" style="padding: 10px 12px; font-size: 0.82rem; background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #fbbf24; color: #020617; font-weight: 900; box-shadow: 0 0 15px rgba(245, 158, 11, 0.35); border-radius: 10px;">
-            🛠️ OPRAVIT A POKRAČOVAT (<span id="asteroid-continue-cost">600</span> DOGE)
+          <button id="btn-asteroid-continue" class="btn-restart" style="padding: 10px 14px; font-size: 0.8rem; background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #fbbf24; color: #020617; font-weight: 900; box-shadow: 0 0 15px rgba(245, 158, 11, 0.35); border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="display: flex; align-items: center; gap: 6px;">🛠️ OPRAVIT A POKRAČOVAT</span>
+            <span style="background: rgba(0,0,0,0.22); padding: 3px 8px; border-radius: 8px; color: #020617; font-weight: 900; font-size: 0.76rem; letter-spacing: 0.3px;"><span id="asteroid-continue-cost">4 500</span> DOGE</span>
           </button>
-          <button id="btn-asteroid-return" class="btn-restart" style="padding: 10px 12px; font-size: 0.80rem; background: rgba(30, 41, 59, 0.9); border-color: #64748b; font-weight: 800; color: #e2e8f0; border-radius: 10px;">
-            🏠 NOUZOVÝ NÁVRAT DOMŮ (<span id="asteroid-return-cost">150</span> DOGE)
+          <button id="btn-asteroid-return" class="btn-restart" style="padding: 10px 14px; font-size: 0.8rem; background: rgba(30, 41, 59, 0.92); border-color: #64748b; font-weight: 800; color: #e2e8f0; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="display: flex; align-items: center; gap: 6px;">🏠 NOUZOVÝ NÁVRAT</span>
+            <span style="background: rgba(0,0,0,0.45); padding: 3px 8px; border-radius: 8px; color: #fbbf24; font-weight: 900; font-size: 0.76rem; letter-spacing: 0.3px;"><span id="asteroid-return-cost">900</span> DOGE</span>
           </button>
         </div>
       </div>
@@ -904,7 +989,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>window.GAME_VERSION = '1.692';</script>
-    <script type="module" src="./main.js?v=1.692"></script>
+    <script>window.GAME_VERSION = '1.693';</script>
+    <script type="module" src="./main.js?v=1.693"></script>
   </body>
 </html>
