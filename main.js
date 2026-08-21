@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.684
+ * NEO SURVIVOR - Core Game Logic - v1.685
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4286,10 +4286,12 @@ const PlanetVisualEngine = {
 
     handleCanvasInteraction(clickX, clickY) {
         const cx = (this.logicalW || window.innerWidth) / 2;
+        const curPan = (this.state === 'idle' ? (this.panOffset || 0) : 0);
+        const rocketX = cx + curPan;
         const shipY = this.shipY;
         
         // Check direct click on the Rocket -> Opens Planet Select Star Map!
-        const dxRocket = clickX - cx;
+        const dxRocket = clickX - rocketX;
         const dyRocket = clickY - shipY;
         if (Math.abs(dxRocket) < 65 && Math.abs(dyRocket) < 85) {
             openPlanetSelectModal();
@@ -4537,11 +4539,16 @@ const PlanetVisualEngine = {
     },
 
     update() {
-        const cx = (this.logicalW || window.innerWidth) / 2;
+        const w = (this.logicalW || window.innerWidth);
+        const cx = w / 2;
         const groundY = this.targetY + 12 + this.flightOffset;
         const padY = groundY - 2;
+        const curPan = (this.state === 'idle' ? (this.panOffset || 0) : 0);
+        const normDx = curPan / (w * 0.48);
+        const curveYDrop = (normDx * normDx) * 32;
+        const currentPadY = padY + (this.state === 'idle' ? curveYDrop : 0);
         // The rocket resting height so it sits squarely ON TOP of the landing pad
-        const restY = padY - 52;
+        const restY = currentPadY - 52;
 
         // Volcano smoke generator (Directly at volcano crater!)
         if (this.flightOffset < 150 && Math.random() < 0.4) {
@@ -4630,8 +4637,9 @@ const PlanetVisualEngine = {
             if (this.panOffset < -maxPan) { this.panOffset += (-maxPan - this.panOffset) * 0.2; }
 
             if (Math.random() < 0.25) {
+                const rocketX = cx + (this.panOffset || 0);
                 this.particles.push({
-                    x: cx + (Math.random() - 0.5) * 24,
+                    x: rocketX + (Math.random() - 0.5) * 24,
                     y: this.shipY + 52,
                     vx: (Math.random() - 0.5) * 1,
                     vy: Math.random() * 1.5 + 0.6,
@@ -5803,18 +5811,26 @@ const PlanetVisualEngine = {
                     ctx.restore();
                 });
 
-                // 9. Futuristic Landing Pad Platform in center (Clean Launch Platform)
+                // 9. Futuristic Landing Pad Platform in center (Rotates with planet curvature)
                 ctx.save();
                 const padH = isMobileHeight ? 22 : 28;
+                const padX = cx + curPan;
+                const normDx = (padX - cx) / (w * 0.48);
+                const curveYDrop = (normDx * normDx) * 32;
+                const padCurvedY = padY + curveYDrop;
+                const padTilt = normDx * 0.20;
+
+                ctx.translate(padX, padCurvedY);
+                ctx.rotate(padTilt);
 
                 // Pad shadow & base
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
                 ctx.beginPath();
-                ctx.ellipse(cx, padY + 8, padW / 2 + 14, padH / 2 + 7, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, 8, padW / 2 + 14, padH / 2 + 7, 0, 0, Math.PI * 2);
                 ctx.fill();
 
                 // Metallic Launchpad Plate
-                const padGrad = ctx.createLinearGradient(cx - padW / 2, 0, cx + padW / 2, 0);
+                const padGrad = ctx.createLinearGradient(-padW / 2, 0, padW / 2, 0);
                 padGrad.addColorStop(0, '#1e293b');
                 padGrad.addColorStop(0.5, '#334155');
                 padGrad.addColorStop(1, '#1e293b');
@@ -5822,7 +5838,7 @@ const PlanetVisualEngine = {
                 ctx.strokeStyle = curWorld.surfaceLine || '#10b981';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.ellipse(cx, padY, padW / 2, padH / 2, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, 0, padW / 2, padH / 2, 0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
@@ -5830,8 +5846,8 @@ const PlanetVisualEngine = {
                 const ledCount = 10;
                 for (let i = 0; i < ledCount; i++) {
                     const angle = (i / ledCount) * Math.PI * 2;
-                    const lx = cx + Math.cos(angle) * (padW / 2 - 12);
-                    const ly = padY + Math.sin(angle) * (padH / 2 - 6);
+                    const lx = Math.cos(angle) * (padW / 2 - 12);
+                    const ly = Math.sin(angle) * (padH / 2 - 6);
                     ctx.fillStyle = (Date.now() % 800 < 400) ? (curWorld.beaconColor || '#10b981') : '#ffffff';
                     ctx.shadowBlur = 6;
                     ctx.shadowColor = curWorld.beaconColor || '#10b981';
@@ -5855,9 +5871,13 @@ const PlanetVisualEngine = {
             });
             ctx.restore();
 
-            // 11. Draw Vector Modelled Rocket Ship (SITTING FLUSH ON THE PAD)
-            const shipX = (this.state === 'traveling') ? cx + (this.shipLateralX || 0) : cx;
+            // 11. Draw Vector Modelled Rocket Ship (SITTING FLUSH ON THE PAD & ROTATING WITH PLANET)
+            const shipX = (this.state === 'traveling') ? cx + (this.shipLateralX || 0) : (cx + curPan);
             const shipY = this.shipY;
+            const normShipDx = (shipX - cx) / (w * 0.48);
+            const shipTilt = (this.state === 'idle') 
+                ? (normShipDx * 0.20 + (this.panVelocity || 0) * 0.04) 
+                : (this.shipTilt || 0);
 
             let isRocketHovered = false;
             if (this.state === 'idle' && this.mouseX !== undefined && this.mouseY !== undefined) {
@@ -5866,16 +5886,17 @@ const PlanetVisualEngine = {
                 if (Math.abs(dxR) < 55 && Math.abs(dyR) < 75) isRocketHovered = true;
             }
 
+            const currentPadCurvedY = padY + ((normShipDx * normShipDx) * 32);
             // Ground shadow under rocket (only if near ground)
-            if (shipY > 0 && shipY <= padY + 20 && groundY < h + 100) {
-                const distRatio = Math.max(0, 1 - Math.abs(padY - shipY) / 180);
+            if (shipY > 0 && shipY <= currentPadCurvedY + 20 && groundY < h + 100) {
+                const distRatio = Math.max(0, 1 - Math.abs(currentPadCurvedY - shipY) / 180);
                 ctx.fillStyle = `rgba(0, 0, 0, ${0.65 * distRatio})`;
                 ctx.beginPath();
-                ctx.ellipse(shipX, padY, (44 * distRatio), (14 * distRatio), 0, 0, Math.PI * 2);
+                ctx.ellipse(shipX, currentPadCurvedY, (44 * distRatio), (14 * distRatio), shipTilt, 0, Math.PI * 2);
                 ctx.fill();
             }
 
-            this.drawRocketModel(ctx, shipX, shipY, this.shipVy, this.state, time, isRocketHovered, this.mode, this.shipTilt || 0, this.shipRotation || 0);
+            this.drawRocketModel(ctx, shipX, shipY, this.shipVy, this.state, time, isRocketHovered, this.mode, shipTilt, this.shipRotation || 0);
 
             // 12. Draw Expanding Ejection Shockwave Rings (Efekt vyplivnutí)
             if (this.shockwaves && this.shockwaves.length > 0) {
