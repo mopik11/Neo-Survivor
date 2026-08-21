@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.678
+ * NEO SURVIVOR - Core Game Logic - v1.679
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4072,7 +4072,7 @@ const PLANET_WORLDS = [
         lavaGlow: '#f97316',
         beaconColor: '#10b981',
         accentColor: '#10b981',
-        travelDuration: 3.2
+        travelDuration: 12.0
     },
     {
         id: 'ignis',
@@ -4091,7 +4091,7 @@ const PLANET_WORLDS = [
         lavaGlow: '#f59e0b',
         beaconColor: '#f97316',
         accentColor: '#f97316',
-        travelDuration: 3.8
+        travelDuration: 22.0
     },
     {
         id: 'cryo',
@@ -4110,7 +4110,7 @@ const PLANET_WORLDS = [
         lavaGlow: '#38bdf8',
         beaconColor: '#38bdf8',
         accentColor: '#38bdf8',
-        travelDuration: 4.2
+        travelDuration: 38.0
     },
     {
         id: 'cyber',
@@ -4129,7 +4129,7 @@ const PLANET_WORLDS = [
         lavaGlow: '#e879f9',
         beaconColor: '#c084fc',
         accentColor: '#c084fc',
-        travelDuration: 4.8
+        travelDuration: 55.0
     }
 ];
 
@@ -4251,7 +4251,16 @@ const PlanetVisualEngine = {
         this.logicalH = window.innerHeight;
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
-        this.targetY = Math.max(220, this.logicalH - 165);
+        this.targetY = (this.logicalH <= 500) ? Math.max(160, this.logicalH - 95) : Math.max(220, this.logicalH - 165);
+    },
+
+    skipTravel() {
+        if (this.state !== 'traveling') return;
+        const duration = this.travelDuration || 30;
+        this.travelStartTime = Date.now() - (duration * 0.985 * 1000);
+        const skipBtn = document.getElementById('btn-planet-skip-travel');
+        if (skipBtn) skipBtn.style.display = 'none';
+        if (typeof playSound === 'function') playSound('shoot');
     },
 
     travelTo(planetId) {
@@ -4265,19 +4274,19 @@ const PlanetVisualEngine = {
         this.sourcePlanet = sourceWorld;
         this.targetPlanet = targetWorld;
         this.travelStartTime = Date.now();
-        this.travelDuration = targetWorld.travelDuration || 3.8;
+        this.travelDuration = targetWorld.travelDuration || 25.0;
         this.shipLateralX = 0;
         this.shipTilt = 0;
         this.shipRotation = 0;
         
         // Generate traveling asteroids
         this.travelAsteroids = [];
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 22; i++) {
             this.travelAsteroids.push({
                 x: Math.random() * (this.logicalW || window.innerWidth),
-                y: -Math.random() * (this.logicalH * 3) - 100,
+                y: -Math.random() * (this.logicalH * 4) - 100,
                 size: Math.random() * 22 + 8,
-                speed: Math.random() * 4 + 2,
+                speed: Math.random() * 3 + 1.8,
                 rot: Math.random() * Math.PI * 2,
                 rotSpeed: (Math.random() - 0.5) * 0.04,
                 points: Array.from({ length: 7 }, (_, idx) => {
@@ -4292,9 +4301,9 @@ const PlanetVisualEngine = {
         // Generate passing celestial planets in parallax
         const w = this.logicalW || window.innerWidth;
         this.passingPlanets = [
-            { x: w * 0.16, y: -250, radius: 48, speed: 1.8, color: '#f59e0b', ring: true, ringColor: 'rgba(251, 191, 36, 0.35)' },
-            { x: w * 0.84, y: -750, radius: 65, speed: 2.2, color: '#38bdf8', ring: false },
-            { x: w * 0.25, y: -1350, radius: 40, speed: 2.6, color: '#c084fc', ring: true, ringColor: 'rgba(192, 132, 252, 0.3)' }
+            { x: w * 0.16, y: -300, radius: 48, speed: 1.2, color: '#f59e0b', ring: true, ringColor: 'rgba(251, 191, 36, 0.35)' },
+            { x: w * 0.84, y: -900, radius: 65, speed: 1.5, color: '#38bdf8', ring: false },
+            { x: w * 0.25, y: -1600, radius: 40, speed: 1.8, color: '#c084fc', ring: true, ringColor: 'rgba(192, 132, 252, 0.3)' }
         ];
 
         // Hide menus during flight
@@ -4312,6 +4321,10 @@ const PlanetVisualEngine = {
             statusTag.style.color = targetWorld.accentColor || '#38bdf8';
             statusTag.style.borderColor = targetWorld.accentColor || 'rgba(56, 189, 248, 0.4)';
         }
+
+        // Show skip travel button
+        const skipBtn = document.getElementById('btn-planet-skip-travel');
+        if (skipBtn) skipBtn.style.display = 'flex';
 
         if (typeof playSound === 'function') playSound('shoot');
     },
@@ -4333,6 +4346,9 @@ const PlanetVisualEngine = {
         this.shipLateralX = 0;
         this.shipTilt = 0;
         this.shipRotation = 0;
+
+        const skipBtn = document.getElementById('btn-planet-skip-travel');
+        if (skipBtn) skipBtn.style.display = 'none';
 
         const modal = document.getElementById('planet-modal');
         if (modal) {
@@ -4376,6 +4392,8 @@ const PlanetVisualEngine = {
         if (centerAct) { centerAct.style.transition = 'opacity 0.3s ease'; centerAct.style.opacity = '0'; centerAct.style.pointerEvents = 'none'; }
         const statusTag = document.getElementById('planet-status-tag');
         if (statusTag) { statusTag.style.transition = 'opacity 0.3s ease'; statusTag.style.opacity = '0'; }
+        const skipBtn = document.getElementById('btn-planet-skip-travel');
+        if (skipBtn) skipBtn.style.display = 'none';
 
         // Pre-load solo game in the background so we fly directly into the active game!
         if (this.mode === 'solo' && !GAME.active) {
@@ -5043,6 +5061,8 @@ const PlanetVisualEngine = {
         if (tilt || rotation) {
             ctx.rotate(tilt + rotation);
         }
+        const rocketScale = Math.min(1.0, Math.max(0.72, (this.logicalH || window.innerHeight) / 520));
+        ctx.scale(rocketScale, rocketScale);
 
         // Big Majestic Rocket Dimensions (increased for epic scale!)
         const bodyW = 56;
@@ -5554,25 +5574,26 @@ const PlanetVisualEngine = {
                 ctx.restore();
 
                 // 7. Calculate 8 building plot positions evenly distributed along horizon WITHOUT touching landing pad
-                const padW = Math.min(230, w * 0.34);
-                const minSafeDist = padW / 2 + 50; // Strict safe distance from pad center
-                const maxSpread = Math.min(w * 0.44, 570);
+                const isMobileHeight = (h <= 500);
+                const padW = Math.min(isMobileHeight ? 180 : 230, w * 0.32);
+                const minSafeDist = padW / 2 + (w < 768 ? 32 : 46); // Strict safe distance from pad center
+                const maxSpread = Math.min(w * 0.46, 580);
 
                 const leftStep = (maxSpread - minSafeDist) / 3;
                 const rightStep = (maxSpread - minSafeDist) / 3;
 
                 this.plotPositions = [
                     // Left 4 buildings (outermost to closest to pad)
-                    { x: cx - maxSpread, y: groundY + 12 },
-                    { x: cx - (maxSpread - leftStep), y: groundY + 4 },
+                    { x: cx - maxSpread, y: groundY + (isMobileHeight ? 8 : 12) },
+                    { x: cx - (maxSpread - leftStep), y: groundY + (isMobileHeight ? 2 : 4) },
                     { x: cx - (maxSpread - leftStep * 2), y: groundY - 4 },
-                    { x: cx - minSafeDist, y: groundY - 9 },
+                    { x: cx - minSafeDist, y: groundY - 8 },
                     
                     // Right 4 buildings (closest to pad to outermost)
-                    { x: cx + minSafeDist, y: groundY - 9 },
+                    { x: cx + minSafeDist, y: groundY - 8 },
                     { x: cx + (minSafeDist + rightStep), y: groundY - 4 },
-                    { x: cx + (minSafeDist + rightStep * 2), y: groundY + 4 },
-                    { x: cx + maxSpread, y: groundY + 12 }
+                    { x: cx + (minSafeDist + rightStep * 2), y: groundY + (isMobileHeight ? 2 : 4) },
+                    { x: cx + maxSpread, y: groundY + (isMobileHeight ? 8 : 12) }
                 ];
 
                 // 8. Draw Vector Buildings & Clean Floating Price Badges
@@ -5598,11 +5619,12 @@ const PlanetVisualEngine = {
 
                     // Draw the clean floating text box / price badge in front
                     ctx.save();
-                    const badgeY = pos.y + 12;
-                    const badgeW = 72 * bScale;
-                    const badgeH = 24 * bScale;
+                    const badgeW = Math.max(76, 84 * bScale);
+                    const badgeH = 26 * bScale;
+                    // On low height mobile screens, place badge ABOVE building so it never overlaps buttons/horizon!
+                    const badgeY = isMobileHeight ? (pos.y - 48 * bScale) : (pos.y + 12);
 
-                    ctx.fillStyle = isHovered ? 'rgba(15, 23, 42, 0.95)' : 'rgba(10, 15, 30, 0.85)';
+                    ctx.fillStyle = isHovered ? 'rgba(15, 23, 42, 0.95)' : 'rgba(10, 15, 30, 0.88)';
                     ctx.strokeStyle = isBuilt ? (curWorld.surfaceLine || '#10b981') : (isHovered ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)');
                     ctx.lineWidth = isHovered ? 1.5 : 1;
                     if (isHovered && !isBuilt) {
@@ -5616,30 +5638,30 @@ const PlanetVisualEngine = {
 
                     if (isBuilt) {
                         ctx.fillStyle = curWorld.surfaceLine || '#34d399';
-                        ctx.font = `bold ${7.8 * bScale}px "Inter", Arial, sans-serif`;
+                        ctx.font = `bold ${8.2 * bScale}px "Inter", Arial, sans-serif`;
                         ctx.textAlign = 'center';
-                        ctx.fillText('AKTIVNÍ', pos.x, badgeY + 9.5 * bScale);
+                        ctx.fillText('AKTIVNÍ', pos.x, badgeY + 10 * bScale);
                         ctx.fillStyle = '#fbbf24';
-                        ctx.font = `bold ${7.2 * bScale}px "Inter", Arial, sans-serif`;
-                        ctx.fillText(`+${formatNumberFull(bInfo.income || 1)}/m`, pos.x, badgeY + 18.5 * bScale);
+                        ctx.font = `bold ${7.6 * bScale}px "Inter", Arial, sans-serif`;
+                        ctx.fillText(`+${formatNumberFull(bInfo.income || 1)}/m`, pos.x, badgeY + 20 * bScale);
                     } else {
                         ctx.fillStyle = isHovered ? '#fbbf24' : '#cbd5e1';
-                        ctx.font = `bold ${7.2 * bScale}px "Inter", Arial, sans-serif`;
+                        ctx.font = `bold ${7.5 * bScale}px "Inter", Arial, sans-serif`;
                         ctx.textAlign = 'center';
-                        ctx.fillText(bInfo.name.split(' #')[0], pos.x, badgeY + 9 * bScale);
+                        ctx.fillText(bInfo.name.split(' #')[0], pos.x, badgeY + 9.5 * bScale);
 
                         const canAfford = (META.currency || 0) >= bInfo.cost;
                         ctx.fillStyle = canAfford ? (curWorld.surfaceLine || '#10b981') : '#ef4444';
-                        ctx.font = `900 ${7.8 * bScale}px "Inter", Arial, sans-serif`;
+                        ctx.font = `900 ${8.2 * bScale}px "Inter", Arial, sans-serif`;
                         const costText = (bInfo.cost >= 1e12) ? (bInfo.cost / 1e12) + 'T DOGE' : (bInfo.cost >= 1e9) ? (bInfo.cost / 1e9) + 'B DOGE' : (bInfo.cost >= 1e6) ? (bInfo.cost / 1e6) + 'M DOGE' : (bInfo.cost >= 1000) ? (bInfo.cost / 1000) + 'k DOGE' : bInfo.cost + ' DOGE';
-                        ctx.fillText(costText, pos.x, badgeY + 18.5 * bScale);
+                        ctx.fillText(costText, pos.x, badgeY + 20 * bScale);
                     }
                     ctx.restore();
                 });
 
                 // 9. Futuristic Landing Pad Platform in center (Clean Launch Platform)
                 ctx.save();
-                const padH = 28;
+                const padH = isMobileHeight ? 22 : 28;
 
                 // Pad shadow & base
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
@@ -5726,12 +5748,14 @@ const PlanetVisualEngine = {
                 });
             }
 
-            // 13. Draw Authentic In-Game Player Orb(s) Deployed in Center of Arena! (FULL SCALE + PET & HAT!)
+            // 13. Draw Authentic In-Game Player Orb(s) Deployed in Center of Arena! (EXACT GAME.ZOOM SCALING!)
             if (this.state === 'ejecting' && this.ejectedPlayers) {
+                const gameZoomScale = (typeof GAME !== 'undefined' && GAME.zoom) ? GAME.zoom : (w < 768 ? 0.45 : 1.0);
                 this.ejectedPlayers.forEach(ep => {
                     ctx.save();
                     ctx.translate(ep.x, ep.y);
-                    ctx.scale(ep.scale, ep.scale);
+                    const currentVisualScale = ep.scale * gameZoomScale;
+                    ctx.scale(currentVisualScale, currentVisualScale);
                     
                     // Authentic in-game player orb body (Full game size: radius 22px!)
                     ctx.shadowBlur = 35;

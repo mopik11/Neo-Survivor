@@ -108,7 +108,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.678
+            NEO SURVIVOR v1.679
           </div>
         </div>
       </div>
@@ -438,14 +438,19 @@
           </div>
 
           <!-- BOTTOM LEFT UI (Menu Navigation) -->
-          <div id="planet-bottom-menu" style="position: absolute; bottom: 20px; left: 20px; pointer-events: auto; z-index: 20; display: flex; gap: 10px;">
-            <button id="btn-planet-menu-back" class="btn-restart modern-glass-btn" style="padding: 10px 18px; font-size: 0.85rem; font-weight: 800; border-radius: 12px; background: rgba(10, 15, 30, 0.85); border: 1.5px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(0,0,0,0.5); cursor: pointer;">
-              <span>🏠</span> <span data-i18n="MENU">HLAVNÍ MENU</span>
+          <div id="planet-bottom-menu" style="position: absolute; bottom: 14px; left: 14px; pointer-events: auto; z-index: 20; display: flex; gap: 8px;">
+            <button id="btn-planet-menu-back" class="btn-restart modern-glass-btn" style="padding: 8px 14px; font-size: 0.78rem; font-weight: 800; border-radius: 10px; background: rgba(10, 15, 30, 0.85); border: 1.5px solid rgba(255,255,255,0.2); box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer;">
+              <span>🏠</span> <span data-i18n="MENU">MENU</span>
             </button>
-            <button id="btn-planet-open-map" class="btn-restart modern-glass-btn" onclick="window.openPlanetSelectModal()" style="padding: 10px 18px; font-size: 0.85rem; font-weight: 800; border-radius: 12px; background: rgba(15, 23, 42, 0.85); border: 1.5px solid rgba(56, 189, 248, 0.4); color: #38bdf8; box-shadow: 0 8px 25px rgba(0,0,0,0.5); cursor: pointer;">
+            <button id="btn-planet-open-map" class="btn-restart modern-glass-btn" onclick="window.openPlanetSelectModal()" style="padding: 8px 14px; font-size: 0.78rem; font-weight: 800; border-radius: 10px; background: rgba(15, 23, 42, 0.85); border: 1.5px solid rgba(56, 189, 248, 0.4); color: #38bdf8; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer;">
               <span>🗺️</span> <span data-i18n="MAPA PLANET">MAPA PLANET</span>
             </button>
           </div>
+
+          <!-- SKIP TRAVEL ACTION (Visible only during flight) -->
+          <button id="btn-planet-skip-travel" class="btn-restart modern-glass-btn" onclick="window.PlanetVisualEngine.skipTravel()" style="display: none; position: absolute; bottom: 18px; right: 18px; padding: 8px 16px; font-size: 0.78rem; font-weight: 800; border-radius: 99px; background: rgba(15, 23, 42, 0.9); border: 1.5px solid #38bdf8; color: #38bdf8; pointer-events: auto; z-index: 50; box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);">
+            <span>⏩</span> <span data-i18n="PŘESKOČIT LET">PŘESKOČIT LET</span>
+          </button>
         </div>
       </div>
 

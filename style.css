@@ -294,15 +294,15 @@ canvas {
 
 @media (max-width: 900px), (max-height: 520px) {
   #planet-top-card {
-    top: 5px !important;
-    left: 5px !important;
+    top: 6px !important;
+    left: 6px !important;
     padding: 6px 10px !important;
     border-radius: 12px !important;
-    transform: scale(0.68) !important;
+    transform: scale(0.65) !important;
     transform-origin: top left !important;
   }
   #planet-status-tag {
-    top: 5px !important;
+    top: 6px !important;
     font-size: 0.6rem !important;
     padding: 2px 8px !important;
   }
@@ -312,15 +312,22 @@ canvas {
     gap: 6px !important;
   }
   #planet-bottom-menu button {
-    padding: 5px 10px !important;
-    font-size: 0.68rem !important;
+    padding: 4px 8px !important;
+    font-size: 0.65rem !important;
   }
   #planet-center-actions {
-    bottom: 8px !important;
+    bottom: 6px !important;
   }
   #btn-planet-launch-battle {
-    padding: 7px 16px !important;
-    font-size: 0.78rem !important;
+    padding: 6px 14px !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 1px !important;
+  }
+  #btn-planet-skip-travel {
+    bottom: 6px !important;
+    right: 6px !important;
+    padding: 5px 10px !important;
+    font-size: 0.68rem !important;
   }
 }
 
