@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.670
+ * NEO SURVIVOR - Core Game Logic - v1.671
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4176,11 +4176,6 @@ const PlanetVisualEngine = {
         if (botMenu) { botMenu.style.transition = 'opacity 0.3s ease, transform 0.3s ease'; botMenu.style.opacity = '0'; botMenu.style.pointerEvents = 'none'; botMenu.style.transform = 'translateY(15px)'; }
         const statusTag = document.getElementById('planet-status-tag');
         if (statusTag) { statusTag.style.transition = 'opacity 0.3s ease'; statusTag.style.opacity = '0'; }
-
-        // Pre-launch the solo game in the background right now so WebSocket + game engine are live ahead of time!
-        if (this.mode === 'solo' && !GAME.active) {
-            startSoloGame();
-        }
 
         if (typeof playSound === 'function') playSound('shoot');
     },
