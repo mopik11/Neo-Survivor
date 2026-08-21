@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.690
+ * NEO SURVIVOR - Core Game Logic - v1.691
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.650'
+    version: window.GAME_VERSION || '1.691'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.650";
+const GAME_VERSION = window.GAME_VERSION || "1.691";
 const GAME = {
     active: false,
     paused: false,
@@ -4206,6 +4206,12 @@ const PlanetVisualEngine = {
         this.canvas = document.getElementById('planet-surface-canvas');
         if (!this.canvas) return;
         this.ctx = this.canvas.getContext('2d');
+
+        const savedPlanet = localStorage.getItem('neoSurvivor_planet') || 'terra';
+        this.currentPlanetId = savedPlanet;
+        this.currentPlanet = PLANET_WORLDS.find(p => p.id === savedPlanet) || PLANET_WORLDS[0];
+        if (typeof applyPlanetTheme === 'function') applyPlanetTheme(savedPlanet);
+
         this.resize();
         window.addEventListener('resize', () => {
             if (document.getElementById('planet-modal')?.classList.contains('active')) {
@@ -4477,33 +4483,12 @@ const PlanetVisualEngine = {
     },
 
     triggerAsteroidHazard() {
-        if (this.hazardTriggered || this.state !== 'traveling') return;
+        if (this.state !== 'traveling') return;
         this.hazardTriggered = true;
         this.isTravelPaused = true;
-        this.pauseStartTime = Date.now();
+        if (!this.pauseStartTime) this.pauseStartTime = Date.now();
         const targetWorld = this.targetPlanet || PLANET_WORLDS[0];
         const originWorld = this.sourcePlanet || PLANET_WORLDS[0];
-
-        // Shockwave explosion effect on rocket
-        const cx = (this.logicalW || window.innerWidth) / 2;
-        const shipX = cx + (this.shipLateralX || 0);
-        const shipY = this.shipY || (this.logicalH * 0.45);
-        for (let i = 0; i < 40; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const spd = Math.random() * 8 + 3;
-            this.particles.push({
-                x: shipX,
-                y: shipY,
-                vx: Math.cos(angle) * spd,
-                vy: Math.sin(angle) * spd,
-                size: Math.random() * 8 + 4,
-                color: Math.random() > 0.4 ? '#f97316' : '#ef4444',
-                alpha: 1,
-                life: 1.2
-            });
-        }
-        if (typeof shakeScreen === 'function') shakeScreen(15);
-        if (typeof playSound === 'function') playSound('explosion');
 
         const modal = document.getElementById('asteroid-emergency-modal');
         const desc = document.getElementById('asteroid-hazard-desc');
@@ -4516,7 +4501,7 @@ const PlanetVisualEngine = {
         if (costContEl) costContEl.innerText = formatNumberFull(contCost);
         if (costRetEl) costRetEl.innerText = formatNumberFull(retCost);
         if (desc) {
-            desc.innerHTML = `Raketka narazila na pás asteroidů při cestě na <b>${targetWorld.name}</b>!<br>Opravte loď pro pokračování na cíl, nebo zvolte nouzový návrat na <b>${originWorld.name}</b>.`;
+            desc.innerHTML = `Raketka byla poškozena průletem polem asteroidů na cestě na <b>${targetWorld.name}</b>.<br>Zvolte opravu lodi pro pokračování, nebo nouzový návrat na <b>${originWorld.name}</b>.`;
         }
 
         const btnCont = document.getElementById('btn-asteroid-continue');
@@ -4527,8 +4512,13 @@ const PlanetVisualEngine = {
                 if ((META.currency || 0) >= contCost) {
                     addCurrency(-contCost);
                     showCurrencyNotification(-contCost, "OPRAVA LODI V LETU");
+                } else if ((META.currency || 0) > 0) {
+                    addCurrency(-META.currency);
                 }
-                modal.classList.remove('active');
+                if (modal) {
+                    modal.classList.remove('active');
+                    modal.style.display = 'none';
+                }
                 this.resumeTravelAfterHazard(true);
             };
         }
@@ -4538,17 +4528,30 @@ const PlanetVisualEngine = {
                 if ((META.currency || 0) >= retCost) {
                     addCurrency(-retCost);
                     showCurrencyNotification(-retCost, "NOUZOVÝ NÁVRAT");
+                } else if ((META.currency || 0) > 0) {
+                    addCurrency(-META.currency);
                 }
-                modal.classList.remove('active');
+                if (modal) {
+                    modal.classList.remove('active');
+                    modal.style.display = 'none';
+                }
                 this.resumeTravelAfterHazard(false);
             };
         }
 
-        if (modal) modal.classList.add('active');
+        if (modal) {
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+        }
     },
 
     resumeTravelAfterHazard(continueToTarget = true) {
         this.isTravelPaused = false;
+        const modal = document.getElementById('asteroid-emergency-modal');
+        if (modal) {
+            modal.classList.remove('active');
+            modal.style.display = 'none';
+        }
         const pauseDuration = (Date.now() - (this.pauseStartTime || Date.now()));
         this.travelStartTime += pauseDuration; // Adjust timer so duration remains accurate
 
@@ -4559,6 +4562,8 @@ const PlanetVisualEngine = {
             this.sourcePlanet = temp;
             this.currentPlanet = this.targetPlanet;
             this.currentPlanetId = this.targetPlanet.id;
+            localStorage.setItem('neoSurvivor_planet', this.targetPlanet.id);
+            if (typeof applyPlanetTheme === 'function') applyPlanetTheme(this.targetPlanet.id);
             this.travelDuration = 6.0; // Quick return descent
             this.travelStartTime = Date.now() - (this.travelDuration * 0.75 * 1000); // jump straight to descent!
         }
@@ -4924,7 +4929,7 @@ const PlanetVisualEngine = {
                     // Open emergency menu after player sees the full impact & debris explosion
                     setTimeout(() => {
                         this.triggerAsteroidHazard();
-                    }, 800);
+                    }, 600);
                     return;
                 }
             }
@@ -5010,6 +5015,8 @@ const PlanetVisualEngine = {
             if (progress >= 1.0) {
                 this.currentPlanetId = this.targetPlanet.id;
                 this.currentPlanet = this.targetPlanet;
+                localStorage.setItem('neoSurvivor_planet', this.targetPlanet.id);
+                if (typeof applyPlanetTheme === 'function') applyPlanetTheme(this.targetPlanet.id);
                 this.state = 'landing';
                 this.landingStartTime = Date.now();
                 this.flightOffset = 0;
@@ -7892,6 +7899,10 @@ function sellAllEmojis() {
 function startGame() {
     switchMusic(null);
     if (GAME.active) return;
+
+    const activePlanetId = (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || localStorage.getItem('neoSurvivor_planet') || 'terra';
+    if (typeof applyPlanetTheme === 'function') applyPlanetTheme(activePlanetId);
+
     resetGame();
     
     // Resume session if exists
@@ -8907,6 +8918,9 @@ function init() {
     if (loginVer) loginVer.textContent = `NEO SURVIVOR v${GAME_VERSION}`;
     const menuVerVal = document.getElementById('menu-version-value');
     if (menuVerVal) menuVerVal.textContent = GAME_VERSION;
+
+    const savedPlanet = localStorage.getItem('neoSurvivor_planet') || 'terra';
+    if (typeof applyPlanetTheme === 'function') applyPlanetTheme(savedPlanet);
 
     GAME.menuAnimation = new MenuAnimation();
     GAME.canvas = document.getElementById('game-canvas');
