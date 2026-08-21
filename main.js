@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.675
+ * NEO SURVIVOR - Core Game Logic - v1.676
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4026,20 +4026,102 @@ function renderPlanetUI() {
 }
 window.renderPlanetUI = renderPlanetUI;
 
+const PLANET_WORLDS = [
+    {
+        id: 'terra',
+        name: 'DOMOVSKÁ PLANETA',
+        shortName: 'Terra Prime',
+        icon: '🌍',
+        skyTop: '#020617',
+        skyMid: '#050a1e',
+        skyLow: '#064e3b',
+        skyBot: '#022c22',
+        surfaceGrad: ['#042f2e', '#022c22', '#011c16'],
+        surfaceLine: '#10b981',
+        hillsGrad: '#064e3b',
+        volcanoBody: '#1e1b4b',
+        volcanoLava: '#ef4444',
+        lavaGlow: '#f97316',
+        beaconColor: '#10b981',
+        accentColor: '#10b981',
+        travelDuration: 2.4
+    },
+    {
+        id: 'ignis',
+        name: 'VULKÁN IGNIS',
+        shortName: 'Ignis Prime',
+        icon: '🔴',
+        skyTop: '#180303',
+        skyMid: '#2d0606',
+        skyLow: '#7f1d1d',
+        skyBot: '#450a0a',
+        surfaceGrad: ['#450a0a', '#280505', '#160202'],
+        surfaceLine: '#f97316',
+        hillsGrad: '#7c2d12',
+        volcanoBody: '#290404',
+        volcanoLava: '#fbbf24',
+        lavaGlow: '#f59e0b',
+        beaconColor: '#f97316',
+        accentColor: '#f97316',
+        travelDuration: 3.2
+    },
+    {
+        id: 'cryo',
+        name: 'CRYO ORBIT',
+        shortName: 'Cryo Moon',
+        icon: '❄️',
+        skyTop: '#020617',
+        skyMid: '#082f49',
+        skyLow: '#0c4a6e',
+        skyBot: '#075985',
+        surfaceGrad: ['#0369a1', '#075985', '#082f49'],
+        surfaceLine: '#38bdf8',
+        hillsGrad: '#0284c7',
+        volcanoBody: '#0f172a',
+        volcanoLava: '#67e8f9',
+        lavaGlow: '#38bdf8',
+        beaconColor: '#38bdf8',
+        accentColor: '#38bdf8',
+        travelDuration: 3.8
+    },
+    {
+        id: 'cyber',
+        name: 'NEON CITADEL',
+        shortName: 'Aether Citadel',
+        icon: '🟣',
+        skyTop: '#090514',
+        skyMid: '#1e1035',
+        skyLow: '#4c1d95',
+        skyBot: '#3b0764',
+        surfaceGrad: ['#2e1065', '#1e0b4b', '#0f051d'],
+        surfaceLine: '#c084fc',
+        hillsGrad: '#581c87',
+        volcanoBody: '#130426',
+        volcanoLava: '#f472b6',
+        lavaGlow: '#e879f9',
+        beaconColor: '#c084fc',
+        accentColor: '#c084fc',
+        travelDuration: 4.4
+    }
+];
+
 const PlanetVisualEngine = {
     canvas: null,
     ctx: null,
     animFrame: null,
-    state: 'idle', // 'landing', 'idle', 'takeoff'
+    state: 'idle', // 'landing', 'idle', 'takeoff', 'ejecting', 'traveling'
     shipY: 100,
     shipVy: 0,
     targetY: 100,
     bounce: 0,
     particles: [],
     stars: [],
+    travelAsteroids: [],
     mode: 'solo',
     launchCallback: null,
     isInitialized: false,
+    currentPlanetId: 'terra',
+    currentPlanet: PLANET_WORLDS[0],
 
     init() {
         this.canvas = document.getElementById('planet-surface-canvas');
@@ -4052,7 +4134,7 @@ const PlanetVisualEngine = {
             }
         });
         
-        // Handle clicks for buying buildings or clicking the rocket
+        // Handle clicks for buying buildings
         this.canvas.addEventListener('click', (e) => {
             if (this.state !== 'idle') return;
             const rect = this.canvas.getBoundingClientRect();
@@ -4061,7 +4143,7 @@ const PlanetVisualEngine = {
             const cx = (this.logicalW || window.innerWidth) / 2;
             const shipY = this.shipY;
             
-            // 1. Direct click on the Rocket immediately launches into space!
+            // Check direct click on the Rocket
             const dxRocket = clickX - cx;
             const dyRocket = clickY - shipY;
             if (Math.abs(dxRocket) < 55 && Math.abs(dyRocket) < 75) {
@@ -4069,7 +4151,7 @@ const PlanetVisualEngine = {
                 return;
             }
 
-            // 2. Check click on buildings / price badges
+            // Check click on buildings / price badges
             if (this.plotPositions) {
                 this.plotPositions.forEach((pos, idx) => {
                     const dx = clickX - pos.x;
@@ -4088,6 +4170,12 @@ const PlanetVisualEngine = {
             this.mouseX = e.clientX - rect.left;
             this.mouseY = e.clientY - rect.top;
         });
+
+        // Wire up dedicated Enter Battle button
+        const btnLaunchBattle = document.getElementById('btn-planet-launch-battle');
+        if (btnLaunchBattle) {
+            btnLaunchBattle.onclick = () => this.startTakeoff();
+        }
 
         this.isInitialized = true;
     },
@@ -4125,6 +4213,63 @@ const PlanetVisualEngine = {
         this.targetY = Math.max(220, this.logicalH - 165);
     },
 
+    travelTo(planetId) {
+        if (this.currentPlanetId === planetId) return;
+        if (this.state === 'traveling' || this.state === 'takeoff' || this.state === 'ejecting') return;
+        
+        const targetWorld = PLANET_WORLDS.find(p => p.id === planetId) || PLANET_WORLDS[0];
+        const sourceWorld = PLANET_WORLDS.find(p => p.id === this.currentPlanetId) || PLANET_WORLDS[0];
+        
+        this.state = 'traveling';
+        this.sourcePlanet = sourceWorld;
+        this.targetPlanet = targetWorld;
+        this.travelStartTime = Date.now();
+        this.travelDuration = targetWorld.travelDuration || 3.0;
+        
+        // Generate traveling asteroids
+        this.travelAsteroids = [];
+        for (let i = 0; i < 18; i++) {
+            this.travelAsteroids.push({
+                x: Math.random() * (this.logicalW || window.innerWidth),
+                y: -Math.random() * (this.logicalH * 3) - 100,
+                size: Math.random() * 22 + 8,
+                speed: Math.random() * 4 + 2,
+                rot: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.04,
+                points: Array.from({ length: 7 }, (_, idx) => {
+                    const angle = (idx / 7) * Math.PI * 2;
+                    const r = 0.7 + Math.random() * 0.5;
+                    return { x: Math.cos(angle) * r, y: Math.sin(angle) * r };
+                }),
+                color: Math.random() > 0.4 ? '#475569' : (Math.random() > 0.5 ? '#78716c' : '#334155')
+            });
+        }
+
+        // Hide menus during flight
+        const topCard = document.getElementById('planet-top-card');
+        if (topCard) { topCard.style.transition = 'opacity 0.3s ease'; topCard.style.opacity = '0'; topCard.style.pointerEvents = 'none'; }
+        const botMenu = document.getElementById('planet-bottom-menu');
+        if (botMenu) { botMenu.style.transition = 'opacity 0.3s ease'; botMenu.style.opacity = '0'; botMenu.style.pointerEvents = 'none'; }
+        const centerAct = document.getElementById('planet-center-actions');
+        if (centerAct) { centerAct.style.transition = 'opacity 0.3s ease'; centerAct.style.opacity = '0'; centerAct.style.pointerEvents = 'none'; }
+        
+        const statusTag = document.getElementById('planet-status-tag');
+        if (statusTag) {
+            statusTag.style.opacity = '1';
+            statusTag.innerHTML = `<span>🚀 MEZIPLANETÁRNÍ LET DO ${targetWorld.name}...</span>`;
+            statusTag.style.color = targetWorld.accentColor || '#38bdf8';
+            statusTag.style.borderColor = targetWorld.accentColor || 'rgba(56, 189, 248, 0.4)';
+        }
+
+        // Update active destination chips
+        document.querySelectorAll('.planet-select-chip').forEach(chip => {
+            if (chip.getAttribute('data-planet') === planetId) chip.classList.add('active');
+            else chip.classList.remove('active');
+        });
+
+        if (typeof playSound === 'function') playSound('shoot');
+    },
+
     startLanding(mode = 'solo', onLaunch = null) {
         if (!this.isInitialized) this.init();
         this.resize();
@@ -4150,12 +4295,16 @@ const PlanetVisualEngine = {
         if (topCard) { topCard.style.opacity = '1'; topCard.style.pointerEvents = 'auto'; topCard.style.transform = 'none'; }
         const botMenu = document.getElementById('planet-bottom-menu');
         if (botMenu) { botMenu.style.opacity = '1'; botMenu.style.pointerEvents = 'auto'; botMenu.style.transform = 'none'; }
+        const centerAct = document.getElementById('planet-center-actions');
+        if (centerAct) { centerAct.style.opacity = '1'; centerAct.style.pointerEvents = 'auto'; }
+
+        const curWorld = this.currentPlanet || PLANET_WORLDS[0];
         const statusTag = document.getElementById('planet-status-tag');
         if (statusTag) {
             statusTag.style.opacity = '1';
-            statusTag.innerHTML = `<span>🚀 PŘISTÁVÁNÍ NA DOMOVSKÉ PLANETĚ...</span>`;
-            statusTag.style.color = '#38bdf8';
-            statusTag.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+            statusTag.innerHTML = `<span>🚀 PŘISTÁVÁNÍ NA ${curWorld.name}...</span>`;
+            statusTag.style.color = curWorld.accentColor || '#38bdf8';
+            statusTag.style.borderColor = curWorld.accentColor || 'rgba(56, 189, 248, 0.4)';
         }
 
         if (typeof playSound === 'function') playSound('menuOpen');
@@ -4163,7 +4312,7 @@ const PlanetVisualEngine = {
     },
 
     startTakeoff() {
-        if (this.state === 'takeoff' || this.state === 'ejecting') return;
+        if (this.state === 'takeoff' || this.state === 'ejecting' || this.state === 'traveling') return;
         this.state = 'takeoff';
         this.takeoffStartTime = Date.now();
         this.shipVy = 1.2;
@@ -4174,6 +4323,8 @@ const PlanetVisualEngine = {
         if (topCard) { topCard.style.transition = 'opacity 0.3s ease, transform 0.3s ease'; topCard.style.opacity = '0'; topCard.style.pointerEvents = 'none'; topCard.style.transform = 'translateY(-15px)'; }
         const botMenu = document.getElementById('planet-bottom-menu');
         if (botMenu) { botMenu.style.transition = 'opacity 0.3s ease, transform 0.3s ease'; botMenu.style.opacity = '0'; botMenu.style.pointerEvents = 'none'; botMenu.style.transform = 'translateY(15px)'; }
+        const centerAct = document.getElementById('planet-center-actions');
+        if (centerAct) { centerAct.style.transition = 'opacity 0.3s ease'; centerAct.style.opacity = '0'; centerAct.style.pointerEvents = 'none'; }
         const statusTag = document.getElementById('planet-status-tag');
         if (statusTag) { statusTag.style.transition = 'opacity 0.3s ease'; statusTag.style.opacity = '0'; }
 
@@ -4224,7 +4375,7 @@ const PlanetVisualEngine = {
 
         if (this.state === 'landing') {
             const elapsed = (Date.now() - this.landingStartTime) / 1000;
-            const progress = Math.min(1.0, elapsed / 0.75); // Fast 0.75s landing!
+            const progress = Math.min(1.0, elapsed / 1.1); // Smooth 1.1s landing
             const easeP = Math.sin(progress * Math.PI / 2); // Smooth deceleration onto pad
             this.shipY = -140 + easeP * (restY - (-140));
 
@@ -4263,11 +4414,12 @@ const PlanetVisualEngine = {
                     });
                 }
 
+                const curWorld = this.currentPlanet || PLANET_WORLDS[0];
                 const tag = document.getElementById('planet-status-tag');
                 if (tag) {
-                    tag.innerHTML = `<span>🟢 RAKETA PŘISTÁLA – KLIKNI NA NI PRO START</span>`;
-                    tag.style.color = '#10b981';
-                    tag.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                    tag.innerHTML = `<span>🟢 ${curWorld.name} – PŘIPRAVENO K BOJI</span>`;
+                    tag.style.color = curWorld.accentColor || '#10b981';
+                    tag.style.borderColor = curWorld.surfaceLine || 'rgba(16, 185, 129, 0.4)';
                 }
                 if (typeof playSound === 'function') playSound('upgrade');
             }
@@ -4287,10 +4439,89 @@ const PlanetVisualEngine = {
                     life: 1
                 });
             }
+        } else if (this.state === 'traveling') {
+            const elapsed = (Date.now() - this.travelStartTime) / 1000;
+            const progress = Math.min(1.0, elapsed / (this.travelDuration || 3.0));
+            
+            // Rocket hovers and navigates through space
+            const targetCamY = this.logicalH * 0.45;
+            this.shipY = targetCamY + Math.sin(Date.now() / 200) * 4;
+            
+            // Planet scrolls down out of view, then target planet scrolls up near the end
+            if (progress < 0.3) {
+                const p1 = progress / 0.3;
+                this.flightOffset = p1 * (this.logicalH * 1.6);
+            } else if (progress > 0.75) {
+                const p2 = (progress - 0.75) / 0.25;
+                this.flightOffset = (1 - p2) * (this.logicalH * 1.6);
+            } else {
+                this.flightOffset = this.logicalH * 1.6;
+            }
+
+            // Thruster trail in space
+            for (let i = 0; i < 8; i++) {
+                this.particles.push({
+                    x: cx + (Math.random() - 0.5) * 28,
+                    y: this.shipY + 52,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: Math.random() * 8 + 6,
+                    size: Math.random() * 8 + 3,
+                    color: Math.random() > 0.4 ? '#38bdf8' : (Math.random() > 0.5 ? '#f59e0b' : '#ef4444'),
+                    alpha: 1,
+                    life: 0.8
+                });
+            }
+
+            // Update traveling asteroids
+            if (this.travelAsteroids) {
+                this.travelAsteroids.forEach(ast => {
+                    ast.y += ast.speed * 4;
+                    ast.rot += ast.rotSpeed;
+                    if (ast.y > this.logicalH + 100) {
+                        ast.y = -Math.random() * 300 - 50;
+                        ast.x = Math.random() * this.logicalW;
+                    }
+                });
+            }
+
+            // Landing on the destination planet when travel completes
+            if (progress >= 1.0) {
+                this.currentPlanetId = this.targetPlanet.id;
+                this.currentPlanet = this.targetPlanet;
+                this.state = 'landing';
+                this.landingStartTime = Date.now();
+                this.flightOffset = 0;
+                this.travelAsteroids = [];
+                
+                // Update header & title
+                const titleEl = document.getElementById('planet-header-title');
+                if (titleEl) {
+                    titleEl.innerText = this.targetPlanet.name;
+                    titleEl.style.color = this.targetPlanet.accentColor || '#10b981';
+                }
+                const topCard = document.getElementById('planet-top-card');
+                if (topCard) {
+                    topCard.style.borderColor = this.targetPlanet.surfaceLine || 'rgba(16, 185, 129, 0.4)';
+                    topCard.style.opacity = '1';
+                    topCard.style.pointerEvents = 'auto';
+                }
+                const botMenu = document.getElementById('planet-bottom-menu');
+                if (botMenu) { botMenu.style.opacity = '1'; botMenu.style.pointerEvents = 'auto'; }
+                const centerAct = document.getElementById('planet-center-actions');
+                if (centerAct) { centerAct.style.opacity = '1'; centerAct.style.pointerEvents = 'auto'; }
+
+                const statusTag = document.getElementById('planet-status-tag');
+                if (statusTag) {
+                    statusTag.innerHTML = `<span>🟢 PŘISTÁNO NA PLANETĚ ${this.targetPlanet.name}</span>`;
+                    statusTag.style.color = this.targetPlanet.accentColor || '#10b981';
+                    statusTag.style.borderColor = this.targetPlanet.surfaceLine || 'rgba(16, 185, 129, 0.4)';
+                }
+                if (typeof playSound === 'function') playSound('upgrade');
+            }
         } else if (this.state === 'takeoff') {
             const elapsed = (Date.now() - this.takeoffStartTime) / 1000;
-            // Snappy liftoff (0.85s duration)
-            const progress = Math.min(1.0, elapsed / 0.85);
+            // Cinematic liftoff (1.15s duration)
+            const progress = Math.min(1.0, elapsed / 1.15);
             const easeP = progress * progress;
             
             // Ground altitude smoothly drops down into space
@@ -4314,7 +4545,7 @@ const PlanetVisualEngine = {
                 });
             }
 
-            // At 0.85s, when the planet has scrolled into deep space -> trigger Ejection!
+            // At 1.15s, when the planet has scrolled into deep space -> trigger Ejection!
             if (progress >= 1.0) {
                 this.state = 'ejecting';
                 this.ejectStartTime = Date.now();
@@ -4415,8 +4646,8 @@ const PlanetVisualEngine = {
                 });
             }
 
-            // Early & seamless launch: Start game at 0.65s with zero delay!
-            if (Date.now() - this.ejectStartTime > 650 && !this.hasLaunched) {
+            // Early & seamless launch: Start game at 0.7s with zero delay!
+            if (Date.now() - this.ejectStartTime > 700 && !this.hasLaunched) {
                 this.hasLaunched = true;
                 this.state = 'done';
                 if (this.animFrame) cancelAnimationFrame(this.animFrame);
@@ -4938,11 +5169,13 @@ const PlanetVisualEngine = {
             if (ctx.resetTransform) ctx.resetTransform();
             ctx.clearRect(0, 0, w, h);
 
+            const curWorld = this.currentPlanet || PLANET_WORLDS[0];
+
             // Space transition factor (0 = on planet surface, 1 = deep space)
             const spaceAlpha = Math.min(1, Math.max(0, flightOff / (h * 0.75)));
 
-            // 1. Cosmic background (exact game cosmos #020617)
-            ctx.fillStyle = '#020617';
+            // 1. Cosmic background (exact game cosmos)
+            ctx.fillStyle = curWorld.skyTop || '#020617';
             ctx.fillRect(0, 0, w, h);
 
             // Atmospheric sky gradient when near planet
@@ -4950,10 +5183,10 @@ const PlanetVisualEngine = {
                 ctx.save();
                 ctx.globalAlpha = 1.0 - spaceAlpha;
                 const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-                skyGrad.addColorStop(0, '#020617');
-                skyGrad.addColorStop(0.5, '#050a1e');
-                skyGrad.addColorStop(0.85, '#064e3b');
-                skyGrad.addColorStop(1, '#022c22');
+                skyGrad.addColorStop(0, curWorld.skyTop || '#020617');
+                skyGrad.addColorStop(0.5, curWorld.skyMid || '#050a1e');
+                skyGrad.addColorStop(0.85, curWorld.skyLow || '#064e3b');
+                skyGrad.addColorStop(1, curWorld.skyBot || '#022c22');
                 ctx.fillStyle = skyGrad;
                 ctx.fillRect(0, 0, w, h);
                 ctx.restore();
@@ -4963,14 +5196,14 @@ const PlanetVisualEngine = {
             if (spaceAlpha < 0.9) {
                 ctx.save();
                 ctx.globalAlpha = Math.max(0, 1 - spaceAlpha * 1.2);
-                ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+                ctx.strokeStyle = curWorld.accentColor ? `${curWorld.accentColor}44` : 'rgba(56, 189, 248, 0.25)';
                 ctx.lineWidth = 8;
                 ctx.beginPath();
                 ctx.ellipse(w * 0.84, Math.min(100, h * 0.18) + flightOff * 0.3, 70, 16, Math.PI / 6, 0, Math.PI * 2);
                 ctx.stroke();
-                ctx.fillStyle = '#fbbf24';
+                ctx.fillStyle = curWorld.lavaGlow || '#fbbf24';
                 ctx.shadowBlur = 20;
-                ctx.shadowColor = '#fbbf24';
+                ctx.shadowColor = curWorld.lavaGlow || '#fbbf24';
                 ctx.beginPath();
                 ctx.arc(w * 0.84, Math.min(100, h * 0.18) + flightOff * 0.3, 22, 0, Math.PI * 2);
                 ctx.fill();
@@ -4987,12 +5220,12 @@ const PlanetVisualEngine = {
             }
             GAME.stars.forEach(s => {
                 const sx = (s.x) % (w / (GAME.zoom || 1));
-                const sy = (s.y + (this.state === 'takeoff' ? (flightOff * 0.4) : 0)) % (h / (GAME.zoom || 1));
+                const sy = (s.y + (this.state === 'takeoff' || this.state === 'traveling' ? (flightOff * 0.4) : 0)) % (h / (GAME.zoom || 1));
                 const drawX = sx < 0 ? sx + (w / (GAME.zoom || 1)) : sx;
                 const drawY = sy < 0 ? sy + (h / (GAME.zoom || 1)) : sy;
                 ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity || 0.6})`;
                 ctx.beginPath();
-                if (this.state === 'takeoff') {
+                if (this.state === 'takeoff' || this.state === 'traveling') {
                     ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
                     ctx.lineWidth = 1;
                     ctx.moveTo(drawX, drawY);
@@ -5005,6 +5238,37 @@ const PlanetVisualEngine = {
             });
             ctx.restore();
 
+            // 3b. Render Traveling Asteroids in Deep Space!
+            if (this.state === 'traveling' && this.travelAsteroids && this.travelAsteroids.length > 0) {
+                ctx.save();
+                this.travelAsteroids.forEach(ast => {
+                    ctx.save();
+                    ctx.translate(ast.x, ast.y);
+                    ctx.rotate(ast.rot);
+                    ctx.fillStyle = ast.color;
+                    ctx.strokeStyle = '#1e293b';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ast.points.forEach((pt, pidx) => {
+                        const px = pt.x * ast.size;
+                        const py = pt.y * ast.size;
+                        if (pidx === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    });
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Crater detail
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.5)';
+                    ctx.beginPath();
+                    ctx.arc(ast.size * 0.2, -ast.size * 0.1, ast.size * 0.25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                });
+                ctx.restore();
+            }
+
             // ONLY DRAW PLANET SURFACE IF STILL IN VIEW
             if (groundY < h + 200) {
                 // Responsive building scale on mobile
@@ -5014,7 +5278,7 @@ const PlanetVisualEngine = {
                 const volX = Math.max(60, w * 0.10);
                 const volY = groundY - 15;
                 ctx.save();
-                ctx.fillStyle = '#1e1b4b';
+                ctx.fillStyle = curWorld.volcanoBody || '#1e1b4b';
                 ctx.beginPath();
                 ctx.moveTo(volX - 65, groundY + 40);
                 ctx.lineTo(volX - 14, volY - 26);
@@ -5023,14 +5287,14 @@ const PlanetVisualEngine = {
                 ctx.closePath();
                 ctx.fill();
 
-                ctx.fillStyle = '#ef4444';
+                ctx.fillStyle = curWorld.volcanoLava || '#ef4444';
                 ctx.shadowBlur = 15;
-                ctx.shadowColor = '#f97316';
+                ctx.shadowColor = curWorld.lavaGlow || '#f97316';
                 ctx.beginPath();
                 ctx.ellipse(volX, volY - 26, 14, 4, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                ctx.strokeStyle = 'rgba(249, 115, 22, 0.75)';
+                ctx.strokeStyle = curWorld.lavaGlow ? `${curWorld.lavaGlow}bb` : 'rgba(249, 115, 22, 0.75)';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.moveTo(volX - 5, volY - 24);
@@ -5044,7 +5308,7 @@ const PlanetVisualEngine = {
 
                 // 5. Distant hills terrain
                 ctx.save();
-                ctx.fillStyle = '#064e3b';
+                ctx.fillStyle = curWorld.hillsGrad || '#064e3b';
                 ctx.beginPath();
                 ctx.moveTo(0, groundY + 30);
                 ctx.bezierCurveTo(w * 0.25, groundY - 40, w * 0.45, groundY - 15, w * 0.65, groundY - 35);
@@ -5057,11 +5321,12 @@ const PlanetVisualEngine = {
                 // 6. Foreground Planet Surface with crisp glowing boundary
                 ctx.save();
                 const fgGrad = ctx.createLinearGradient(0, groundY - 10, 0, h + 200);
-                fgGrad.addColorStop(0, '#042f2e');
-                fgGrad.addColorStop(0.3, '#022c22');
-                fgGrad.addColorStop(1, '#011c16');
+                const sGrad = curWorld.surfaceGrad || ['#042f2e', '#022c22', '#011c16'];
+                fgGrad.addColorStop(0, sGrad[0]);
+                fgGrad.addColorStop(0.3, sGrad[1] || sGrad[0]);
+                fgGrad.addColorStop(1, sGrad[2] || sGrad[0]);
                 ctx.fillStyle = fgGrad;
-                ctx.strokeStyle = '#10b981';
+                ctx.strokeStyle = curWorld.surfaceLine || '#10b981';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
                 ctx.moveTo(0, groundY + 40);
@@ -5073,7 +5338,7 @@ const PlanetVisualEngine = {
                 ctx.stroke();
 
                 // Surface cybernetic lines
-                ctx.strokeStyle = 'rgba(16, 185, 129, 0.15)';
+                ctx.strokeStyle = curWorld.surfaceLine ? `${curWorld.surfaceLine}26` : 'rgba(16, 185, 129, 0.15)';
                 ctx.lineWidth = 1;
                 for (let i = 0; i < 7; i++) {
                     const gx = (w / 8) * (i + 1);
@@ -5084,19 +5349,26 @@ const PlanetVisualEngine = {
                 }
                 ctx.restore();
 
-                // 7. Calculate 8 building plot positions evenly distributed along horizon
-                const spread = Math.min(w * 0.43, 540);
+                // 7. Calculate 8 building plot positions evenly distributed along horizon WITHOUT touching landing pad
+                const padW = Math.min(240, w * 0.35);
+                const minSafeDist = padW / 2 + 45; // Strict safe distance from pad center
+                const maxSpread = Math.min(w * 0.44, 560);
+
+                const leftStep = (maxSpread - minSafeDist) / 3;
+                const rightStep = (maxSpread - minSafeDist) / 3;
+
                 this.plotPositions = [
-                    // Left 4 buildings
-                    { x: cx - spread * 0.96, y: groundY + 12 },
-                    { x: cx - spread * 0.73, y: groundY + 2 },
-                    { x: cx - spread * 0.50, y: groundY - 5 },
-                    { x: cx - spread * 0.27, y: groundY - 9 },
-                    // Right 4 buildings
-                    { x: cx + spread * 0.27, y: groundY - 9 },
-                    { x: cx + spread * 0.50, y: groundY - 5 },
-                    { x: cx + spread * 0.73, y: groundY + 2 },
-                    { x: cx + spread * 0.96, y: groundY + 12 }
+                    // Left 4 buildings (outermost to closest to pad)
+                    { x: cx - maxSpread, y: groundY + 12 },
+                    { x: cx - (maxSpread - leftStep), y: groundY + 4 },
+                    { x: cx - (maxSpread - leftStep * 2), y: groundY - 4 },
+                    { x: cx - minSafeDist, y: groundY - 9 },
+                    
+                    // Right 4 buildings (closest to pad to outermost)
+                    { x: cx + minSafeDist, y: groundY - 9 },
+                    { x: cx + (minSafeDist + rightStep), y: groundY - 4 },
+                    { x: cx + (minSafeDist + rightStep * 2), y: groundY + 4 },
+                    { x: cx + maxSpread, y: groundY + 12 }
                 ];
 
                 // 8. Draw Vector Buildings & Clean Floating Price Badges
@@ -5127,7 +5399,7 @@ const PlanetVisualEngine = {
                     const badgeH = 24 * bScale;
 
                     ctx.fillStyle = isHovered ? 'rgba(15, 23, 42, 0.95)' : 'rgba(10, 15, 30, 0.85)';
-                    ctx.strokeStyle = isBuilt ? '#10b981' : (isHovered ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)');
+                    ctx.strokeStyle = isBuilt ? (curWorld.surfaceLine || '#10b981') : (isHovered ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)');
                     ctx.lineWidth = isHovered ? 1.5 : 1;
                     if (isHovered && !isBuilt) {
                         ctx.shadowBlur = 10;
@@ -5139,7 +5411,7 @@ const PlanetVisualEngine = {
                     ctx.stroke();
 
                     if (isBuilt) {
-                        ctx.fillStyle = '#34d399';
+                        ctx.fillStyle = curWorld.surfaceLine || '#34d399';
                         ctx.font = `bold ${8 * bScale}px "Inter", Arial, sans-serif`;
                         ctx.textAlign = 'center';
                         ctx.fillText('AKTIVNÍ', pos.x, badgeY + 10 * bScale);
@@ -5153,7 +5425,7 @@ const PlanetVisualEngine = {
                         ctx.fillText(bInfo.name.split(' #')[0], pos.x, badgeY + 9 * bScale);
 
                         const canAfford = (META.currency || 0) >= bInfo.cost;
-                        ctx.fillStyle = canAfford ? '#10b981' : '#ef4444';
+                        ctx.fillStyle = canAfford ? (curWorld.surfaceLine || '#10b981') : '#ef4444';
                         ctx.font = `900 ${8 * bScale}px "Inter", Arial, sans-serif`;
                         const costText = (bInfo.cost >= 1000) ? (bInfo.cost / 1000) + 'k DOGE' : bInfo.cost + ' DOGE';
                         ctx.fillText(costText, pos.x, badgeY + 19 * bScale);
@@ -5163,7 +5435,6 @@ const PlanetVisualEngine = {
 
                 // 9. Futuristic Landing Pad Platform in center (Clean Launch Platform)
                 ctx.save();
-                const padW = Math.min(250, w * 0.36);
                 const padH = 28;
 
                 // Pad shadow & base
@@ -5178,7 +5449,7 @@ const PlanetVisualEngine = {
                 padGrad.addColorStop(0.5, '#334155');
                 padGrad.addColorStop(1, '#1e293b');
                 ctx.fillStyle = padGrad;
-                ctx.strokeStyle = '#10b981';
+                ctx.strokeStyle = curWorld.surfaceLine || '#10b981';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
                 ctx.ellipse(cx, padY, padW / 2, padH / 2, 0, 0, Math.PI * 2);
@@ -5191,9 +5462,9 @@ const PlanetVisualEngine = {
                     const angle = (i / ledCount) * Math.PI * 2;
                     const lx = cx + Math.cos(angle) * (padW / 2 - 12);
                     const ly = padY + Math.sin(angle) * (padH / 2 - 6);
-                    ctx.fillStyle = (Date.now() % 800 < 400) ? '#10b981' : '#34d399';
+                    ctx.fillStyle = (Date.now() % 800 < 400) ? (curWorld.beaconColor || '#10b981') : '#ffffff';
                     ctx.shadowBlur = 6;
-                    ctx.shadowColor = '#10b981';
+                    ctx.shadowColor = curWorld.beaconColor || '#10b981';
                     ctx.beginPath();
                     ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
                     ctx.fill();

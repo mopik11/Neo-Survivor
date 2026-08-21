@@ -105,7 +105,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.675
+            NEO SURVIVOR v1.676
           </div>
         </div>
       </div>
@@ -410,7 +410,7 @@
           <!-- TOP UI (Header & Income) - Left Side -->
           <div id="planet-top-card">
             <div style="display: flex; flex-direction: column; gap: 8px;">
-              <h2 style="font-size: 1.4rem; margin: 0; color: #10b981; text-transform: uppercase;" data-i18n="DOMOVSKÁ PLANETA">DOMOVSKÁ PLANETA</h2>
+              <h2 id="planet-header-title" style="font-size: 1.3rem; margin: 0; color: #10b981; text-transform: uppercase;" data-i18n="DOMOVSKÁ PLANETA">DOMOVSKÁ PLANETA</h2>
               <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                 <div class="stat-chip" style="background: rgba(0,0,0,0.6); border: 1px solid #fbbf24; color: #fbbf24; font-weight: 800; font-size: 0.85rem; padding: 6px 12px;">
                   DOGE: <span id="planet-currency-val">0</span>
@@ -427,7 +427,22 @@
               </div>
             </div>
           </div>
+
+          <!-- PLANET DESTINATION SELECTOR (TOP RIGHT) -->
+          <div id="planet-destination-bar" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 20; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+            <button class="planet-select-chip active" data-planet="terra" onclick="window.PlanetVisualEngine.travelTo('terra')">🌍 Terra</button>
+            <button class="planet-select-chip" data-planet="ignis" onclick="window.PlanetVisualEngine.travelTo('ignis')">🔴 Ignis</button>
+            <button class="planet-select-chip" data-planet="cryo" onclick="window.PlanetVisualEngine.travelTo('cryo')">❄️ Cryo</button>
+            <button class="planet-select-chip" data-planet="cyber" onclick="window.PlanetVisualEngine.travelTo('cyber')">🟣 Cyber</button>
+          </div>
           
+          <!-- CENTER BOTTOM ACTION: ENTER BATTLE BUTTON -->
+          <div id="planet-center-actions" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); pointer-events: auto; z-index: 20; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+            <button id="btn-planet-launch-battle" class="btn-restart" style="padding: 12px 30px; font-size: 1.05rem; font-weight: 900; letter-spacing: 1.5px; border-radius: 99px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%); color: #fff; border: 2px solid rgba(254, 202, 202, 0.4); box-shadow: 0 0 25px rgba(239, 68, 68, 0.5), inset 0 1px 0 rgba(255,255,255,0.4); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; gap: 10px;">
+              <span>⚔️</span> <span data-i18n="VSTOUPIT DO BOJE">VSTOUPIT DO BOJE</span> <span>🚀</span>
+            </button>
+          </div>
+
           <!-- BOTTOM LEFT UI (Menu Navigation) -->
           <div id="planet-bottom-menu" style="position: absolute; bottom: 20px; left: 20px; pointer-events: auto; z-index: 20;">
             <button id="btn-planet-menu-back" class="btn-restart modern-glass-btn" style="padding: 10px 18px; font-size: 0.85rem; font-weight: 800; border-radius: 12px; background: rgba(10, 15, 30, 0.85); border: 1.5px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(0,0,0,0.5); cursor: pointer;">
