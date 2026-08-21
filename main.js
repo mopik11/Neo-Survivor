@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.665
+ * NEO SURVIVOR - Core Game Logic - v1.666
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4197,8 +4197,8 @@ const PlanetVisualEngine = {
         const cx = (this.logicalW || window.innerWidth) / 2;
         const groundY = this.targetY + 12 + this.flightOffset;
         const padY = groundY - 2;
-        // The rocket resting height so it sits squarely ON TOP of the landing pad (raised by 4px)
-        const restY = padY - 42;
+        // The rocket resting height so it sits squarely ON TOP of the landing pad
+        const restY = padY - 52;
 
         // Volcano smoke generator
         if (this.flightOffset < 150 && Math.random() < 0.4) {
@@ -4220,11 +4220,11 @@ const PlanetVisualEngine = {
             this.shipY += this.shipVy;
             for (let i = 0; i < 4; i++) {
                 this.particles.push({
-                    x: cx + (Math.random() - 0.5) * 26,
-                    y: this.shipY + 40,
+                    x: cx + (Math.random() - 0.5) * 32,
+                    y: this.shipY + 50,
                     vx: (Math.random() - 0.5) * 2,
                     vy: Math.random() * 4 + 3,
-                    size: Math.random() * 6 + 3,
+                    size: Math.random() * 7 + 3,
                     color: Math.random() > 0.4 ? '#38bdf8' : '#60a5fa',
                     alpha: 1,
                     life: 1
@@ -4239,7 +4239,7 @@ const PlanetVisualEngine = {
                     const a = Math.PI + (Math.random() - 0.5) * 2.2;
                     const spd = Math.random() * 5 + 1.5;
                     this.particles.push({
-                        x: cx + (Math.random() - 0.5) * 36,
+                        x: cx + (Math.random() - 0.5) * 44,
                         y: padY + 2,
                         vx: Math.cos(a) * spd,
                         vy: Math.sin(a) * spd * 0.5,
@@ -4261,10 +4261,10 @@ const PlanetVisualEngine = {
             if (this.bounce > 0) this.bounce *= 0.88;
             this.shipY = restY + Math.sin(Date.now() / 350) * 0.8;
 
-            if (Math.random() < 0.2) {
+            if (Math.random() < 0.25) {
                 this.particles.push({
-                    x: cx + (Math.random() - 0.5) * 20,
-                    y: this.shipY + 40,
+                    x: cx + (Math.random() - 0.5) * 24,
+                    y: this.shipY + 52,
                     vx: (Math.random() - 0.5) * 1,
                     vy: Math.random() * 1.5 + 0.6,
                     size: Math.random() * 3 + 1.5,
@@ -4275,48 +4275,53 @@ const PlanetVisualEngine = {
             }
         } else if (this.state === 'takeoff') {
             const elapsed = (Date.now() - this.takeoffStartTime) / 1000;
+            const progress = Math.min(1.0, elapsed / 2.0);
+            const easeP = progress * progress;
             
-            // Smooth natural acceleration curve
-            this.flightOffset = (elapsed * elapsed) * (this.logicalH * 0.55);
-            this.shipY = restY - Math.min(this.logicalH * 0.45, (elapsed * elapsed) * 260);
+            // Ground altitude smoothly drops down into space
+            this.flightOffset = easeP * (this.logicalH * 1.5);
+            
+            // Rocket rises smoothly to center-upper third and stays centered in camera!
+            const targetCamY = this.logicalH * 0.44;
+            this.shipY = restY - easeP * (restY - targetCamY);
 
-            // Intense takeoff thrust fire
-            for (let i = 0; i < 16; i++) {
+            // Intense takeoff thrust flames
+            for (let i = 0; i < 18; i++) {
                 this.particles.push({
-                    x: cx + (Math.random() - 0.5) * 32,
-                    y: this.shipY + 42,
-                    vx: (Math.random() - 0.5) * 4,
-                    vy: Math.random() * 10 + 7,
-                    size: Math.random() * 10 + 5,
+                    x: cx + (Math.random() - 0.5) * 36,
+                    y: this.shipY + 54,
+                    vx: (Math.random() - 0.5) * 5,
+                    vy: Math.random() * 12 + 7,
+                    size: Math.random() * 12 + 6,
                     color: Math.random() > 0.3 ? '#f59e0b' : '#ef4444',
                     alpha: 1,
                     life: 1
                 });
             }
 
-            // At 1.4s, when the planet has completely scrolled into deep space -> trigger Ejection!
-            if (elapsed >= 1.4) {
+            // At 2.0s, when the planet has completely scrolled into deep space -> trigger Ejection!
+            if (progress >= 1.0) {
                 this.state = 'ejecting';
                 this.ejectStartTime = Date.now();
-                this.ejectOrigin = { x: cx, y: this.shipY + 10 };
+                this.ejectOrigin = { x: cx, y: this.shipY + 20 };
                 
-                // VYPLIVNUTÍ / SPIT-OUT SHOCKWAVE & BURST
+                // VYFLUSNUTÍ / SPIT-OUT SHOCKWAVE & BURST
                 if (!this.shockwaves) this.shockwaves = [];
-                this.shockwaves.push({ x: cx, y: this.shipY + 10, r: 6, maxR: 140, alpha: 1 });
-                this.shockwaves.push({ x: cx, y: this.shipY + 10, r: 2, maxR: 90, alpha: 1 });
+                this.shockwaves.push({ x: cx, y: this.shipY + 20, r: 10, maxR: 180, alpha: 1 });
+                this.shockwaves.push({ x: cx, y: this.shipY + 20, r: 4, maxR: 120, alpha: 1 });
 
-                for (let i = 0; i < 55; i++) {
+                for (let i = 0; i < 65; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const spd = Math.random() * 9 + 4;
+                    const spd = Math.random() * 10 + 4;
                     this.particles.push({
                         x: cx,
-                        y: this.shipY + 10,
+                        y: this.shipY + 20,
                         vx: Math.cos(angle) * spd,
                         vy: Math.sin(angle) * spd + 3,
-                        size: Math.random() * 7 + 4,
+                        size: Math.random() * 8 + 4,
                         color: Math.random() > 0.4 ? '#38bdf8' : (Math.random() > 0.5 ? '#ffffff' : '#fbbf24'),
                         alpha: 1,
-                        life: 1.3
+                        life: 1.4
                     });
                 }
 
@@ -4331,15 +4336,15 @@ const PlanetVisualEngine = {
                 }
 
                 this.ejectedPlayers = crewList.map((c, i) => {
-                    const targetX = (crewList.length === 1) ? cx : cx + (i - (crewList.length - 1) / 2) * 60;
+                    const targetX = (crewList.length === 1) ? cx : cx + (i - (crewList.length - 1) / 2) * 75;
                     const targetY = (this.logicalH / 2);
                     return {
                         x: cx,
-                        y: this.shipY + 15,
+                        y: this.shipY + 25,
                         targetX: targetX,
                         targetY: targetY,
                         name: c.name,
-                        scale: 0.3,
+                        scale: 0.2,
                         isLocal: c.isLocal
                     };
                 });
@@ -4356,24 +4361,25 @@ const PlanetVisualEngine = {
         } else if (this.state === 'ejecting') {
             const ejectElapsed = (Date.now() - this.ejectStartTime) / 1000;
             
-            // Rocket accelerates away upwards into the cosmos
-            this.shipY -= (ejectElapsed * ejectElapsed) * 35 + 8;
+            // Rocket flies past the player and accelerates upwards into deep space
+            const targetCamY = this.logicalH * 0.44;
+            this.shipY = targetCamY - (ejectElapsed * ejectElapsed) * (this.logicalH * 1.1) - (ejectElapsed * 20);
             
             // Animate ejected players smoothly landing in center ready to play!
             if (this.ejectedPlayers) {
                 this.ejectedPlayers.forEach(p => {
                     p.x += (p.targetX - p.x) * 0.16;
                     p.y += (p.targetY - p.y) * 0.16;
-                    p.scale = Math.min(1.0, p.scale + 0.07);
+                    p.scale = Math.min(1.0, p.scale + 0.08);
 
                     // Glowing plasma ejection trail
-                    if (Math.random() < 0.6) {
+                    if (Math.random() < 0.7) {
                         this.particles.push({
-                            x: p.x + (Math.random() - 0.5) * 6,
-                            y: p.y + (Math.random() - 0.5) * 6,
+                            x: p.x + (Math.random() - 0.5) * 8,
+                            y: p.y + (Math.random() - 0.5) * 8,
                             vx: (Math.random() - 0.5) * 1.5,
                             vy: -(Math.random() * 2 + 1),
-                            size: 4,
+                            size: 5,
                             color: p.isLocal ? '#818cf8' : '#f43f5e',
                             alpha: 0.8,
                             life: 0.6
@@ -4385,13 +4391,13 @@ const PlanetVisualEngine = {
             // Update shockwaves
             if (this.shockwaves) {
                 this.shockwaves.forEach(sw => {
-                    sw.r += 6;
+                    sw.r += 7;
                     sw.alpha = Math.max(0, 1 - sw.r / sw.maxR);
                 });
             }
 
-            // Finish after ~1.1s and start the game instantly with the player orb!
-            if (Date.now() - this.ejectStartTime > 1100) {
+            // Finish after ~1.2s and start the game instantly with the player orb!
+            if (Date.now() - this.ejectStartTime > 1200) {
                 this.state = 'done';
                 if (this.animFrame) cancelAnimationFrame(this.animFrame);
                 document.getElementById('planet-modal').classList.remove('active');
@@ -4689,13 +4695,13 @@ const PlanetVisualEngine = {
         ctx.save();
         ctx.translate(x, y);
 
-        // Big Majestic Rocket Dimensions
-        const bodyW = 44;
-        const bodyH = 92;
+        // Big Majestic Rocket Dimensions (increased for epic scale!)
+        const bodyW = 56;
+        const bodyH = 118;
 
         // Thruster flame when landing / takeoff / idle
         if (state === 'takeoff' || state === 'landing' || state === 'idle') {
-            const flameLen = (state === 'takeoff') ? 60 + Math.sin(time * 25) * 15 : (state === 'landing') ? 35 + Math.sin(time * 15) * 8 : 14 + Math.sin(time * 10) * 3;
+            const flameLen = (state === 'takeoff') ? 75 + Math.sin(time * 25) * 18 : (state === 'landing') ? 45 + Math.sin(time * 15) * 10 : 16 + Math.sin(time * 10) * 4;
             
             // Outer Fire
             ctx.fillStyle = (state === 'takeoff') ? '#ef4444' : '#0284c7';
@@ -4719,30 +4725,30 @@ const PlanetVisualEngine = {
         // Mechanical Landing Gear Legs (touching down on the pad!)
         ctx.fillStyle = '#1e293b';
         ctx.strokeStyle = '#475569';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         // Left Gear
         ctx.beginPath();
         ctx.moveTo(-bodyW * 0.35, bodyH * 0.36);
-        ctx.lineTo(-bodyW * 0.65, bodyH * 0.46);
-        ctx.lineTo(-bodyW * 0.72, bodyH * 0.46);
+        ctx.lineTo(-bodyW * 0.68, bodyH * 0.46);
+        ctx.lineTo(-bodyW * 0.76, bodyH * 0.46);
         ctx.stroke();
         // Left Footpad
         ctx.fillStyle = '#0f172a';
-        ctx.fillRect(-bodyW * 0.76, bodyH * 0.44, 8, 4);
+        ctx.fillRect(-bodyW * 0.80, bodyH * 0.44, 10, 5);
 
         // Right Gear
         ctx.beginPath();
         ctx.moveTo(bodyW * 0.35, bodyH * 0.36);
-        ctx.lineTo(bodyW * 0.65, bodyH * 0.46);
-        ctx.lineTo(bodyW * 0.72, bodyH * 0.46);
+        ctx.lineTo(bodyW * 0.68, bodyH * 0.46);
+        ctx.lineTo(bodyW * 0.76, bodyH * 0.46);
         ctx.stroke();
         // Right Footpad
-        ctx.fillRect(bodyW * 0.68, bodyH * 0.44, 8, 4);
+        ctx.fillRect(bodyW * 0.72, bodyH * 0.44, 10, 5);
 
         // Heavy Left & Right Delta Wings
         ctx.fillStyle = '#334155';
         ctx.strokeStyle = '#6366f1';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         // Left Wing
         ctx.beginPath();
         ctx.moveTo(-bodyW * 0.4, -bodyH * 0.05);
@@ -4762,9 +4768,9 @@ const PlanetVisualEngine = {
 
         // Wingtip beacon lights
         ctx.fillStyle = '#ef4444'; // Red on left
-        ctx.beginPath(); ctx.arc(-bodyW * 1.2, bodyH * 0.4, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-bodyW * 1.2, bodyH * 0.4, 3.5, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#22c55e'; // Green on right
-        ctx.beginPath(); ctx.arc(bodyW * 1.2, bodyH * 0.4, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(bodyW * 1.2, bodyH * 0.4, 3.5, 0, Math.PI * 2); ctx.fill();
 
         // Rocket Main Fuselage Hull
         const hullGrad = ctx.createLinearGradient(-bodyW / 2, 0, bodyW / 2, 0);
@@ -4773,7 +4779,7 @@ const PlanetVisualEngine = {
         hullGrad.addColorStop(1, '#94a3b8');
         ctx.fillStyle = hullGrad;
         ctx.strokeStyle = '#4338ca';
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 3;
         
         ctx.beginPath();
         ctx.moveTo(0, -bodyH * 0.55); // Nose cone tip
@@ -4786,21 +4792,21 @@ const PlanetVisualEngine = {
 
         // Center fuselage racing stripe & panel lines
         ctx.fillStyle = '#4f46e5';
-        ctx.fillRect(-5, -bodyH * 0.25, 10, bodyH * 0.65);
+        ctx.fillRect(-6, -bodyH * 0.25, 12, bodyH * 0.65);
 
         // Cockpit Glass Canopy (Large panoramic)
         ctx.fillStyle = '#06b6d4';
         ctx.strokeStyle = '#0891b2';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.ellipse(0, -bodyH * 0.16, bodyW * 0.28, bodyH * 0.16, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, -bodyH * 0.16, bodyW * 0.30, bodyH * 0.17, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         
         // Glass specular sheen
         ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
         ctx.beginPath();
-        ctx.ellipse(-3, -bodyH * 0.20, 3, 7, -Math.PI / 6, 0, Math.PI * 2);
+        ctx.ellipse(-4, -bodyH * 0.20, 4, 9, -Math.PI / 6, 0, Math.PI * 2);
         ctx.fill();
 
         // 3 Engine Exhaust Nozzles
@@ -4809,16 +4815,16 @@ const PlanetVisualEngine = {
         ctx.lineWidth = 1.5;
         [-bodyW * 0.25, 0, bodyW * 0.25].forEach(nx => {
             ctx.beginPath();
-            ctx.moveTo(nx - 4, bodyH * 0.44);
-            ctx.lineTo(nx - 6, bodyH * 0.50);
-            ctx.lineTo(nx + 6, bodyH * 0.50);
-            ctx.lineTo(nx + 4, bodyH * 0.44);
+            ctx.moveTo(nx - 5, bodyH * 0.44);
+            ctx.lineTo(nx - 7, bodyH * 0.51);
+            ctx.lineTo(nx + 7, bodyH * 0.51);
+            ctx.lineTo(nx + 5, bodyH * 0.44);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
         });
 
-        // DRAW AUTHENTIC IN-GAME PLAYER ORB INSIDE COCKPIT (NO MINUS SIGN!)
+        // DRAW AUTHENTIC IN-GAME PLAYER ORB INSIDE COCKPIT (PROMINENT & CLEAR!)
         if (state !== 'ejecting' && state !== 'done') {
             const localName = META.playerName || SecureStorage.getItem('neoSurvivor_user') || "Hráč";
             
@@ -4829,23 +4835,23 @@ const PlanetVisualEngine = {
             ctx.shadowColor = '#6366f1';
             ctx.fillStyle = '#f8fafc';
             ctx.beginPath();
-            ctx.arc(0, playerOrbY, 8, 0, Math.PI * 2);
+            ctx.arc(0, playerOrbY, 11, 0, Math.PI * 2);
             ctx.fill();
             ctx.strokeStyle = '#6366f1';
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 3;
             ctx.stroke();
             ctx.restore();
 
             // Nickname badge floating above cockpit
             ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
             ctx.strokeStyle = '#6366f1';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.roundRect(-32, playerOrbY - 24, 64, 14, 4);
+            ctx.roundRect(-36, playerOrbY - 26, 72, 16, 5);
             ctx.fill();
             ctx.stroke();
             ctx.fillStyle = '#818cf8';
-            ctx.font = 'bold 8.5px "Inter", Arial, sans-serif';
+            ctx.font = 'bold 9.5px "Inter", Arial, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(localName, 0, playerOrbY - 14);
 
@@ -4861,10 +4867,10 @@ const PlanetVisualEngine = {
                     ctx.shadowColor = m.stroke;
                     ctx.fillStyle = m.col;
                     ctx.beginPath();
-                    ctx.arc(m.x, m.y, 7, 0, Math.PI * 2);
+                    ctx.arc(m.x, m.y, 9, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.strokeStyle = m.stroke;
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = 2.5;
                     ctx.stroke();
                     ctx.restore();
 
@@ -4872,11 +4878,11 @@ const PlanetVisualEngine = {
                     ctx.strokeStyle = m.stroke;
                     ctx.lineWidth = 1;
                     ctx.beginPath();
-                    ctx.roundRect(m.x - 22, m.y - 17, 44, 12, 3);
+                    ctx.roundRect(m.x - 24, m.y - 18, 48, 13, 3);
                     ctx.fill();
                     ctx.stroke();
                     ctx.fillStyle = m.col;
-                    ctx.font = 'bold 7.5px "Inter", Arial, sans-serif';
+                    ctx.font = 'bold 8px "Inter", Arial, sans-serif';
                     ctx.fillText(m.name, m.x, m.y - 8);
                 });
             }
@@ -5107,13 +5113,13 @@ const PlanetVisualEngine = {
 
                 // 9. Futuristic Landing Pad Platform in center (Clean Launch Platform)
                 ctx.save();
-                const padW = Math.min(220, w * 0.32);
-                const padH = 26;
+                const padW = Math.min(250, w * 0.36);
+                const padH = 28;
 
                 // Pad shadow & base
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
                 ctx.beginPath();
-                ctx.ellipse(cx, padY + 8, padW / 2 + 12, padH / 2 + 6, 0, 0, Math.PI * 2);
+                ctx.ellipse(cx, padY + 8, padW / 2 + 14, padH / 2 + 7, 0, 0, Math.PI * 2);
                 ctx.fill();
 
                 // Metallic Launchpad Plate
@@ -5123,7 +5129,7 @@ const PlanetVisualEngine = {
                 padGrad.addColorStop(1, '#1e293b');
                 ctx.fillStyle = padGrad;
                 ctx.strokeStyle = '#10b981';
-                ctx.lineWidth = 2.5;
+                ctx.lineWidth = 3;
                 ctx.beginPath();
                 ctx.ellipse(cx, padY, padW / 2, padH / 2, 0, 0, Math.PI * 2);
                 ctx.fill();
@@ -5133,13 +5139,13 @@ const PlanetVisualEngine = {
                 const ledCount = 10;
                 for (let i = 0; i < ledCount; i++) {
                     const angle = (i / ledCount) * Math.PI * 2;
-                    const lx = cx + Math.cos(angle) * (padW / 2 - 10);
-                    const ly = padY + Math.sin(angle) * (padH / 2 - 5);
+                    const lx = cx + Math.cos(angle) * (padW / 2 - 12);
+                    const ly = padY + Math.sin(angle) * (padH / 2 - 6);
                     ctx.fillStyle = (Date.now() % 800 < 400) ? '#10b981' : '#34d399';
                     ctx.shadowBlur = 6;
                     ctx.shadowColor = '#10b981';
                     ctx.beginPath();
-                    ctx.arc(lx, ly, 3, 0, Math.PI * 2);
+                    ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
                     ctx.fill();
                 }
                 ctx.restore();
@@ -5166,7 +5172,7 @@ const PlanetVisualEngine = {
             if (this.state === 'idle' && this.mouseX !== undefined && this.mouseY !== undefined) {
                 const dxR = this.mouseX - shipX;
                 const dyR = this.mouseY - shipY;
-                if (Math.abs(dxR) < 48 && Math.abs(dyR) < 65) isRocketHovered = true;
+                if (Math.abs(dxR) < 55 && Math.abs(dyR) < 75) isRocketHovered = true;
             }
 
             // Ground shadow under rocket (only if near ground)
@@ -5174,7 +5180,7 @@ const PlanetVisualEngine = {
                 const distRatio = Math.max(0, 1 - Math.abs(padY - shipY) / 180);
                 ctx.fillStyle = `rgba(0, 0, 0, ${0.65 * distRatio})`;
                 ctx.beginPath();
-                ctx.ellipse(shipX, padY, (36 * distRatio), (12 * distRatio), 0, 0, Math.PI * 2);
+                ctx.ellipse(shipX, padY, (44 * distRatio), (14 * distRatio), 0, 0, Math.PI * 2);
                 ctx.fill();
             }
 
@@ -5185,8 +5191,8 @@ const PlanetVisualEngine = {
                 this.shockwaves.forEach(sw => {
                     ctx.save();
                     ctx.strokeStyle = `rgba(56, 189, 248, ${sw.alpha * 0.9})`;
-                    ctx.lineWidth = 3;
-                    ctx.shadowBlur = 15;
+                    ctx.lineWidth = 3.5;
+                    ctx.shadowBlur = 18;
                     ctx.shadowColor = '#38bdf8';
                     ctx.beginPath();
                     ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
@@ -5195,42 +5201,42 @@ const PlanetVisualEngine = {
                 });
             }
 
-            // 13. Draw Authentic In-Game Player Orb(s) Deployed in Center of Arena!
+            // 13. Draw Authentic In-Game Player Orb(s) Deployed in Center of Arena! (FULL SCALE!)
             if (this.state === 'ejecting' && this.ejectedPlayers) {
                 this.ejectedPlayers.forEach(ep => {
                     ctx.save();
                     ctx.translate(ep.x, ep.y);
                     ctx.scale(ep.scale, ep.scale);
                     
-                    // Authentic in-game player orb body
-                    ctx.shadowBlur = 30;
+                    // Authentic in-game player orb body (Full game size: radius 22px!)
+                    ctx.shadowBlur = 35;
                     ctx.shadowColor = ep.isLocal ? '#6366f1' : '#f43f5e';
                     ctx.fillStyle = ep.isLocal ? '#f8fafc' : '#fca5a5';
                     ctx.beginPath();
-                    ctx.arc(0, 0, 14, 0, Math.PI * 2);
+                    ctx.arc(0, 0, 22, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.strokeStyle = ep.isLocal ? '#6366f1' : '#f43f5e';
-                    ctx.lineWidth = 4;
+                    ctx.lineWidth = 4.5;
                     ctx.stroke();
                     ctx.shadowBlur = 0;
 
                     // Authentic flashlight weapon attachment
                     ctx.fillStyle = '#94a3b8';
                     ctx.strokeStyle = '#334155';
-                    ctx.lineWidth = 1.5;
+                    ctx.lineWidth = 2;
                     ctx.save();
-                    ctx.translate(-14, -6);
+                    ctx.translate(-22, -10);
                     ctx.rotate(-Math.PI / 4);
-                    ctx.fillRect(-3, -3, 8, 6);
-                    ctx.strokeRect(-3, -3, 8, 6);
+                    ctx.fillRect(-5, -5, 12, 10);
+                    ctx.strokeRect(-5, -5, 12, 10);
                     ctx.restore();
 
                     // Authentic player nickname tag
                     ctx.fillStyle = ep.isLocal ? '#818cf8' : '#fb7185';
-                    ctx.font = 'bold 12px "Outfit", Arial, sans-serif';
+                    ctx.font = 'bold 15px "Outfit", Arial, sans-serif';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
-                    ctx.fillText(ep.name, 0, -20);
+                    ctx.fillText(ep.name, 0, -28);
 
                     ctx.restore();
                 });
