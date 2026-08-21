@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.667
+ * NEO SURVIVOR - Core Game Logic - v1.668
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4189,6 +4189,11 @@ const PlanetVisualEngine = {
         const statusTag = document.getElementById('planet-status-tag');
         if (statusTag) { statusTag.style.transition = 'opacity 0.3s ease'; statusTag.style.opacity = '0'; }
 
+        // Pre-launch the solo game in the background right now so WebSocket + game engine are live ahead of time!
+        if (this.mode === 'solo' && !GAME.active) {
+            startSoloGame();
+        }
+
         if (typeof playSound === 'function') playSound('shoot');
     },
 
@@ -4931,10 +4936,19 @@ const PlanetVisualEngine = {
             const padY = groundY - 2;
             const time = Date.now() / 1000;
 
+            ctx.clearRect(0, 0, w, h);
+
             // Space transition factor (0 = on planet surface, 1 = deep space)
             const spaceAlpha = Math.min(1, Math.max(0, flightOff / (h * 0.75)));
 
-            // 1. Cosmic starry background (matches in-game deep navy blue cosmos)
+            // 1. Cosmic starry background (seamless crossfade into live game canvas!)
+            ctx.save();
+            if (this.state === 'ejecting' && this.ejectStartTime) {
+                const ejectTime = (Date.now() - this.ejectStartTime) / 1000;
+                if (ejectTime > 0.35) {
+                    ctx.globalAlpha = Math.max(0, 1 - (ejectTime - 0.35) / 0.35);
+                }
+            }
             const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
             skyGrad.addColorStop(0, '#020617');
             skyGrad.addColorStop(0.5, '#050a1e');
@@ -4942,6 +4956,7 @@ const PlanetVisualEngine = {
             skyGrad.addColorStop(1, spaceAlpha > 0.3 ? '#020617' : '#022c22');
             ctx.fillStyle = skyGrad;
             ctx.fillRect(0, 0, w, h);
+            ctx.restore();
 
             // 2. Distant planetary moon / ring glow (pans down with space depth)
             if (spaceAlpha < 0.9) {
@@ -6819,7 +6834,7 @@ function startGame() {
     if (NET.isMultiplayer && NET.socket) {
         NET.socket.emit('playerReady');
     }
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.querySelectorAll('.modal:not(#planet-modal)').forEach(m => m.classList.remove('active'));
     document.getElementById('ui-layer').style.display = 'block';
     document.getElementById('menu-anim-canvas').style.display = 'none';
     GAME.startTime = Date.now();
@@ -7051,7 +7066,7 @@ function initSocket() {
             console.log("=== NEO SURVIVOR v1.492 ===");
             NET.roomId = roomId;
             NET.isMultiplayer = true;
-            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            document.querySelectorAll('.modal:not(#planet-modal)').forEach(m => m.classList.remove('active'));
             if (NET.serverPollingInterval) clearInterval(NET.serverPollingInterval);
 
             // Session logic moved below startGame to ensure player exists
