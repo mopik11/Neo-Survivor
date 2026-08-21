@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.647
+ * NEO SURVIVOR - Core Game Logic - v1.648
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -368,7 +368,7 @@ const SKILL_TREE_DATA = {
 };
 
 function getSkillTreeBonus(nodeId) {
-    if (!META.skillTree) return 0;
+    if (!META.skillTree || (META.maxLevel || 1) < 10) return 0;
     const level = META.skillTree.nodes[nodeId] || 0;
     if (level === 0) return 0;
     const node = SKILL_TREE_DATA[nodeId];
@@ -473,7 +473,7 @@ const META = {
     settings: { musicMenu: true, musicGame: true, sfx: true },
     selectedLanguage: 'cs',
     lastSession: null,
-    version: window.GAME_VERSION || '1.647'
+    version: window.GAME_VERSION || '1.648'
 };
 
 let achievementsInitialized = false;
@@ -624,6 +624,25 @@ const formatNumberFull = (num) => {
     return sign + val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 };
 
+const updateProgressionLocks = () => {
+    const btnMeta = document.getElementById('btn-meta-menu');
+    if (btnMeta) {
+        const isSkillTreeUnlocked = (META.maxLevel || 1) >= 10;
+        if (!isSkillTreeUnlocked) {
+            btnMeta.classList.remove('special-glow');
+            btnMeta.style.opacity = '0.75';
+            btnMeta.innerHTML = `<span>🔒</span> <span>SKILL TREE (${META.maxLevel || 1}/10)</span>`;
+            btnMeta.title = (typeof window.T === 'function' ? window.T("Odemkne se po dosažení Levelu 10") : "Odemkne se po dosažení Levelu 10");
+        } else {
+            btnMeta.classList.add('special-glow');
+            btnMeta.style.opacity = '1';
+            btnMeta.innerHTML = `<span>🌌</span> <span>SKILL TREE</span>`;
+            btnMeta.title = "";
+        }
+    }
+};
+window.updateProgressionLocks = updateProgressionLocks;
+
 const updateCurrencyUI = () => {
     const formatted = formatNumber(META.currency);
     const full = formatNumberFull(META.currency);
@@ -642,6 +661,7 @@ const updateCurrencyUI = () => {
     if (metaCurrency) metaCurrency.innerText = full;
     
     if (window.updateMarketUI) window.updateMarketUI();
+    updateProgressionLocks();
 };
 
 const saveMetaLocalOnly = () => {
@@ -803,7 +823,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.647";
+const GAME_VERSION = window.GAME_VERSION || "1.648";
 const GAME = {
     active: false,
     paused: false,
@@ -2394,7 +2414,7 @@ class Player {
         this.fireRate = 1000 / (isLocal ? (1 + getSkillTreeBonus('speed_2')) : 1);
         this.projSpeed = CONFIG.PROJECTILE_SPEED * (isLocal ? (1 + getSkillTreeBonus('speed_3')) : 1);
         let magnetMult = 1.0;
-        if (isLocal && META.selectedPet === 'pet_magnet') {
+        if (isLocal && (META.maxLevel || 1) >= 15 && META.selectedPet === 'pet_magnet') {
             const petLvl = (META.petLevels && META.petLevels['pet_magnet']) || 1;
             magnetMult += petLvl * 0.15;
         }
@@ -2480,7 +2500,7 @@ class Player {
 
         // Meta Upgrades: Regeneration
         let regenVal = getSkillTreeBonus('health_2');
-        if (META.selectedPet === 'pet_healer') {
+        if ((!this.isLocal || (META.maxLevel || 1) >= 15) && META.selectedPet === 'pet_healer') {
             const petLvl = (META.petLevels && META.petLevels['pet_healer']) || 1;
             regenVal += petLvl * 0.5; // 0.5 HP per second per pet level
         }
@@ -2490,7 +2510,7 @@ class Player {
         }
 
         // Pet Laser (Epic)
-        if (META.selectedPet === 'pet_laser' && this.isLocal) {
+        if (META.selectedPet === 'pet_laser' && this.isLocal && (META.maxLevel || 1) >= 15) {
             const now = Date.now();
             if (!this.lastPetLaser) this.lastPetLaser = now;
             const petLvl = (META.petLevels && META.petLevels['pet_laser']) || 1;
@@ -2920,7 +2940,7 @@ class Player {
 
         const displayName = this.isLocal ? META.playerName : this.remoteName;
         const hat = this.isLocal ? (META.upgrades.hat || null) : this.remoteHat;
-        const pet = this.isLocal ? (META.selectedPet || null) : this.remotePet;
+        const pet = this.isLocal ? (((META.maxLevel || 1) >= 15) ? (META.selectedPet || null) : null) : this.remotePet;
 
         if (pet) {
             const petEmoji = EMOJIS.find(e => e.id === pet);
@@ -4103,18 +4123,19 @@ function showSkillTreeMenu(silent = false) {
         const pos = POSITIONS[id];
         if (!pos) return;
         
+        const isTreeUnlocked = (META.maxLevel || 1) >= 10;
         let level = 0;
         let isUnlocked = false;
         let canUnlock = false;
 
         if (isVstupne) {
-            isUnlocked = META.skillTree.unlocked;
-            canUnlock = !isUnlocked;
+            isUnlocked = META.skillTree.unlocked && isTreeUnlocked;
+            canUnlock = !isUnlocked && isTreeUnlocked;
         } else {
             level = META.skillTree.nodes[id] || 0;
-            isUnlocked = level > 0;
+            isUnlocked = level > 0 && isTreeUnlocked;
             const req = data.requires;
-            canUnlock = META.skillTree.unlocked && (!req || (META.skillTree.nodes[req] || 0) > 0);
+            canUnlock = isTreeUnlocked && META.skillTree.unlocked && (!req || (META.skillTree.nodes[req] || 0) > 0);
         }
 
         const node = document.createElement('div');
@@ -4124,7 +4145,7 @@ function showSkillTreeMenu(silent = false) {
         
         if (isVstupne) {
             node.innerHTML = `
-                <div class="node-icon" style="font-size: 2rem;">${isUnlocked ? '🌟' : '🔒'}</div>
+                <div class="node-icon" style="font-size: 2rem;">${isUnlocked ? '🌟' : (isTreeUnlocked ? '🔓' : '🔒')}</div>
                 <div class="node-label">VSTUPNE</div>
             `;
         } else {
@@ -4145,7 +4166,8 @@ function showSkillTreeMenu(silent = false) {
     const nodesArray = Object.values(SKILL_TREE_DATA);
     nodesArray.forEach(data => {
         const req = data.requires || 'vstupne';
-        const isUnlocked = META.skillTree.nodes[data.id] > 0 || (req === 'vstupne' && META.skillTree.unlocked);
+        const isTreeUnlocked = (META.maxLevel || 1) >= 10;
+        const isUnlocked = isTreeUnlocked && (META.skillTree.nodes[data.id] > 0 || (req === 'vstupne' && META.skillTree.unlocked));
         drawLine(req, data.id, isUnlocked);
     });
 
@@ -4219,27 +4241,29 @@ function showSkillTreeMenu(silent = false) {
 
 function showNodeDetails(id, data, isVstupne) {
     let title, desc, costText, canAfford, actionText, action;
-    const isUnlocked = META.skillTree.unlocked;
+    const isLevelMet = (META.maxLevel || 1) >= 10;
+    const isUnlocked = META.skillTree.unlocked && isLevelMet;
     
     if (isVstupne) {
         title = "VSTUPNE (Základní Odemčení)";
         desc = "Odemkne přístup ke Stromu dovedností.";
-        if (isUnlocked) {
-            costText = "JIŽ ODEMČENO";
+        if (!isLevelMet) {
+            costText = window.T("VYŽADUJE LEVEL 10");
+            canAfford = false;
+        } else if (META.skillTree.unlocked) {
+            costText = window.T("JIŽ ODEMČENO");
             canAfford = false;
         } else {
-            costText = "ZDARMA";
+            costText = window.T("ZDARMA (Level 10 splněn)");
             canAfford = true;
-            actionText = "ODEMKNOUT";
+            actionText = window.T("ODEMKNOUT");
             action = () => {
-                if (true) {
-                    META.skillTree.unlocked = true;
-                    playSound('upgrade');
-                    // NOTE: Do NOT call saveMetaForce() here — it would create a competing syncAccount
-                    // that races against purchaseSuccess/syncSuccess and may revert currency.
-                    if (NET.socket) NET.socket.emit('purchase', { type: 'skillTree', id: 'vstupne', token: NET.sessionToken });
-                    showSkillTreeMenu();
-                }
+                META.skillTree.unlocked = true;
+                playSound('upgrade');
+                // NOTE: Do NOT call saveMetaForce() here — it would create a competing syncAccount
+                // that races against purchaseSuccess/syncSuccess and may revert currency.
+                if (NET.socket) NET.socket.emit('purchase', { type: 'skillTree', id: 'vstupne', token: NET.sessionToken });
+                showSkillTreeMenu();
             };
         }
     } else {
@@ -4254,17 +4278,20 @@ function showNodeDetails(id, data, isVstupne) {
             desc += `<br><span style="color:#10b981">Aktuální bonus: +${Math.round(currentBonus * 100)}%</span>`;
         }
         
-        if (!reqMet) {
-            costText = "UZAMČENO";
+        if (!isLevelMet) {
+            costText = window.T("VYŽADUJE LEVEL 10");
+            canAfford = false;
+        } else if (!reqMet) {
+            costText = window.T("UZAMČENO");
             canAfford = false;
         } else if (level >= data.maxLevel) {
-            costText = "MAX LEVEL";
+            costText = window.T("MAX LEVEL");
             canAfford = false;
         } else {
             const cost = Math.floor(data.baseCost * Math.pow(data.costMultiplier, level));
             costText = `${formatNumberFull(cost)} SP`;
             canAfford = (META.skillPoints || 0) >= cost;
-            actionText = "KOUPIT LEVEL";
+            actionText = window.T("KOUPIT LEVEL");
             action = () => {
                 if ((META.skillPoints || 0) >= cost) {
                     META.skillPoints -= cost;
@@ -4357,39 +4384,63 @@ function openPetDetails(emoji, count) {
     const costEl = document.getElementById('pet-upgrade-cost');
     if (costEl) costEl.innerText = formatNumberFull(upgradeCost);
     
+    const isPetUnlocked = (META.maxLevel || 1) >= 15;
     const btnUpgrade = document.getElementById('btn-pet-upgrade');
     if (btnUpgrade) {
-        const canAfford = META.currency >= upgradeCost;
-        if (canAfford) {
-            btnUpgrade.classList.remove('disabled');
-            btnUpgrade.style.opacity = '1';
-            btnUpgrade.style.cursor = 'pointer';
-        } else {
+        if (!isPetUnlocked) {
+            btnUpgrade.innerHTML = `<span style="color:#f87171; font-weight:800;">🔒 ${window.T("VYŽADUJE LEVEL 15")}</span>`;
             btnUpgrade.classList.add('disabled');
             btnUpgrade.style.opacity = '0.5';
             btnUpgrade.style.cursor = 'not-allowed';
-        }
-        btnUpgrade.onclick = (e) => {
-            e.preventDefault();
-            if (META.currency >= upgradeCost) {
-                META.currency -= upgradeCost;
-                if (!META.petLevels) META.petLevels = {};
-                META.petLevels[emoji.id] = lvl + 1;
-                updateCurrencyUI();
-                renderInventoryCrates();
-                playSound('upgrade');
-                if (NET.socket && NET.socket.connected) {
-                    NET.socket.emit('purchase', { type: 'petUpgrade', id: emoji.id, token: NET.sessionToken });
-                }
+            btnUpgrade.onclick = (e) => {
+                e.preventDefault();
+                if (typeof playSound === 'function') playSound('error');
+                window.showCustomAlert(window.T("Peti se odemknou po dosažení Levelu 15!"));
+            };
+        } else {
+            const canAfford = META.currency >= upgradeCost;
+            btnUpgrade.innerHTML = `<span data-i18n="UPGRADOVAT ZA:">${window.T("UPGRADOVAT ZA:")}</span> &nbsp;<span id="pet-upgrade-cost" style="color: #fbbf24; font-weight: 900;">${formatNumberFull(upgradeCost)}</span>&nbsp; DOGE`;
+            if (canAfford) {
+                btnUpgrade.classList.remove('disabled');
+                btnUpgrade.style.opacity = '1';
+                btnUpgrade.style.cursor = 'pointer';
             } else {
-                window.showCustomAlert(window.T("Nedostatek Dogecoinů!"));
+                btnUpgrade.classList.add('disabled');
+                btnUpgrade.style.opacity = '0.5';
+                btnUpgrade.style.cursor = 'not-allowed';
             }
-        };
+            btnUpgrade.onclick = (e) => {
+                e.preventDefault();
+                if (META.currency >= upgradeCost) {
+                    META.currency -= upgradeCost;
+                    if (!META.petLevels) META.petLevels = {};
+                    META.petLevels[emoji.id] = lvl + 1;
+                    updateCurrencyUI();
+                    renderInventoryCrates();
+                    playSound('upgrade');
+                    if (NET.socket && NET.socket.connected) {
+                        NET.socket.emit('purchase', { type: 'petUpgrade', id: emoji.id, token: NET.sessionToken });
+                    }
+                } else {
+                    window.showCustomAlert(window.T("Nedostatek Dogecoinů!"));
+                }
+            };
+        }
     }
     
     const btnMerge = document.getElementById('btn-pet-merge');
     if (btnMerge) {
-        if (count >= 2) {
+        if (!isPetUnlocked) {
+            btnMerge.innerHTML = `<span style="color:#f87171; font-weight:800;">🔒 ${window.T("VYŽADUJE LEVEL 15")}</span>`;
+            btnMerge.classList.add('disabled');
+            btnMerge.style.opacity = '0.5';
+            btnMerge.style.cursor = 'not-allowed';
+            btnMerge.onclick = (e) => {
+                e.preventDefault();
+                if (typeof playSound === 'function') playSound('error');
+                window.showCustomAlert(window.T("Peti se odemknou po dosažení Levelu 15!"));
+            };
+        } else if (count >= 2) {
             btnMerge.innerText = window.T("SLOUČIT 2 PETY (FREE)");
             btnMerge.classList.remove('disabled');
             btnMerge.style.opacity = '1';
@@ -4507,41 +4558,58 @@ function renderInventoryCrates() {
         card.style.position = 'relative';
         card.style.zIndex = '5';
 
-        card.innerHTML = `
-            <h3 style="margin-bottom: 2px;">${window.T(type.name)}</h3>
-            <div style="font-size: 0.65rem; color: #fbbf24; font-weight: 800; margin-bottom: 12px; opacity: 0.8;">${formatNumberFull(type.cost)} DOGE / ks</div>
-            
-            <div class="crate-multipliers" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 5px;">
-                ${[1, 2, 5, 10].map(count => {
-                    const canAfford = META.currency >= type.cost * count;
-                    return `<button class="btn-bulk ${canAfford ? '' : 'disabled'}" data-count="${count}">${count}x</button>`;
-                }).join('')}
-            </div>
-        `;
-
-        card.querySelectorAll('.btn-bulk').forEach(btn => {
-            btn.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const count = parseInt(btn.getAttribute('data-count'));
-                const totalCost = type.cost * count;
-
-                if (META.currency >= totalCost) {
-                    META.currency -= totalCost;
-                    if (!META.unopenedCrates) META.unopenedCrates = { basic:0, premium:0, legendary:0 };
-                    META.unopenedCrates[type.id] = (META.unopenedCrates[type.id] || 0) + count;
-                    playSound('upgrade');
-                    renderInventoryCrates();
-                }
-
-                if (!NET.socket) initSocket();
-                if (NET.socket) {
-                    NET.socket.emit('purchase', { type: 'crate', id: type.id, count: count, token: NET.sessionToken });
-                } else {
-                    window.showCustomAlert(window.T("Chyba připojení k serveru!"));
-                }
+        const isPetCrateLocked = type.id === 'pet' && (META.maxLevel || 1) < 15;
+        if (isPetCrateLocked) {
+            card.style.opacity = '0.7';
+            card.style.borderColor = '#475569';
+            card.style.cursor = 'pointer';
+            card.innerHTML = `
+                <div style="position: absolute; top: 6px; right: 8px; font-size: 0.7rem; color: #ef4444; font-weight: 800; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 6px; border: 1px solid rgba(239,68,68,0.4);">🔒 Lvl 15 (${META.maxLevel || 1}/15)</div>
+                <h3 style="margin-bottom: 2px;">${window.T(type.name)}</h3>
+                <div style="font-size: 0.65rem; color: #fbbf24; font-weight: 800; margin-bottom: 12px; opacity: 0.8;">${formatNumberFull(type.cost)} DOGE / ks</div>
+                <div style="font-size: 0.75rem; color: #f87171; font-weight: bold; margin-top: 8px; padding: 8px 6px; background: rgba(239,68,68,0.1); border-radius: 8px; text-align: center;">${window.T('Odemkne se na Levelu 15')}</div>
+            `;
+            card.onclick = () => {
+                if (typeof playSound === 'function') playSound('error');
+                window.showCustomAlert(window.T("Peti a Vajíčka se odemknou po dosažení Levelu 15! (Tvůj nej. level: ") + (META.maxLevel || 1) + "/15)");
             };
-        });
+        } else {
+            card.innerHTML = `
+                <h3 style="margin-bottom: 2px;">${window.T(type.name)}</h3>
+                <div style="font-size: 0.65rem; color: #fbbf24; font-weight: 800; margin-bottom: 12px; opacity: 0.8;">${formatNumberFull(type.cost)} DOGE / ks</div>
+                
+                <div class="crate-multipliers" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 5px;">
+                    ${[1, 2, 5, 10].map(count => {
+                        const canAfford = META.currency >= type.cost * count;
+                        return `<button class="btn-bulk ${canAfford ? '' : 'disabled'}" data-count="${count}">${count}x</button>`;
+                    }).join('')}
+                </div>
+            `;
+
+            card.querySelectorAll('.btn-bulk').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const count = parseInt(btn.getAttribute('data-count'));
+                    const totalCost = type.cost * count;
+
+                    if (META.currency >= totalCost) {
+                        META.currency -= totalCost;
+                        if (!META.unopenedCrates) META.unopenedCrates = { basic:0, premium:0, legendary:0 };
+                        META.unopenedCrates[type.id] = (META.unopenedCrates[type.id] || 0) + count;
+                        playSound('upgrade');
+                        renderInventoryCrates();
+                    }
+
+                    if (!NET.socket) initSocket();
+                    if (NET.socket) {
+                        NET.socket.emit('purchase', { type: 'crate', id: type.id, count: count, token: NET.sessionToken });
+                    } else {
+                        window.showCustomAlert(window.T("Chyba připojení k serveru!"));
+                    }
+                };
+            });
+        }
         cratesGrid.appendChild(card);
     });
     container.appendChild(cratesSection);
@@ -4559,12 +4627,13 @@ function renderInventoryCrates() {
 
     // 4A. SEKCE PETI / DRONI
     if (petItems.length > 0) {
+        const isPetLocked = (META.maxLevel || 1) < 15;
         const petsSection = document.createElement('div');
         petsSection.style.marginBottom = '30px';
         petsSection.innerHTML = `
             <div style="border-bottom: 1px solid rgba(99,102,241,0.2); margin-bottom: 15px; padding-bottom: 5px; text-align: left;">
-                <h2 style="color: #6366f1; margin:0; font-size: 1.2rem;">🤖 ${window.T('TVOJI PETI A DRONI')}</h2>
-                <div style="font-size: 0.65rem; color: #64748b; margin-top: 2px;">${window.T('Klikni na peta pro Upgrade & Merge')}</div>
+                <h2 style="color: #6366f1; margin:0; font-size: 1.2rem;">🤖 ${window.T('TVOJI PETI A DRONI')}${isPetLocked ? ` <span style="font-size:0.75rem; color:#f87171; font-weight:bold; margin-left:8px;">🔒 (${window.T('Odemkne se na Levelu 15')})</span>` : ''}</h2>
+                <div style="font-size: 0.65rem; color: #64748b; margin-top: 2px;">${isPetLocked ? window.T('Peti se odemknou po dosažení Levelu 15!') : window.T('Klikni na peta pro Upgrade & Merge')}</div>
             </div>
         `;
         const petsGrid = document.createElement('div');
@@ -4583,8 +4652,11 @@ function renderInventoryCrates() {
             card.style.padding = '12px';
             card.style.cursor = 'pointer';
             
-            const isEquipped = META.selectedPet === emoji.id;
+            const isEquipped = !isPetLocked && META.selectedPet === emoji.id;
             if (isEquipped) card.style.borderColor = '#fbbf24';
+            if (isPetLocked) {
+                card.style.opacity = '0.75';
+            }
             
             card.innerHTML = `
                 <div style="font-size: 1.8rem;">${emoji.icon}</div>
@@ -4607,6 +4679,11 @@ function renderInventoryCrates() {
             const btnEquip = card.querySelector('.btn-equip');
             btnEquip.onclick = (e) => {
                 e.stopPropagation();
+                if (isPetLocked) {
+                    if (typeof playSound === 'function') playSound('error');
+                    window.showCustomAlert(window.T("Peti se odemknou po dosažení Levelu 15!"));
+                    return;
+                }
                 if (META.selectedPet === emoji.id) META.selectedPet = null;
                 else META.selectedPet = emoji.id;
                 saveMeta();
@@ -4735,6 +4812,11 @@ function getRarityColor(rarity) {
 }
 
 function openCrate(type = 'basic', count = 1) {
+    if (type === 'pet' && (META.maxLevel || 1) < 15) {
+        if (typeof playSound === 'function') playSound('error');
+        window.showCustomAlert(window.T("Peti a Vajíčka se odemknou po dosažení Levelu 15!"));
+        return;
+    }
     if (!NET.socket) return;
     NET.socket.emit('openCrate', { type: type, count: count, token: NET.sessionToken });
 }
@@ -6661,7 +6743,15 @@ function init() {
             "Magnetický Dron ti pomáhá sbírat zkušenostní gemy z větší vzdálenosti během hry.": "Magnet drone helps you collect experience gems from a further distance.",
             "Bojový Dron střílí automaticky lasery na nejbližší nepřátele v tvé blízkosti.": "Combat drone fires lasers automatically at nearby enemies.",
             "Léčivý Dron ti postupně automaticky doplňuje zdraví lodi za sekundu.": "Healing drone automatically restores HP per second.",
-            "dosah": "range"
+            "dosah": "range",
+            "Skill Tree se odemkne po dosažení Levelu 10!": "Skill Tree unlocks at Level 10!",
+            "Peti a Vajíčka se odemknou po dosažení Levelu 15!": "Pets & Eggs unlock at Level 15!",
+            "Peti se odemknou po dosažení Levelu 15!": "Pets unlock at Level 15!",
+            "Odemkne se na Levelu 15": "Unlocks at Level 15",
+            "Odemkne se po dosažení Levelu 10": "Unlocks at Level 10",
+            "VYŽADUJE LEVEL 10": "REQUIRES LEVEL 10",
+            "VYŽADUJE LEVEL 15": "REQUIRES LEVEL 15",
+            "ZDARMA (Level 10 splněn)": "FREE (Level 10 reached)"
         }
     };
 
@@ -7231,6 +7321,11 @@ function init() {
 
     const btnMeta = document.getElementById('btn-meta-menu');
     if (btnMeta) btnMeta.onclick = () => { 
+        if ((META.maxLevel || 1) < 10) {
+            if (typeof playSound === 'function') playSound('error');
+            window.showCustomAlert(window.T("Skill Tree se odemkne po dosažení Levelu 10! (Tvůj nej. level: ") + (META.maxLevel || 1) + "/10)");
+            return;
+        }
         if (!NET.socket) initSocket();
         showSkillTreeMenu(); 
         if (window.updateMarketUI) window.updateMarketUI();

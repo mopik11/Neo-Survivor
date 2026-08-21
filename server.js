@@ -638,7 +638,7 @@ function generateLoot(crateType) {
         else rarity = 'common';
     }
 
-    const possible = EMOJIS.filter(e => e.rarity === rarity && e.id !== 'ultra_rare');
+    const possible = EMOJIS.filter(e => e.rarity === rarity && e.id !== 'ultra_rare' && !e.id.startsWith('pet_'));
     return possible.length === 0 ? EMOJIS[0] : possible[Math.floor(Math.random() * possible.length)];
 }
 
@@ -1202,6 +1202,10 @@ io.on('connection', (socket) => {
             let meta;
             try { meta = JSON.parse(Security.decrypt(row.meta)); } catch(e) { meta = JSON.parse(row.meta); }
             if (!meta || !meta.unopenedCrates || (meta.unopenedCrates[data.type] || 0) < 1) return;
+            if (data.type === 'pet' && (meta.maxLevel || 1) < 15) {
+                console.warn(`[OPENCRATE] Blocked pet crate open for "${user}": maxLevel ${(meta.maxLevel || 1)} < 15`);
+                return;
+            }
 
             const count = Math.min(meta.unopenedCrates[data.type], reqCount);
             const results = [];
@@ -1522,6 +1526,10 @@ io.on('connection', (socket) => {
                     success = true;
                 }
             } else if (data.type === 'skillTree') {
+                if ((meta.maxLevel || 1) < 10) {
+                    console.warn(`[PURCHASE] Blocked skillTree purchase for "${user}": maxLevel ${(meta.maxLevel || 1)} < 10`);
+                    return;
+                }
                 if (!meta.skillTree) meta.skillTree = { unlocked: false, nodes: {} };
                 if (!meta.skillTree.nodes) meta.skillTree.nodes = {};
                 if (typeof meta.skillPoints === 'undefined') meta.skillPoints = 0;
@@ -1558,6 +1566,10 @@ io.on('connection', (socket) => {
                     }
                 }
             } else if (data.type === 'crate') {
+                if (data.id === 'pet' && (meta.maxLevel || 1) < 15) {
+                    console.warn(`[PURCHASE] Blocked pet crate purchase for "${user}": maxLevel ${(meta.maxLevel || 1)} < 15`);
+                    return;
+                }
                 const baseCost = (PRICES.crates && PRICES.crates[data.id]) || 0;
                 const count = Math.max(1, Math.min(100, Math.floor(Number(data.count) || 1)));
                 cost = baseCost * count;
@@ -1575,6 +1587,10 @@ io.on('connection', (socket) => {
                     success = true;
                 }
             } else if (data.type === 'petUpgrade') {
+                if ((meta.maxLevel || 1) < 15) {
+                    console.warn(`[PURCHASE] Blocked petUpgrade for "${user}": maxLevel ${(meta.maxLevel || 1)} < 15`);
+                    return;
+                }
                 const invItem = meta.inventory && meta.inventory.find(i => i.id === data.id);
                 if (invItem) {
                     if (!meta.petLevels) meta.petLevels = {};
@@ -1586,6 +1602,10 @@ io.on('connection', (socket) => {
                     }
                 }
             } else if (data.type === 'petMerge') {
+                if ((meta.maxLevel || 1) < 15) {
+                    console.warn(`[PURCHASE] Blocked petMerge for "${user}": maxLevel ${(meta.maxLevel || 1)} < 15`);
+                    return;
+                }
                 const invItem = meta.inventory && meta.inventory.find(i => i.id === data.id);
                 if (invItem && invItem.count >= 2) {
                     if (!meta.petLevels) meta.petLevels = {};
@@ -1866,12 +1886,14 @@ io.on('connection', (socket) => {
                 if (meta.upgrades && meta.upgrades.hat !== undefined) {
                     merged.upgrades.hat = meta.upgrades.hat;
                 }
-                if (meta.selectedPet !== undefined) {
-                    merged.selectedPet = meta.selectedPet;
-                }
-                merged.unopenedCrates  = serverMeta.unopenedCrates || { basic: 0, premium: 0, legendary: 0 };
                 merged.maxLevel        = Math.max(serverMeta.maxLevel || 1, (row ? row.max_level : 1) || 1);
                 
+                if (meta.selectedPet !== undefined && (merged.maxLevel || 1) >= 15) {
+                    merged.selectedPet = meta.selectedPet;
+                } else if ((merged.maxLevel || 1) < 15) {
+                    merged.selectedPet = null;
+                }
+
                 // Ships/abilities: union (once unlocked, always unlocked - merge server + client)
                 merged.ships     = Object.assign({}, serverMeta.ships    || { 1: true }, merged.ships    || {});
                 merged.abilities = Object.assign({}, serverMeta.abilities || { 1: true }, merged.abilities || {});
@@ -1880,6 +1902,9 @@ io.on('connection', (socket) => {
                 // (skillTree.unlocked and nodes are SERVER-AUTHORITATIVE - only set by purchase handler)
                 if (!merged.skillTree) merged.skillTree = { unlocked: false, nodes: {} };
                 if (!merged.skillTree.nodes) merged.skillTree.nodes = {};
+                if ((merged.maxLevel || 1) < 10) {
+                    merged.skillTree.unlocked = false;
+                }
                 
                 // NOTE: selectedShip, selectedAbility, autoSelect, autoUpgrade, settings
                 // are already correctly set from client data above (lines 1117-1122)
