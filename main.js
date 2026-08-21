@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.654
+ * NEO SURVIVOR - Core Game Logic - v1.655
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4050,21 +4050,74 @@ const PlanetVisualEngine = {
                 this.resize();
             }
         });
+        
+        // Handle clicks for buying buildings directly on the canvas
+        this.canvas.addEventListener('click', (e) => {
+            if (this.state !== 'idle') return;
+            const rect = this.canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            
+            if (this.plotPositions) {
+                this.plotPositions.forEach((pos, idx) => {
+                    const dx = clickX - pos.x;
+                    const dy = clickY - pos.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 40) {
+                        const bInfo = PLANET_BUILDINGS[idx];
+                        if (bInfo) this.attemptBuyBuilding(bInfo.id);
+                    }
+                });
+            }
+        });
+        
+        this.canvas.addEventListener('mousemove', (e) => {
+            if (this.state !== 'idle') return;
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouseX = e.clientX - rect.left;
+            this.mouseY = e.clientY - rect.top;
+        });
+
         this.isInitialized = true;
+    },
+    
+    attemptBuyBuilding(id) {
+        if (!META.planet) META.planet = { buildings: {}, lastIncomeTime: Date.now() };
+        if (META.planet.buildings[id]) return; // Already built
+        const b = PLANET_BUILDINGS.find(x => x.id == id);
+        if (b && META.dogeCoins >= b.cost) {
+            if (NET.socket && NET.socket.connected) {
+                NET.socket.emit('purchase', { type: 'building', id: b.id });
+            } else {
+                META.dogeCoins -= b.cost;
+                META.planet.buildings[b.id] = true;
+                saveMetaLocalOnly();
+                updateCurrencyUI();
+                if (typeof playSound === 'function') playSound('buy');
+            }
+        } else {
+            if (typeof playSound === 'function') playSound('error');
+        }
     },
 
     resize() {
         if (!this.canvas) return;
-        // Full screen dynamically
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        this.targetY = this.canvas.height - 180; // Land closer to bottom
+        // High DPI Support for sharp rendering
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = window.innerWidth * dpr;
+        this.canvas.height = window.innerHeight * dpr;
+        this.ctx.scale(dpr, dpr);
+        
+        // Logical width/height
+        this.logicalW = window.innerWidth;
+        this.logicalH = window.innerHeight;
+        this.targetY = this.logicalH - 180; // Land closer to bottom
 
         this.stars = [];
         for (let i = 0; i < 40; i++) {
             this.stars.push({
-                x: Math.random() * this.canvas.width,
-                y: Math.random() * (this.canvas.height * 0.7),
+                x: Math.random() * this.logicalW,
+                y: Math.random() * (this.logicalH * 0.7),
                 size: Math.random() * 1.8 + 0.5,
                 opacity: Math.random() * 0.6 + 0.3
             });
@@ -4242,111 +4295,145 @@ const PlanetVisualEngine = {
     },
 
     draw() {
-        const ctx = this.ctx;
-        if (!ctx) return;
-        const w = this.canvas.width;
-        const h = this.canvas.height;
-        const cx = w / 2;
-        const groundY = this.targetY + 12;
+        try {
+            const ctx = this.ctx;
+            if (!ctx) return;
+            const w = this.logicalW;
+            const h = this.logicalH;
+            const cx = w / 2;
+            const groundY = this.targetY + 12;
 
-        // 1. Alien cosmic sky gradient
-        const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-        skyGrad.addColorStop(0, '#040714');
-        skyGrad.addColorStop(0.5, '#0b162c');
-        skyGrad.addColorStop(1, '#064e3b');
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, w, h);
+            // 1. Alien cosmic sky gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+            skyGrad.addColorStop(0, '#040714');
+            skyGrad.addColorStop(0.5, '#0b162c');
+            skyGrad.addColorStop(1, '#064e3b');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, w, h);
 
-        // 2. Distant planetary ring / celestial glow
-        ctx.save();
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
-        ctx.lineWidth = 14;
-        ctx.beginPath();
-        ctx.ellipse(w * 0.8, 30, 90, 20, Math.PI / 6, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.fillStyle = 'rgba(251, 191, 36, 0.2)';
-        ctx.beginPath();
-        ctx.arc(w * 0.8, 30, 22, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
-        // 3. Stars
-        ctx.save();
-        this.stars.forEach(s => {
-            ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity * (0.8 + 0.2 * Math.sin(Date.now() / 500 + s.x))})`;
+            // 2. Distant planetary ring / celestial glow
+            ctx.save();
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+            ctx.lineWidth = 14;
             ctx.beginPath();
-            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.ellipse(w * 0.8, 30, 90, 20, Math.PI / 6, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.2)';
+            ctx.beginPath();
+            ctx.arc(w * 0.8, 30, 22, 0, Math.PI * 2);
             ctx.fill();
-        });
-        ctx.restore();
+            ctx.restore();
 
-        // 4. Background terrain silhouette
-        ctx.save();
-        ctx.fillStyle = 'rgba(6, 78, 59, 0.4)';
-        ctx.beginPath();
-        ctx.moveTo(0, groundY + 50);
-        ctx.lineTo(0, groundY - 30);
-        ctx.bezierCurveTo(w * 0.25, groundY - 60, w * 0.4, groundY - 20, w * 0.6, groundY - 45);
-        ctx.bezierCurveTo(w * 0.75, groundY - 70, w * 0.9, groundY - 30, w, groundY - 35);
-        ctx.lineTo(w, h);
-        ctx.lineTo(0, h);
-        ctx.fill();
+            // 3. Stars
+            ctx.save();
+            this.stars.forEach(s => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity * (0.8 + 0.2 * Math.sin(Date.now() / 500 + s.x))})`;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.restore();
 
-        // 5. Foreground terrain
-        const foreGrad = ctx.createLinearGradient(0, groundY - 15, 0, h);
-        foreGrad.addColorStop(0, '#064e3b');
-        foreGrad.addColorStop(1, '#022c22');
-        ctx.fillStyle = foreGrad;
-        ctx.beginPath();
-        ctx.moveTo(0, groundY + 50);
-        ctx.bezierCurveTo(w * 0.3, groundY - 12, w * 0.7, groundY - 12, w, groundY + 50);
-        ctx.lineTo(w, h);
-        ctx.lineTo(0, h);
-        ctx.fill();
-        ctx.restore();
+            // 4. Background terrain silhouette
+            ctx.save();
+            ctx.fillStyle = 'rgba(6, 78, 59, 0.4)';
+            ctx.beginPath();
+            ctx.moveTo(0, groundY + 50);
+            ctx.lineTo(0, groundY - 30);
+            ctx.bezierCurveTo(w * 0.25, groundY - 60, w * 0.4, groundY - 20, w * 0.6, groundY - 45);
+            ctx.bezierCurveTo(w * 0.75, groundY - 70, w * 0.9, groundY - 30, w, groundY - 35);
+            ctx.lineTo(w, h);
+            ctx.lineTo(0, h);
+            ctx.fill();
 
-        // 6. Draw Built Base Structures along the terrain
-        if (META.planet && META.planet.buildings) {
-            const builtIds = Object.keys(META.planet.buildings).filter(k => META.planet.buildings[k]);
-            const plotPositions = [
+            // 5. Foreground terrain
+            const foreGrad = ctx.createLinearGradient(0, groundY - 15, 0, h);
+            foreGrad.addColorStop(0, '#064e3b');
+            foreGrad.addColorStop(1, '#022c22');
+            ctx.fillStyle = foreGrad;
+            ctx.beginPath();
+            ctx.moveTo(0, groundY + 50);
+            ctx.bezierCurveTo(w * 0.3, groundY - 12, w * 0.7, groundY - 12, w, groundY + 50);
+            ctx.lineTo(w, h);
+            ctx.lineTo(0, h);
+            ctx.fill();
+            ctx.restore();
+
+            // Store plotPositions for click detection
+            this.plotPositions = [
+                { x: cx - 350, y: groundY - 16 },
                 { x: cx - 280, y: groundY - 12 },
                 { x: cx - 210, y: groundY - 8 },
                 { x: cx - 140, y: groundY - 4 },
                 { x: cx + 140, y: groundY - 4 },
                 { x: cx + 210, y: groundY - 8 },
                 { x: cx + 280, y: groundY - 12 },
-                { x: cx - 350, y: groundY - 16 },
                 { x: cx + 350, y: groundY - 16 }
             ];
 
-            builtIds.forEach((bId, idx) => {
-                const bInfo = PLANET_BUILDINGS.find(b => b.id == bId);
-                const pos = plotPositions[idx % plotPositions.length];
-                if (bInfo && pos && pos.x > 15 && pos.x < w - 15) {
+            // 6. Draw Built Base Structures & Empty Plots
+            if (META.planet) {
+                if (!META.planet.buildings) META.planet.buildings = {};
+                PLANET_BUILDINGS.forEach((bInfo, idx) => {
+                    const pos = this.plotPositions[idx];
+                    if (!pos) return;
+                    
+                    const isBuilt = META.planet.buildings[bInfo.id];
+                    
+                    // Hover check
+                    let isHovered = false;
+                    if (this.mouseX !== undefined && this.mouseY !== undefined) {
+                        const dx = this.mouseX - pos.x;
+                        const dy = this.mouseY - pos.y;
+                        if (Math.sqrt(dx*dx + dy*dy) < 40) isHovered = true;
+                    }
+
                     ctx.save();
-                    // Foundation aura
-                    ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
-                    ctx.beginPath();
-                    ctx.ellipse(pos.x, pos.y + 4, 14, 4, 0, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    // Structure Icon
-                    ctx.font = '18px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'bottom';
-                    ctx.fillText(bInfo.icon, pos.x, pos.y + 2);
-
-                    // Ambient energy beam / particle
-                    if (Math.random() < 0.15) {
-                        ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
+                    if (isBuilt) {
+                        // Foundation aura
+                        ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
                         ctx.beginPath();
-                        ctx.arc(pos.x + (Math.random() - 0.5) * 10, pos.y - 15 - Math.random() * 10, 1.5, 0, Math.PI * 2);
+                        ctx.ellipse(pos.x, pos.y + 10, 20, 6, 0, 0, Math.PI * 2);
                         ctx.fill();
+
+                        // Building Icon (Animated if built)
+                        const bobY = Math.sin(Date.now() / 300 + idx) * 3;
+                        ctx.font = '24px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        ctx.fillText(bInfo.icon, pos.x, pos.y + 4 + bobY);
+                        
+                        // Active energy / smoke particle animation
+                        if (Math.random() < 0.2) {
+                            ctx.fillStyle = (bInfo.icon === '☢️' || bInfo.icon === '⚡') ? 'rgba(56, 189, 248, 0.8)' : 'rgba(16, 185, 129, 0.6)';
+                            ctx.beginPath();
+                            ctx.arc(pos.x + (Math.random() - 0.5) * 15, pos.y - 15 - Math.random() * 15, 2, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    } else {
+                        // Empty Plot Outline
+                        ctx.fillStyle = isHovered ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+                        ctx.strokeStyle = isHovered ? 'rgba(16, 185, 129, 0.8)' : 'rgba(255, 255, 255, 0.2)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.ellipse(pos.x, pos.y + 10, 18, 5, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        // Ghost icon & Cost
+                        ctx.globalAlpha = isHovered ? 0.8 : 0.4;
+                        ctx.font = '18px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        ctx.fillText(bInfo.icon, pos.x, pos.y + 4);
+                        
+                        ctx.font = 'bold 10px Arial';
+                        ctx.fillStyle = (META.dogeCoins >= bInfo.cost) ? '#10b981' : '#ef4444';
+                        ctx.fillText(bInfo.cost + ' D', pos.x, pos.y + 22);
                     }
                     ctx.restore();
-                }
-            });
-        }
+                });
+            }
 
         // 7. Futuristic Landing Pad Platform in center
         ctx.save();
@@ -4464,6 +4551,9 @@ const PlanetVisualEngine = {
             }
         }
         ctx.restore();
+        } catch (e) {
+            console.error("PlanetDraw Error:", e);
+        }
     }
 };
 window.PlanetVisualEngine = PlanetVisualEngine;

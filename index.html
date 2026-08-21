@@ -87,7 +87,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.654
+            NEO SURVIVOR v1.655
           </div>
         </div>
       </div>
@@ -429,33 +429,23 @@
           <!-- Spacer to let user see the planet -->
           <div style="flex-grow: 1;"></div>
 
-          <!-- BOTTOM UI (Buildings & Actions) -->
-          <div style="background: rgba(10, 15, 30, 0.85); backdrop-filter: blur(10px); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 20px; padding: 15px 20px; box-shadow: 0 -10px 30px rgba(0,0,0,0.5);">
-            <!-- Building Plots Section -->
-            <div style="max-height: 200px; overflow-y: auto; padding-right: 5px;">
-              <h3 style="margin: 0 0 10px 0; font-size: 1rem; color: #a5b4fc; letter-spacing: 1px; text-transform: uppercase;" data-i18n="STAVEBNÍ PARCELY ZÁKLADNY">STAVEBNÍ PARCELY ZÁKLADNY</h3>
-              <div id="planet-plots-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;">
-                <!-- Dynamically generated plots -->
-              </div>
-            </div>
-
-            <!-- Bottom Combat & Hub Navigation Row -->
-            <div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-              <button id="btn-planet-fight" class="btn-restart" style="width: 100%; padding: 18px; font-size: 1.5rem; font-weight: 900; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #fff; border: 2px solid rgba(255,255,255,0.3); border-radius: 16px; box-shadow: 0 0 30px rgba(239, 68, 68, 0.6); cursor: pointer; letter-spacing: 3px; text-transform: uppercase;">
-                <span>⚔️</span> <span data-i18n="BOJOVAT">BOJOVAT</span>
+          <!-- BOTTOM UI (Floating Combat & Navigation) -->
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: auto; padding: 0 20px 20px 20px;">
+            <!-- Removed the big blurred background and building HTML grid to let user see the planet and click directly on it -->
+            <button id="btn-planet-fight" class="btn-restart" style="width: 100%; max-width: 400px; margin: 0 auto; padding: 20px; font-size: 1.6rem; font-weight: 900; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #fff; border: 2px solid rgba(255,255,255,0.4); border-radius: 20px; box-shadow: 0 0 40px rgba(239, 68, 68, 0.8); cursor: pointer; letter-spacing: 3px; text-transform: uppercase; transform: scale(1); transition: all 0.2s;">
+              <span>⚔️</span> <span data-i18n="ODSTARTOVAT">ODSTARTOVAT</span> <span>🚀</span>
+            </button>
+            
+            <div style="display: flex; justify-content: center; gap: 10px; max-width: 400px; margin: 0 auto; width: 100%;">
+              <button id="btn-planet-ships" class="btn-restart modern-glass-btn" style="flex: 1; padding: 12px 5px; font-size: 0.8rem; border-radius: 12px; background: rgba(10, 15, 30, 0.7); backdrop-filter: blur(5px);">
+                <span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span>
               </button>
-              
-              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-                <button id="btn-planet-ships" class="btn-restart modern-glass-btn" style="padding: 10px 5px; font-size: 0.75rem; border-radius: 10px;">
-                  <span>🚀</span> <span data-i18n="VÝBAVA">VÝBAVA</span>
-                </button>
-                <button id="btn-planet-tree" class="btn-restart modern-glass-btn" style="padding: 10px 5px; font-size: 0.75rem; border-radius: 10px;">
-                  <span>🌌</span> <span data-i18n="SKILL TREE">SKILL TREE</span>
-                </button>
-                <button id="btn-planet-menu-back" class="btn-restart modern-glass-btn" style="padding: 10px 5px; font-size: 0.75rem; border-radius: 10px;">
-                  <span>🏠</span> <span data-i18n="MENU">MENU</span>
-                </button>
-              </div>
+              <button id="btn-planet-tree" class="btn-restart modern-glass-btn" style="flex: 1; padding: 12px 5px; font-size: 0.8rem; border-radius: 12px; background: rgba(10, 15, 30, 0.7); backdrop-filter: blur(5px);">
+                <span>🌌</span> <span data-i18n="SKILL TREE">SKILL TREE</span>
+              </button>
+              <button id="btn-planet-menu-back" class="btn-restart modern-glass-btn" style="flex: 1; padding: 12px 5px; font-size: 0.8rem; border-radius: 12px; background: rgba(10, 15, 30, 0.7); backdrop-filter: blur(5px);">
+                <span>🏠</span> <span data-i18n="MENU">MENU</span>
+              </button>
             </div>
           </div>
         </div>
