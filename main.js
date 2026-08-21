@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.650
+ * NEO SURVIVOR - Core Game Logic - v1.651
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4055,9 +4055,9 @@ const PlanetVisualEngine = {
 
     resize() {
         if (!this.canvas) return;
-        const rect = this.canvas.getBoundingClientRect();
-        this.canvas.width = rect.width || 700;
-        this.canvas.height = rect.height || 180;
+        // Statically lock the canvas resolution to prevent 0-width bugs from CSS display: none
+        this.canvas.width = 800;
+        this.canvas.height = 200;
         this.targetY = this.canvas.height - 48;
 
         this.stars = [];
@@ -4475,14 +4475,16 @@ function openPlanetModal(mode = 'solo') {
     if (modal) {
         modal.classList.add('active');
         renderPlanetUI();
-        PlanetVisualEngine.startLanding(mode, () => {
-            document.getElementById('planet-modal').classList.remove('active');
-            if (mode === 'solo') {
-                startSoloGame();
-            } else if (mode === 'multiplayer') {
-                document.getElementById('multiplayer-modal').classList.add('active');
-            }
-        });
+        setTimeout(() => {
+            PlanetVisualEngine.startLanding(mode, () => {
+                document.getElementById('planet-modal').classList.remove('active');
+                if (mode === 'solo') {
+                    startSoloGame();
+                } else if (mode === 'multiplayer') {
+                    document.getElementById('multiplayer-modal').classList.add('active');
+                }
+            });
+        }, 50);
     }
 }
 window.openPlanetModal = openPlanetModal;
@@ -7983,10 +7985,7 @@ function init() {
         window.requestServerList();
     };
 
-    const btnPlanet = document.getElementById('btn-planet-menu');
-    if (btnPlanet) btnPlanet.onclick = () => {
-        openPlanetModal('solo');
-    };
+    // Removed btnPlanet
 
     const btnClaimPlanet = document.getElementById('btn-claim-planet-income');
     if (btnClaimPlanet) btnClaimPlanet.onclick = () => {
