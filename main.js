@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.668
+ * NEO SURVIVOR - Core Game Logic - v1.669
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -4042,7 +4042,7 @@ const PlanetVisualEngine = {
     isInitialized: false,
 
     init() {
-        this.canvas = document.getElementById('planet-surface-canvas');
+        this.canvas = document.getElementById('game-canvas');
         if (!this.canvas) return;
         this.ctx = this.canvas.getContext('2d');
         this.resize();
@@ -4052,42 +4052,48 @@ const PlanetVisualEngine = {
             }
         });
         
-        // Handle clicks for buying buildings or clicking the rocket
-        this.canvas.addEventListener('click', (e) => {
-            if (this.state !== 'idle') return;
-            const rect = this.canvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
-            const cx = (this.logicalW || window.innerWidth) / 2;
-            const shipY = this.shipY;
-            
-            // 1. Direct click on the Rocket immediately launches into space!
-            const dxRocket = clickX - cx;
-            const dyRocket = clickY - shipY;
-            if (Math.abs(dxRocket) < 48 && Math.abs(dyRocket) < 65) {
-                this.startTakeoff();
-                return;
-            }
+        // Handle clicks for buying buildings or clicking the rocket directly on planet-modal overlay
+        const modal = document.getElementById('planet-modal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (this.state !== 'idle') return;
+                // Ignore clicks on top card and bottom menu buttons
+                if (e.target.closest('#planet-top-card') || e.target.closest('#planet-bottom-menu')) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+                const cx = (this.logicalW || window.innerWidth) / 2;
+                const shipY = this.shipY;
+                
+                // 1. Direct click on the Rocket immediately launches into space!
+                const dxRocket = clickX - cx;
+                const dyRocket = clickY - shipY;
+                if (Math.abs(dxRocket) < 55 && Math.abs(dyRocket) < 75) {
+                    this.startTakeoff();
+                    return;
+                }
 
-            // 2. Check click on buildings / price badges
-            if (this.plotPositions) {
-                this.plotPositions.forEach((pos, idx) => {
-                    const dx = clickX - pos.x;
-                    const dy = clickY - (pos.y - 15);
-                    if (Math.abs(dx) < 38 && Math.abs(dy) < 48) {
-                        const bInfo = PLANET_BUILDINGS[idx];
-                        if (bInfo) this.attemptBuyBuilding(bInfo.id);
-                    }
-                });
-            }
-        });
-        
-        this.canvas.addEventListener('mousemove', (e) => {
-            if (this.state !== 'idle') return;
-            const rect = this.canvas.getBoundingClientRect();
-            this.mouseX = e.clientX - rect.left;
-            this.mouseY = e.clientY - rect.top;
-        });
+                // 2. Check click on buildings / price badges
+                if (this.plotPositions) {
+                    this.plotPositions.forEach((pos, idx) => {
+                        const dx = clickX - pos.x;
+                        const dy = clickY - (pos.y - 15);
+                        if (Math.abs(dx) < 38 && Math.abs(dy) < 48) {
+                            const bInfo = PLANET_BUILDINGS[idx];
+                            if (bInfo) this.attemptBuyBuilding(bInfo.id);
+                        }
+                    });
+                }
+            });
+            
+            modal.addEventListener('mousemove', (e) => {
+                if (this.state !== 'idle') return;
+                const rect = this.canvas.getBoundingClientRect();
+                this.mouseX = e.clientX - rect.left;
+                this.mouseY = e.clientY - rect.top;
+            });
+        }
 
         this.isInitialized = true;
     },
@@ -4115,25 +4121,23 @@ const PlanetVisualEngine = {
 
     resize() {
         if (!this.canvas) return;
-        const dpr = window.devicePixelRatio || 1;
-        this.canvas.width = window.innerWidth * dpr;
-        this.canvas.height = window.innerHeight * dpr;
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        this.ctx.scale(dpr, dpr);
-        
         this.logicalW = window.innerWidth;
         this.logicalH = window.innerHeight;
+        this.canvas.width = this.logicalW;
+        this.canvas.height = this.logicalH;
         this.targetY = Math.max(220, this.logicalH - 165);
 
-        this.stars = [];
-        for (let i = 0; i < 80; i++) {
-            this.stars.push({
-                x: Math.random() * this.logicalW,
-                y: Math.random() * this.logicalH,
-                size: Math.random() * 2 + 0.8,
-                opacity: Math.random() * 0.7 + 0.3,
-                speed: Math.random() * 1.5 + 0.5
-            });
+        if (!this.stars || this.stars.length === 0) {
+            this.stars = [];
+            for (let i = 0; i < 80; i++) {
+                this.stars.push({
+                    x: Math.random() * this.logicalW,
+                    y: Math.random() * this.logicalH,
+                    size: Math.random() * 2 + 0.8,
+                    opacity: Math.random() * 0.7 + 0.3,
+                    speed: Math.random() * 1.5 + 0.5
+                });
+            }
         }
     },
 
