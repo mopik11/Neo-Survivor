@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.689
+ * NEO SURVIVOR - Core Game Logic - v1.690
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -6438,8 +6438,8 @@ function startSoloGame() {
         roomId: soloRoomId, 
         playerId: myPlayerId, 
         isSolo: true,
-        username: localStorage.getItem('neoSurvivor_user'),
-        name: localStorage.getItem('neoSurvivor_user')
+        username: (META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč'),
+        name: (META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč')
     });
 }
 window.startSoloGame = startSoloGame;
@@ -11934,8 +11934,13 @@ function render() {
 
         if (NET.isMultiplayer || (GAME.paused && META.lastSession && META.lastSession.roomId)) {
             let pMe = GAME.entities.player;
+            let myCleanName = META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Já';
+            if (myCleanName.startsWith('enc:')) {
+                myCleanName = SecureStorage.getItem('neoSurvivor_user') || 'Hráč';
+            }
+
             let playersList = [{ 
-                name: (localStorage.getItem('neoSurvivor_user') || "Já"), 
+                name: myCleanName, 
                 kills: GAME.kills || 0, 
                 isMe: true,
                 hp: pMe ? pMe.hp : 0,
@@ -11945,8 +11950,10 @@ function render() {
             for (const id in NET.others) {
                 const op = NET.others[id];
                 if (op) {
+                    let otherName = op.remoteName || "Hráč";
+                    if (otherName.startsWith('enc:')) otherName = "Hráč";
                     playersList.push({ 
-                        name: op.remoteName || "Hráč", 
+                        name: otherName, 
                         kills: op.kills || 0, 
                         isMe: false, 
                         dead: op.dead,
@@ -11962,10 +11969,35 @@ function render() {
             const startX_sb = GAME.canvas.width - sbWidth - padding;
             const sbHeight = 35 + playersList.length * 25;
             const sbY = startY + mapSize + 15;
+
+            const curWorldId = (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || 'terra';
+            let sbBorder = 'rgba(16, 185, 129, 0.65)';
+            let sbHeader = '#34d399';
+            let sbMeColor = '#10b981';
+            let sbGlow = 'rgba(16, 185, 129, 0.35)';
+
+            if (curWorldId === 'ignis') {
+                sbBorder = 'rgba(249, 115, 22, 0.75)';
+                sbHeader = '#fbbf24';
+                sbMeColor = '#f97316';
+                sbGlow = 'rgba(249, 115, 22, 0.4)';
+            } else if (curWorldId === 'cryo') {
+                sbBorder = 'rgba(56, 189, 248, 0.75)';
+                sbHeader = '#7dd3fc';
+                sbMeColor = '#38bdf8';
+                sbGlow = 'rgba(56, 189, 248, 0.4)';
+            } else if (curWorldId === 'cyber') {
+                sbBorder = 'rgba(217, 70, 239, 0.75)';
+                sbHeader = '#f0abfc';
+                sbMeColor = '#d946ef';
+                sbGlow = 'rgba(217, 70, 239, 0.4)';
+            }
             
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
+            ctx.fillStyle = 'rgba(8, 14, 26, 0.88)';
+            ctx.strokeStyle = sbBorder;
             ctx.lineWidth = 2;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = sbGlow;
             if (ctx.roundRect) {
                 ctx.beginPath();
                 ctx.roundRect(startX_sb, sbY, sbWidth, sbHeight, 8);
@@ -11974,8 +12006,9 @@ function render() {
                 ctx.fillRect(startX_sb, sbY, sbWidth, sbHeight);
                 ctx.strokeRect(startX_sb, sbY, sbWidth, sbHeight);
             }
+            ctx.shadowBlur = 0;
 
-            ctx.fillStyle = '#a5b4fc';
+            ctx.fillStyle = sbHeader;
             ctx.font = 'bold 12px Outfit, sans-serif';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
@@ -11990,24 +12023,26 @@ function render() {
             ctx.beginPath();
             ctx.moveTo(startX_sb + 10, sbY + 30);
             ctx.lineTo(startX_sb + sbWidth - 10, sbY + 30);
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.strokeStyle = sbBorder;
+            ctx.lineWidth = 1;
             ctx.stroke();
 
             playersList.forEach((pl, idx) => {
                 const rowY = sbY + 40 + idx * 25;
-                ctx.fillStyle = pl.dead ? '#64748b' : (pl.isMe ? '#10b981' : '#f8fafc');
+                ctx.fillStyle = pl.dead ? '#64748b' : (pl.isMe ? sbMeColor : '#f8fafc');
                 
                 // Name
                 ctx.textAlign = 'left';
-                let dispName = pl.name;
-                if (dispName.length > 10) dispName = dispName.substring(0, 8) + '..';
+                let dispName = pl.name || 'Hráč';
+                if (dispName.startsWith('enc:')) dispName = 'Hráč';
+                if (dispName.length > 12) dispName = dispName.substring(0, 10) + '..';
                 ctx.fillText(dispName, startX_sb + 15, rowY);
                 
                 // HP
                 ctx.textAlign = 'center';
                 if (!pl.dead) {
                     const hpText = Math.ceil(pl.hp).toString();
-                    ctx.fillStyle = pl.hp < pl.maxHp * 0.3 ? '#ef4444' : (pl.isMe ? '#10b981' : '#f8fafc');
+                    ctx.fillStyle = pl.hp < pl.maxHp * 0.3 ? '#ef4444' : (pl.isMe ? sbMeColor : '#f8fafc');
                     ctx.fillText(hpText, startX_sb + sbWidth / 2 + 10, rowY);
                 } else {
                     ctx.fillStyle = '#64748b';
@@ -12015,7 +12050,7 @@ function render() {
                 }
 
                 // Kills
-                ctx.fillStyle = pl.dead ? '#64748b' : (pl.isMe ? '#10b981' : '#f8fafc');
+                ctx.fillStyle = pl.dead ? '#64748b' : (pl.isMe ? sbMeColor : '#f8fafc');
                 ctx.textAlign = 'right';
                 ctx.fillText(pl.kills.toString(), startX_sb + sbWidth - 15, rowY);
             });
