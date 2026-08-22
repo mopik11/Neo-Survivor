@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.710
+ * NEO SURVIVOR - Core Game Logic - v1.711
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.710'
+    version: window.GAME_VERSION || '1.711'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.710";
+const GAME_VERSION = window.GAME_VERSION || "1.711";
 const GAME = {
     active: false,
     paused: false,
@@ -3832,16 +3832,22 @@ function handleLocalPlayerDeath() {
                     const uiLayer = document.getElementById('ui-layer');
                     if (uiLayer) uiLayer.style.display = 'none';
                     
-                    const playersList = ensureLocalPlayerInList([
-                        { id: myPlayerId, name: META.playerName || 'Hráč', dead: true, shipColor: META.selectedShipColor || '#38bdf8' },
-                        ...others
-                    ]);
+                    const currentLobby = window.PlanetVisualEngine?.multiplayerLobby;
+                    const isBattle = (currentLobby && typeof currentLobby.isBattleActive === 'boolean')
+                        ? currentLobby.isBattleActive
+                        : others.some(op => !op.dead);
+                    const playersList = ensureLocalPlayerInList(
+                        (currentLobby && currentLobby.players) ? currentLobby.players : [
+                            { id: myPlayerId, name: META.playerName || 'Hráč', dead: true, shipColor: META.selectedShipColor || '#38bdf8' },
+                            ...others
+                        ]
+                    );
                     
                     window.openMultiplayerStaging({
                         roomId: NET.roomId,
                         planetId: (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || 'terra',
                         players: playersList,
-                        isBattleActive: true
+                        isBattleActive: isBattle
                     });
                     if (window.PlanetVisualEngine) {
                         window.PlanetVisualEngine.startLanding('multiplayer');
@@ -8263,12 +8269,17 @@ window.softResetToPlanet = () => {
             resetGame();
             saveMeta();
             
+            const currentLobby = window.PlanetVisualEngine?.multiplayerLobby;
             const others = Object.values(NET.others || {});
-            const isBattle = others.some(op => !op.dead);
-            const playersList = ensureLocalPlayerInList([
-                { id: myPlayerId, name: META.playerName || 'Hráč', dead: true, shipColor: META.selectedShipColor || '#38bdf8' },
-                ...others
-            ]);
+            const isBattle = (currentLobby && typeof currentLobby.isBattleActive === 'boolean') 
+                ? currentLobby.isBattleActive 
+                : others.some(op => !op.dead);
+            const playersList = ensureLocalPlayerInList(
+                (currentLobby && currentLobby.players) ? currentLobby.players : [
+                    { id: myPlayerId, name: META.playerName || 'Hráč', dead: true, shipColor: META.selectedShipColor || '#38bdf8' },
+                    ...others
+                ]
+            );
             
             window.openMultiplayerStaging({
                 roomId: NET.roomId,
@@ -9011,13 +9022,23 @@ function ensureLocalPlayerInList(playersList) {
     const myShipColor = META.selectedShipColor || '#38bdf8';
     const myLevel = META.maxLevel || 1;
     let list = Array.isArray(playersList) ? [...playersList] : [];
-    const hasMe = list.some(p => p.id === myPlayerId || p.name === myName);
-    if (!hasMe) {
+    
+    // Check if local player is viewing planet staging (inactive or dead in game)
+    const isLocalOnPlanet = !GAME.active || (GAME.entities.player && GAME.entities.player.dead);
+    
+    const myIdx = list.findIndex(p => p.id === myPlayerId || (p.name && myName && p.name.toLowerCase() === myName.toLowerCase()));
+    if (myIdx >= 0) {
+        list[myIdx].id = myPlayerId;
+        if (!list[myIdx].name) list[myIdx].name = myName;
+        if (!list[myIdx].shipColor) list[myIdx].shipColor = myShipColor;
+        if (isLocalOnPlanet) list[myIdx].dead = true;
+    } else {
         list.unshift({
             id: myPlayerId,
             name: myName,
             level: myLevel,
-            shipColor: myShipColor
+            shipColor: myShipColor,
+            dead: isLocalOnPlanet
         });
     }
     return list;
