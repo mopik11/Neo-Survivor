@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.697
+ * NEO SURVIVOR - Core Game Logic - v1.695
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.697'
+    version: window.GAME_VERSION || '1.695'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.697";
+const GAME_VERSION = window.GAME_VERSION || "1.695";
 const GAME = {
     active: false,
     paused: false,
@@ -4678,12 +4678,9 @@ const PlanetVisualEngine = {
         const skipBtn = document.getElementById('btn-planet-skip-travel');
         if (skipBtn) skipBtn.style.display = 'none';
 
-        // Pre-load game in the background so we fly directly into the active game!
+        // Pre-load solo game in the background so we fly directly into the active game!
         if (this.mode === 'solo' && !GAME.active) {
             startSoloGame();
-        } else if (this.mode === 'multiplayer' && !GAME.active) {
-            // For MP: game was already socket-joined, just call startGame
-            if (typeof startGame === 'function') startGame();
         }
 
         if (typeof playSound === 'function') playSound('shoot');
@@ -5537,7 +5534,7 @@ const PlanetVisualEngine = {
     },
 
     // Big majestic vector-modeled rocket spaceship with crew and landing gear
-    drawRocketModel(ctx, x, y, vy, state, time, isHovered, mode, tilt = 0, rotation = 0) {
+    drawRocketModel(ctx, x, y, vy, state, time, isHovered, mode, tilt = 0, rotation = 0, customName = null, customColor = null) {
         ctx.save();
         ctx.translate(x, y);
         if (tilt || rotation) {
@@ -5546,9 +5543,10 @@ const PlanetVisualEngine = {
         const rocketScale = Math.min(1.0, Math.max(0.72, (this.logicalH || window.innerHeight) / 520));
         ctx.scale(rocketScale, rocketScale);
 
-        // Big Majestic Rocket Dimensions (increased for epic scale!)
+        // Big Majestic Rocket Dimensions
         const bodyW = 56;
         const bodyH = 118;
+        const primaryColor = customColor || '#6366f1';
 
         // Thruster flame when landing / takeoff / idle / traveling
         if (state === 'takeoff' || state === 'landing' || state === 'idle' || state === 'traveling') {
@@ -5598,7 +5596,7 @@ const PlanetVisualEngine = {
 
         // Heavy Left & Right Delta Wings
         ctx.fillStyle = '#334155';
-        ctx.strokeStyle = '#6366f1';
+        ctx.strokeStyle = primaryColor;
         ctx.lineWidth = 2.5;
         // Left Wing
         ctx.beginPath();
@@ -5618,9 +5616,9 @@ const PlanetVisualEngine = {
         ctx.stroke();
 
         // Wingtip beacon lights
-        ctx.fillStyle = '#ef4444'; // Red on left
+        ctx.fillStyle = '#ef4444';
         ctx.beginPath(); ctx.arc(-bodyW * 1.2, bodyH * 0.4, 3.5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#22c55e'; // Green on right
+        ctx.fillStyle = '#22c55e';
         ctx.beginPath(); ctx.arc(bodyW * 1.2, bodyH * 0.4, 3.5, 0, Math.PI * 2); ctx.fill();
 
         // Rocket Main Fuselage Hull
@@ -5629,11 +5627,11 @@ const PlanetVisualEngine = {
         hullGrad.addColorStop(0.5, '#ffffff');
         hullGrad.addColorStop(1, '#94a3b8');
         ctx.fillStyle = hullGrad;
-        ctx.strokeStyle = '#4338ca';
+        ctx.strokeStyle = primaryColor;
         ctx.lineWidth = 3;
         
         ctx.beginPath();
-        ctx.moveTo(0, -bodyH * 0.55); // Nose cone tip
+        ctx.moveTo(0, -bodyH * 0.55);
         ctx.bezierCurveTo(-bodyW * 0.65, -bodyH * 0.2, -bodyW * 0.6, bodyH * 0.3, -bodyW * 0.42, bodyH * 0.44);
         ctx.lineTo(bodyW * 0.42, bodyH * 0.44);
         ctx.bezierCurveTo(bodyW * 0.6, bodyH * 0.3, bodyW * 0.65, -bodyH * 0.2, 0, -bodyH * 0.55);
@@ -5641,11 +5639,11 @@ const PlanetVisualEngine = {
         ctx.fill();
         ctx.stroke();
 
-        // Center fuselage racing stripe & panel lines
-        ctx.fillStyle = '#4f46e5';
+        // Center fuselage racing stripe
+        ctx.fillStyle = primaryColor;
         ctx.fillRect(-6, -bodyH * 0.25, 12, bodyH * 0.65);
 
-        // Cockpit Glass Canopy (Large panoramic)
+        // Cockpit Glass Canopy
         ctx.fillStyle = '#06b6d4';
         ctx.strokeStyle = '#0891b2';
         ctx.lineWidth = 2.5;
@@ -5675,70 +5673,36 @@ const PlanetVisualEngine = {
             ctx.stroke();
         });
 
-        // DRAW AUTHENTIC IN-GAME PLAYER ORB INSIDE COCKPIT (PROMINENT & CLEAR!)
+        // Glowing Player Orb & Name Badge
         if (state !== 'ejecting' && state !== 'done') {
-            const localName = META.playerName || SecureStorage.getItem('neoSurvivor_user') || "Hráč";
+            const displayName = customName || META.playerName || SecureStorage.getItem('neoSurvivor_user') || "Hráč";
             
-            // True glowing Player Orb in main cockpit
             const playerOrbY = -bodyH * 0.16;
             ctx.save();
             ctx.shadowBlur = 15;
-            ctx.shadowColor = '#6366f1';
+            ctx.shadowColor = primaryColor;
             ctx.fillStyle = '#f8fafc';
             ctx.beginPath();
             ctx.arc(0, playerOrbY, 11, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = '#6366f1';
+            ctx.strokeStyle = primaryColor;
             ctx.lineWidth = 3;
             ctx.stroke();
             ctx.restore();
 
             // Nickname badge floating above cockpit
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-            ctx.strokeStyle = '#6366f1';
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+            ctx.strokeStyle = primaryColor;
             ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.roundRect(-36, playerOrbY - 26, 72, 16, 5);
+            ctx.roundRect(-42, playerOrbY - 26, 84, 16, 5);
             ctx.fill();
             ctx.stroke();
-            ctx.fillStyle = '#818cf8';
+            ctx.fillStyle = '#f8fafc';
             ctx.font = 'bold 9.5px "Inter", Arial, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(localName, 0, playerOrbY - 14);
-
-            // In Multiplayer: Draw additional party crew members embarking / seated!
-            if (mode === 'multiplayer') {
-                const crewMembers = [
-                    { x: -bodyW * 0.75, y: bodyH * 0.15, name: "Pilot #2", col: '#fca5a5', stroke: '#f43f5e' },
-                    { x: bodyW * 0.75, y: bodyH * 0.15, name: "Pilot #3", col: '#86efac', stroke: '#22c55e' }
-                ];
-                crewMembers.forEach(m => {
-                    ctx.save();
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = m.stroke;
-                    ctx.fillStyle = m.col;
-                    ctx.beginPath();
-                    ctx.arc(m.x, m.y, 9, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = m.stroke;
-                    ctx.lineWidth = 2.5;
-                    ctx.stroke();
-                    ctx.restore();
-
-                    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-                    ctx.strokeStyle = m.stroke;
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.roundRect(m.x - 24, m.y - 18, 48, 13, 3);
-                    ctx.fill();
-                    ctx.stroke();
-                    ctx.fillStyle = m.col;
-                    ctx.font = 'bold 8px "Inter", Arial, sans-serif';
-                    ctx.fillText(m.name, m.x, m.y - 8);
-                });
-            }
+            ctx.fillText(displayName, 0, playerOrbY - 14);
         }
-
         ctx.restore();
     },
 
@@ -5886,8 +5850,6 @@ const PlanetVisualEngine = {
                 });
                 ctx.restore();
             }
-
-            // 3c. (Approaching planet handled smoothly via surface horizon ascent)
 
             // 3d. Render Detailed 3D Vector Asteroids in Deep Space!
             if (this.state === 'traveling' && this.travelAsteroids && this.travelAsteroids.length > 0) {
@@ -6233,48 +6195,59 @@ const PlanetVisualEngine = {
                     ctx.restore();
                 });
 
-                // 9. Futuristic Landing Pad Platform in center (Rotates with planet curvature)
-                ctx.save();
+                // 9. Futuristic Landing Pad(s) Platform (Singleplayer: 1 center pad, Multiplayer Lobby: pads for all joined players!)
+                const isMpLobby = !!(this.multiplayerLobby && this.multiplayerLobby.active && this.multiplayerLobby.players && this.multiplayerLobby.players.length > 0);
+                const lobbyPlayers = isMpLobby ? this.multiplayerLobby.players : [{ id: myPlayerId, name: META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč', shipColor: META.selectedShipColor || '#38bdf8' }];
+                const numPads = lobbyPlayers.length;
+                const padSpacing = Math.min(140, Math.max(90, (w * 0.75) / Math.max(1, numPads)));
+                const singlePadW = isMpLobby ? Math.min(130, padSpacing * 0.92) : Math.min(isMobileHeight ? 170 : 230, w * 0.30);
                 const padH = isMobileHeight ? 22 : 28;
-                const padX = cx + curPan;
-                const padTilt = normDx * 0.20;
 
-                ctx.translate(padX, currentPadY);
-                ctx.rotate(padTilt);
+                lobbyPlayers.forEach((pl, pIdx) => {
+                    const padCenterOffset = isMpLobby ? (pIdx - (numPads - 1) / 2) * padSpacing : curPan;
+                    const pPadX = cx + padCenterOffset;
+                    const pNormDx = (pPadX - cx) / Math.max(1, w * 0.48);
+                    const pPadTilt = isMpLobby ? 0 : (pNormDx * 0.20);
+                    const pPadY = currentPadY;
 
-                // Pad shadow & base
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-                ctx.beginPath();
-                ctx.ellipse(0, 8, padW / 2 + 14, padH / 2 + 7, 0, 0, Math.PI * 2);
-                ctx.fill();
+                    ctx.save();
+                    ctx.translate(pPadX, pPadY);
+                    ctx.rotate(pPadTilt);
 
-                // Metallic Launchpad Plate
-                const padGrad = ctx.createLinearGradient(-padW / 2, 0, padW / 2, 0);
-                padGrad.addColorStop(0, '#1e293b');
-                padGrad.addColorStop(0.5, '#334155');
-                padGrad.addColorStop(1, '#1e293b');
-                ctx.fillStyle = padGrad;
-                ctx.strokeStyle = curWorld.surfaceLine || '#10b981';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.ellipse(0, 0, padW / 2, padH / 2, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-
-                // Runway Beacon LEDs
-                const ledCount = 10;
-                for (let i = 0; i < ledCount; i++) {
-                    const angle = (i / ledCount) * Math.PI * 2;
-                    const lx = Math.cos(angle) * (padW / 2 - 12);
-                    const ly = Math.sin(angle) * (padH / 2 - 6);
-                    ctx.fillStyle = (Date.now() % 800 < 400) ? (curWorld.beaconColor || '#10b981') : '#ffffff';
-                    ctx.shadowBlur = 6;
-                    ctx.shadowColor = curWorld.beaconColor || '#10b981';
+                    // Pad shadow & base
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
                     ctx.beginPath();
-                    ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+                    ctx.ellipse(0, 8, singlePadW / 2 + 12, padH / 2 + 6, 0, 0, Math.PI * 2);
                     ctx.fill();
-                }
-                ctx.restore();
+
+                    // Metallic Launchpad Plate
+                    const padGrad = ctx.createLinearGradient(-singlePadW / 2, 0, singlePadW / 2, 0);
+                    padGrad.addColorStop(0, '#1e293b');
+                    padGrad.addColorStop(0.5, '#334155');
+                    padGrad.addColorStop(1, '#1e293b');
+                    ctx.fillStyle = padGrad;
+                    ctx.strokeStyle = curWorld.surfaceLine || '#10b981';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, singlePadW / 2, padH / 2, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Runway Beacon LEDs
+                    const ledCount = 8;
+                    for (let i = 0; i < ledCount; i++) {
+                        const angle = (i / ledCount) * Math.PI * 2;
+                        const lx = Math.cos(angle) * (singlePadW / 2 - 10);
+                        const ly = Math.sin(angle) * (padH / 2 - 5);
+                        ctx.fillStyle = (Date.now() % 800 < 400) ? (curWorld.beaconColor || '#10b981') : '#ffffff';
+                        ctx.shadowBlur = 6;
+                        ctx.shadowColor = curWorld.beaconColor || '#10b981';
+                        ctx.beginPath();
+                        ctx.arc(lx, ly, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                });
             }
 
             // 10. Draw Thruster Particles & Smoke
@@ -6290,31 +6263,76 @@ const PlanetVisualEngine = {
             });
             ctx.restore();
 
-            // 11. Draw Vector Modelled Rocket Ship (SITTING FLUSH ON THE PAD & ROTATING WITH PLANET)
-            const shipX = (this.state === 'traveling') ? cx + (this.shipLateralX || 0) : (cx + curPan);
-            const shipY = (typeof this.shipY === 'number' && !isNaN(this.shipY)) ? this.shipY : restY;
-            const normShipDx = (shipX - cx) / Math.max(1, w * 0.48);
-            const shipTilt = (this.state === 'idle') 
-                ? (normShipDx * 0.20 + (this.panVelocity || 0) * 0.04) 
-                : (this.shipTilt || 0);
+            // 11. Draw Vector Modelled Rocket Ship(s)
+            const isMpLobby = !!(this.multiplayerLobby && this.multiplayerLobby.active && this.multiplayerLobby.players && this.multiplayerLobby.players.length > 0);
+            const lobbyPlayers = isMpLobby ? this.multiplayerLobby.players : [{ id: myPlayerId, name: META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč', shipColor: META.selectedShipColor || '#38bdf8' }];
+            const numPads = lobbyPlayers.length;
+            const padSpacing = Math.min(140, Math.max(90, (w * 0.75) / Math.max(1, numPads)));
 
-            let isRocketHovered = false;
-            if (this.state === 'idle' && this.mouseX !== undefined && this.mouseY !== undefined) {
-                const dxR = this.mouseX - shipX;
-                const dyR = this.mouseY - shipY;
-                if (Math.abs(dxR) < 55 && Math.abs(dyR) < 75) isRocketHovered = true;
+            if (isMpLobby) {
+                // Draw all connected players' rockets on their respective pads
+                lobbyPlayers.forEach((pl, pIdx) => {
+                    const padCenterOffset = (pIdx - (numPads - 1) / 2) * padSpacing;
+                    const pShipX = cx + padCenterOffset;
+                    const isMe = (pl.id === myPlayerId || pl.name === (META.playerName || SecureStorage.getItem('neoSurvivor_user')));
+                    
+                    // Smooth landing descent animation when joining
+                    if (pl.targetY === undefined) pl.targetY = restY;
+                    if (pl.animY === undefined) pl.animY = isMe ? restY : (restY - 180);
+                    if (pl.animY < pl.targetY) {
+                        pl.animY += (pl.targetY - pl.animY) * 0.08;
+                        if (Math.random() > 0.4) {
+                            this.particles.push({
+                                x: pShipX + (Math.random() - 0.5) * 20,
+                                y: pl.animY + 45,
+                                vx: (Math.random() - 0.5) * 4,
+                                vy: Math.random() * 2 + 1,
+                                size: Math.random() * 5 + 2,
+                                color: '#38bdf8',
+                                alpha: 0.8,
+                                life: 0.5
+                            });
+                        }
+                    }
+
+                    const pShipY = (this.state === 'takeoff') ? this.shipY : pl.animY;
+                    const pShipTilt = (this.state === 'takeoff') ? (this.shipTilt || 0) : 0;
+
+                    // Ground shadow under rocket
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                    ctx.beginPath();
+                    ctx.ellipse(pShipX, currentPadY, 36, 12, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    const pColor = pl.shipColor || (isMe ? (META.selectedShipColor || '#38bdf8') : '#a855f7');
+                    this.drawRocketModel(ctx, pShipX, pShipY, this.shipVy, this.state, time, false, this.mode, pShipTilt, 0, pl.name || "Hráč", pColor);
+                });
+            } else {
+                // Singleplayer rocket drawing
+                const shipX = (this.state === 'traveling') ? cx + (this.shipLateralX || 0) : (cx + curPan);
+                const shipY = (typeof this.shipY === 'number' && !isNaN(this.shipY)) ? this.shipY : restY;
+                const normShipDx = (shipX - cx) / Math.max(1, w * 0.48);
+                const shipTilt = (this.state === 'idle') 
+                    ? (normShipDx * 0.20 + (this.panVelocity || 0) * 0.04) 
+                    : (this.shipTilt || 0);
+
+                let isRocketHovered = false;
+                if (this.state === 'idle' && this.mouseX !== undefined && this.mouseY !== undefined) {
+                    const dxR = this.mouseX - shipX;
+                    const dyR = this.mouseY - shipY;
+                    if (Math.abs(dxR) < 55 && Math.abs(dyR) < 75) isRocketHovered = true;
+                }
+
+                if (shipY > 0 && shipY <= currentPadY + 20 && groundY < h + 100) {
+                    const distRatio = Math.max(0, 1 - Math.abs(currentPadY - shipY) / 180);
+                    ctx.fillStyle = `rgba(0, 0, 0, ${0.65 * distRatio})`;
+                    ctx.beginPath();
+                    ctx.ellipse(shipX, currentPadY, (44 * distRatio), (14 * distRatio), shipTilt, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                this.drawRocketModel(ctx, shipX, shipY, this.shipVy, this.state, time, isRocketHovered, this.mode, shipTilt, this.shipRotation || 0);
             }
-
-            // Ground shadow under rocket (only if near ground)
-            if (shipY > 0 && shipY <= currentPadY + 20 && groundY < h + 100) {
-                const distRatio = Math.max(0, 1 - Math.abs(currentPadY - shipY) / 180);
-                ctx.fillStyle = `rgba(0, 0, 0, ${0.65 * distRatio})`;
-                ctx.beginPath();
-                ctx.ellipse(shipX, currentPadY, (44 * distRatio), (14 * distRatio), shipTilt, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            this.drawRocketModel(ctx, shipX, shipY, this.shipVy, this.state, time, isRocketHovered, this.mode, shipTilt, this.shipRotation || 0);
 
             // 12. Draw Expanding Ejection Shockwave Rings (Efekt vyplivnutí)
             if (this.shockwaves && this.shockwaves.length > 0) {
@@ -6481,12 +6499,10 @@ function startSoloGame() {
     // Join a private server-side room even for solo to enable authoritative rewards
     const soloRoomId = "SOLO_" + Math.random().toString(36).substr(2, 6).toUpperCase();
     initSocket();
-    const curPlanet = window.PlanetVisualEngine?.currentPlanetId || localStorage.getItem('neoSurvivor_planet') || 'terra';
     NET.socket.emit('joinRoom', { 
         roomId: soloRoomId, 
         playerId: myPlayerId, 
         isSolo: true,
-        planet: curPlanet,
         username: (META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč'),
         name: (META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč')
     });
@@ -8237,11 +8253,15 @@ function initSocket() {
                 return;
             }
             rooms.forEach(room => {
+                const pInfo = PLANET_WORLDS.find(p => p.id === room.planetId) || PLANET_WORLDS[0];
                 const btn = document.createElement('div');
                 btn.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);";
                 btn.innerHTML = `
                     <div>
-                        <strong style="color: #a5b4fc; font-size: 1.1rem; letter-spacing: 2px;">${room.id}</strong>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <strong style="color: #a5b4fc; font-size: 1.1rem; letter-spacing: 2px;">${room.id}</strong>
+                            <span style="font-size: 0.72rem; color: #fbbf24; background: rgba(251, 191, 36, 0.15); padding: 2px 6px; border-radius: 6px; font-weight: bold;">${pInfo.icon || '🪐'} ${pInfo.name}</span>
+                        </div>
                         <div style="font-size: 0.75rem; color: gray; margin-top: 4px;">LVL ${room.level} | Hráči: ${room.players} / ${room.maxPlayers || 32}</div>
                     </div>
                     <button class="btn-restart" style="padding: 8px 15px; font-size: 0.8rem; background: #10b981; margin: 0;" onclick="window.joinCloudServer('${room.id}')">HRÁT</button>
@@ -8251,108 +8271,96 @@ function initSocket() {
         });
 
         NET.socket.on('joined', (data) => {
-            const { roomId, playerState, planet, isHost } = data;
-            console.log("=== NEO SURVIVOR v1.492 ===");
+            const { roomId, planetId, isSolo, isStarted, playerState, players } = data;
+            console.log("=== NEO SURVIVOR MULTIPLAYER JOINED ===", roomId, planetId);
             NET.roomId = roomId;
-            NET.isMultiplayer = true;
-            NET.isHost = isHost || false;
-
-            // Synchronize active planet and UI styling for all players in room!
-            if (planet) {
-                window.activeMultiplayerPlanet = planet;
-                if (typeof applyPlanetTheme === 'function') applyPlanetTheme(planet);
-                if (window.PlanetVisualEngine) {
-                    window.PlanetVisualEngine.currentPlanetId = planet;
-                    const w = PLANET_WORLDS.find(p => p.id === planet);
-                    if (w) window.PlanetVisualEngine.currentPlanet = w;
-                }
-            }
-
+            NET.isMultiplayer = !isSolo;
             if (NET.serverPollingInterval) clearInterval(NET.serverPollingInterval);
 
-            // Show the planet screen with landing animation for ALL multiplayer players!
-            // The game itself starts only when the host clicks "SPUSTIT HRU" (which fires teamTakeoff)
-            const menuAnim = document.getElementById('menu-anim-canvas');
-            if (menuAnim) menuAnim.style.display = 'none';
-            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            if (isSolo || isStarted) {
+                document.querySelectorAll('.modal:not(#planet-modal)').forEach(m => m.classList.remove('active'));
+                const wasNotActive = !GAME.active;
+                if (wasNotActive) {
+                    if (planetId && window.PLANET_WORLDS && window.PlanetVisualEngine) {
+                        window.PlanetVisualEngine.currentPlanetId = planetId;
+                        window.PlanetVisualEngine.currentPlanet = PLANET_WORLDS.find(p => p.id === planetId) || PLANET_WORLDS[0];
+                    }
+                    startGame();
 
-            // Inject a host-only "START GAME" button into planet UI
-            setTimeout(() => {
-                // Show the MP waiting lobby on the planet
-                renderPlanetUI();
-                applyPlanetTheme(planet || PlanetVisualEngine.currentPlanetId || 'terra');
-
-                const modal = document.getElementById('planet-modal');
-                if (modal) modal.classList.add('active');
-
-                PlanetVisualEngine.startLanding('multiplayer', null);
-
-                // Inject MP lobby overlay with player list + host start button
-                let mpOverlay = document.getElementById('mp-lobby-overlay');
-                if (!mpOverlay) {
-                    mpOverlay = document.createElement('div');
-                    mpOverlay.id = 'mp-lobby-overlay';
-                    mpOverlay.style.cssText = `
-                        position: absolute; top: 14px; right: 14px; z-index: 50;
-                        background: rgba(10,15,30,0.88); border: 1.5px solid rgba(99,102,241,0.4);
-                        border-radius: 16px; padding: 14px 18px; min-width: 200px;
-                        font-family: 'Outfit', sans-serif; pointer-events: auto;
-                        box-shadow: 0 0 25px rgba(99,102,241,0.25);
-                    `;
-                    const planetModal = document.getElementById('planet-modal');
-                    if (planetModal) planetModal.appendChild(mpOverlay);
-                }
-
-                const isHostPlayer = NET.isHost;
-                mpOverlay.innerHTML = `
-                    <div style="font-size:0.72rem; color:#94a3b8; letter-spacing:2px; margin-bottom:8px; font-weight:800;">🎮 MULTIPLAYER – LOBBY</div>
-                    <div style="font-size:0.8rem; color:#a5b4fc; margin-bottom:4px;">Místnost: <b style="color:#f1f5f9;">${roomId}</b></div>
-                    <div id="mp-lobby-players" style="font-size:0.78rem; color:#64748b; margin-bottom:10px;">Čekám na hráče…</div>
-                    ${isHostPlayer ? `<button id="btn-mp-start-all" style="
-                        width:100%; padding:10px 0; background:linear-gradient(135deg,#6366f1,#4f46e5);
-                        color:#fff; font-weight:900; font-size:0.88rem; border:none; border-radius:10px;
-                        cursor:pointer; letter-spacing:1px; box-shadow:0 0 18px rgba(99,102,241,0.5);
-                    ">🚀 SPUSTIT HRU PRO VŠECHNY</button>` : `<div style="font-size:0.76rem; color:#64748b; text-align:center; margin-top:4px;">⏳ Čekám na start od hostitele…</div>`}
-                `;
-
-                if (isHostPlayer) {
-                    const btnMPStart = document.getElementById('btn-mp-start-all');
-                    if (btnMPStart) {
-                        btnMPStart.onclick = () => {
-                            btnMPStart.disabled = true;
-                            btnMPStart.innerText = '🚀 Startujeme!';
-                            if (NET.socket) NET.socket.emit('teamLaunch');
-                        };
+                    if (playerState && (playerState.x !== 0 || playerState.y !== 0)) {
+                        GAME.entities.player.x = playerState.x;
+                        GAME.entities.player.y = playerState.y;
+                        GAME.entities.player.hp = playerState.hp;
+                        GAME.entities.player.maxHp = playerState.maxHp;
+                        GAME.entities.player.level = playerState.level;
                     }
                 }
-            }, 80);
 
-            NET.socket.emit('upgradePicked');
+                // Restore session ONLY if we just started the game
+                if (wasNotActive && META.lastSession && META.lastSession.roomId === roomId) {
+                    console.log('[REJOIN] Restoring session for room:', roomId);
+                    const session = META.lastSession;
+                    if (GAME.entities && GAME.entities.player) {
+                        GAME.entities.player.level = session.level || 1;
+                        GAME.entities.player.xp = session.xp || 0;
+                        GAME.entities.player.nextLevelXp = session.nextLevelXp || 100;
+                        if (session.upgrades && session.upgrades.length > 0) {
+                            session.upgrades.forEach(u => {
+                                try { applyUpgrade(u, false); } catch(e) {}
+                            });
+                        }
+                    }
+                    META.lastSession = null; 
+                    saveMeta();
+                }
+                
+                NET.socket.emit('upgradePicked');
+            } else {
+                // Open Multiplayer Planet Staging Area (Waiting for player to start mission!)
+                window.openMultiplayerStaging(data);
+            }
         });
 
-        NET.socket.on('teamTakeoff', () => {
-            // All players: trigger the cinematic takeoff from the planet, then game begins
-            const pModal = document.getElementById('planet-modal');
-            if (pModal && pModal.classList.contains('active')) {
-                // Remove lobby overlay so UI is clean during takeoff
-                const lo = document.getElementById('mp-lobby-overlay');
-                if (lo) lo.remove();
-                // Trigger takeoff – startTakeoff will call startGame for MP mode
-                if (window.PlanetVisualEngine && window.PlanetVisualEngine.state === 'idle') {
-                    window.PlanetVisualEngine.startTakeoff();
-                } else {
-                    // Fallback if still landing – delay slightly then takeoff
-                    setTimeout(() => {
-                        if (window.PlanetVisualEngine) window.PlanetVisualEngine.startTakeoff();
-                    }, 1200);
+        NET.socket.on('roomLobbyUpdate', (data) => {
+            console.log('[ROOM LOBBY UPDATE]', data);
+            if (window.PlanetVisualEngine && window.PlanetVisualEngine.multiplayerLobby) {
+                window.PlanetVisualEngine.multiplayerLobby.players = data.players || [];
+                window.PlanetVisualEngine.multiplayerLobby.planetId = data.planetId || 'terra';
+                if (data.planetId && window.PLANET_WORLDS) {
+                    window.PlanetVisualEngine.currentPlanetId = data.planetId;
+                    window.PlanetVisualEngine.currentPlanet = PLANET_WORLDS.find(p => p.id === data.planetId) || PLANET_WORLDS[0];
                 }
-            } else {
-                // Planet not visible – start game directly (edge case: player had it hidden)
-                document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-                if (!GAME.active && typeof startGame === 'function') startGame();
-                const uiEl = document.getElementById('ui-layer');
-                if (uiEl) { uiEl.style.display = 'block'; uiEl.style.opacity = '1'; }
+                const countEl = document.getElementById('mp-staging-count');
+                if (countEl) countEl.innerText = (data.players || []).length;
+                const planetEl = document.getElementById('mp-staging-planet');
+                if (planetEl && window.PlanetVisualEngine.currentPlanet) {
+                    planetEl.innerText = `${window.PlanetVisualEngine.currentPlanet.name} (${window.PlanetVisualEngine.currentPlanet.icon || '🪐'})`;
+                }
+                if (typeof playSound === 'function') playSound('select');
             }
+        });
+
+        NET.socket.on('matchStarted', (data) => {
+            console.log('[MULTIPLAYER] Mission launched on planet:', data.planetId);
+            const hud = document.getElementById('mp-staging-hud');
+            if (hud) hud.style.display = 'none';
+
+            if (window.PlanetVisualEngine) {
+                if (data.planetId && window.PLANET_WORLDS) {
+                    window.PlanetVisualEngine.currentPlanetId = data.planetId;
+                    window.PlanetVisualEngine.currentPlanet = PLANET_WORLDS.find(p => p.id === data.planetId) || PLANET_WORLDS[0];
+                }
+                window.PlanetVisualEngine.state = 'takeoff';
+                if (typeof playSound === 'function') playSound('meteor');
+            }
+
+            setTimeout(() => {
+                if (window.PlanetVisualEngine && window.PlanetVisualEngine.multiplayerLobby) {
+                    window.PlanetVisualEngine.multiplayerLobby.active = false;
+                }
+                document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+                startGame();
+            }, 1200);
         });
 
         NET.socket.on('dailyGiftClaimed', (data) => {
@@ -8378,17 +8386,6 @@ function initSocket() {
                 GAME.entities.player.level = data.roomInfo.level;
                 GAME.entities.player.xp = data.roomInfo.xp;
                 GAME.entities.player.nextLevelXp = data.roomInfo.nextLevelXp;
-
-                // Sync planet across all connected clients in real-time
-                if (data.roomInfo.planet && window.activeMultiplayerPlanet !== data.roomInfo.planet) {
-                    window.activeMultiplayerPlanet = data.roomInfo.planet;
-                    if (typeof applyPlanetTheme === 'function') applyPlanetTheme(data.roomInfo.planet);
-                    if (window.PlanetVisualEngine) {
-                        window.PlanetVisualEngine.currentPlanetId = data.roomInfo.planet;
-                        const w = PLANET_WORLDS.find(p => p.id === data.roomInfo.planet);
-                        if (w) window.PlanetVisualEngine.currentPlanet = w;
-                    }
-                }
             }
 
             if (data.frozen) {
@@ -8801,6 +8798,67 @@ function syncShot(proj) {
     });
 }
 
+window.openMultiplayerStaging = function(data) {
+    document.querySelectorAll('.modal:not(#planet-modal)').forEach(m => m.classList.remove('active'));
+    
+    if (window.PlanetVisualEngine) {
+        const pId = data.planetId || 'terra';
+        window.PlanetVisualEngine.multiplayerLobby = {
+            active: true,
+            roomId: data.roomId,
+            planetId: pId,
+            players: data.players || []
+        };
+        window.PlanetVisualEngine.currentPlanetId = pId;
+        window.PlanetVisualEngine.currentPlanet = PLANET_WORLDS.find(p => p.id === pId) || PLANET_WORLDS[0];
+        window.PlanetVisualEngine.state = 'idle';
+        window.PlanetVisualEngine.flightOffset = 0;
+        
+        const planetModal = document.getElementById('planet-modal');
+        if (planetModal) planetModal.classList.add('active');
+        window.PlanetVisualEngine.start();
+    }
+
+    const hud = document.getElementById('mp-staging-hud');
+    if (hud) {
+        hud.style.display = 'block';
+        const codeEl = document.getElementById('mp-staging-code');
+        if (codeEl) codeEl.innerText = `#${data.roomId}`;
+        const countEl = document.getElementById('mp-staging-count');
+        if (countEl) countEl.innerText = (data.players || []).length;
+        const planetEl = document.getElementById('mp-staging-planet');
+        if (planetEl && window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanet) {
+            planetEl.innerText = `${window.PlanetVisualEngine.currentPlanet.name} (${window.PlanetVisualEngine.currentPlanet.icon || '🪐'})`;
+        }
+    }
+
+    if (typeof playSound === 'function') playSound('select');
+};
+
+window.launchMultiplayerMission = function() {
+    if (NET.socket && NET.roomId) {
+        const curPlanet = (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || 'terra';
+        NET.socket.emit('startMatch', { roomId: NET.roomId, planetId: curPlanet });
+        if (typeof playSound === 'function') playSound('select');
+    }
+};
+
+window.leaveMultiplayerLobby = function() {
+    if (NET.socket) {
+        NET.socket.emit('leaveRoom');
+    }
+    if (window.PlanetVisualEngine && window.PlanetVisualEngine.multiplayerLobby) {
+        window.PlanetVisualEngine.multiplayerLobby.active = false;
+        window.PlanetVisualEngine.multiplayerLobby.players = [];
+    }
+    const hud = document.getElementById('mp-staging-hud');
+    if (hud) hud.style.display = 'none';
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    const menuModal = document.getElementById('menu-modal');
+    if (menuModal) menuModal.classList.add('active');
+    if (typeof playSound === 'function') playSound('select');
+};
+
 window.showHostModal = () => {
     // Deprecated. Host UI is now embedded in multiplayer-modal.
 };
@@ -8812,13 +8870,14 @@ window.joinCloudServer = (roomName) => {
         return;
     }
     initSocket();
-    const curPlanet = window.PlanetVisualEngine?.currentPlanetId || localStorage.getItem('neoSurvivor_planet') || 'terra';
+    const curPlanetId = (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || 'terra';
     NET.socket.emit('joinRoom', { 
         roomId: roomName.trim().toUpperCase(), 
         playerId: myPlayerId,
-        planet: curPlanet,
+        planetId: curPlanetId,
         username: META.playerName || SecureStorage.getItem('neoSurvivor_user'),
-        name: META.playerName || SecureStorage.getItem('neoSurvivor_user')
+        name: META.playerName || SecureStorage.getItem('neoSurvivor_user'),
+        shipColor: META.selectedShipColor || '#38bdf8'
     });
 };
 
@@ -10215,10 +10274,6 @@ function init() {
             btnStartHosted.onclick = () => {
                 document.getElementById('multiplayer-modal').classList.remove('active');
                 tryFullscreen();
-                AudioEngine.init();
-                AudioEngine.stopMenuMusic();
-                // Join the room → the 'joined' socket event will show the planet lobby
-                const curPlanet = window.PlanetVisualEngine?.currentPlanetId || localStorage.getItem('neoSurvivor_planet') || 'terra';
                 window.joinCloudServer(roomName);
             };
         }

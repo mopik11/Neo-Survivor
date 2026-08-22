@@ -647,24 +647,19 @@ function rewardPlayer(socket, amount) {
     const p = socket.playerId;
     if (!r || !ROOMS[r] || !ROOMS[r].players[p]) return;
 
-    const room = ROOMS[r];
-    const player = room.players[p];
+    const player = ROOMS[r].players[p];
     
-    // Apply Planet Doge Multiplier in Multiplayer (Ignis +40%, Cryo +75%, Cyber +120%)
-    const planetMult = (room.planet === 'ignis') ? 1.4 : (room.planet === 'cryo') ? 1.75 : (room.planet === 'cyber') ? 2.2 : 1.0;
-    const finalAmount = Math.max(1, Math.round(amount * planetMult));
-
     // 1. Memory tracking for Game Over stats (FOR EVERYONE)
-    if (!room.dogeEarned) room.dogeEarned = {};
-    room.dogeEarned[p] = (room.dogeEarned[p] || 0) + finalAmount;
+    if (!ROOMS[r].dogeEarned) ROOMS[r].dogeEarned = {};
+    ROOMS[r].dogeEarned[p] = (ROOMS[r].dogeEarned[p] || 0) + amount;
 
     // 2. Accumulate in memory (ONLY if logged in)
     if (player.username) {
-        player.pendingRewards = (player.pendingRewards || 0) + finalAmount;
+        player.pendingRewards = (player.pendingRewards || 0) + amount;
     }
 
     // 3. Notify client for responsive UI (v1.431)
-    socket.emit('killConfirmed', { amount: finalAmount, totalSessionDoge: room.dogeEarned[p] });
+    socket.emit('killConfirmed', { amount: amount, totalSessionDoge: ROOMS[r].dogeEarned[p] });
 }
 
 function killEnemy(room, enemyId, rewardTarget = null) {
@@ -2066,15 +2061,22 @@ io.on('connection', (socket) => {
     });
 
     socket.on('requestRooms', () => {
-        // ZERO TRUST: Filter out private solo, finished, or abandoned rooms (v1.432)
+        // ZERO TRUST: Filter out private solo, finished, or already started/locked rooms
         const activeRooms = Object.values(ROOMS)
             .filter(r => {
                 const activePlayers = Object.values(r.players).filter(p => !p.disconnected);
-                return !r.isGameOver && !r.isSolo && !r.isFinished && activePlayers.length > 0;
+                return !r.isGameOver && !r.isSolo && !r.isFinished && !r.isLocked && !r.isStarted && activePlayers.length > 0;
             })
             .map(r => {
-                const activePlayersCount = Object.values(r.players).filter(p => !p.disconnected).length;
-                return { id: r.id, players: activePlayersCount, maxPlayers: 32, level: r.level };
+                const activePlayers = Object.values(r.players).filter(p => !p.disconnected);
+                return { 
+                    id: r.id, 
+                    players: activePlayers.length, 
+                    maxPlayers: 32, 
+                    level: r.level,
+                    planetId: r.planetId || 'terra',
+                    isStarted: r.isStarted || false
+                };
             });
         socket.emit('roomList', activeRooms);
     });
@@ -2084,19 +2086,20 @@ io.on('connection', (socket) => {
 
         const roomId = data.roomId.trim().toUpperCase().substring(0, 16);
         const playerId = data.playerId.trim().substring(0, 64);
+        const planetId = (typeof data.planetId === 'string' && data.planetId.trim()) ? data.planetId.trim().toLowerCase() : 'terra';
 
         if (!/^[A-Z0-9_-]{1,16}$/i.test(roomId) || !/^[A-Za-z0-9_-]{1,64}$/.test(playerId)) {
             return socket.emit('error', { msg: "Neplatný formát místnosti nebo ID hráče." });
         }
 
-        // Prevent joining if room is finished, game over, or already locked/started (v1.697)
+        // Prevent joining if room is finished, game over, or already launched/locked
         if (ROOMS[roomId]) {
             if (ROOMS[roomId].isGameOver || ROOMS[roomId].isFinished) {
                 socket.emit('error', { msg: "Místnost je již uzavřena nebo hra skončila. Vytvoř novou." });
                 return;
             }
-            if (ROOMS[roomId].isLocked && !ROOMS[roomId].players[playerId]) {
-                socket.emit('error', { msg: "Hra již začala. Nelze se připojit – počkej na nové kolo." });
+            if (ROOMS[roomId].isStarted || ROOMS[roomId].isLocked) {
+                socket.emit('error', { msg: "Mise na této planetě již odstartovala. Místnost je uzamčena." });
                 return;
             }
         }
@@ -2110,14 +2113,12 @@ io.on('connection', (socket) => {
         socket.roomId = roomId;
         socket.playerId = playerId;
 
-        const safePlayerName = (typeof data.name === 'string') ? data.name.replace(/[<>]/g, '').trim().substring(0, 16) : "Hráč";
-        const safeUsername = (typeof data.username === 'string') ? data.username.toLowerCase().trim().substring(0, 16) : null;
-        const reqPlanet = (typeof data.planet === 'string' && ['terra', 'ignis', 'cryo', 'cyber'].includes(data.planet)) ? data.planet : 'terra';
-
         if (!ROOMS[roomId]) {
             ROOMS[roomId] = {
                 id: roomId,
-                planet: reqPlanet,
+                planetId: planetId,
+                isStarted: data.isSolo ? true : false,
+                isLocked: false,
                 players: {},
                 enemies: [],
                 gems: [],
@@ -2146,6 +2147,11 @@ io.on('connection', (socket) => {
                 ROOMS[roomId].cleanupTimer = null;
             }
         }
+
+        const safePlayerName = (typeof data.name === 'string') ? data.name.replace(/[<>]/g, '').trim().substring(0, 16) : "Hráč";
+        const safeUsername = (typeof data.username === 'string') ? data.username.toLowerCase().trim().substring(0, 16) : null;
+        const safeShipColor = (typeof data.shipColor === 'string') ? data.shipColor : '#38bdf8';
+        const safeShipType = (typeof data.shipType === 'string') ? data.shipType : 'default';
 
         if (!ROOMS[roomId].players[playerId]) {
             // AUTHORITATIVE STAT LOADING (v1.430)
@@ -2177,6 +2183,8 @@ io.on('connection', (socket) => {
                 dead: false, hat: null, level: 1, disconnected: false, 
                 name: safePlayerName,
                 username: safeUsername,
+                shipColor: safeShipColor,
+                shipType: safeShipType,
                 pendingRewards: 0,
                 socketId: socket.id 
             };
@@ -2184,33 +2192,61 @@ io.on('connection', (socket) => {
             ROOMS[roomId].players[playerId].disconnected = false;
             if (safeUsername) ROOMS[roomId].players[playerId].username = safeUsername;
             ROOMS[roomId].players[playerId].name = safePlayerName;
+            ROOMS[roomId].players[playerId].shipColor = safeShipColor;
+            ROOMS[roomId].players[playerId].shipType = safeShipType;
         }
 
-        // isHost: first player who created the room becomes host
-        const isHostPlayer = (Object.keys(ROOMS[roomId].players).length === 1);
+        const activePlayersList = Object.values(ROOMS[roomId].players).filter(p => !p.disconnected);
 
         socket.emit('joined', {
             roomId: roomId,
+            planetId: ROOMS[roomId].planetId,
+            isSolo: ROOMS[roomId].isSolo,
+            isStarted: ROOMS[roomId].isStarted,
             playerState: ROOMS[roomId].players[playerId],
-            planet: ROOMS[roomId].planet || 'terra',
-            isHost: isHostPlayer
+            players: activePlayersList
+        });
+
+        // Broadcast room lobby update to everyone in the room
+        io.to(roomId).emit('roomLobbyUpdate', {
+            roomId: roomId,
+            planetId: ROOMS[roomId].planetId,
+            isStarted: ROOMS[roomId].isStarted,
+            players: activePlayersList
         });
     });
 
-    socket.on('teamLaunch', () => {
+    socket.on('startMatch', (data) => {
         const r = socket.roomId;
         if (r && ROOMS[r]) {
-            // Lock room – no new players can join once game starts
-            ROOMS[r].isLocked = true;
-            io.to(r).emit('teamTakeoff');
+            const room = ROOMS[r];
+            if (room.isStarted || room.isLocked) return;
+            room.isStarted = true;
+            room.isLocked = true;
+            room.paused = false;
+            if (data && typeof data.planetId === 'string' && data.planetId.trim()) {
+                room.planetId = data.planetId.trim().toLowerCase();
+            }
+            io.to(r).emit('matchStarted', {
+                roomId: r,
+                planetId: room.planetId
+            });
+            broadcastServerStats();
         }
     });
 
-    socket.on('setRoomPlanet', (data) => {
+    socket.on('leaveRoom', () => {
         const r = socket.roomId;
-        if (r && ROOMS[r] && data && typeof data.planet === 'string') {
-            ROOMS[r].planet = data.planet;
-            io.to(r).emit('roomPlanetChanged', { planet: data.planet });
+        const p = socket.playerId;
+        if (r && ROOMS[r] && ROOMS[r].players[p]) {
+            ROOMS[r].players[p].disconnected = true;
+            socket.leave(r);
+            io.to(r).emit('roomLobbyUpdate', {
+                roomId: r,
+                planetId: ROOMS[r].planetId,
+                isStarted: ROOMS[r].isStarted,
+                players: Object.values(ROOMS[r].players).filter(pl => !pl.disconnected)
+            });
         }
     });
 
@@ -2689,7 +2725,7 @@ setInterval(() => {
                     tombstones: room.tombstones,
                     envObjects: room.envObjects,
                     time: room.time,
-                    roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp, planet: room.planet || 'terra' },
+                    roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp },
                     frozen: true
                 });
                 continue;
@@ -2912,7 +2948,7 @@ setInterval(() => {
                 tombstones: room.tombstones,
                 envObjects: room.envObjects,
                 time: room.time,
-                roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp, planet: room.planet || 'terra' },
+                roomInfo: { level: room.level, xp: room.xp, nextLevelXp: room.nextLevelXp },
                 frozen: false
             });
         } catch (err) {
