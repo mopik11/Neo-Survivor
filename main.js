@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.695
+ * NEO SURVIVOR - Core Game Logic - v1.696
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.695'
+    version: window.GAME_VERSION || '1.696'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.695";
+const GAME_VERSION = window.GAME_VERSION || "1.696";
 const GAME = {
     active: false,
     paused: false,
@@ -4686,6 +4686,10 @@ const PlanetVisualEngine = {
         if (typeof playSound === 'function') playSound('shoot');
     },
 
+    start() {
+        this.runLoop();
+    },
+
     runLoop() {
         if (this.animFrame) cancelAnimationFrame(this.animFrame);
         const loop = () => {
@@ -5817,39 +5821,6 @@ const PlanetVisualEngine = {
                 }
             });
             ctx.restore();
-
-            // 3b. Render Passing Celestial Planets & Moons in Deep Space!
-            if (this.state === 'traveling' && this.passingPlanets && this.passingPlanets.length > 0) {
-                ctx.save();
-                this.passingPlanets.forEach(pp => {
-                    if (pp.y > -100 && pp.y < h + 150) {
-                        ctx.save();
-                        ctx.translate(pp.x, pp.y);
-                        // Planetary ring if any
-                        if (pp.ring) {
-                            ctx.strokeStyle = pp.ringColor || 'rgba(255, 255, 255, 0.3)';
-                            ctx.lineWidth = pp.radius * 0.18;
-                            ctx.beginPath();
-                            ctx.ellipse(0, 0, pp.radius * 1.7, pp.radius * 0.45, Math.PI / 6, 0, Math.PI * 2);
-                            ctx.stroke();
-                        }
-                        // Planet body with atmospheric glow
-                        ctx.fillStyle = pp.color;
-                        ctx.shadowBlur = 20;
-                        ctx.shadowColor = pp.color;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, pp.radius, 0, Math.PI * 2);
-                        ctx.fill();
-                        // Dark shadow crescent
-                        ctx.fillStyle = 'rgba(2, 6, 23, 0.55)';
-                        ctx.beginPath();
-                        ctx.arc(pp.radius * 0.3, pp.radius * 0.2, pp.radius * 0.95, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.restore();
-                    }
-                });
-                ctx.restore();
-            }
 
             // 3d. Render Detailed 3D Vector Asteroids in Deep Space!
             if (this.state === 'traveling' && this.travelAsteroids && this.travelAsteroids.length > 0) {
@@ -8801,6 +8772,16 @@ function syncShot(proj) {
 window.openMultiplayerStaging = function(data) {
     document.querySelectorAll('.modal:not(#planet-modal)').forEach(m => m.classList.remove('active'));
     
+    // Hide standard singleplayer planet menus in multiplayer staging
+    const topCard = document.getElementById('planet-top-card');
+    if (topCard) topCard.style.display = 'none';
+    const botMenu = document.getElementById('planet-bottom-menu');
+    if (botMenu) botMenu.style.display = 'none';
+    const centerAct = document.getElementById('planet-center-actions');
+    if (centerAct) centerAct.style.display = 'none';
+    const statusTag = document.getElementById('planet-status-tag');
+    if (statusTag) statusTag.style.display = 'none';
+
     if (window.PlanetVisualEngine) {
         const pId = data.planetId || 'terra';
         window.PlanetVisualEngine.multiplayerLobby = {
@@ -8811,12 +8792,20 @@ window.openMultiplayerStaging = function(data) {
         };
         window.PlanetVisualEngine.currentPlanetId = pId;
         window.PlanetVisualEngine.currentPlanet = PLANET_WORLDS.find(p => p.id === pId) || PLANET_WORLDS[0];
+        window.PlanetVisualEngine.mode = 'multiplayer';
         window.PlanetVisualEngine.state = 'idle';
         window.PlanetVisualEngine.flightOffset = 0;
+        window.PlanetVisualEngine.panOffset = 0;
+        window.PlanetVisualEngine.panVelocity = 0;
         
         const planetModal = document.getElementById('planet-modal');
-        if (planetModal) planetModal.classList.add('active');
-        window.PlanetVisualEngine.start();
+        if (planetModal) {
+            planetModal.classList.add('active');
+            planetModal.style.opacity = '1';
+            planetModal.style.pointerEvents = 'auto';
+        }
+        window.PlanetVisualEngine.resize();
+        window.PlanetVisualEngine.runLoop();
     }
 
     const hud = document.getElementById('mp-staging-hud');
@@ -8853,6 +8842,17 @@ window.leaveMultiplayerLobby = function() {
     }
     const hud = document.getElementById('mp-staging-hud');
     if (hud) hud.style.display = 'none';
+
+    // Restore singleplayer planet menu displays
+    const topCard = document.getElementById('planet-top-card');
+    if (topCard) topCard.style.display = '';
+    const botMenu = document.getElementById('planet-bottom-menu');
+    if (botMenu) botMenu.style.display = '';
+    const centerAct = document.getElementById('planet-center-actions');
+    if (centerAct) centerAct.style.display = '';
+    const statusTag = document.getElementById('planet-status-tag');
+    if (statusTag) statusTag.style.display = '';
+
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     const menuModal = document.getElementById('menu-modal');
     if (menuModal) menuModal.classList.add('active');
