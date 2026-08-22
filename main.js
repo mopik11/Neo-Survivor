@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.698
+ * NEO SURVIVOR - Core Game Logic - v1.699
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.698'
+    version: window.GAME_VERSION || '1.699'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.698";
+const GAME_VERSION = window.GAME_VERSION || "1.699";
 const GAME = {
     active: false,
     paused: false,
@@ -4661,10 +4661,15 @@ const PlanetVisualEngine = {
         if (this.state === 'takeoff' || this.state === 'ejecting' || this.state === 'traveling') return;
         this.state = 'takeoff';
         this.takeoffStartTime = Date.now();
+        this.hasLaunched = false;
         this.shipVy = 1.2;
         this.flightOffset = 0;
         this.panOffset = 0;
         this.panVelocity = 0;
+
+        // Instantly hide MP staging HUD
+        const hud = document.getElementById('mp-staging-hud');
+        if (hud) hud.style.display = 'none';
 
         // Instantly fade out the planet menus so they don't block the cinematic view
         const topCard = document.getElementById('planet-top-card');
@@ -4683,7 +4688,8 @@ const PlanetVisualEngine = {
             startSoloGame();
         }
 
-        if (typeof playSound === 'function') playSound('shoot');
+        if (typeof playSound === 'function') playSound('meteor');
+        this.runLoop();
     },
 
     start() {
@@ -5103,6 +5109,7 @@ const PlanetVisualEngine = {
                 if (typeof playSound === 'function') playSound('upgrade');
             }
         } else if (this.state === 'takeoff') {
+            if (!this.takeoffStartTime) this.takeoffStartTime = Date.now();
             const elapsed = (Date.now() - this.takeoffStartTime) / 1000;
             // Cinematic liftoff (1.15s duration)
             const progress = Math.min(1.0, elapsed / 1.15);
@@ -5115,19 +5122,30 @@ const PlanetVisualEngine = {
             const targetCamY = this.logicalH * 0.44;
             this.shipY = restY - easeP * (restY - targetCamY);
 
-            // Intense takeoff thrust flames
-            for (let i = 0; i < 18; i++) {
-                this.particles.push({
-                    x: cx + (Math.random() - 0.5) * 36,
-                    y: this.shipY + 54,
-                    vx: (Math.random() - 0.5) * 5,
-                    vy: Math.random() * 12 + 7,
-                    size: Math.random() * 12 + 6,
-                    color: Math.random() > 0.3 ? '#f59e0b' : '#ef4444',
-                    alpha: 1,
-                    life: 1
-                });
-            }
+            const isMpLobby = !!(this.multiplayerLobby && this.multiplayerLobby.active);
+            const lobbyPlayers = isMpLobby 
+                ? (typeof ensureLocalPlayerInList === 'function' ? ensureLocalPlayerInList(this.multiplayerLobby.players) : (this.multiplayerLobby.players || []))
+                : [{ id: myPlayerId, name: META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč', shipColor: META.selectedShipColor || '#38bdf8' }];
+            const numPads = lobbyPlayers.length;
+            const padSpacing = Math.min(140, Math.max(90, (w * 0.75) / Math.max(1, numPads)));
+
+            // Intense takeoff thrust flames for each rocket
+            lobbyPlayers.forEach((pl, pIdx) => {
+                const padCenterOffset = isMpLobby ? (pIdx - (numPads - 1) / 2) * padSpacing : 0;
+                const rX = cx + padCenterOffset;
+                for (let i = 0; i < (isMpLobby ? 6 : 18); i++) {
+                    this.particles.push({
+                        x: rX + (Math.random() - 0.5) * 36,
+                        y: this.shipY + 54,
+                        vx: (Math.random() - 0.5) * 5,
+                        vy: Math.random() * 12 + 7,
+                        size: Math.random() * 10 + 5,
+                        color: Math.random() > 0.3 ? '#f59e0b' : '#ef4444',
+                        alpha: 1,
+                        life: 1
+                    });
+                }
+            });
 
             // At 1.15s, when the planet has scrolled into deep space -> trigger Ejection!
             if (progress >= 1.0) {
@@ -5135,47 +5153,43 @@ const PlanetVisualEngine = {
                 this.ejectStartTime = Date.now();
                 this.ejectOrigin = { x: cx, y: this.shipY + 20 };
                 
-                // VYFLUSNUTÍ / SPIT-OUT SHOCKWAVE & BURST
+                // VYFLUSNUTÍ / SPIT-OUT SHOCKWAVE & BURST for all rockets
                 if (!this.shockwaves) this.shockwaves = [];
-                this.shockwaves.push({ x: cx, y: this.shipY + 20, r: 10, maxR: 180, alpha: 1 });
-                this.shockwaves.push({ x: cx, y: this.shipY + 20, r: 4, maxR: 120, alpha: 1 });
 
-                for (let i = 0; i < 65; i++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const spd = Math.random() * 10 + 4;
-                    this.particles.push({
-                        x: cx,
-                        y: this.shipY + 20,
-                        vx: Math.cos(angle) * spd,
-                        vy: Math.sin(angle) * spd + 3,
-                        size: Math.random() * 8 + 4,
-                        color: Math.random() > 0.4 ? '#38bdf8' : (Math.random() > 0.5 ? '#ffffff' : '#fbbf24'),
-                        alpha: 1,
-                        life: 1.4
-                    });
-                }
-
-                // Prepare authentic player orb(s) with spit-out ejection trajectory
-                const localName = META.playerName || SecureStorage.getItem('neoSurvivor_user') || "Hráč";
-                const crewList = [{ name: localName, isLocal: true }];
-                
-                if (this.mode === 'multiplayer') {
-                    crewList.push({ name: "Pilot #2", isLocal: false });
-                    crewList.push({ name: "Pilot #3", isLocal: false });
-                    crewList.push({ name: "Pilot #4", isLocal: false });
-                }
-
-                this.ejectedPlayers = crewList.map((c, i) => {
-                    const targetX = (crewList.length === 1) ? cx : cx + (i - (crewList.length - 1) / 2) * 75;
+                this.ejectedPlayers = lobbyPlayers.map((pl, i) => {
+                    const padCenterOffset = isMpLobby ? (i - (numPads - 1) / 2) * padSpacing : 0;
+                    const rX = cx + padCenterOffset;
+                    const targetX = (numPads === 1) ? cx : cx + (i - (numPads - 1) / 2) * 80;
                     const targetY = (this.logicalH / 2);
+                    const isMe = (pl.id === myPlayerId || pl.name === (META.playerName || SecureStorage.getItem('neoSurvivor_user')));
+
+                    this.shockwaves.push({ x: rX, y: this.shipY + 20, r: 10, maxR: 180, alpha: 1 });
+                    this.shockwaves.push({ x: rX, y: this.shipY + 20, r: 4, maxR: 120, alpha: 1 });
+
+                    for (let p = 0; p < 40; p++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const spd = Math.random() * 10 + 4;
+                        this.particles.push({
+                            x: rX,
+                            y: this.shipY + 20,
+                            vx: Math.cos(angle) * spd,
+                            vy: Math.sin(angle) * spd + 3,
+                            size: Math.random() * 8 + 4,
+                            color: Math.random() > 0.4 ? (pl.shipColor || '#38bdf8') : (Math.random() > 0.5 ? '#ffffff' : '#fbbf24'),
+                            alpha: 1,
+                            life: 1.4
+                        });
+                    }
+
                     return {
-                        x: cx,
+                        x: rX,
                         y: this.shipY + 25,
                         targetX: targetX,
                         targetY: targetY,
-                        name: c.name,
+                        name: pl.name || (isMe ? (META.playerName || "Hráč") : "Spoluhráč"),
+                        shipColor: pl.shipColor || '#38bdf8',
                         scale: 0.3,
-                        isLocal: c.isLocal
+                        isLocal: isMe
                     };
                 });
 
@@ -5214,7 +5228,7 @@ const PlanetVisualEngine = {
                             vx: (Math.random() - 0.5) * 1.5,
                             vy: -(Math.random() * 2 + 1),
                             size: 5,
-                            color: p.isLocal ? '#818cf8' : '#f43f5e',
+                            color: p.shipColor || (p.isLocal ? '#818cf8' : '#f43f5e'),
                             alpha: 0.8,
                             life: 0.6
                         });
@@ -5236,6 +5250,10 @@ const PlanetVisualEngine = {
                 this.state = 'done';
                 if (this.animFrame) cancelAnimationFrame(this.animFrame);
                 
+                if (this.multiplayerLobby) {
+                    this.multiplayerLobby.active = false;
+                }
+
                 const pModal = document.getElementById('planet-modal');
                 if (pModal) {
                     pModal.style.transition = 'opacity 0.3s ease-out';
@@ -5246,6 +5264,11 @@ const PlanetVisualEngine = {
                         pModal.style.opacity = '1';
                         pModal.style.pointerEvents = 'auto';
                     }, 300);
+                }
+
+                document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+                if (!GAME.active) {
+                    startGame();
                 }
 
                 if (typeof this.launchCallback === 'function') {
@@ -8309,17 +8332,11 @@ function initSocket() {
                     window.PlanetVisualEngine.currentPlanetId = data.planetId;
                     window.PlanetVisualEngine.currentPlanet = PLANET_WORLDS.find(p => p.id === data.planetId) || PLANET_WORLDS[0];
                 }
-                window.PlanetVisualEngine.state = 'takeoff';
-                if (typeof playSound === 'function') playSound('meteor');
-            }
-
-            setTimeout(() => {
-                if (window.PlanetVisualEngine && window.PlanetVisualEngine.multiplayerLobby) {
-                    window.PlanetVisualEngine.multiplayerLobby.active = false;
-                }
+                window.PlanetVisualEngine.startTakeoff();
+            } else {
                 document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
                 startGame();
-            }, 1200);
+            }
         });
 
         NET.socket.on('dailyGiftClaimed', (data) => {
@@ -8846,24 +8863,12 @@ window.launchMultiplayerMission = function() {
         NET.socket.emit('upgradePicked');
     }
     
-    // Play sound and trigger cinematic takeoff immediately for instant feedback
-    if (typeof playSound === 'function') playSound('meteor');
-    if (window.PlanetVisualEngine) {
-        window.PlanetVisualEngine.state = 'takeoff';
-    }
     const hud = document.getElementById('mp-staging-hud');
     if (hud) hud.style.display = 'none';
-    
-    // Fallback timer to transition into game smoothly even if network has delay
-    setTimeout(() => {
-        if (!GAME.active) {
-            if (window.PlanetVisualEngine && window.PlanetVisualEngine.multiplayerLobby) {
-                window.PlanetVisualEngine.multiplayerLobby.active = false;
-            }
-            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-            startGame();
-        }
-    }, 1200);
+
+    if (window.PlanetVisualEngine) {
+        window.PlanetVisualEngine.startTakeoff();
+    }
 };
 
 window.leaveMultiplayerLobby = function() {
