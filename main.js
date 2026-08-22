@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.720
+ * NEO SURVIVOR - Core Game Logic - v1.721
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.720'
+    version: window.GAME_VERSION || '1.721'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.720";
+const GAME_VERSION = window.GAME_VERSION || "1.721";
 const GAME = {
     active: false,
     paused: false,
@@ -9682,6 +9682,43 @@ function initAutoAccountDetection() {
     if (inputPass) inputPass.addEventListener('keydown', handleEnter);
 }
 
+function checkPortraitLock() {
+    const portraitOverlay = document.getElementById('portrait-lock-overlay');
+    if (!portraitOverlay) return;
+    const loginModal = document.getElementById('login-modal');
+    const isLoginVisible = loginModal && loginModal.classList.contains('active');
+    
+    // Never lock or prompt landscape orientation before user is logged in
+    if (isLoginVisible || !META.playerName) {
+        portraitOverlay.style.display = 'none';
+        return;
+    }
+    
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    if (isMobileDevice && window.innerHeight > window.innerWidth) {
+        portraitOverlay.style.display = 'flex';
+    } else {
+        portraitOverlay.style.display = 'none';
+    }
+}
+window.checkPortraitLock = checkPortraitLock;
+
+function checkAndShowRotateAnimation() {
+    const loginModal = document.getElementById('login-modal');
+    const isLoginVisible = loginModal && loginModal.classList.contains('active');
+    if (isLoginVisible || !META.playerName) return;
+    if (window.innerWidth < window.innerHeight && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+        const modal = document.getElementById('rotate-device-modal');
+        if (modal) {
+            modal.classList.add('active');
+            setTimeout(() => {
+                modal.classList.remove('active');
+            }, 3000);
+        }
+    }
+}
+window.checkAndShowRotateAnimation = checkAndShowRotateAnimation;
+
 function requestLandscapeOrientation() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window || navigator.maxTouchPoints > 0);
     if (!isMobile) return;
@@ -9700,14 +9737,14 @@ function requestLandscapeOrientation() {
     if (reqFullscreen && !document.fullscreenElement && !document.webkitFullscreenElement) {
         reqFullscreen.call(docEl).then(() => {
             tryOrientationLock();
-            if (typeof checkPortraitLock === 'function') setTimeout(checkPortraitLock, 250);
+            setTimeout(checkPortraitLock, 250);
         }).catch(() => {
             tryOrientationLock();
-            if (typeof checkPortraitLock === 'function') setTimeout(checkPortraitLock, 250);
+            setTimeout(checkPortraitLock, 250);
         });
     } else {
         tryOrientationLock();
-        if (typeof checkPortraitLock === 'function') setTimeout(checkPortraitLock, 250);
+        setTimeout(checkPortraitLock, 250);
     }
 }
 window.requestLandscapeOrientation = requestLandscapeOrientation;
@@ -10884,21 +10921,6 @@ function init() {
 
     setInterval(() => { if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume(); }, 500);
 
-    function checkAndShowRotateAnimation() {
-        const loginModal = document.getElementById('login-modal');
-        const isLoginVisible = loginModal && loginModal.classList.contains('active');
-        if (isLoginVisible || !META.playerName) return;
-        if (window.innerWidth < window.innerHeight && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
-            const modal = document.getElementById('rotate-device-modal');
-            if (modal) {
-                modal.classList.add('active');
-                setTimeout(() => {
-                    modal.classList.remove('active');
-                }, 3000);
-            }
-        }
-    }
-
     const btnStart = document.getElementById('btn-start');
     const btnPlayAction = document.getElementById('btn-play-action');
     const modeSelect = document.getElementById('game-mode-select');
@@ -10960,27 +10982,7 @@ function init() {
         });
     }
     
-    // Portrait lock logic
-    const portraitOverlay = document.getElementById('portrait-lock-overlay');
-    function checkPortraitLock() {
-        if (!portraitOverlay) return;
-        const loginModal = document.getElementById('login-modal');
-        const isLoginVisible = loginModal && loginModal.classList.contains('active');
-        
-        // Never lock or prompt landscape orientation before user is logged in
-        if (isLoginVisible || !META.playerName) {
-            portraitOverlay.style.display = 'none';
-            return;
-        }
-        
-        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-        if (isMobileDevice && window.innerHeight > window.innerWidth) {
-            portraitOverlay.style.display = 'flex';
-        } else {
-            portraitOverlay.style.display = 'none';
-        }
-    }
-    
+    // Portrait lock event listeners
     window.addEventListener('resize', checkPortraitLock);
     window.addEventListener('orientationchange', () => {
         setTimeout(checkPortraitLock, 150);
@@ -10990,8 +10992,9 @@ function init() {
     });
     checkPortraitLock(); // initial check
     
-    if (portraitOverlay) {
-        portraitOverlay.addEventListener('click', () => {
+    const pOverlay = document.getElementById('portrait-lock-overlay');
+    if (pOverlay) {
+        pOverlay.addEventListener('click', () => {
             if (typeof requestLandscapeOrientation === 'function') {
                 requestLandscapeOrientation();
             }
