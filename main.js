@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.700
+ * NEO SURVIVOR - Core Game Logic - v1.701
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.700'
+    version: window.GAME_VERSION || '1.701'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.700";
+const GAME_VERSION = window.GAME_VERSION || "1.701";
 const GAME = {
     active: false,
     paused: false,
@@ -3774,24 +3774,47 @@ window.claimAchievement = function(id) {
 };
 
 
+function triggerRescueExtraction(onComplete) {
+    if (GAME.isExtracting) {
+        if (typeof onComplete === 'function') onComplete();
+        return;
+    }
+    GAME.isExtracting = true;
+    GAME.paused = false;
+
+    if (typeof playSound === 'function') playSound('meteor');
+
+    const p = GAME.entities.player || { x: 0, y: 0 };
+    const extractStartTime = Date.now();
+    const extractDuration = 1000; // 1.0s
+
+    GAME.extractionAnim = {
+        startTime: extractStartTime,
+        duration: extractDuration,
+        targetX: p.x,
+        targetY: p.y,
+        onComplete: onComplete
+    };
+}
+
 function handleLocalPlayerDeath() {
     if (!GAME.entities.player || GAME.entities.player.dead) return;
     GAME.entities.player.dead = true;
     
     if (NET.isMultiplayer && NET.socket) {
         NET.socket.emit('playerUpdate', { dead: true, hp: 0 });
+        NET.socket.emit('playerDied', { roomId: NET.roomId, playerId: myPlayerId });
         
         const others = Object.values(NET.others || {});
         const othersAlive = others.some(op => !op.dead);
         
         if (othersAlive) {
             if (typeof showCurrencyNotification === 'function') {
-                showCurrencyNotification(0, "💀 PADL JSI V BOJI – PŘESUN NA ZÁKLADNU...");
+                showCurrencyNotification(0, "🚀 ZÁCHRANNÝ ODVOZ NA ZÁKLADNU...");
             }
-            if (typeof playSound === 'function') playSound('meteor');
             
-            setTimeout(() => {
-                if (GAME.active && NET.isMultiplayer) {
+            triggerRescueExtraction(() => {
+                if (NET.isMultiplayer) {
                     GAME.active = false;
                     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
                     const uiLayer = document.getElementById('ui-layer');
@@ -3808,13 +3831,19 @@ function handleLocalPlayerDeath() {
                         players: playersList,
                         isBattleActive: true
                     });
+                    if (window.PlanetVisualEngine) {
+                        window.PlanetVisualEngine.startLanding('multiplayer');
+                    }
                 }
-            }, 1000);
+            });
             return;
         }
     }
     
-    gameOver();
+    // Solo death or all players dead in MP -> trigger extraction and gameOver
+    triggerRescueExtraction(() => {
+        gameOver();
+    });
 }
 
 function gameOver() {
@@ -6351,7 +6380,7 @@ const PlanetVisualEngine = {
                         return;
                     }
 
-                    const pShipY = (this.state === 'takeoff') ? this.shipY : restY;
+                    const pShipY = (this.state === 'takeoff' || (this.state === 'landing' && isMe)) ? this.shipY : restY;
                     const pShipTilt = (this.state === 'takeoff') ? (this.shipTilt || 0) : 0;
 
                     // Ground shadow under rocket
@@ -8161,8 +8190,6 @@ window.softResetToPlanet = () => {
         addCurrency(GAME.dogeGained);
         showCurrencyNotification(GAME.dogeGained, "VÝNOS Z BITVY (Základna)");
     }
-    GAME.active = false;
-    GAME.paused = false;
     
     const chat = document.getElementById('global-chat');
     if (chat) chat.style.display = 'none';
@@ -8170,58 +8197,69 @@ window.softResetToPlanet = () => {
     if (chatBtn) chatBtn.style.display = 'none';
     if (chat) chat.classList.remove('mobile-active');
 
-    // Multiplayer: Return to planet staging without disconnecting from room
+    // Multiplayer: Return to planet staging with rescue extraction animation
     if (NET.isMultiplayer && NET.socket && NET.socket.connected && NET.roomId) {
         NET.socket.emit('playerUpdate', { dead: true, hp: 0 });
+        NET.socket.emit('playerDied', { roomId: NET.roomId, playerId: myPlayerId });
         
-        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        const uiLayer = document.getElementById('ui-layer');
-        if (uiLayer) uiLayer.style.display = 'none';
-        const menuAnim = document.getElementById('menu-anim-canvas');
-        if (menuAnim) menuAnim.style.display = 'none';
-        
-        switchMusic('menu');
-        resetGame();
-        saveMeta();
-        
-        const others = Object.values(NET.others || {});
-        const isBattle = others.some(op => !op.dead);
-        const playersList = ensureLocalPlayerInList([
-            { id: myPlayerId, name: META.playerName || 'Hráč', dead: true, shipColor: META.selectedShipColor || '#38bdf8' },
-            ...others
-        ]);
-        
-        window.openMultiplayerStaging({
-            roomId: NET.roomId,
-            planetId: (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || 'terra',
-            players: playersList,
-            isBattleActive: isBattle
+        triggerRescueExtraction(() => {
+            GAME.active = false;
+            GAME.paused = false;
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            const uiLayer = document.getElementById('ui-layer');
+            if (uiLayer) uiLayer.style.display = 'none';
+            const menuAnim = document.getElementById('menu-anim-canvas');
+            if (menuAnim) menuAnim.style.display = 'none';
+            
+            switchMusic('menu');
+            resetGame();
+            saveMeta();
+            
+            const others = Object.values(NET.others || {});
+            const isBattle = others.some(op => !op.dead);
+            const playersList = ensureLocalPlayerInList([
+                { id: myPlayerId, name: META.playerName || 'Hráč', dead: true, shipColor: META.selectedShipColor || '#38bdf8' },
+                ...others
+            ]);
+            
+            window.openMultiplayerStaging({
+                roomId: NET.roomId,
+                planetId: (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || 'terra',
+                players: playersList,
+                isBattleActive: isBattle
+            });
+            if (window.PlanetVisualEngine) {
+                window.PlanetVisualEngine.startLanding('multiplayer');
+            }
         });
         return;
     }
 
-    if (NET.socket) {
-        NET.socket.disconnect();
-        NET.socket = null;
-    }
+    // Solo: Return to planet with rescue extraction animation
+    triggerRescueExtraction(() => {
+        if (NET.socket) {
+            NET.socket.disconnect();
+            NET.socket = null;
+        }
 
-    if (NET.serverPollingInterval) {
-        clearInterval(NET.serverPollingInterval);
-        NET.serverPollingInterval = null;
-    }
+        if (NET.serverPollingInterval) {
+            clearInterval(NET.serverPollingInterval);
+            NET.serverPollingInterval = null;
+        }
 
-    NET.isMultiplayer = false;
-    NET.roomId = null;
-    NET.others = {};
+        NET.isMultiplayer = false;
+        NET.roomId = null;
+        NET.others = {};
 
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('ui-layer').style.display = 'none';
-    const menuAnim = document.getElementById('menu-anim-canvas');
-    if (menuAnim) menuAnim.style.display = 'none';
-    switchMusic('menu');
-    resetGame();
-    saveMeta();
-    openPlanetModal('solo');
+        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+        document.getElementById('ui-layer').style.display = 'none';
+        const menuAnim = document.getElementById('menu-anim-canvas');
+        if (menuAnim) menuAnim.style.display = 'none';
+        switchMusic('menu');
+        resetGame();
+        saveMeta();
+        openPlanetModal('solo');
+    });
 };
 
 
@@ -12224,6 +12262,61 @@ function render() {
             }
             
             if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
+
+            // Rescue Extraction Ship Cinematic Animation
+            if (GAME.extractionAnim) {
+                const ex = GAME.extractionAnim;
+                const elapsed = (Date.now() - ex.startTime) / 1000;
+                const prog = Math.min(1.0, elapsed / (ex.duration / 1000));
+                
+                const shipX = (ex.targetX * GAME.zoom) - camX;
+                const shipScreenY = (ex.targetY * GAME.zoom) - camY;
+                
+                let curShipY = shipScreenY;
+                let isThrustingUp = false;
+                
+                if (prog < 0.35) {
+                    const p1 = prog / 0.35;
+                    curShipY = (shipScreenY - 350) + p1 * 320;
+                } else if (prog < 0.65) {
+                    curShipY = shipScreenY - 30;
+                    // Tractor beam cone
+                    ctx.save();
+                    const beamGrad = ctx.createLinearGradient(shipX, curShipY + 20, shipX, shipScreenY + 20);
+                    beamGrad.addColorStop(0, 'rgba(56, 189, 248, 0.7)');
+                    beamGrad.addColorStop(1, 'rgba(56, 189, 248, 0.05)');
+                    ctx.fillStyle = beamGrad;
+                    ctx.beginPath();
+                    ctx.moveTo(shipX - 15, curShipY + 20);
+                    ctx.lineTo(shipX + 15, curShipY + 20);
+                    ctx.lineTo(shipX + 35, shipScreenY + 20);
+                    ctx.lineTo(shipX - 35, shipScreenY + 20);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                } else {
+                    isThrustingUp = true;
+                    const p3 = (prog - 0.65) / 0.35;
+                    curShipY = (shipScreenY - 30) - (p3 * p3) * 500;
+                }
+
+                // Draw the vector rocket model
+                if (window.PlanetVisualEngine && typeof window.PlanetVisualEngine.drawRocketModel === 'function') {
+                    ctx.save();
+                    const rColor = META.selectedShipColor || '#38bdf8';
+                    const rState = isThrustingUp ? 'takeoff' : 'landing';
+                    window.PlanetVisualEngine.drawRocketModel(ctx, shipX, curShipY, isThrustingUp ? -15 : 5, rState, Date.now() / 1000, false, 'solo', 0, 0, META.playerName || 'Záchranný modul', rColor);
+                    ctx.restore();
+                }
+
+                if (prog >= 1.0 && !ex._done) {
+                    ex._done = true;
+                    const cb = ex.onComplete;
+                    GAME.extractionAnim = null;
+                    GAME.isExtracting = false;
+                    if (typeof cb === 'function') cb();
+                }
+            }
 
             if (GAME.entities.floatingTexts) {
                 GAME.entities.floatingTexts.forEach(ft => { if (ft) ft.draw(ctx, { x: camX, y: camY }); });
