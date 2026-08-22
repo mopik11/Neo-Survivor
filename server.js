@@ -2235,6 +2235,23 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('setRoomPlanet', (data) => {
+        const r = socket.roomId || (data && data.roomId);
+        if (r && ROOMS[r]) {
+            const room = ROOMS[r];
+            if (data && typeof data.planetId === 'string' && data.planetId.trim()) {
+                room.planetId = data.planetId.trim().toLowerCase();
+            }
+            io.to(r).emit('roomLobbyUpdate', {
+                roomId: r,
+                planetId: room.planetId,
+                isStarted: room.isStarted,
+                isBattleActive: room.isStarted,
+                players: Object.values(room.players).filter(pl => !pl.disconnected)
+            });
+        }
+    });
+
     socket.on('leaveRoom', (data) => {
         const r = socket.roomId || (data && data.roomId);
         const p = socket.playerId || (data && data.playerId);

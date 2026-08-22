@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.711
+ * NEO SURVIVOR - Core Game Logic - v1.712
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.711'
+    version: window.GAME_VERSION || '1.712'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.711";
+const GAME_VERSION = window.GAME_VERSION || "1.712";
 const GAME = {
     active: false,
     paused: false,
@@ -1662,16 +1662,91 @@ class Tombstone {
         this.x = x; this.y = y; this.id = id; this.playerId = playerId; this.progress = progress || 0;
     }
     draw(ctx, cam) {
-        ctx.fillStyle = '#475569';
-        ctx.fillRect(this.x - cam.x - 15, this.y - cam.y - 20, 30, 40);
-        ctx.fillStyle = '#94a3b8';
-        ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y - 20, 15, Math.PI, 0); ctx.fill();
+        const sx = this.x - cam.x;
+        const sy = this.y - cam.y;
+        const t = Date.now() / 1000;
 
-        // Progress bar
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(this.x - cam.x - 20, this.y - cam.y + 25, 40, 6);
-        ctx.fillStyle = '#10b981';
-        ctx.fillRect(this.x - cam.x - 20, this.y - cam.y + 25, 40 * (this.progress / 100), 6);
+        ctx.save();
+        ctx.translate(sx, sy);
+
+        // 1. Holographic revival zone pulsing radar rings
+        const pulse = (Math.sin(t * 4) + 1) * 0.5;
+        const reviveRadius = 90; // Interaction zone radius
+
+        ctx.save();
+        ctx.strokeStyle = `rgba(56, 189, 248, ${0.15 + pulse * 0.18})`;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.arc(0, 0, reviveRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // 2. High-Tech Hexagonal Pod Base
+        const hexR = 20;
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = '#38bdf8';
+        ctx.fillStyle = '#0f172a';
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.5;
+
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2 + t * 0.4;
+            const hx = Math.cos(angle) * hexR;
+            const hy = Math.sin(angle) * hexR;
+            if (i === 0) ctx.moveTo(hx, hy);
+            else ctx.lineTo(hx, hy);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // 3. Central Pulsing Distress Beacon Core
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(0, 0, 7 + pulse * 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 4. Rotating Energy Emitters
+        ctx.strokeStyle = '#60a5fa';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) {
+            const ang = (i / 3) * Math.PI * 2 - t * 1.5;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(ang) * 10, Math.sin(ang) * 10);
+            ctx.lineTo(Math.cos(ang) * 24, Math.sin(ang) * 24);
+            ctx.stroke();
+        }
+
+        // 5. Holographic Circular Revive Progress Ring & Label
+        const prog = Math.max(0, Math.min(100, this.progress || 0));
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = (prog > 0) ? '#10b981' : '#38bdf8';
+
+        // Background Track Ring
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, 30, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Progress Arc
+        if (prog > 0) {
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, -Math.PI / 2, -Math.PI / 2 + (prog / 100) * Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Hologram Text Badge
+        ctx.font = 'bold 11px "Outfit", Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = (prog > 0) ? '#10b981' : '#38bdf8';
+        ctx.fillText(prog > 0 ? `⚡ OŽIVENÍ: ${Math.floor(prog)}%` : `🆘 NOUZOVÝ MAJÁK`, 0, -40);
+
+        ctx.restore();
     }
 }
 
@@ -4569,7 +4644,7 @@ const PlanetVisualEngine = {
             { x: w * 0.25, y: -1600, radius: 40, speed: 1.8, color: '#c084fc', ring: true, ringColor: 'rgba(192, 132, 252, 0.3)' }
         ];
 
-        // Hide menus during flight
+        // Hide menus and multiplayer staging HUD during flight
         const topCard = document.getElementById('planet-top-card');
         if (topCard) { topCard.style.transition = 'opacity 0.3s ease'; topCard.style.opacity = '0'; topCard.style.pointerEvents = 'none'; }
         const botMenu = document.getElementById('planet-bottom-menu');
@@ -4577,6 +4652,13 @@ const PlanetVisualEngine = {
         const centerAct = document.getElementById('planet-center-actions');
         if (centerAct) { centerAct.style.transition = 'opacity 0.3s ease'; centerAct.style.opacity = '0'; centerAct.style.pointerEvents = 'none'; }
         
+        const mpStagingHud = document.getElementById('mp-staging-hud');
+        if (mpStagingHud) mpStagingHud.style.display = 'none';
+
+        if (this.mode === 'multiplayer' && NET.socket && NET.socket.connected && NET.roomId) {
+            NET.socket.emit('setRoomPlanet', { roomId: NET.roomId, planetId: targetWorld.id });
+        }
+
         const statusTag = document.getElementById('planet-status-tag');
         if (statusTag) {
             statusTag.style.opacity = '1';
@@ -5208,16 +5290,26 @@ const PlanetVisualEngine = {
                     titleEl.innerText = this.targetPlanet.name;
                     titleEl.style.color = this.targetPlanet.accentColor || '#10b981';
                 }
-                const topCard = document.getElementById('planet-top-card');
-                if (topCard) {
-                    topCard.style.borderColor = this.targetPlanet.surfaceLine || 'rgba(16, 185, 129, 0.4)';
-                    topCard.style.opacity = '1';
-                    topCard.style.pointerEvents = 'auto';
+                if (this.mode === 'multiplayer') {
+                    const hud = document.getElementById('mp-staging-hud');
+                    if (hud) {
+                        hud.style.display = 'block';
+                        if (typeof window.updateMultiplayerStagingUI === 'function') {
+                            window.updateMultiplayerStagingUI();
+                        }
+                    }
+                } else {
+                    const topCard = document.getElementById('planet-top-card');
+                    if (topCard) {
+                        topCard.style.borderColor = this.targetPlanet.surfaceLine || 'rgba(16, 185, 129, 0.4)';
+                        topCard.style.opacity = '1';
+                        topCard.style.pointerEvents = 'auto';
+                    }
+                    const botMenu = document.getElementById('planet-bottom-menu');
+                    if (botMenu) { botMenu.style.opacity = '1'; botMenu.style.pointerEvents = 'auto'; }
+                    const centerAct = document.getElementById('planet-center-actions');
+                    if (centerAct) { centerAct.style.opacity = '1'; centerAct.style.pointerEvents = 'auto'; }
                 }
-                const botMenu = document.getElementById('planet-bottom-menu');
-                if (botMenu) { botMenu.style.opacity = '1'; botMenu.style.pointerEvents = 'auto'; }
-                const centerAct = document.getElementById('planet-center-actions');
-                if (centerAct) { centerAct.style.opacity = '1'; centerAct.style.pointerEvents = 'auto'; }
                 const skipBtn = document.getElementById('btn-planet-skip-travel');
                 if (skipBtn) skipBtn.style.display = 'none';
 
@@ -6443,7 +6535,7 @@ const PlanetVisualEngine = {
                     ctx.fill();
 
                     const pColor = pl.shipColor || (isMe ? (META.selectedShipColor || '#38bdf8') : '#a855f7');
-                    const badgeLabel = (isBattleRunning && pl.dead) ? `💀 ${pl.name || 'Hráč'} (ČEKÁ)` : (pl.name || "Hráč");
+                    const badgeLabel = pl.name || "Hráč";
                     this.drawRocketModel(ctx, pShipX, pShipY, this.shipVy, this.state, time, false, this.mode, pShipTilt, 0, badgeLabel, pColor);
                 });
             } else {
