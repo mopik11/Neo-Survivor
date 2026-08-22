@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.717
+ * NEO SURVIVOR - Core Game Logic - v1.718
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.717'
+    version: window.GAME_VERSION || '1.718'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.717";
+const GAME_VERSION = window.GAME_VERSION || "1.718";
 const GAME = {
     active: false,
     paused: false,
@@ -9563,6 +9563,145 @@ function initRecaptchaWidget() {
 }
 window.initRecaptchaWidget = initRecaptchaWidget;
 
+let authDetectionState = null; // null: unknown/default, true: account exists, false: new user
+
+function initAutoAccountDetection() {
+    const inputName = document.getElementById('input-login-name');
+    const inputPass = document.getElementById('input-login-pass');
+    const hint = document.getElementById('login-user-hint');
+    const btnLogin = document.getElementById('btn-login');
+    const btnRegister = document.getElementById('btn-register');
+    if (!inputName || !btnLogin || !btnRegister) return;
+
+    let checkTimeout = null;
+
+    const applyDefaultUI = () => {
+        authDetectionState = null;
+        if (hint) {
+            hint.innerHTML = '';
+            hint.style.color = '#94a3b8';
+        }
+        btnLogin.style.flex = '1.5';
+        btnLogin.style.background = 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)';
+        btnLogin.style.border = 'none';
+        btnLogin.style.boxShadow = '';
+        btnLogin.style.transform = 'scale(1)';
+        btnLogin.style.opacity = '1';
+        btnLogin.innerHTML = window.T("PŘIHLÁSIT");
+
+        btnRegister.style.flex = '1';
+        btnRegister.style.background = 'rgba(255, 255, 255, 0.05)';
+        btnRegister.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+        btnRegister.style.boxShadow = 'none';
+        btnRegister.style.transform = 'scale(1)';
+        btnRegister.style.opacity = '1';
+        btnRegister.innerHTML = window.T("REGISTROVAT");
+    };
+
+    const applyExistsUI = () => {
+        authDetectionState = true;
+        if (hint) {
+            hint.innerHTML = `<span style="color: #38bdf8; display: inline-flex; align-items: center; gap: 5px;">🟢 ` + window.T("Účet nalezen v databázi") + `</span>`;
+        }
+        // Big prominent Login button
+        btnLogin.style.flex = '2.2';
+        btnLogin.style.background = 'linear-gradient(135deg, #38bdf8 0%, #6366f1 100%)';
+        btnLogin.style.border = '1.5px solid #38bdf8';
+        btnLogin.style.boxShadow = '0 0 25px rgba(56, 189, 248, 0.5)';
+        btnLogin.style.transform = 'scale(1.02)';
+        btnLogin.style.opacity = '1';
+        btnLogin.innerHTML = `<span>🔑</span> ` + window.T("PŘIHLÁSIT SE");
+
+        // Small secondary Register button
+        btnRegister.style.flex = '0.9';
+        btnRegister.style.background = 'rgba(255, 255, 255, 0.05)';
+        btnRegister.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+        btnRegister.style.boxShadow = 'none';
+        btnRegister.style.transform = 'scale(0.98)';
+        btnRegister.style.opacity = '0.75';
+        btnRegister.innerHTML = window.T("Registrovat");
+    };
+
+    const applyNewUserUI = () => {
+        authDetectionState = false;
+        if (hint) {
+            hint.innerHTML = `<span style="color: #10b981; display: inline-flex; align-items: center; gap: 5px;">✨ ` + window.T("Nový hráč – účet neexistuje") + `</span>`;
+        }
+        // Big prominent Register button
+        btnRegister.style.flex = '2.2';
+        btnRegister.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        btnRegister.style.border = '1.5px solid #10b981';
+        btnRegister.style.boxShadow = '0 0 25px rgba(16, 185, 129, 0.5)';
+        btnRegister.style.transform = 'scale(1.02)';
+        btnRegister.style.opacity = '1';
+        btnRegister.innerHTML = `<span>🚀</span> ` + window.T("REGISTROVAT SE");
+
+        // Small secondary Login button
+        btnLogin.style.flex = '0.9';
+        btnLogin.style.background = 'rgba(255, 255, 255, 0.05)';
+        btnLogin.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+        btnLogin.style.boxShadow = 'none';
+        btnLogin.style.transform = 'scale(0.98)';
+        btnLogin.style.opacity = '0.75';
+        btnLogin.innerHTML = window.T("Přihlásit");
+    };
+
+    const triggerCheck = () => {
+        const val = inputName.value.trim().toLowerCase();
+        clearTimeout(checkTimeout);
+        if (val.length < 3) {
+            applyDefaultUI();
+            return;
+        }
+        if (hint) {
+            hint.innerHTML = `<span style="color: #94a3b8; opacity: 0.8; display: inline-flex; align-items: center; gap: 5px;">🔍 ` + window.T("Ověřuji jméno...") + `</span>`;
+        }
+        checkTimeout = setTimeout(() => {
+            if (NET.socket && NET.socket.connected) {
+                NET.socket.emit('checkUsername', { user: val });
+            }
+        }, 200);
+    };
+
+    inputName.addEventListener('input', triggerCheck);
+    inputName.addEventListener('change', triggerCheck);
+
+    if (NET.socket) {
+        NET.socket.on('checkUsernameResponse', (res) => {
+            if (!res) return;
+            const currentVal = inputName.value.trim().toLowerCase();
+            if (currentVal !== res.user) return;
+            if (!res.valid) {
+                applyDefaultUI();
+                return;
+            }
+            if (res.exists) {
+                applyExistsUI();
+            } else {
+                applyNewUserUI();
+            }
+        });
+        NET.socket.on('connect', () => {
+            if (inputName.value.trim().length >= 3) {
+                triggerCheck();
+            }
+        });
+    }
+
+    const handleEnter = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (authDetectionState === false) {
+                handleAuth(false);
+            } else {
+                handleAuth(true);
+            }
+        }
+    };
+    inputName.addEventListener('keydown', handleEnter);
+    if (inputPass) inputPass.addEventListener('keydown', handleEnter);
+}
+
 function handleAuth(isLogin) {
     const nameVal = document.getElementById('input-login-name').value.trim();
     const passVal = document.getElementById('input-login-pass').value.trim();
@@ -9723,6 +9862,13 @@ function init() {
             "Heslo...": "Password...",
             "PŘIHLÁSIT": "LOGIN",
             "REGISTROVAT": "REGISTER",
+            "PŘIHLÁSIT SE": "LOGIN",
+            "REGISTROVAT SE": "REGISTER",
+            "Registrovat": "Register",
+            "Přihlásit": "Login",
+            "Účet nalezen v databázi": "Account found in database",
+            "Nový hráč – účet neexistuje": "New player – account does not exist",
+            "Ověřuji jméno...": "Checking username...",
             "KOSMICKÝ BOJ O PŘEŽITÍ": "COSMIC STRUGGLE FOR SURVIVAL",
             "Hráč:": "Player:",
             "Nej. Level:": "Max Level:",
@@ -10516,6 +10662,7 @@ function init() {
     if (btnRegister) btnRegister.onclick = () => handleAuth(false);
 
     initRecaptchaWidget();
+    initAutoAccountDetection();
 
     // Daily Gift Logic (Streak based)
     const btnDaily = document.getElementById('btn-daily-gift');

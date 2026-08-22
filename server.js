@@ -1744,6 +1744,22 @@ io.on('connection', (socket) => {
         });
     });
 
+    socket.on('checkUsername', (data) => {
+        const clientIp = socket.handshake.address || socket.id;
+        if (!socketRateLimiter.check(`checkUser:${clientIp}`, 60, 60000)) {
+            return;
+        }
+        if (!data || typeof data.user !== 'string') return;
+        const user = data.user.trim().toLowerCase();
+        if (user.length < 3 || user.length > 15) {
+            return socket.emit('checkUsernameResponse', { user, exists: false, valid: false });
+        }
+        db.get(`SELECT username FROM accounts WHERE username = ?`, [user], (err, row) => {
+            if (err) return socket.emit('checkUsernameResponse', { user, error: true, valid: false });
+            socket.emit('checkUsernameResponse', { user, exists: !!row, valid: true });
+        });
+    });
+
     socket.on('deleteAccount', (data) => {
         const clientIp = socket.handshake.address || socket.id;
         if (!socketRateLimiter.check(`del:${clientIp}`, 5, 60000)) {
