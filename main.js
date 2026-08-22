@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.715
+ * NEO SURVIVOR - Core Game Logic - v1.716
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.715'
+    version: window.GAME_VERSION || '1.716'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.715";
+const GAME_VERSION = window.GAME_VERSION || "1.716";
 const GAME = {
     active: false,
     paused: false,
@@ -6763,6 +6763,16 @@ window.PlanetVisualEngine = PlanetVisualEngine;
 function applyPlanetTheme(planetId = 'terra') {
     const root = document.documentElement;
     document.body.classList.remove('theme-terra', 'theme-ignis', 'theme-cryo', 'theme-cyber');
+
+    if (planetId === 'menu' || planetId === 'default' || !planetId) {
+        root.style.setProperty('--accent-color', '#10b981');
+        root.style.setProperty('--accent-glow', 'rgba(16, 185, 129, 0.6)');
+        root.style.setProperty('--secondary-color', '#059669');
+        root.style.setProperty('--xp-color', '#10b981');
+        root.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.12)');
+        return;
+    }
+
     document.body.classList.add(`theme-${planetId}`);
 
     if (planetId === 'ignis') {
@@ -8419,6 +8429,7 @@ window.softResetToMenu = () => {
 
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     document.getElementById('menu-modal').classList.add('active');
+    applyPlanetTheme('menu');
 
     document.getElementById('ui-layer').style.display = 'none';
     document.getElementById('menu-anim-canvas').style.display = 'block';
