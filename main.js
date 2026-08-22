@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.699
+ * NEO SURVIVOR - Core Game Logic - v1.700
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.699'
+    version: window.GAME_VERSION || '1.700'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.699";
+const GAME_VERSION = window.GAME_VERSION || "1.700";
 const GAME = {
     active: false,
     paused: false,
@@ -3774,6 +3774,49 @@ window.claimAchievement = function(id) {
 };
 
 
+function handleLocalPlayerDeath() {
+    if (!GAME.entities.player || GAME.entities.player.dead) return;
+    GAME.entities.player.dead = true;
+    
+    if (NET.isMultiplayer && NET.socket) {
+        NET.socket.emit('playerUpdate', { dead: true, hp: 0 });
+        
+        const others = Object.values(NET.others || {});
+        const othersAlive = others.some(op => !op.dead);
+        
+        if (othersAlive) {
+            if (typeof showCurrencyNotification === 'function') {
+                showCurrencyNotification(0, "💀 PADL JSI V BOJI – PŘESUN NA ZÁKLADNU...");
+            }
+            if (typeof playSound === 'function') playSound('meteor');
+            
+            setTimeout(() => {
+                if (GAME.active && NET.isMultiplayer) {
+                    GAME.active = false;
+                    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+                    const uiLayer = document.getElementById('ui-layer');
+                    if (uiLayer) uiLayer.style.display = 'none';
+                    
+                    const playersList = ensureLocalPlayerInList([
+                        { id: myPlayerId, name: META.playerName || 'Hráč', dead: true, shipColor: META.selectedShipColor || '#38bdf8' },
+                        ...others
+                    ]);
+                    
+                    window.openMultiplayerStaging({
+                        roomId: NET.roomId,
+                        planetId: (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || 'terra',
+                        players: playersList,
+                        isBattleActive: true
+                    });
+                }
+            }, 1000);
+            return;
+        }
+    }
+    
+    gameOver();
+}
+
 function gameOver() {
     GAME.active = false;
     
@@ -6270,12 +6313,44 @@ const PlanetVisualEngine = {
             const padSpacing = Math.min(140, Math.max(90, (w * 0.75) / Math.max(1, numPads)));
 
             if (isMpLobby) {
+                const isBattleRunning = !!(this.multiplayerLobby && this.multiplayerLobby.isBattleActive);
                 // Draw all connected players' rockets on their respective pads
                 lobbyPlayers.forEach((pl, pIdx) => {
                     const padCenterOffset = (pIdx - (numPads - 1) / 2) * padSpacing;
                     const pShipX = cx + padCenterOffset;
                     const isMe = (pl.id === myPlayerId || pl.name === (META.playerName || SecureStorage.getItem('neoSurvivor_user')));
                     
+                    // If battle is running and player is still alive in space:
+                    const isInSpace = isBattleRunning && !pl.dead;
+                    if (isInSpace) {
+                        // Holographic radar beacon for rocket in space
+                        ctx.save();
+                        ctx.translate(pShipX, currentPadY - 20);
+                        
+                        // Hologram cone beam
+                        const beamGrad = ctx.createLinearGradient(0, 15, 0, -35);
+                        beamGrad.addColorStop(0, 'rgba(56, 189, 248, 0.25)');
+                        beamGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+                        ctx.fillStyle = beamGrad;
+                        ctx.beginPath();
+                        ctx.moveTo(-28, 15);
+                        ctx.lineTo(28, 15);
+                        ctx.lineTo(14, -35);
+                        ctx.lineTo(-14, -35);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        // Holographic badge text
+                        ctx.fillStyle = '#38bdf8';
+                        ctx.font = 'bold 12px "Outfit", Arial, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = '#38bdf8';
+                        ctx.fillText(`⚔️ ${pl.name || 'Hráč'} (V BITVĚ)`, 0, -40);
+                        ctx.restore();
+                        return;
+                    }
+
                     const pShipY = (this.state === 'takeoff') ? this.shipY : restY;
                     const pShipTilt = (this.state === 'takeoff') ? (this.shipTilt || 0) : 0;
 
@@ -6286,7 +6361,8 @@ const PlanetVisualEngine = {
                     ctx.fill();
 
                     const pColor = pl.shipColor || (isMe ? (META.selectedShipColor || '#38bdf8') : '#a855f7');
-                    this.drawRocketModel(ctx, pShipX, pShipY, this.shipVy, this.state, time, false, this.mode, pShipTilt, 0, pl.name || "Hráč", pColor);
+                    const badgeLabel = (isBattleRunning && pl.dead) ? `💀 ${pl.name || 'Hráč'} (ČEKÁ)` : (pl.name || "Hráč");
+                    this.drawRocketModel(ctx, pShipX, pShipY, this.shipVy, this.state, time, false, this.mode, pShipTilt, 0, badgeLabel, pColor);
                 });
             } else {
                 // Singleplayer rocket drawing
@@ -8094,6 +8170,36 @@ window.softResetToPlanet = () => {
     if (chatBtn) chatBtn.style.display = 'none';
     if (chat) chat.classList.remove('mobile-active');
 
+    // Multiplayer: Return to planet staging without disconnecting from room
+    if (NET.isMultiplayer && NET.socket && NET.socket.connected && NET.roomId) {
+        NET.socket.emit('playerUpdate', { dead: true, hp: 0 });
+        
+        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+        const uiLayer = document.getElementById('ui-layer');
+        if (uiLayer) uiLayer.style.display = 'none';
+        const menuAnim = document.getElementById('menu-anim-canvas');
+        if (menuAnim) menuAnim.style.display = 'none';
+        
+        switchMusic('menu');
+        resetGame();
+        saveMeta();
+        
+        const others = Object.values(NET.others || {});
+        const isBattle = others.some(op => !op.dead);
+        const playersList = ensureLocalPlayerInList([
+            { id: myPlayerId, name: META.playerName || 'Hráč', dead: true, shipColor: META.selectedShipColor || '#38bdf8' },
+            ...others
+        ]);
+        
+        window.openMultiplayerStaging({
+            roomId: NET.roomId,
+            planetId: (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || 'terra',
+            players: playersList,
+            isBattleActive: isBattle
+        });
+        return;
+    }
+
     if (NET.socket) {
         NET.socket.disconnect();
         NET.socket = null;
@@ -8308,15 +8414,13 @@ function initSocket() {
                 const pList = ensureLocalPlayerInList(data.players);
                 window.PlanetVisualEngine.multiplayerLobby.players = pList;
                 window.PlanetVisualEngine.multiplayerLobby.planetId = data.planetId || 'terra';
+                window.PlanetVisualEngine.multiplayerLobby.isBattleActive = !!data.isBattleActive;
                 if (data.planetId && window.PLANET_WORLDS) {
                     window.PlanetVisualEngine.currentPlanetId = data.planetId;
                     window.PlanetVisualEngine.currentPlanet = PLANET_WORLDS.find(p => p.id === data.planetId) || PLANET_WORLDS[0];
                 }
-                const countEl = document.getElementById('mp-staging-count');
-                if (countEl) countEl.innerText = pList.length;
-                const planetEl = document.getElementById('mp-staging-planet');
-                if (planetEl && window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanet) {
-                    planetEl.innerText = `${window.PlanetVisualEngine.currentPlanet.name} (${window.PlanetVisualEngine.currentPlanet.icon || '🪐'})`;
+                if (typeof window.updateMultiplayerStagingUI === 'function') {
+                    window.updateMultiplayerStagingUI(data);
                 }
                 if (typeof playSound === 'function') playSound('select');
             }
@@ -8580,7 +8684,15 @@ function initSocket() {
 
             const waitModal = document.getElementById('waiting-modal');
             if (waitModal) waitModal.classList.remove('active');
-            gameOver();
+
+            if (GAME.active) {
+                gameOver();
+            } else {
+                if (typeof showCurrencyNotification === 'function') {
+                    showCurrencyNotification(GAME.dogeGained || 0, "💀 CELÁ POSÁDKA PADLA – MISE UKONČENA");
+                }
+                if (typeof playSound === 'function') playSound('meteor');
+            }
         });
 
         NET.socket.on('serverStats', (data) => {
@@ -8791,6 +8903,72 @@ function ensureLocalPlayerInList(playersList) {
     return list;
 }
 
+window.updateMultiplayerStagingUI = function(data) {
+    const hud = document.getElementById('mp-staging-hud');
+    if (!hud) return;
+
+    const pList = (data && data.players) || (window.PlanetVisualEngine?.multiplayerLobby?.players) || [];
+    const isBattle = !!(data && data.isBattleActive);
+
+    const aliveInSpace = pList.filter(p => !p.dead).length;
+    const deadOnPlanet = pList.filter(p => p.dead).length;
+
+    const countEl = document.getElementById('mp-staging-count');
+    if (countEl) {
+        if (isBattle) {
+            countEl.innerHTML = `<span style="color:#f59e0b; font-weight:900;">${aliveInSpace} ve vesmíru</span> / <span style="color:#ef4444; font-weight:900;">${deadOnPlanet} na základně</span>`;
+        } else {
+            countEl.innerHTML = `<span style="color:#38bdf8; font-weight:900;">${pList.length}</span> hráčů na rampách`;
+        }
+    }
+
+    const codeEl = document.getElementById('mp-staging-code');
+    if (codeEl && data && data.roomId) codeEl.innerText = `#${data.roomId}`;
+
+    const planetEl = document.getElementById('mp-staging-planet');
+    if (planetEl && window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanet) {
+        planetEl.innerText = `${window.PlanetVisualEngine.currentPlanet.name} (${window.PlanetVisualEngine.currentPlanet.icon || '🪐'})`;
+    }
+
+    const statusMsg = document.getElementById('mp-staging-status-msg');
+    const launchBtn = document.getElementById('btn-mp-launch');
+    const roleInfo = document.getElementById('mp-staging-role-info');
+
+    if (isBattle) {
+        if (statusMsg) {
+            statusMsg.innerHTML = `⚔️ BITVA PROBÍHÁ VE VESMÍRU (${aliveInSpace} živých pilotů)`;
+            statusMsg.style.color = '#f59e0b';
+            statusMsg.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+        }
+        if (roleInfo) {
+            roleInfo.innerText = 'Čeká se na konec mise';
+            roleInfo.style.color = '#f59e0b';
+        }
+        if (launchBtn) {
+            launchBtn.innerText = '⏳ BITVA PROBÍHÁ...';
+            launchBtn.disabled = true;
+            launchBtn.style.opacity = '0.5';
+            launchBtn.style.pointerEvents = 'none';
+        }
+    } else {
+        if (statusMsg) {
+            statusMsg.innerHTML = `🟢 CELÁ POSÁDKA NA ZÁKLADNĚ – PŘIPRAVENO`;
+            statusMsg.style.color = '#10b981';
+            statusMsg.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        }
+        if (roleInfo) {
+            roleInfo.innerText = 'Odstartovat může kdokoliv';
+            roleInfo.style.color = '#94a3b8';
+        }
+        if (launchBtn) {
+            launchBtn.innerText = '🚀 ODSTARTOVAT MISI';
+            launchBtn.disabled = false;
+            launchBtn.style.opacity = '1';
+            launchBtn.style.pointerEvents = 'auto';
+        }
+    }
+};
+
 window.openMultiplayerStaging = function(data) {
     document.querySelectorAll('.modal:not(#planet-modal)').forEach(m => m.classList.remove('active'));
     
@@ -8812,7 +8990,8 @@ window.openMultiplayerStaging = function(data) {
             active: true,
             roomId: data.roomId,
             planetId: pId,
-            players: pList
+            players: pList,
+            isBattleActive: !!data.isBattleActive
         };
         window.PlanetVisualEngine.currentPlanetId = pId;
         window.PlanetVisualEngine.currentPlanet = PLANET_WORLDS.find(p => p.id === pId) || PLANET_WORLDS[0];
@@ -8835,14 +9014,7 @@ window.openMultiplayerStaging = function(data) {
     const hud = document.getElementById('mp-staging-hud');
     if (hud) {
         hud.style.display = 'block';
-        const codeEl = document.getElementById('mp-staging-code');
-        if (codeEl) codeEl.innerText = `#${data.roomId}`;
-        const countEl = document.getElementById('mp-staging-count');
-        if (countEl) countEl.innerText = pList.length;
-        const planetEl = document.getElementById('mp-staging-planet');
-        if (planetEl && window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanet) {
-            planetEl.innerText = `${window.PlanetVisualEngine.currentPlanet.name} (${window.PlanetVisualEngine.currentPlanet.icon || '🪐'})`;
-        }
+        window.updateMultiplayerStagingUI(data);
     }
 
     if (typeof playSound === 'function') playSound('select');
@@ -10699,8 +10871,12 @@ function init() {
     const btnRestart = document.getElementById('btn-restart-game');
     if (btnRestart) btnRestart.onclick = () => {
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        tryFullscreen();
-        startGame();
+        if (NET.isMultiplayer && NET.roomId) {
+            window.softResetToPlanet();
+        } else {
+            tryFullscreen();
+            startGame();
+        }
     };
 
     const btnPauseMenu = document.getElementById('btn-pause-menu');
@@ -11479,7 +11655,10 @@ function update(dt) {
                                     dmg *= (1 - armorRed);
                                 }
                                 t.hp -= dmg;
-                                if (t.hp <= 0) t.dead = true;
+                                if (t.hp <= 0) {
+                                    t.dead = true;
+                                    if (t.isLocal) handleLocalPlayerDeath();
+                                }
                             }
 
                             if (t.isLocal) {
@@ -11561,7 +11740,10 @@ function update(dt) {
                             dmg *= (1 - armorRed);
                         }
                         pl.hp -= dmg;
-                        if (pl.hp <= 0) pl.dead = true;
+                        if (pl.hp <= 0) {
+                            pl.dead = true;
+                            if (pl.isLocal) handleLocalPlayerDeath();
+                        }
                         GAME.entities.projectiles.splice(pIndex, 1);
                         updateUI();
 

@@ -2263,41 +2263,81 @@ io.on('connection', (socket) => {
             });
 
             if (data.dead && !ROOMS[r].isGameOver) {
-                // Hráč umřel -> Vytvořit náhrobek
+                ROOMS[r].players[p].dead = true;
+                // Tombstone for in-game revives
                 if (!ROOMS[r].tombstones.find(t => t.playerId === p)) {
                     ROOMS[r].tombstones.push({ id: Math.random().toString(36).substr(2, 9), playerId: p, x: ROOMS[r].players[p].x, y: ROOMS[r].players[p].y, reviveProgress: 0 });
                 }
 
-                // Zkontrolovat, zda žije ještě někdo jiný
-                const allDead = Object.values(ROOMS[r].players).every(pl => pl.dead || pl.disconnected);
+                // Check whether any active players are still alive
+                const activePlayers = Object.values(ROOMS[r].players).filter(pl => !pl.disconnected);
+                const allDead = activePlayers.length > 0 && activePlayers.every(pl => pl.dead);
 
                 if (allDead) {
                     ROOMS[r].isGameOver = true;
-                    ROOMS[r].isFinished = true; // Block new joins immediately (v1.428)
                     
                     const finalLevel = ROOMS[r].level;
-                    Object.values(ROOMS[r].players).forEach(p => {
-                        if (p.username) {
+                    Object.values(ROOMS[r].players).forEach(pObj => {
+                        if (pObj.username) {
                             // 1. Save max level
-                            db.run(`UPDATE accounts SET max_level = MAX(max_level, ?) WHERE username = ?`, [finalLevel, p.username]);
+                            db.run(`UPDATE accounts SET max_level = MAX(max_level, ?) WHERE username = ?`, [finalLevel, pObj.username]);
                             
-                            // 2. Authoritative Final Flush (v1.428)
-                            if (p.pendingRewards > 0) {
-                                flushUsernameRewards(p.username, p.pendingRewards);
-                                p.pendingRewards = 0;
+                            // 2. Authoritative Final Flush
+                            if (pObj.pendingRewards > 0) {
+                                flushUsernameRewards(pObj.username, pObj.pendingRewards);
+                                pObj.pendingRewards = 0;
                             }
                         }
                     });
 
-                    io.to(r).emit('teamGameOver', { dogeEarned: ROOMS[r].dogeEarned });
+                    io.to(r).emit('teamGameOver', { 
+                        dogeEarned: ROOMS[r].dogeEarned,
+                        level: ROOMS[r].level
+                    });
 
-                    // v1.428: Completely shut down the room after 5 seconds
+                    // Reset room state so players can launch again together on the planet!
                     setTimeout(() => {
                         if (ROOMS[r]) {
-                            console.log(`[ROOM] Shutting down room ${r}`);
-                            delete ROOMS[r];
+                            ROOMS[r].isStarted = false;
+                            ROOMS[r].isLocked = false;
+                            ROOMS[r].isGameOver = false;
+                            ROOMS[r].isFinished = false;
+                            ROOMS[r].paused = true;
+                            ROOMS[r].level = 1;
+                            ROOMS[r].xp = 0;
+                            ROOMS[r].time = 0;
+                            ROOMS[r].enemies = [];
+                            ROOMS[r].gems = [];
+                            ROOMS[r].baits = [];
+                            ROOMS[r].tombstones = [];
+                            ROOMS[r].envObjects = [];
+                            ROOMS[r].lastBossLevelSpawned = 0;
+
+                            for (const pId in ROOMS[r].players) {
+                                ROOMS[r].players[pId].dead = false;
+                                ROOMS[r].players[pId].hp = ROOMS[r].players[pId].maxHp || 100;
+                                ROOMS[r].players[pId].x = 0;
+                                ROOMS[r].players[pId].y = 0;
+                            }
+
+                            io.to(r).emit('roomLobbyUpdate', {
+                                roomId: r,
+                                planetId: ROOMS[r].planetId,
+                                isStarted: false,
+                                isBattleActive: false,
+                                players: Object.values(ROOMS[r].players).filter(pl => !pl.disconnected)
+                            });
                         }
-                    }, 5000);
+                    }, 1200);
+                } else {
+                    // Battle still active with remaining pilots fighting in space
+                    io.to(r).emit('roomLobbyUpdate', {
+                        roomId: r,
+                        planetId: ROOMS[r].planetId,
+                        isStarted: true,
+                        isBattleActive: true,
+                        players: Object.values(ROOMS[r].players).filter(pl => !pl.disconnected)
+                    });
                 }
             }
         }
