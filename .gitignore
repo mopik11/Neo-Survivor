@@ -28,3 +28,6 @@ server_config.js
 .env
 get_my_hash.js
 neo_survivor.db
+
+# Showcase
+showcase.html
