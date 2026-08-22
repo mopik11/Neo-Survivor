@@ -2278,6 +2278,10 @@ io.on('connection', (socket) => {
         const p = socket.playerId || (data && data.playerId);
         if (r && ROOMS[r] && ROOMS[r].players[p]) {
             ROOMS[r].players[p].disconnected = true;
+            if (ROOMS[r].tombstones) {
+                ROOMS[r].tombstones = ROOMS[r].tombstones.filter(t => t.playerId !== p);
+            }
+            io.to(r).emit('tombstoneRemoved', { playerId: p });
             socket.leave(r);
             io.to(r).emit('roomLobbyUpdate', {
                 roomId: r,
@@ -2285,6 +2289,22 @@ io.on('connection', (socket) => {
                 isStarted: ROOMS[r].isStarted,
                 players: Object.values(ROOMS[r].players).filter(pl => !pl.disconnected)
             });
+        }
+    });
+
+    socket.on('playerLeftToMenu', (data) => {
+        const r = socket.roomId || (data && data.roomId);
+        const p = socket.playerId || (data && data.playerId);
+        if (r && ROOMS[r]) {
+            if (ROOMS[r].tombstones) {
+                ROOMS[r].tombstones = ROOMS[r].tombstones.filter(t => t.playerId !== p);
+            }
+            if (ROOMS[r].players[p]) {
+                ROOMS[r].players[p].dead = true;
+                ROOMS[r].players[p].onBase = true;
+            }
+            io.to(r).emit('tombstoneRemoved', { playerId: p });
+            markPlayerDead(r, p);
         }
     });
 
@@ -2691,6 +2711,10 @@ io.on('connection', (socket) => {
         const p = socket.playerId;
         if (r && ROOMS[r] && ROOMS[r].players[p]) {
             ROOMS[r].players[p].disconnected = true;
+            if (ROOMS[r].tombstones) {
+                ROOMS[r].tombstones = ROOMS[r].tombstones.filter(t => t.playerId !== p);
+            }
+            io.to(r).emit('tombstoneRemoved', { playerId: p });
 
             let anyActive = false;
             let activePlayersCount = 0;

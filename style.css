@@ -3151,7 +3151,7 @@ body.fullscreen-tree-active #meta-modal .modal-content {
 #menu-modal .menu-group-title {
     font-size: 0.8rem;
     letter-spacing: 2px;
-    color: var(--accent-color);
+    color: #38bdf8;
     margin-bottom: 15px !important;
     text-transform: uppercase;
     text-align: left;
@@ -3226,17 +3226,6 @@ body.fullscreen-tree-active #meta-modal .modal-content {
     box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.3) !important;
 }
 
-.special-glow {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.2)) !important;
-    border: 1px solid rgba(167, 139, 250, 0.4) !important;
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.2) !important;
-}
-.special-glow:hover {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3)) !important;
-    border-color: rgba(167, 139, 250, 0.8) !important;
-    box-shadow: 0 0 25px rgba(139, 92, 246, 0.4) !important;
-}
-
 /* --- PREMIUM ANIMATIONS & BUTTONS (v1.546) --- */
 .modal {
     transition: opacity 0.4s ease, visibility 0.4s ease !important;
@@ -3249,40 +3238,6 @@ body.fullscreen-tree-active #meta-modal .modal-content {
 
 .modal.active .modal-content {
     transform: scale(1) translateY(0) !important;
-}
-
-.premium-btn-solo {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 95, 70, 0.25)) !important;
-    border: 1px solid rgba(16, 185, 129, 0.4) !important;
-    box-shadow: 0 5px 15px rgba(16, 185, 129, 0.15) !important;
-}
-.premium-btn-solo:hover {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 95, 70, 0.35)) !important;
-    border-color: rgba(16, 185, 129, 0.8) !important;
-    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4) !important;
-}
-
-.premium-btn-multi {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(76, 29, 149, 0.25)) !important;
-    border: 1px solid rgba(139, 92, 246, 0.4) !important;
-    box-shadow: 0 5px 15px rgba(139, 92, 246, 0.15) !important;
-}
-.premium-btn-multi:hover {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(76, 29, 149, 0.35)) !important;
-    border-color: rgba(139, 92, 246, 0.8) !important;
-    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4) !important;
-}
-
-.premium-btn-quit {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(153, 27, 27, 0.15)) !important;
-    border: 1px solid rgba(239, 68, 68, 0.3) !important;
-    color: #fca5a5 !important;
-}
-.premium-btn-quit:hover {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(153, 27, 27, 0.3)) !important;
-    border-color: rgba(239, 68, 68, 0.6) !important;
-    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3) !important;
-    color: #fff !important;
 }
 
 #menu-group-progression, #menu-group-other, #menu-group-game {

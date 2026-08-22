@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.714
+ * NEO SURVIVOR - Core Game Logic - v1.715
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.714'
+    version: window.GAME_VERSION || '1.715'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.714";
+const GAME_VERSION = window.GAME_VERSION || "1.715";
 const GAME = {
     active: false,
     paused: false,
@@ -3890,7 +3890,11 @@ function handleLocalPlayerDeath() {
     if (NET.isMultiplayer && NET.socket) {
         NET.socket.emit('playerUpdate', { dead: true, hp: 0 });
         NET.socket.emit('playerDied', { roomId: NET.roomId, playerId: myPlayerId });
+        NET.socket.emit('playerLeftToMenu', { roomId: NET.roomId, playerId: myPlayerId });
         NET.socket.emit('requestRoomLobby', { roomId: NET.roomId });
+        if (GAME.entities && GAME.entities.tombstones) {
+            GAME.entities.tombstones = GAME.entities.tombstones.filter(t => t.playerId !== myPlayerId);
+        }
         
         const others = Object.values(NET.others || {});
         const othersAlive = others.some(op => !op.dead);
@@ -8439,7 +8443,11 @@ window.softResetToPlanet = () => {
     if (NET.isMultiplayer && NET.socket && NET.socket.connected && NET.roomId) {
         NET.socket.emit('playerUpdate', { dead: true, hp: 0 });
         NET.socket.emit('playerDied', { roomId: NET.roomId, playerId: myPlayerId });
+        NET.socket.emit('playerLeftToMenu', { roomId: NET.roomId, playerId: myPlayerId });
         NET.socket.emit('requestRoomLobby', { roomId: NET.roomId });
+        if (GAME.entities && GAME.entities.tombstones) {
+            GAME.entities.tombstones = GAME.entities.tombstones.filter(t => t.playerId !== myPlayerId);
+        }
         
         triggerRescueExtraction(() => {
             GAME.active = false;
@@ -8729,6 +8737,12 @@ function initSocket() {
             console.log('[MULTIPLAYER] Room travel fast-forwarded');
             if (window.PlanetVisualEngine && typeof window.PlanetVisualEngine.fastForwardTravel === 'function') {
                 window.PlanetVisualEngine.fastForwardTravel();
+            }
+        });
+
+        NET.socket.on('tombstoneRemoved', (data) => {
+            if (GAME.entities && GAME.entities.tombstones && data && data.playerId) {
+                GAME.entities.tombstones = GAME.entities.tombstones.filter(t => t.playerId !== data.playerId);
             }
         });
 
