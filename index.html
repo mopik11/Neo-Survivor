@@ -72,11 +72,10 @@
             <p class="subtitle" style="font-size: 0.8rem; letter-spacing: 5px; margin-bottom: 3.5rem;">AUTHENTICATION REQUIRED</p>
           </div>
           
-          <div style="width: 100%; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+          <div style="width: 100%; display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px;">
               <div class="input-wrapper" style="position: relative; width: 100%;">
                 <input type="text" id="input-login-name" placeholder="PŘEZDÍVKA" maxlength="15" class="login-input" style="text-align: center;">
               </div>
-              <div id="login-user-hint" style="font-size: 0.8rem; font-weight: 800; min-height: 18px; margin-top: -4px; transition: all 0.25s ease; display: flex; align-items: center; justify-content: center; gap: 6px;"></div>
               <div class="input-wrapper" style="position: relative; width: 100%;">
                 <input type="password" id="input-login-pass" placeholder="HESLO" maxlength="15" class="login-input" style="text-align: center;">
               </div>
@@ -100,16 +99,16 @@
             </div>
           </div>
 
-          <div class="join-group" style="margin-bottom: 15px; width: 100%; gap: 12px; display: flex; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
-              <button id="btn-login" class="btn-restart btn-join" style="flex: 1.5; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">PŘIHLÁSIT</button>
-              <button id="btn-register" class="btn-restart btn-join" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); box-shadow: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">REGISTROVAT</button>
+          <div class="join-group" style="margin-bottom: 15px; width: 100%; gap: 12px; display: flex;">
+              <button id="btn-login" class="btn-restart btn-join" style="flex: 1.5; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border: none;">PŘIHLÁSIT</button>
+              <button id="btn-register" class="btn-restart btn-join" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); box-shadow: none;">REGISTROVAT</button>
           </div>
           
           <p id="login-error" style="color: #f87171; font-size: 0.85rem; font-weight: 600; height: 15px; margin-top: 5px; text-shadow: 0 0 10px rgba(239, 68, 68, 0.2);"></p>
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.718
+            NEO SURVIVOR v1.719
           </div>
         </div>
       </div>
@@ -198,7 +197,7 @@
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
             <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.718</span>
+              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.719</span>
             </div>
 
             <div id="menu-links" class="mobile-stack-links" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 15px;">
@@ -1029,7 +1028,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>window.GAME_VERSION = '1.718';</script>
-    <script type="module" src="./main.js?v=1.718"></script>
+    <script>window.GAME_VERSION = '1.719';</script>
+    <script type="module" src="./main.js?v=1.719"></script>
   </body>
 </html>

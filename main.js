@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.718
+ * NEO SURVIVOR - Core Game Logic - v1.719
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.718'
+    version: window.GAME_VERSION || '1.719'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.718";
+const GAME_VERSION = window.GAME_VERSION || "1.719";
 const GAME = {
     active: false,
     paused: false,
@@ -9568,7 +9568,6 @@ let authDetectionState = null; // null: unknown/default, true: account exists, f
 function initAutoAccountDetection() {
     const inputName = document.getElementById('input-login-name');
     const inputPass = document.getElementById('input-login-pass');
-    const hint = document.getElementById('login-user-hint');
     const btnLogin = document.getElementById('btn-login');
     const btnRegister = document.getElementById('btn-register');
     if (!inputName || !btnLogin || !btnRegister) return;
@@ -9577,73 +9576,57 @@ function initAutoAccountDetection() {
 
     const applyDefaultUI = () => {
         authDetectionState = null;
-        if (hint) {
-            hint.innerHTML = '';
-            hint.style.color = '#94a3b8';
-        }
+        btnLogin.style.display = 'block';
         btnLogin.style.flex = '1.5';
+        btnLogin.style.width = '';
         btnLogin.style.background = 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)';
         btnLogin.style.border = 'none';
-        btnLogin.style.boxShadow = '';
-        btnLogin.style.transform = 'scale(1)';
+        btnLogin.style.boxShadow = 'none';
+        btnLogin.style.transform = 'none';
         btnLogin.style.opacity = '1';
-        btnLogin.innerHTML = window.T("PŘIHLÁSIT");
+        btnLogin.innerText = window.T("PŘIHLÁSIT");
 
+        btnRegister.style.display = 'block';
         btnRegister.style.flex = '1';
+        btnRegister.style.width = '';
         btnRegister.style.background = 'rgba(255, 255, 255, 0.05)';
         btnRegister.style.border = '1px solid rgba(255, 255, 255, 0.1)';
         btnRegister.style.boxShadow = 'none';
-        btnRegister.style.transform = 'scale(1)';
+        btnRegister.style.transform = 'none';
         btnRegister.style.opacity = '1';
-        btnRegister.innerHTML = window.T("REGISTROVAT");
+        btnRegister.innerText = window.T("REGISTROVAT");
     };
 
     const applyExistsUI = () => {
         authDetectionState = true;
-        if (hint) {
-            hint.innerHTML = `<span style="color: #38bdf8; display: inline-flex; align-items: center; gap: 5px;">🟢 ` + window.T("Účet nalezen v databázi") + `</span>`;
-        }
-        // Big prominent Login button
-        btnLogin.style.flex = '2.2';
-        btnLogin.style.background = 'linear-gradient(135deg, #38bdf8 0%, #6366f1 100%)';
-        btnLogin.style.border = '1.5px solid #38bdf8';
-        btnLogin.style.boxShadow = '0 0 25px rgba(56, 189, 248, 0.5)';
-        btnLogin.style.transform = 'scale(1.02)';
+        // Show ONLY Login button (full width, no emoji, no glow)
+        btnLogin.style.display = 'block';
+        btnLogin.style.flex = '1';
+        btnLogin.style.width = '100%';
+        btnLogin.style.background = 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)';
+        btnLogin.style.border = 'none';
+        btnLogin.style.boxShadow = 'none';
+        btnLogin.style.transform = 'none';
         btnLogin.style.opacity = '1';
-        btnLogin.innerHTML = `<span>🔑</span> ` + window.T("PŘIHLÁSIT SE");
+        btnLogin.innerText = window.T("PŘIHLÁSIT SE");
 
-        // Small secondary Register button
-        btnRegister.style.flex = '0.9';
-        btnRegister.style.background = 'rgba(255, 255, 255, 0.05)';
-        btnRegister.style.border = '1px solid rgba(255, 255, 255, 0.1)';
-        btnRegister.style.boxShadow = 'none';
-        btnRegister.style.transform = 'scale(0.98)';
-        btnRegister.style.opacity = '0.75';
-        btnRegister.innerHTML = window.T("Registrovat");
+        btnRegister.style.display = 'none';
     };
 
     const applyNewUserUI = () => {
         authDetectionState = false;
-        if (hint) {
-            hint.innerHTML = `<span style="color: #10b981; display: inline-flex; align-items: center; gap: 5px;">✨ ` + window.T("Nový hráč – účet neexistuje") + `</span>`;
-        }
-        // Big prominent Register button
-        btnRegister.style.flex = '2.2';
+        // Show ONLY Register button (full width, no emoji, no glow)
+        btnRegister.style.display = 'block';
+        btnRegister.style.flex = '1';
+        btnRegister.style.width = '100%';
         btnRegister.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-        btnRegister.style.border = '1.5px solid #10b981';
-        btnRegister.style.boxShadow = '0 0 25px rgba(16, 185, 129, 0.5)';
-        btnRegister.style.transform = 'scale(1.02)';
+        btnRegister.style.border = 'none';
+        btnRegister.style.boxShadow = 'none';
+        btnRegister.style.transform = 'none';
         btnRegister.style.opacity = '1';
-        btnRegister.innerHTML = `<span>🚀</span> ` + window.T("REGISTROVAT SE");
+        btnRegister.innerText = window.T("REGISTROVAT SE");
 
-        // Small secondary Login button
-        btnLogin.style.flex = '0.9';
-        btnLogin.style.background = 'rgba(255, 255, 255, 0.05)';
-        btnLogin.style.border = '1px solid rgba(255, 255, 255, 0.1)';
-        btnLogin.style.boxShadow = 'none';
-        btnLogin.style.transform = 'scale(0.98)';
-        btnLogin.style.opacity = '0.75';
-        btnLogin.innerHTML = window.T("Přihlásit");
+        btnLogin.style.display = 'none';
     };
 
     const triggerCheck = () => {
@@ -9653,14 +9636,11 @@ function initAutoAccountDetection() {
             applyDefaultUI();
             return;
         }
-        if (hint) {
-            hint.innerHTML = `<span style="color: #94a3b8; opacity: 0.8; display: inline-flex; align-items: center; gap: 5px;">🔍 ` + window.T("Ověřuji jméno...") + `</span>`;
-        }
         checkTimeout = setTimeout(() => {
             if (NET.socket && NET.socket.connected) {
                 NET.socket.emit('checkUsername', { user: val });
             }
-        }, 200);
+        }, 180);
     };
 
     inputName.addEventListener('input', triggerCheck);
@@ -9772,6 +9752,11 @@ function handleAuth(isLogin) {
                 document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
                 document.getElementById('menu-modal').classList.add('active');
 
+                if (typeof checkPortraitLock === 'function') checkPortraitLock();
+                if (typeof checkAndShowRotateAnimation === 'function') {
+                    checkAndShowRotateAnimation();
+                }
+
                 if (!GAME.loopStarted) {
                     GAME.loopStarted = true;
                     requestAnimationFrame(loop);
@@ -9800,6 +9785,11 @@ function handleAuth(isLogin) {
         document.getElementById('display-player-name').innerText = nameVal;
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('menu-modal').classList.add('active');
+
+        if (typeof checkPortraitLock === 'function') checkPortraitLock();
+        if (typeof checkAndShowRotateAnimation === 'function') {
+            checkAndShowRotateAnimation();
+        }
 
         if (!GAME.loopStarted) {
             GAME.loopStarted = true;
@@ -10853,6 +10843,9 @@ function init() {
     setInterval(() => { if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume(); }, 500);
 
     function checkAndShowRotateAnimation() {
+        const loginModal = document.getElementById('login-modal');
+        const isLoginVisible = loginModal && loginModal.classList.contains('active');
+        if (isLoginVisible || !META.playerName) return;
         if (window.innerWidth < window.innerHeight && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
             const modal = document.getElementById('rotate-device-modal');
             if (modal) {
@@ -10932,8 +10925,14 @@ function init() {
         const loginModal = document.getElementById('login-modal');
         const isLoginVisible = loginModal && loginModal.classList.contains('active');
         
-        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (isMobileDevice && window.innerHeight > window.innerWidth && !isLoginVisible) {
+        // Never lock or prompt landscape orientation before user is logged in
+        if (isLoginVisible || !META.playerName) {
+            portraitOverlay.style.display = 'none';
+            return;
+        }
+        
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+        if (isMobileDevice && window.innerHeight > window.innerWidth) {
             portraitOverlay.style.display = 'flex';
         } else {
             portraitOverlay.style.display = 'none';
