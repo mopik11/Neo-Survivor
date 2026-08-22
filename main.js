@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.696
+ * NEO SURVIVOR - Core Game Logic - v1.697
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.696'
+    version: window.GAME_VERSION || '1.697'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.696";
+const GAME_VERSION = window.GAME_VERSION || "1.697";
 const GAME = {
     active: false,
     paused: false,
@@ -6103,74 +6103,78 @@ const PlanetVisualEngine = {
                     { x: cx + maxSpread + curPan, y: groundY + (isMobileHeight ? 8 : 12) }
                 ];
 
-                // 8. Draw Vector Buildings & Large Clean Floating Price Badges
-                const bList = getCurrentWorldBuildings();
-                const curWorldBuildings = (META.planet?.planets?.[this.currentPlanetId]?.buildings) || (this.currentPlanetId === 'terra' ? (META.planet?.buildings || {}) : {});
-
-                bList.forEach((bInfo, idx) => {
-                    const pos = this.plotPositions[idx];
-                    if (!pos) return;
-                    
-                    const isBuilt = !!curWorldBuildings[bInfo.id];
-                    
-                    // Hover detection
-                    let isHovered = false;
-                    if (this.state === 'idle' && this.mouseX !== undefined && this.mouseY !== undefined) {
-                        const dx = this.mouseX - pos.x;
-                        const dy = this.mouseY - (pos.y - 15);
-                        if (Math.abs(dx) < 45 && Math.abs(dy) < 55) isHovered = true;
-                    }
-
-                    // Draw the custom vector modeled building
-                    this.drawBuildingModel(ctx, pos.x, pos.y, bInfo.id, isBuilt, isHovered, time, bScale);
-
-                    // Draw large, crisp floating text box / price badge in front
-                    ctx.save();
-                    const badgeW = isMobileHeight ? Math.max(92, 102 * bScale) : Math.max(80, 88 * bScale);
-                    const badgeH = isMobileHeight ? (32 * bScale) : (28 * bScale);
-                    // On low height mobile screens, place badge ABOVE building so it never overlaps buttons/horizon!
-                    const badgeY = isMobileHeight ? (pos.y - 52 * bScale) : (pos.y + 12);
-
-                    ctx.fillStyle = isHovered ? 'rgba(15, 23, 42, 0.96)' : 'rgba(10, 15, 30, 0.92)';
-                    ctx.strokeStyle = isBuilt ? (curWorld.surfaceLine || '#10b981') : (isHovered ? '#fbbf24' : 'rgba(255, 255, 255, 0.25)');
-                    ctx.lineWidth = isHovered ? 2 : 1.2;
-                    if (isHovered && !isBuilt) {
-                        ctx.shadowBlur = 12;
-                        ctx.shadowColor = '#fbbf24';
-                    }
-                    ctx.beginPath();
-                    ctx.roundRect(pos.x - badgeW / 2, badgeY, badgeW, badgeH, 6);
-                    ctx.fill();
-                    ctx.stroke();
-
-                    if (isBuilt) {
-                        ctx.fillStyle = curWorld.surfaceLine || '#34d399';
-                        ctx.font = `bold ${Math.max(8.5, 9.2 * bScale)}px "Inter", Arial, sans-serif`;
-                        ctx.textAlign = 'center';
-                        ctx.fillText('AKTIVNÍ', pos.x, badgeY + 12 * bScale);
-                        ctx.fillStyle = '#fbbf24';
-                        ctx.font = `bold ${Math.max(8.0, 8.6 * bScale)}px "Inter", Arial, sans-serif`;
-                        ctx.fillText(`+${formatNumberFull(bInfo.income || 1)} DOGE/m`, pos.x, badgeY + 23 * bScale);
-                    } else {
-                        ctx.fillStyle = isHovered ? '#fbbf24' : '#f1f5f9';
-                        ctx.font = `bold ${Math.max(8.5, 8.8 * bScale)}px "Inter", Arial, sans-serif`;
-                        ctx.textAlign = 'center';
-                        ctx.fillText(bInfo.name.split(' #')[0], pos.x, badgeY + 11.5 * bScale);
-
-                        const canAfford = (META.currency || 0) >= bInfo.cost;
-                        ctx.fillStyle = canAfford ? (curWorld.surfaceLine || '#10b981') : '#ef4444';
-                        ctx.font = `900 ${Math.max(9.5, 10.2 * bScale)}px "Inter", Arial, sans-serif`;
-                        const costText = (bInfo.cost >= 1e12) ? (bInfo.cost / 1e12) + 'T DOGE' : (bInfo.cost >= 1e9) ? (bInfo.cost / 1e9) + 'B DOGE' : (bInfo.cost >= 1e6) ? (bInfo.cost / 1e6) + 'M DOGE' : (bInfo.cost >= 1000) ? (bInfo.cost / 1000) + 'k DOGE' : bInfo.cost + ' DOGE';
-                        ctx.fillText(costText, pos.x, badgeY + 24 * bScale);
-                    }
-                    ctx.restore();
-                });
-
-                // 9. Futuristic Landing Pad(s) Platform (Singleplayer: 1 center pad, Multiplayer Lobby: pads for all joined players!)
-                const isMpLobby = !!(this.multiplayerLobby && this.multiplayerLobby.active && this.multiplayerLobby.players && this.multiplayerLobby.players.length > 0);
-                const lobbyPlayers = isMpLobby ? this.multiplayerLobby.players : [{ id: myPlayerId, name: META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč', shipColor: META.selectedShipColor || '#38bdf8' }];
+                // 8. Draw Vector Buildings & Large Clean Floating Price Badges (Solo only)
+                const isMpLobby = !!(this.multiplayerLobby && this.multiplayerLobby.active);
+                const lobbyPlayers = isMpLobby 
+                    ? ensureLocalPlayerInList(this.multiplayerLobby.players) 
+                    : [{ id: myPlayerId, name: META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč', shipColor: META.selectedShipColor || '#38bdf8' }];
                 const numPads = lobbyPlayers.length;
                 const padSpacing = Math.min(140, Math.max(90, (w * 0.75) / Math.max(1, numPads)));
+
+                if (!isMpLobby) {
+                    const bList = getCurrentWorldBuildings();
+                    const curWorldBuildings = (META.planet?.planets?.[this.currentPlanetId]?.buildings) || (this.currentPlanetId === 'terra' ? (META.planet?.buildings || {}) : {});
+
+                    bList.forEach((bInfo, idx) => {
+                        const pos = this.plotPositions[idx];
+                        if (!pos) return;
+                        
+                        const isBuilt = !!curWorldBuildings[bInfo.id];
+                        
+                        // Hover detection
+                        let isHovered = false;
+                        if (this.state === 'idle' && this.mouseX !== undefined && this.mouseY !== undefined) {
+                            const dx = this.mouseX - pos.x;
+                            const dy = this.mouseY - (pos.y - 15);
+                            if (Math.abs(dx) < 45 && Math.abs(dy) < 55) isHovered = true;
+                        }
+
+                        // Draw the custom vector modeled building
+                        this.drawBuildingModel(ctx, pos.x, pos.y, bInfo.id, isBuilt, isHovered, time, bScale);
+
+                        // Draw large, crisp floating text box / price badge in front
+                        ctx.save();
+                        const badgeW = isMobileHeight ? Math.max(92, 102 * bScale) : Math.max(80, 88 * bScale);
+                        const badgeH = isMobileHeight ? (32 * bScale) : (28 * bScale);
+                        const badgeY = isMobileHeight ? (pos.y - 52 * bScale) : (pos.y + 12);
+
+                        ctx.fillStyle = isHovered ? 'rgba(15, 23, 42, 0.96)' : 'rgba(10, 15, 30, 0.92)';
+                        ctx.strokeStyle = isBuilt ? (curWorld.surfaceLine || '#10b981') : (isHovered ? '#fbbf24' : 'rgba(255, 255, 255, 0.25)');
+                        ctx.lineWidth = isHovered ? 2 : 1.2;
+                        if (isHovered && !isBuilt) {
+                            ctx.shadowBlur = 12;
+                            ctx.shadowColor = '#fbbf24';
+                        }
+                        ctx.beginPath();
+                        ctx.roundRect(pos.x - badgeW / 2, badgeY, badgeW, badgeH, 6);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        if (isBuilt) {
+                            ctx.fillStyle = curWorld.surfaceLine || '#34d399';
+                            ctx.font = `bold ${Math.max(8.5, 9.2 * bScale)}px "Inter", Arial, sans-serif`;
+                            ctx.textAlign = 'center';
+                            ctx.fillText('AKTIVNÍ', pos.x, badgeY + 12 * bScale);
+                            ctx.fillStyle = '#fbbf24';
+                            ctx.font = `bold ${Math.max(8.0, 8.6 * bScale)}px "Inter", Arial, sans-serif`;
+                            ctx.fillText(`+${formatNumberFull(bInfo.income || 1)} DOGE/m`, pos.x, badgeY + 23 * bScale);
+                        } else {
+                            ctx.fillStyle = isHovered ? '#fbbf24' : '#f1f5f9';
+                            ctx.font = `bold ${Math.max(8.5, 8.8 * bScale)}px "Inter", Arial, sans-serif`;
+                            ctx.textAlign = 'center';
+                            ctx.fillText(bInfo.name.split(' #')[0], pos.x, badgeY + 11.5 * bScale);
+
+                            const canAfford = (META.currency || 0) >= bInfo.cost;
+                            ctx.fillStyle = canAfford ? (curWorld.surfaceLine || '#10b981') : '#ef4444';
+                            ctx.font = `900 ${Math.max(9.5, 10.2 * bScale)}px "Inter", Arial, sans-serif`;
+                            const costText = (bInfo.cost >= 1e12) ? (bInfo.cost / 1e12) + 'T DOGE' : (bInfo.cost >= 1e9) ? (bInfo.cost / 1e9) + 'B DOGE' : (bInfo.cost >= 1e6) ? (bInfo.cost / 1e6) + 'M DOGE' : (bInfo.cost >= 1000) ? (bInfo.cost / 1000) + 'k DOGE' : bInfo.cost + ' DOGE';
+                            ctx.fillText(costText, pos.x, badgeY + 24 * bScale);
+                        }
+                        ctx.restore();
+                    });
+                }
+
+                // 9. Futuristic Landing Pad(s) Platform (Singleplayer: 1 center pad, Multiplayer Lobby: pads for all joined players!)
                 const singlePadW = isMpLobby ? Math.min(130, padSpacing * 0.92) : Math.min(isMobileHeight ? 170 : 230, w * 0.30);
                 const padH = isMobileHeight ? 22 : 28;
 
@@ -6235,8 +6239,10 @@ const PlanetVisualEngine = {
             ctx.restore();
 
             // 11. Draw Vector Modelled Rocket Ship(s)
-            const isMpLobby = !!(this.multiplayerLobby && this.multiplayerLobby.active && this.multiplayerLobby.players && this.multiplayerLobby.players.length > 0);
-            const lobbyPlayers = isMpLobby ? this.multiplayerLobby.players : [{ id: myPlayerId, name: META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč', shipColor: META.selectedShipColor || '#38bdf8' }];
+            const isMpLobby = !!(this.multiplayerLobby && this.multiplayerLobby.active);
+            const lobbyPlayers = isMpLobby 
+                ? ensureLocalPlayerInList(this.multiplayerLobby.players) 
+                : [{ id: myPlayerId, name: META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč', shipColor: META.selectedShipColor || '#38bdf8' }];
             const numPads = lobbyPlayers.length;
             const padSpacing = Math.min(140, Math.max(90, (w * 0.75) / Math.max(1, numPads)));
 
@@ -8295,16 +8301,17 @@ function initSocket() {
         NET.socket.on('roomLobbyUpdate', (data) => {
             console.log('[ROOM LOBBY UPDATE]', data);
             if (window.PlanetVisualEngine && window.PlanetVisualEngine.multiplayerLobby) {
-                window.PlanetVisualEngine.multiplayerLobby.players = data.players || [];
+                const pList = ensureLocalPlayerInList(data.players);
+                window.PlanetVisualEngine.multiplayerLobby.players = pList;
                 window.PlanetVisualEngine.multiplayerLobby.planetId = data.planetId || 'terra';
                 if (data.planetId && window.PLANET_WORLDS) {
                     window.PlanetVisualEngine.currentPlanetId = data.planetId;
                     window.PlanetVisualEngine.currentPlanet = PLANET_WORLDS.find(p => p.id === data.planetId) || PLANET_WORLDS[0];
                 }
                 const countEl = document.getElementById('mp-staging-count');
-                if (countEl) countEl.innerText = (data.players || []).length;
+                if (countEl) countEl.innerText = pList.length;
                 const planetEl = document.getElementById('mp-staging-planet');
-                if (planetEl && window.PlanetVisualEngine.currentPlanet) {
+                if (planetEl && window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanet) {
                     planetEl.innerText = `${window.PlanetVisualEngine.currentPlanet.name} (${window.PlanetVisualEngine.currentPlanet.icon || '🪐'})`;
                 }
                 if (typeof playSound === 'function') playSound('select');
@@ -8769,6 +8776,23 @@ function syncShot(proj) {
     });
 }
 
+function ensureLocalPlayerInList(playersList) {
+    const myName = META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč';
+    const myShipColor = META.selectedShipColor || '#38bdf8';
+    const myLevel = META.maxLevel || 1;
+    let list = Array.isArray(playersList) ? [...playersList] : [];
+    const hasMe = list.some(p => p.id === myPlayerId || p.name === myName);
+    if (!hasMe) {
+        list.unshift({
+            id: myPlayerId,
+            name: myName,
+            level: myLevel,
+            shipColor: myShipColor
+        });
+    }
+    return list;
+}
+
 window.openMultiplayerStaging = function(data) {
     document.querySelectorAll('.modal:not(#planet-modal)').forEach(m => m.classList.remove('active'));
     
@@ -8782,13 +8806,15 @@ window.openMultiplayerStaging = function(data) {
     const statusTag = document.getElementById('planet-status-tag');
     if (statusTag) statusTag.style.display = 'none';
 
+    const pList = ensureLocalPlayerInList(data.players);
+
     if (window.PlanetVisualEngine) {
         const pId = data.planetId || 'terra';
         window.PlanetVisualEngine.multiplayerLobby = {
             active: true,
             roomId: data.roomId,
             planetId: pId,
-            players: data.players || []
+            players: pList
         };
         window.PlanetVisualEngine.currentPlanetId = pId;
         window.PlanetVisualEngine.currentPlanet = PLANET_WORLDS.find(p => p.id === pId) || PLANET_WORLDS[0];
@@ -8814,7 +8840,7 @@ window.openMultiplayerStaging = function(data) {
         const codeEl = document.getElementById('mp-staging-code');
         if (codeEl) codeEl.innerText = `#${data.roomId}`;
         const countEl = document.getElementById('mp-staging-count');
-        if (countEl) countEl.innerText = (data.players || []).length;
+        if (countEl) countEl.innerText = pList.length;
         const planetEl = document.getElementById('mp-staging-planet');
         if (planetEl && window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanet) {
             planetEl.innerText = `${window.PlanetVisualEngine.currentPlanet.name} (${window.PlanetVisualEngine.currentPlanet.icon || '🪐'})`;
