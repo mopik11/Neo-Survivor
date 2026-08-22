@@ -2273,15 +2273,16 @@ io.on('connection', (socket) => {
         console.log(`[ROOM ${r}] Player ${p} marked DEAD. Active: ${activePlayers.length}, AllDead: ${allDead}`);
 
         if (allDead) {
-            ROOMS[r].isGameOver = true;
+            ROOMS[r].isGameOver = false;
+            ROOMS[r].isStarted = false;
+            ROOMS[r].isLocked = false;
+            ROOMS[r].isFinished = false;
+            ROOMS[r].paused = true;
             
             const finalLevel = ROOMS[r].level;
             Object.values(ROOMS[r].players).forEach(pObj => {
                 if (pObj.username) {
-                    // 1. Save max level
                     db.run(`UPDATE accounts SET max_level = MAX(max_level, ?) WHERE username = ?`, [finalLevel, pObj.username]);
-                    
-                    // 2. Authoritative Final Flush
                     if (pObj.pendingRewards > 0) {
                         flushUsernameRewards(pObj.username, pObj.pendingRewards);
                         pObj.pendingRewards = 0;
@@ -2294,40 +2295,31 @@ io.on('connection', (socket) => {
                 level: ROOMS[r].level
             });
 
-            // Reset room state so players can launch again together on the planet!
-            setTimeout(() => {
-                if (ROOMS[r]) {
-                    ROOMS[r].isStarted = false;
-                    ROOMS[r].isLocked = false;
-                    ROOMS[r].isGameOver = false;
-                    ROOMS[r].isFinished = false;
-                    ROOMS[r].paused = true;
-                    ROOMS[r].level = 1;
-                    ROOMS[r].xp = 0;
-                    ROOMS[r].time = 0;
-                    ROOMS[r].enemies = [];
-                    ROOMS[r].gems = [];
-                    ROOMS[r].baits = [];
-                    ROOMS[r].tombstones = [];
-                    ROOMS[r].envObjects = [];
-                    ROOMS[r].lastBossLevelSpawned = 0;
+            ROOMS[r].level = 1;
+            ROOMS[r].xp = 0;
+            ROOMS[r].time = 0;
+            ROOMS[r].enemies = [];
+            ROOMS[r].gems = [];
+            ROOMS[r].baits = [];
+            ROOMS[r].tombstones = [];
+            ROOMS[r].envObjects = [];
+            ROOMS[r].lastBossLevelSpawned = 0;
 
-                    for (const pId in ROOMS[r].players) {
-                        ROOMS[r].players[pId].dead = false;
-                        ROOMS[r].players[pId].hp = ROOMS[r].players[pId].maxHp || 100;
-                        ROOMS[r].players[pId].x = 0;
-                        ROOMS[r].players[pId].y = 0;
-                    }
+            for (const pId in ROOMS[r].players) {
+                ROOMS[r].players[pId].dead = false;
+                ROOMS[r].players[pId].hp = ROOMS[r].players[pId].maxHp || 100;
+                ROOMS[r].players[pId].x = 0;
+                ROOMS[r].players[pId].y = 0;
+            }
 
-                    io.to(r).emit('roomLobbyUpdate', {
-                        roomId: r,
-                        planetId: ROOMS[r].planetId,
-                        isStarted: false,
-                        isBattleActive: false,
-                        players: Object.values(ROOMS[r].players).filter(pl => !pl.disconnected)
-                    });
-                }
-            }, 1200);
+            // Immediately broadcast that entire crew is back on base and ready to launch!
+            io.to(r).emit('roomLobbyUpdate', {
+                roomId: r,
+                planetId: ROOMS[r].planetId,
+                isStarted: false,
+                isBattleActive: false,
+                players: Object.values(ROOMS[r].players).filter(pl => !pl.disconnected)
+            });
         } else {
             // Battle still active with remaining pilots fighting in space
             io.to(r).emit('roomLobbyUpdate', {
@@ -2339,6 +2331,21 @@ io.on('connection', (socket) => {
             });
         }
     }
+
+    socket.on('requestRoomLobby', (data) => {
+        const r = socket.roomId || (data && data.roomId);
+        if (r && ROOMS[r]) {
+            const activePl = Object.values(ROOMS[r].players).filter(pl => !pl.disconnected);
+            const isBattle = ROOMS[r].isStarted && activePl.some(pl => !pl.dead);
+            socket.emit('roomLobbyUpdate', {
+                roomId: r,
+                planetId: ROOMS[r].planetId,
+                isStarted: ROOMS[r].isStarted,
+                isBattleActive: isBattle,
+                players: activePl
+            });
+        }
+    });
 
     socket.on('playerDied', (data) => {
         const r = socket.roomId || (data && data.roomId);
@@ -2358,7 +2365,7 @@ io.on('connection', (socket) => {
                 }
             });
 
-            if (data.dead && !ROOMS[r].isGameOver) {
+            if (data.dead) {
                 markPlayerDead(r, p);
             }
         }

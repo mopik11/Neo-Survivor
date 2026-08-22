@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.707
+ * NEO SURVIVOR - Core Game Logic - v1.708
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.707'
+    version: window.GAME_VERSION || '1.708'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.707";
+const GAME_VERSION = window.GAME_VERSION || "1.708";
 const GAME = {
     active: false,
     paused: false,
@@ -3809,6 +3809,7 @@ function handleLocalPlayerDeath() {
     if (NET.isMultiplayer && NET.socket) {
         NET.socket.emit('playerUpdate', { dead: true, hp: 0 });
         NET.socket.emit('playerDied', { roomId: NET.roomId, playerId: myPlayerId });
+        NET.socket.emit('requestRoomLobby', { roomId: NET.roomId });
         
         const others = Object.values(NET.others || {});
         const othersAlive = others.some(op => !op.dead);
@@ -3838,6 +3839,9 @@ function handleLocalPlayerDeath() {
                     });
                     if (window.PlanetVisualEngine) {
                         window.PlanetVisualEngine.startLanding('multiplayer');
+                    }
+                    if (NET.socket) {
+                        NET.socket.emit('requestRoomLobby', { roomId: NET.roomId });
                     }
                 }
             });
@@ -8234,6 +8238,7 @@ window.softResetToPlanet = () => {
     if (NET.isMultiplayer && NET.socket && NET.socket.connected && NET.roomId) {
         NET.socket.emit('playerUpdate', { dead: true, hp: 0 });
         NET.socket.emit('playerDied', { roomId: NET.roomId, playerId: myPlayerId });
+        NET.socket.emit('requestRoomLobby', { roomId: NET.roomId });
         
         triggerRescueExtraction(() => {
             GAME.active = false;
@@ -8263,6 +8268,9 @@ window.softResetToPlanet = () => {
             });
             if (window.PlanetVisualEngine) {
                 window.PlanetVisualEngine.startLanding('multiplayer');
+            }
+            if (NET.socket) {
+                NET.socket.emit('requestRoomLobby', { roomId: NET.roomId });
             }
         });
         return;
@@ -8481,8 +8489,13 @@ function initSocket() {
 
         NET.socket.on('roomLobbyUpdate', (data) => {
             console.log('[ROOM LOBBY UPDATE]', data);
-            if (window.PlanetVisualEngine && window.PlanetVisualEngine.multiplayerLobby) {
+            if (window.PlanetVisualEngine) {
+                if (!window.PlanetVisualEngine.multiplayerLobby) {
+                    window.PlanetVisualEngine.multiplayerLobby = { active: true };
+                }
                 const pList = ensureLocalPlayerInList(data.players);
+                window.PlanetVisualEngine.multiplayerLobby.active = true;
+                window.PlanetVisualEngine.multiplayerLobby.roomId = data.roomId || NET.roomId;
                 window.PlanetVisualEngine.multiplayerLobby.players = pList;
                 window.PlanetVisualEngine.multiplayerLobby.planetId = data.planetId || 'terra';
                 window.PlanetVisualEngine.multiplayerLobby.isBattleActive = !!data.isBattleActive;
@@ -8753,6 +8766,19 @@ function initSocket() {
         NET.socket.on('teamGameOver', (data) => {
             if (GAME.entities.player) GAME.entities.player.dead = true;
             
+            if (window.PlanetVisualEngine && window.PlanetVisualEngine.multiplayerLobby) {
+                window.PlanetVisualEngine.multiplayerLobby.isBattleActive = false;
+                if (window.PlanetVisualEngine.multiplayerLobby.players) {
+                    window.PlanetVisualEngine.multiplayerLobby.players.forEach(p => p.dead = false);
+                }
+                if (typeof window.updateMultiplayerStagingUI === 'function') {
+                    window.updateMultiplayerStagingUI({
+                        isBattleActive: false,
+                        players: window.PlanetVisualEngine.multiplayerLobby.players
+                    });
+                }
+            }
+
             // AUTHORITATIVE STATS: Use server-provided earnings if available
             if (data && data.dogeEarned && data.dogeEarned[myPlayerId]) {
                 GAME.dogeGained = data.dogeEarned[myPlayerId];

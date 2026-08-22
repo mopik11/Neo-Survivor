@@ -108,7 +108,7 @@
           <div id="login-loader" class="loader" style="display: none; width: 25px; height: 25px; border-width: 3px; margin: 15px auto;"></div>
 
           <div id="login-version-display" style="margin-top: 2rem; font-size: 0.7rem; color: #475569; letter-spacing: 2px; font-weight: 800; opacity: 0.5;">
-            NEO SURVIVOR v1.707
+            NEO SURVIVOR v1.708
           </div>
         </div>
       </div>
@@ -197,7 +197,7 @@
           <!-- Menu Footer containing version and links -->
           <div id="menu-footer">
             <div id="menu-version" style="margin-top: 1.5rem; font-size: 0.75rem; color: #474969ff; letter-spacing: 2px;">
-              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.707</span>
+              © 2026 coded by: <b>mopik</b>, designed by: <b>cenek</b> | <span data-i18n="verze:">verze:</span> <span id="menu-version-value">1.708</span>
             </div>
 
             <div id="menu-links" class="mobile-stack-links" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 15px;">
@@ -535,41 +535,42 @@
         </div>
       </div>
 
-      <!-- MULTIPLAYER PLANET STAGING AREA HUD (v1.695) -->
-      <div id="mp-staging-hud" style="display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000020; width: 92%; max-width: 520px; pointer-events: auto;">
-        <div style="background: rgba(15, 23, 42, 0.95); border: 2px solid #10b981; box-shadow: 0 0 45px rgba(16, 185, 129, 0.4); border-radius: 20px; padding: 1.25rem 1.5rem; backdrop-filter: blur(16px);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
-            <div>
-              <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">PLANETA MISE</div>
-              <div id="mp-staging-planet" style="font-size: 1.15rem; color: #fbbf24; font-weight: 900; display: flex; align-items: center; gap: 6px;">🌍 TERRA</div>
+      <!-- MULTIPLAYER PLANET STAGING AREA HUD (v1.708) -->
+      <div id="mp-staging-hud" style="display: none; position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1000020; width: 95%; max-width: 860px; pointer-events: auto;">
+        <div style="background: rgba(15, 23, 42, 0.92); border: 2px solid #10b981; box-shadow: 0 0 35px rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 6px 12px; backdrop-filter: blur(16px); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <!-- Left Info: Planet & Room -->
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 0.62rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">PLANETA</span>
+              <span id="mp-staging-planet" style="font-size: 0.90rem; color: #fbbf24; font-weight: 900; display: flex; align-items: center; gap: 4px;">🌍 TERRA</span>
             </div>
-            <div style="text-align: right;">
-              <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">KÓD MÍSTNOSTI</div>
-              <div id="mp-staging-code" style="font-size: 1.3rem; color: #10b981; font-weight: 900; letter-spacing: 3px;">#ROOM</div>
-            </div>
-          </div>
-          
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <div style="color: #cbd5e1; font-size: 0.82rem; font-weight: 700;">
-              👥 Posádka: <span id="mp-staging-count" style="color: #38bdf8; font-weight: 900;">1</span>
-            </div>
-            <div id="mp-staging-role-info" style="color: #94a3b8; font-size: 0.74rem;">
-              Odstartovat může kdokoliv
+            <div style="width: 1px; height: 22px; background: rgba(255,255,255,0.12);"></div>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 0.62rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">MÍSTNOST</span>
+              <span id="mp-staging-code" style="font-size: 0.95rem; color: #10b981; font-weight: 900; letter-spacing: 2px;">#ROOM</span>
             </div>
           </div>
 
-          <div id="mp-staging-status-msg" style="margin-bottom: 12px; font-size: 0.82rem; font-weight: 800; text-align: center; color: #10b981; padding: 4px 8px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
-            🟢 CELÁ POSÁDKA NA ZÁKLADNĚ – PŘIPRAVENO
+          <!-- Middle: Status Banner -->
+          <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 160px; justify-content: center;">
+            <div id="mp-staging-status-msg" style="width: 100%; font-size: 0.74rem; font-weight: 800; text-align: center; color: #10b981; padding: 4px 8px; background: rgba(0,0,0,0.35); border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              🟢 CELÁ POSÁDKA NA ZÁKLADNĚ – PŘIPRAVENO
+            </div>
           </div>
 
-          <div style="display: flex; gap: 10px;">
-            <button id="btn-mp-leave" class="btn-hazard-action return" style="flex: 1; padding: 11px 14px; font-size: 0.82rem;" onclick="leaveMultiplayerLobby()">
-              🚪 ODPOJIT SE
+          <!-- Right: Crew & Action Buttons -->
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="color: #cbd5e1; font-size: 0.74rem; font-weight: 700; background: rgba(255,255,255,0.06); padding: 5px 8px; border-radius: 6px; white-space: nowrap;">
+              👥 <span id="mp-staging-count" style="color: #38bdf8; font-weight: 900;">1</span>
+            </div>
+            <button id="btn-mp-leave" class="btn-hazard-action return" style="padding: 6px 10px; font-size: 0.74rem; border-radius: 8px; margin: 0;" onclick="leaveMultiplayerLobby()">
+              🚪 ODPOJIT
             </button>
-            <button id="btn-mp-launch" class="btn-hazard-action continue" style="flex: 2; padding: 11px 16px; font-size: 0.88rem;" onclick="launchMultiplayerMission()">
+            <button id="btn-mp-launch" class="btn-hazard-action continue" style="padding: 6px 14px; font-size: 0.78rem; border-radius: 8px; margin: 0;" onclick="launchMultiplayerMission()">
               🚀 ODSTARTOVAT MISI
             </button>
           </div>
+          <div id="mp-staging-role-info" style="display: none;"></div>
         </div>
       </div>
 
@@ -1027,7 +1028,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>window.GAME_VERSION = '1.707';</script>
-    <script type="module" src="./main.js?v=1.707"></script>
+    <script>window.GAME_VERSION = '1.708';</script>
+    <script type="module" src="./main.js?v=1.708"></script>
   </body>
 </html>
