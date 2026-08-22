@@ -2429,16 +2429,16 @@ canvas {
   /* HRA (Game controls): Bottom Right */
   #menu-group-game {
     position: absolute !important;
-    bottom: max(15px, env(safe-area-inset-bottom)) !important;
-    right: max(15px, env(safe-area-inset-right)) !important;
-    width: 200px !important;
+    bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    right: max(12px, env(safe-area-inset-right)) !important;
+    width: 165px !important;
     z-index: 10 !important;
   }
   
   #menu-group-game .menu-actions-row {
     display: flex !important;
     flex-direction: column !important;
-    gap: 8px !important;
+    gap: 6px !important;
   }
   
   .desktop-play-btn {
@@ -2455,7 +2455,7 @@ canvas {
     display: block !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    margin: 0 0 10px 0 !important;
+    margin: 0 0 6px 0 !important;
   }
   
   #game-mode-select {
@@ -2467,15 +2467,15 @@ canvas {
     justify-content: center !important;
     align-items: center !important;
     width: 100% !important;
-    height: 48px !important;
-    font-size: 1.25rem !important;
+    height: 40px !important;
+    font-size: 1.05rem !important;
     font-weight: 900 !important;
     text-transform: uppercase !important;
     letter-spacing: 1px !important;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
     background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
     border: 2px solid rgba(255, 255, 255, 0.2) !important;
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4) !important;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.4) !important;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
     transition: all 0.2s ease !important;
     margin: 0 !important;
@@ -2489,16 +2489,16 @@ canvas {
   /* POSTUP (Progression): Bottom Left 2x2 Grid */
   #menu-group-progression {
     position: absolute !important;
-    bottom: max(15px, env(safe-area-inset-bottom)) !important;
-    left: max(15px, env(safe-area-inset-left)) !important;
-    width: 270px !important;
+    bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    left: max(12px, env(safe-area-inset-left)) !important;
+    width: 220px !important;
     z-index: 10 !important;
   }
   
   #menu-group-progression .menu-actions-grid {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
+    gap: 6px !important;
     width: 100% !important;
   }
   
@@ -2507,10 +2507,10 @@ canvas {
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 3px !important;
-    padding: 6px 4px !important;
-    height: 60px !important;
-    font-size: 0.75rem !important;
+    gap: 2px !important;
+    padding: 4px !important;
+    height: 48px !important;
+    font-size: 0.7rem !important;
     font-weight: 800 !important;
     text-align: center !important;
     border-radius: 8px !important;
@@ -2525,12 +2525,12 @@ canvas {
   }
   
   #menu-group-progression .menu-actions-grid button span:first-child {
-    font-size: 1.25rem !important;
+    font-size: 1.05rem !important;
     line-height: 1 !important;
   }
 
   #menu-group-progression .menu-actions-grid button span:last-child {
-    font-size: 0.68rem !important;
+    font-size: 0.62rem !important;
     line-height: 1.15 !important;
     text-align: center !important;
     white-space: nowrap !important;
@@ -3765,5 +3765,31 @@ input.gamepad-focus,
     min-width: 130px !important;
     padding: 8px 14px !important;
     font-size: 0.8rem !important;
+  }
+
+  /* 15. MULTIPLAYER STAGING HUD ON MOBILE */
+  #mp-staging-hud {
+    top: 6px !important;
+    width: 90% !important;
+    max-width: 380px !important;
+  }
+  #mp-staging-hud > div {
+    padding: 8px 12px !important;
+    border-radius: 12px !important;
+  }
+  #mp-staging-planet {
+    font-size: 0.85rem !important;
+  }
+  #mp-staging-code {
+    font-size: 0.95rem !important;
+  }
+  #btn-mp-leave, #btn-mp-launch {
+    padding: 7px 10px !important;
+    font-size: 0.72rem !important;
+  }
+  .btn-hazard-action {
+    padding: 8px 12px !important;
+    font-size: 0.76rem !important;
+    border-radius: 10px !important;
   }
 }

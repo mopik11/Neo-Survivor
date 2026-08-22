@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.697
+ * NEO SURVIVOR - Core Game Logic - v1.698
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.697'
+    version: window.GAME_VERSION || '1.698'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.697";
+const GAME_VERSION = window.GAME_VERSION || "1.698";
 const GAME = {
     active: false,
     paused: false,
@@ -6253,26 +6253,7 @@ const PlanetVisualEngine = {
                     const pShipX = cx + padCenterOffset;
                     const isMe = (pl.id === myPlayerId || pl.name === (META.playerName || SecureStorage.getItem('neoSurvivor_user')));
                     
-                    // Smooth landing descent animation when joining
-                    if (pl.targetY === undefined) pl.targetY = restY;
-                    if (pl.animY === undefined) pl.animY = isMe ? restY : (restY - 180);
-                    if (pl.animY < pl.targetY) {
-                        pl.animY += (pl.targetY - pl.animY) * 0.08;
-                        if (Math.random() > 0.4) {
-                            this.particles.push({
-                                x: pShipX + (Math.random() - 0.5) * 20,
-                                y: pl.animY + 45,
-                                vx: (Math.random() - 0.5) * 4,
-                                vy: Math.random() * 2 + 1,
-                                size: Math.random() * 5 + 2,
-                                color: '#38bdf8',
-                                alpha: 0.8,
-                                life: 0.5
-                            });
-                        }
-                    }
-
-                    const pShipY = (this.state === 'takeoff') ? this.shipY : pl.animY;
+                    const pShipY = (this.state === 'takeoff') ? this.shipY : restY;
                     const pShipTilt = (this.state === 'takeoff') ? (this.shipTilt || 0) : 0;
 
                     // Ground shadow under rocket
@@ -8851,16 +8832,44 @@ window.openMultiplayerStaging = function(data) {
 };
 
 window.launchMultiplayerMission = function() {
-    if (NET.socket && NET.roomId) {
-        const curPlanet = (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || 'terra';
-        NET.socket.emit('startMatch', { roomId: NET.roomId, planetId: curPlanet });
-        if (typeof playSound === 'function') playSound('select');
+    const rId = NET.roomId || window.PlanetVisualEngine?.multiplayerLobby?.roomId;
+    console.log('[MULTIPLAYER] Launching mission for room:', rId);
+    if (!rId) {
+        console.warn('[MULTIPLAYER] No roomId found to launch');
+        return;
     }
+    NET.roomId = rId;
+    const curPlanet = (window.PlanetVisualEngine && window.PlanetVisualEngine.currentPlanetId) || 'terra';
+    
+    if (NET.socket) {
+        NET.socket.emit('startMatch', { roomId: rId, planetId: curPlanet });
+        NET.socket.emit('upgradePicked');
+    }
+    
+    // Play sound and trigger cinematic takeoff immediately for instant feedback
+    if (typeof playSound === 'function') playSound('meteor');
+    if (window.PlanetVisualEngine) {
+        window.PlanetVisualEngine.state = 'takeoff';
+    }
+    const hud = document.getElementById('mp-staging-hud');
+    if (hud) hud.style.display = 'none';
+    
+    // Fallback timer to transition into game smoothly even if network has delay
+    setTimeout(() => {
+        if (!GAME.active) {
+            if (window.PlanetVisualEngine && window.PlanetVisualEngine.multiplayerLobby) {
+                window.PlanetVisualEngine.multiplayerLobby.active = false;
+            }
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            startGame();
+        }
+    }, 1200);
 };
 
 window.leaveMultiplayerLobby = function() {
+    const rId = NET.roomId || window.PlanetVisualEngine?.multiplayerLobby?.roomId;
     if (NET.socket) {
-        NET.socket.emit('leaveRoom');
+        NET.socket.emit('leaveRoom', { roomId: rId, playerId: myPlayerId });
     }
     if (window.PlanetVisualEngine && window.PlanetVisualEngine.multiplayerLobby) {
         window.PlanetVisualEngine.multiplayerLobby.active = false;

@@ -2217,7 +2217,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('startMatch', (data) => {
-        const r = socket.roomId;
+        const r = socket.roomId || (data && data.roomId);
         if (r && ROOMS[r]) {
             const room = ROOMS[r];
             if (room.isStarted || room.isLocked) return;
@@ -2235,9 +2235,9 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('leaveRoom', () => {
-        const r = socket.roomId;
-        const p = socket.playerId;
+    socket.on('leaveRoom', (data) => {
+        const r = socket.roomId || (data && data.roomId);
+        const p = socket.playerId || (data && data.playerId);
         if (r && ROOMS[r] && ROOMS[r].players[p]) {
             ROOMS[r].players[p].disconnected = true;
             socket.leave(r);
