@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.706
+ * NEO SURVIVOR - Core Game Logic - v1.707
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.706'
+    version: window.GAME_VERSION || '1.707'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.706";
+const GAME_VERSION = window.GAME_VERSION || "1.707";
 const GAME = {
     active: false,
     paused: false,
@@ -3219,6 +3219,7 @@ function updateUI() {
 }
 
 function showLevelUp(isBossReward = false) {
+    if (!GAME.active || !GAME.entities || !GAME.entities.player || GAME.entities.player.dead) return;
     if (!isBossReward && document.querySelector('.modal.active')) {
         if (!GAME.levelUpQueue) GAME.levelUpQueue = 0;
         GAME.levelUpQueue++;
@@ -3475,12 +3476,14 @@ function applyUpgrade(id, record = true) {
         return; // Keep game paused
     }
 
-    if (NET.isMultiplayer) {
+    if (NET.isMultiplayer && GAME.active && GAME.entities.player && !GAME.entities.player.dead) {
         const waitModal = document.getElementById('waiting-modal');
         if (waitModal) waitModal.classList.add('active');
         NET.socket.emit('upgradePicked');
     } else {
         GAME.paused = false;
+        const waitModal = document.getElementById('waiting-modal');
+        if (waitModal) waitModal.classList.remove('active');
     }
 }
 
@@ -8668,9 +8671,12 @@ function initSocket() {
                     NET.socket.emit('submitScore', { name: META.playerName, level: META.maxLevel, token: NET.sessionToken });
                 }
             }
-            AudioEngine.play('lvlup');
-            GAME.paused = true;
-            showLevelUp();
+            // Only show level up dialog if actively playing and alive in space!
+            if (GAME.active && !GAME.entities.player.dead) {
+                AudioEngine.play('lvlup');
+                GAME.paused = true;
+                showLevelUp();
+            }
         });
 
         NET.socket.on('syncSuccess', (data) => {
@@ -8731,7 +8737,10 @@ function initSocket() {
         NET.socket.on('resumeGame', () => {
             const waitModal = document.getElementById('waiting-modal');
             if (waitModal) waitModal.classList.remove('active');
-            GAME.paused = false;
+            
+            if (GAME.active && (!GAME.entities.player || !GAME.entities.player.dead)) {
+                GAME.paused = false;
+            }
 
             // Track stats
             incrementStat('totalGames');
@@ -8774,16 +8783,20 @@ function initSocket() {
         });
 
         NET.socket.on('bossWarning', (data) => {
+            if (!GAME.active || (GAME.entities.player && GAME.entities.player.dead)) return;
             const bossNames = { 1: 'Dron', 2: 'Kostka', 3: 'Kamikadze', 4: 'Goblin', 5: 'Support', 6: 'Štítonoš', 7: 'Skokan' };
             showBossWarning(bossNames[data.type] || 'Boss', data.soon);
         });
 
         NET.socket.on('bossDefeated', (data) => {
             console.log("[NET] Boss defeated event received!", data);
-            // Server awards the crate, we just prepare the UI
-            GAME.isBossRewardActive = true; 
-            GAME.paused = true;
-            showLevelUp(true);
+            
+            // Only trigger in-game reward screen if actively in battle
+            if (GAME.active && GAME.entities.player && !GAME.entities.player.dead) {
+                GAME.isBossRewardActive = true; 
+                GAME.paused = true;
+                showLevelUp(true);
+            }
             checkAchievements();
     
             // PERMANENTLY ADD REWARDS TO ACCOUNT (v1.425)
@@ -9039,6 +9052,10 @@ window.updateMultiplayerStagingUI = function(data) {
 
 window.openMultiplayerStaging = function(data) {
     document.querySelectorAll('.modal:not(#planet-modal)').forEach(m => m.classList.remove('active'));
+    const waitModal = document.getElementById('waiting-modal');
+    if (waitModal) waitModal.classList.remove('active');
+    const lvlModal = document.getElementById('levelup-modal');
+    if (lvlModal) lvlModal.classList.remove('active');
     
     // Hide standard singleplayer planet menus in multiplayer staging
     const topCard = document.getElementById('planet-top-card');
