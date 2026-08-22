@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.709
+ * NEO SURVIVOR - Core Game Logic - v1.710
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.709'
+    version: window.GAME_VERSION || '1.710'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.709";
+const GAME_VERSION = window.GAME_VERSION || "1.710";
 const GAME = {
     active: false,
     paused: false,
@@ -3782,6 +3782,12 @@ function triggerRescueExtraction(onComplete) {
     GAME.isExtracting = true;
     GAME.paused = false;
 
+    // Immediately mark player dead locally
+    if (GAME.entities.player) {
+        GAME.entities.player.dead = true;
+        GAME.entities.player.hp = 0;
+    }
+
     // Immediately dismiss all gameplay modals so viewport is clean
     document.querySelectorAll('.modal:not(#planet-modal)').forEach(m => m.classList.remove('active'));
     const uiLayer = document.getElementById('ui-layer');
@@ -6380,14 +6386,18 @@ const PlanetVisualEngine = {
 
             if (isMpLobby) {
                 const isBattleRunning = !!(this.multiplayerLobby && this.multiplayerLobby.isBattleActive);
+                const myName = META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč';
                 // Draw all connected players' rockets on their respective pads
                 lobbyPlayers.forEach((pl, pIdx) => {
                     const padCenterOffset = (pIdx - (numPads - 1) / 2) * padSpacing;
                     const pShipX = cx + padCenterOffset;
-                    const isMe = (pl.id === myPlayerId || pl.name === (META.playerName || SecureStorage.getItem('neoSurvivor_user')));
+                    const isMe = (pl.id === myPlayerId || (pl.name && myName && pl.name.toLowerCase() === myName.toLowerCase()));
+                    
+                    // If local player is on the planet staging view, they are on their pad
+                    const isDead = isMe ? (!GAME.active || (GAME.entities.player && GAME.entities.player.dead) || pl.dead) : pl.dead;
                     
                     // If battle is running and player is still alive in space:
-                    const isInSpace = isBattleRunning && !pl.dead;
+                    const isInSpace = isBattleRunning && !isDead;
                     if (isInSpace) {
                         // Holographic radar beacon for rocket in space
                         ctx.save();
@@ -8927,6 +8937,9 @@ window.requestServerList = () => {
 function syncPlayer() {
     if (!NET.isMultiplayer || !NET.socket || !GAME.entities.player) return;
 
+    const isDead = !!(GAME.entities.player.dead || GAME.isExtracting || !GAME.active);
+    const curHp = isDead ? 0 : GAME.entities.player.hp;
+
     let safeLaserTargets = [];
     if (GAME.entities.player.laserTargets) {
         safeLaserTargets = GAME.entities.player.laserTargets.map(chain => chain.map(e => e ? e.id : null).filter(id => id));
@@ -8941,11 +8954,11 @@ function syncPlayer() {
     NET.socket.emit('playerUpdate', {
         x: GAME.entities.player.x,
         y: GAME.entities.player.y,
-        hp: GAME.entities.player.hp,
+        hp: curHp,
         maxHp: GAME.entities.player.maxHp,
         hat: META.upgrades.hat,
         pet: META.selectedPet,
-        dead: GAME.entities.player.dead,
+        dead: isDead,
         level: GAME.entities.player.level,
         aura: GAME.entities.player.aura,
         auraRange: GAME.entities.player.auraRange,
@@ -9015,10 +9028,9 @@ window.updateMultiplayerStagingUI = function(data) {
     if (!hud) return;
 
     const pList = (data && data.players) || (window.PlanetVisualEngine?.multiplayerLobby?.players) || [];
-    const isBattle = !!(data && data.isBattleActive);
-
     const aliveInSpace = pList.filter(p => !p.dead).length;
     const deadOnPlanet = pList.filter(p => p.dead).length;
+    const isBattle = !!(data && data.isBattleActive) && (aliveInSpace > 0);
 
     const countEl = document.getElementById('mp-staging-count');
     if (countEl) {

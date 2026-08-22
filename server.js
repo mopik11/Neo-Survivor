@@ -2359,6 +2359,13 @@ io.on('connection', (socket) => {
         if (r && ROOMS[r] && ROOMS[r].players[p] && data && typeof data === 'object') {
             // ZERO TRUST: Strict Whitelist for visual/non-critical properties only
             const whitelist = ['x', 'y', 'rot', 'anim', 'hat', 'pet', 'name', 'kills', 'dead', 'hp', 'maxHp', 'flipX', 'aura', 'auraRange', 'auraLevel', 'fireTrail', 'kaktus', 'shipType', 'laserTargetsIds', 'orbitals', 'portals'];
+            
+            // If player is already marked dead in this match, NEVER allow unsetting dead to false via playerUpdate!
+            if (ROOMS[r].players[p].dead) {
+                data.dead = true;
+                data.hp = 0;
+            }
+
             whitelist.forEach(key => {
                 if (data[key] !== undefined) {
                     ROOMS[r].players[p][key] = data[key];
