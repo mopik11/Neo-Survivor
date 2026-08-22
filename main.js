@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.713
+ * NEO SURVIVOR - Core Game Logic - v1.714
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.713'
+    version: window.GAME_VERSION || '1.714'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.713";
+const GAME_VERSION = window.GAME_VERSION || "1.714";
 const GAME = {
     active: false,
     paused: false,
@@ -5239,11 +5239,13 @@ const PlanetVisualEngine = {
                 this.flightOffset = this.logicalH * 1.6;
             }
 
-            // Thruster trails in space (fleet formation for multiplayer!)
+            // Thruster trails in space with exact rocket angle & rotation awareness!
             const isMpLobby = !!(this.multiplayerLobby && this.multiplayerLobby.active);
             const lobbyPlayers = isMpLobby 
                 ? ensureLocalPlayerInList(this.multiplayerLobby.players) 
                 : [{ id: myPlayerId, name: META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč', shipColor: META.selectedShipColor || '#38bdf8' }];
+            const rocketScale = Math.min(1.0, Math.max(0.72, (this.logicalH || window.innerHeight) / 520));
+            const nozzleDist = 52 * rocketScale;
 
             if (isMpLobby && lobbyPlayers.length > 1) {
                 const formSpacing = Math.min(120, Math.max(75, 200 / Math.max(1, lobbyPlayers.length)));
@@ -5254,12 +5256,28 @@ const PlanetVisualEngine = {
                     const rY = this.shipY + vOff;
                     const pCol = pl.shipColor || '#38bdf8';
                     
+                    const pShipTilt = (this.shipTilt || 0) + ((pIdx - (lobbyPlayers.length - 1) / 2) * 0.04);
+                    const pShipRot = this.shipRotation || 0;
+                    const totalAngle = pShipTilt + pShipRot;
+
+                    const dirX = -Math.sin(totalAngle);
+                    const dirY = Math.cos(totalAngle);
+                    const perpX = Math.cos(totalAngle);
+                    const perpY = Math.sin(totalAngle);
+
+                    const nozzleCenterX = rX + dirX * nozzleDist;
+                    const nozzleCenterY = rY + dirY * nozzleDist;
+
                     for (let i = 0; i < 4; i++) {
+                        const spread = (Math.random() - 0.5) * 18 * rocketScale;
+                        const exhaustSpeed = Math.random() * 8 + 6;
+                        const lateralScatter = (Math.random() - 0.5) * 2.5;
+
                         this.particles.push({
-                            x: rX + (Math.random() - 0.5) * 22,
-                            y: rY + 52,
-                            vx: (Math.random() - 0.5) * 3,
-                            vy: Math.random() * 8 + 6,
+                            x: nozzleCenterX + perpX * spread,
+                            y: nozzleCenterY + perpY * spread,
+                            vx: dirX * exhaustSpeed + perpX * lateralScatter,
+                            vy: dirY * exhaustSpeed + perpY * lateralScatter,
                             size: Math.random() * 7 + 3,
                             color: Math.random() > 0.4 ? pCol : (Math.random() > 0.5 ? '#f59e0b' : '#ef4444'),
                             alpha: 1,
@@ -5269,12 +5287,25 @@ const PlanetVisualEngine = {
                 });
             } else {
                 const rocketBaseX = cx + (this.shipLateralX || 0);
+                const totalAngle = (this.shipTilt || 0) + (this.shipRotation || 0);
+                const dirX = -Math.sin(totalAngle);
+                const dirY = Math.cos(totalAngle);
+                const perpX = Math.cos(totalAngle);
+                const perpY = Math.sin(totalAngle);
+
+                const nozzleCenterX = rocketBaseX + dirX * nozzleDist;
+                const nozzleCenterY = this.shipY + dirY * nozzleDist;
+
                 for (let i = 0; i < 8; i++) {
+                    const spread = (Math.random() - 0.5) * 22 * rocketScale;
+                    const exhaustSpeed = Math.random() * 9 + 6;
+                    const lateralScatter = (Math.random() - 0.5) * 3;
+
                     this.particles.push({
-                        x: rocketBaseX + (Math.random() - 0.5) * 28,
-                        y: this.shipY + 52,
-                        vx: (Math.random() - 0.5) * 3,
-                        vy: Math.random() * 8 + 6,
+                        x: nozzleCenterX + perpX * spread,
+                        y: nozzleCenterY + perpY * spread,
+                        vx: dirX * exhaustSpeed + perpX * lateralScatter,
+                        vy: dirY * exhaustSpeed + perpY * lateralScatter,
                         size: Math.random() * 8 + 3,
                         color: Math.random() > 0.4 ? '#38bdf8' : (Math.random() > 0.5 ? '#f59e0b' : '#ef4444'),
                         alpha: 1,
@@ -5969,18 +6000,24 @@ const PlanetVisualEngine = {
             ctx.stroke();
             ctx.restore();
 
-            // Nickname badge floating above cockpit
+            // Nickname badge floating above cockpit (counter-rotate so text is always readable!)
+            ctx.save();
+            ctx.translate(0, playerOrbY - 18);
+            if (tilt || rotation) {
+                ctx.rotate(-(tilt + rotation));
+            }
             ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
             ctx.strokeStyle = primaryColor;
             ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.roundRect(-42, playerOrbY - 26, 84, 16, 5);
+            ctx.roundRect(-42, -8, 84, 16, 5);
             ctx.fill();
             ctx.stroke();
             ctx.fillStyle = '#f8fafc';
             ctx.font = 'bold 9.5px "Inter", Arial, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(displayName, 0, playerOrbY - 14);
+            ctx.fillText(displayName, 0, 4);
+            ctx.restore();
         }
         ctx.restore();
     },
