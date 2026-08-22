@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.708
+ * NEO SURVIVOR - Core Game Logic - v1.709
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.708'
+    version: window.GAME_VERSION || '1.709'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.708";
+const GAME_VERSION = window.GAME_VERSION || "1.709";
 const GAME = {
     active: false,
     paused: false,
@@ -8788,9 +8788,9 @@ function initSocket() {
             const waitModal = document.getElementById('waiting-modal');
             if (waitModal) waitModal.classList.remove('active');
 
-            if (GAME.active) {
+            if (GAME.active && !GAME.isExtracting && !GAME.extractionAnim) {
                 gameOver();
-            } else {
+            } else if (!GAME.active) {
                 if (typeof showCurrencyNotification === 'function') {
                     showCurrencyNotification(GAME.dogeGained || 0, "💀 CELÁ POSÁDKA PADLA – MISE UKONČENA");
                 }
@@ -11736,7 +11736,9 @@ function update(dt) {
         });
     }
 
-    if (alivePlayers.length === 0 && GAME.active) gameOver();
+    if (alivePlayers.length === 0 && GAME.active && !GAME.isExtracting && !GAME.extractionAnim) {
+        handleLocalPlayerDeath();
+    }
 
     if (!NET.isMultiplayer && now < GAME.frozenUntil) {
         // V Solu nepřátelé úplně zmrznou
