@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.712
+ * NEO SURVIVOR - Core Game Logic - v1.713
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.712'
+    version: window.GAME_VERSION || '1.713'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.712";
+const GAME_VERSION = window.GAME_VERSION || "1.713";
 const GAME = {
     active: false,
     paused: false,
@@ -4572,6 +4572,15 @@ const PlanetVisualEngine = {
         this.targetY = (this.logicalH <= 500) ? Math.max(160, this.logicalH - 95) : Math.max(220, this.logicalH - 165);
     },
 
+    fastForwardTravel() {
+        if (this.state !== 'traveling') return;
+        const duration = this.travelDuration || 25.0;
+        this.travelStartTime = Date.now() - (duration * 0.985 * 1000);
+        const skipBtn = document.getElementById('btn-planet-skip-travel');
+        if (skipBtn) skipBtn.style.display = 'none';
+        if (typeof playSound === 'function') playSound('upgrade');
+    },
+
     skipTravel() {
         if (this.state !== 'traveling') return;
         const targetWorld = this.targetPlanet || PLANET_WORLDS[0];
@@ -4585,15 +4594,15 @@ const PlanetVisualEngine = {
         saveMetaLocalOnly();
         updateCurrencyUI();
 
-        const duration = this.travelDuration || 30;
-        this.travelStartTime = Date.now() - (duration * 0.985 * 1000);
-        const skipBtn = document.getElementById('btn-planet-skip-travel');
-        if (skipBtn) skipBtn.style.display = 'none';
+        if (this.mode === 'multiplayer' && NET.socket && NET.socket.connected && NET.roomId) {
+            NET.socket.emit('skipRoomTravel', { roomId: NET.roomId });
+        }
+
+        this.fastForwardTravel();
         if (typeof playSound === 'function') playSound('shoot');
-        if (typeof playSound === 'function') playSound('upgrade');
     },
 
-    travelTo(planetId) {
+    travelTo(planetId, emitToServer = true) {
         if (this.currentPlanetId === planetId) return;
         if (this.state === 'traveling' || this.state === 'takeoff' || this.state === 'ejecting') return;
         
@@ -4655,8 +4664,9 @@ const PlanetVisualEngine = {
         const mpStagingHud = document.getElementById('mp-staging-hud');
         if (mpStagingHud) mpStagingHud.style.display = 'none';
 
-        if (this.mode === 'multiplayer' && NET.socket && NET.socket.connected && NET.roomId) {
+        if (emitToServer && this.mode === 'multiplayer' && NET.socket && NET.socket.connected && NET.roomId) {
             NET.socket.emit('setRoomPlanet', { roomId: NET.roomId, planetId: targetWorld.id });
+            NET.socket.emit('travelRoomToPlanet', { roomId: NET.roomId, planetId: targetWorld.id });
         }
 
         const statusTag = document.getElementById('planet-status-tag');
@@ -5229,19 +5239,48 @@ const PlanetVisualEngine = {
                 this.flightOffset = this.logicalH * 1.6;
             }
 
-            // Thruster trail in space
-            const rocketBaseX = cx + (this.shipLateralX || 0);
-            for (let i = 0; i < 8; i++) {
-                this.particles.push({
-                    x: rocketBaseX + (Math.random() - 0.5) * 28,
-                    y: this.shipY + 52,
-                    vx: (Math.random() - 0.5) * 3,
-                    vy: Math.random() * 8 + 6,
-                    size: Math.random() * 8 + 3,
-                    color: Math.random() > 0.4 ? '#38bdf8' : (Math.random() > 0.5 ? '#f59e0b' : '#ef4444'),
-                    alpha: 1,
-                    life: 0.8
+            // Thruster trails in space (fleet formation for multiplayer!)
+            const isMpLobby = !!(this.multiplayerLobby && this.multiplayerLobby.active);
+            const lobbyPlayers = isMpLobby 
+                ? ensureLocalPlayerInList(this.multiplayerLobby.players) 
+                : [{ id: myPlayerId, name: META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč', shipColor: META.selectedShipColor || '#38bdf8' }];
+
+            if (isMpLobby && lobbyPlayers.length > 1) {
+                const formSpacing = Math.min(120, Math.max(75, 200 / Math.max(1, lobbyPlayers.length)));
+                lobbyPlayers.forEach((pl, pIdx) => {
+                    const formOffset = (pIdx - (lobbyPlayers.length - 1) / 2) * formSpacing;
+                    const rX = cx + (this.shipLateralX || 0) + formOffset;
+                    const vOff = Math.abs(pIdx - (lobbyPlayers.length - 1) / 2) * 18;
+                    const rY = this.shipY + vOff;
+                    const pCol = pl.shipColor || '#38bdf8';
+                    
+                    for (let i = 0; i < 4; i++) {
+                        this.particles.push({
+                            x: rX + (Math.random() - 0.5) * 22,
+                            y: rY + 52,
+                            vx: (Math.random() - 0.5) * 3,
+                            vy: Math.random() * 8 + 6,
+                            size: Math.random() * 7 + 3,
+                            color: Math.random() > 0.4 ? pCol : (Math.random() > 0.5 ? '#f59e0b' : '#ef4444'),
+                            alpha: 1,
+                            life: 0.8
+                        });
+                    }
                 });
+            } else {
+                const rocketBaseX = cx + (this.shipLateralX || 0);
+                for (let i = 0; i < 8; i++) {
+                    this.particles.push({
+                        x: rocketBaseX + (Math.random() - 0.5) * 28,
+                        y: this.shipY + 52,
+                        vx: (Math.random() - 0.5) * 3,
+                        vy: Math.random() * 8 + 6,
+                        size: Math.random() * 8 + 3,
+                        color: Math.random() > 0.4 ? '#38bdf8' : (Math.random() > 0.5 ? '#f59e0b' : '#ef4444'),
+                        alpha: 1,
+                        life: 0.8
+                    });
+                }
             }
 
             // Update traveling asteroids
@@ -6485,58 +6524,75 @@ const PlanetVisualEngine = {
             if (isMpLobby) {
                 const isBattleRunning = !!(this.multiplayerLobby && this.multiplayerLobby.isBattleActive);
                 const myName = META.playerName || SecureStorage.getItem('neoSurvivor_user') || 'Hráč';
-                // Draw all connected players' rockets on their respective pads
+                // Draw all connected players' rockets on their respective pads (or in fleet formation during travel!)
                 lobbyPlayers.forEach((pl, pIdx) => {
                     const padCenterOffset = (pIdx - (numPads - 1) / 2) * padSpacing;
-                    const pShipX = cx + padCenterOffset;
                     const isMe = (pl.id === myPlayerId || (pl.name && myName && pl.name.toLowerCase() === myName.toLowerCase()));
                     
-                    // If local player is on the planet staging view, they are on their pad
-                    const isDead = isMe ? (!GAME.active || (GAME.entities.player && GAME.entities.player.dead) || pl.dead) : pl.dead;
-                    
-                    // If battle is running and player is still alive in space:
-                    const isInSpace = isBattleRunning && !isDead;
-                    if (isInSpace) {
-                        // Holographic radar beacon for rocket in space
-                        ctx.save();
-                        ctx.translate(pShipX, currentPadY - 20);
+                    let pShipX = cx + padCenterOffset;
+                    let pShipY = restY;
+                    let pShipTilt = 0;
+                    let pShipRot = 0;
+
+                    if (this.state === 'traveling') {
+                        // FLEET FORMATION in deep space!
+                        const formSpacing = Math.min(120, Math.max(75, 200 / Math.max(1, numPads)));
+                        const formOffset = (pIdx - (numPads - 1) / 2) * formSpacing;
+                        pShipX = cx + (this.shipLateralX || 0) + formOffset;
                         
-                        // Hologram cone beam
-                        const beamGrad = ctx.createLinearGradient(0, 15, 0, -35);
-                        beamGrad.addColorStop(0, 'rgba(56, 189, 248, 0.25)');
-                        beamGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
-                        ctx.fillStyle = beamGrad;
+                        // V-formation staggering
+                        const vOffset = Math.abs(pIdx - (numPads - 1) / 2) * 18;
+                        pShipY = this.shipY + vOffset + Math.sin(time * 3 + pIdx * 1.6) * 3.5;
+                        pShipTilt = (this.shipTilt || 0) + ((pIdx - (numPads - 1) / 2) * 0.04);
+                        pShipRot = this.shipRotation || 0;
+                    } else {
+                        // If local player is on the planet staging view, they are on their pad
+                        const isDead = isMe ? (!GAME.active || (GAME.entities.player && GAME.entities.player.dead) || pl.dead) : pl.dead;
+                        
+                        // If battle is running and player is still alive in space:
+                        const isInSpace = isBattleRunning && !isDead;
+                        if (isInSpace) {
+                            // Holographic radar beacon for rocket in space
+                            ctx.save();
+                            ctx.translate(pShipX, currentPadY - 20);
+                            
+                            // Hologram cone beam
+                            const beamGrad = ctx.createLinearGradient(0, 15, 0, -35);
+                            beamGrad.addColorStop(0, 'rgba(56, 189, 248, 0.25)');
+                            beamGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+                            ctx.fillStyle = beamGrad;
+                            ctx.beginPath();
+                            ctx.moveTo(-28, 15);
+                            ctx.lineTo(28, 15);
+                            ctx.lineTo(14, -35);
+                            ctx.lineTo(-14, -35);
+                            ctx.closePath();
+                            ctx.fill();
+
+                            // Holographic badge text
+                            ctx.fillStyle = '#38bdf8';
+                            ctx.font = 'bold 12px "Outfit", Arial, sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.shadowBlur = 10;
+                            ctx.shadowColor = '#38bdf8';
+                            ctx.fillText(`⚔️ ${pl.name || 'Hráč'} (V BITVĚ)`, 0, -40);
+                            ctx.restore();
+                            return;
+                        }
+
+                        pShipY = (this.state === 'takeoff' || (this.state === 'landing' && isMe)) ? this.shipY : restY;
+                        pShipTilt = (this.state === 'takeoff') ? (this.shipTilt || 0) : 0;
+
+                        // Ground shadow under rocket
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
                         ctx.beginPath();
-                        ctx.moveTo(-28, 15);
-                        ctx.lineTo(28, 15);
-                        ctx.lineTo(14, -35);
-                        ctx.lineTo(-14, -35);
-                        ctx.closePath();
+                        ctx.ellipse(pShipX, currentPadY, 36, 12, 0, 0, Math.PI * 2);
                         ctx.fill();
-
-                        // Holographic badge text
-                        ctx.fillStyle = '#38bdf8';
-                        ctx.font = 'bold 12px "Outfit", Arial, sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.shadowBlur = 10;
-                        ctx.shadowColor = '#38bdf8';
-                        ctx.fillText(`⚔️ ${pl.name || 'Hráč'} (V BITVĚ)`, 0, -40);
-                        ctx.restore();
-                        return;
                     }
-
-                    const pShipY = (this.state === 'takeoff' || (this.state === 'landing' && isMe)) ? this.shipY : restY;
-                    const pShipTilt = (this.state === 'takeoff') ? (this.shipTilt || 0) : 0;
-
-                    // Ground shadow under rocket
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                    ctx.beginPath();
-                    ctx.ellipse(pShipX, currentPadY, 36, 12, 0, 0, Math.PI * 2);
-                    ctx.fill();
 
                     const pColor = pl.shipColor || (isMe ? (META.selectedShipColor || '#38bdf8') : '#a855f7');
                     const badgeLabel = pl.name || "Hráč";
-                    this.drawRocketModel(ctx, pShipX, pShipY, this.shipVy, this.state, time, false, this.mode, pShipTilt, 0, badgeLabel, pColor);
+                    this.drawRocketModel(ctx, pShipX, pShipY, this.shipVy, this.state, time, false, this.mode, pShipTilt, pShipRot, badgeLabel, pColor);
                 });
             } else {
                 // Singleplayer rocket drawing
@@ -8620,6 +8676,22 @@ function initSocket() {
                     window.updateMultiplayerStagingUI(data);
                 }
                 if (typeof playSound === 'function') playSound('select');
+            }
+        });
+
+        NET.socket.on('roomTravelStarted', (data) => {
+            console.log('[MULTIPLAYER] Room traveling to planet:', data.planetId);
+            if (window.PlanetVisualEngine && data && data.planetId) {
+                if (window.PlanetVisualEngine.state !== 'traveling') {
+                    window.PlanetVisualEngine.travelTo(data.planetId, false);
+                }
+            }
+        });
+
+        NET.socket.on('roomTravelSkipped', () => {
+            console.log('[MULTIPLAYER] Room travel fast-forwarded');
+            if (window.PlanetVisualEngine && typeof window.PlanetVisualEngine.fastForwardTravel === 'function') {
+                window.PlanetVisualEngine.fastForwardTravel();
             }
         });
 
