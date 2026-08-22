@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.719
+ * NEO SURVIVOR - Core Game Logic - v1.720
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.719'
+    version: window.GAME_VERSION || '1.720'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.719";
+const GAME_VERSION = window.GAME_VERSION || "1.720";
 const GAME = {
     active: false,
     paused: false,
@@ -9682,6 +9682,36 @@ function initAutoAccountDetection() {
     if (inputPass) inputPass.addEventListener('keydown', handleEnter);
 }
 
+function requestLandscapeOrientation() {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    if (!isMobile) return;
+
+    const tryOrientationLock = () => {
+        if (screen.orientation && typeof screen.orientation.lock === 'function') {
+            screen.orientation.lock('landscape').catch(() => {
+                screen.orientation.lock('landscape-primary').catch(() => {});
+            });
+        }
+    };
+
+    const docEl = document.documentElement;
+    const reqFullscreen = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+
+    if (reqFullscreen && !document.fullscreenElement && !document.webkitFullscreenElement) {
+        reqFullscreen.call(docEl).then(() => {
+            tryOrientationLock();
+            if (typeof checkPortraitLock === 'function') setTimeout(checkPortraitLock, 250);
+        }).catch(() => {
+            tryOrientationLock();
+            if (typeof checkPortraitLock === 'function') setTimeout(checkPortraitLock, 250);
+        });
+    } else {
+        tryOrientationLock();
+        if (typeof checkPortraitLock === 'function') setTimeout(checkPortraitLock, 250);
+    }
+}
+window.requestLandscapeOrientation = requestLandscapeOrientation;
+
 function handleAuth(isLogin) {
     const nameVal = document.getElementById('input-login-name').value.trim();
     const passVal = document.getElementById('input-login-pass').value.trim();
@@ -9704,6 +9734,9 @@ function handleAuth(isLogin) {
         if (errorEl) errorEl.innerText = window.T("Potvrď ochranu reCAPTCHA!");
         return;
     }
+
+    // Trigger landscape request on user gesture
+    requestLandscapeOrientation();
 
     const loader = document.getElementById('login-loader');
     const errorEl = document.getElementById('login-error');
@@ -9752,6 +9785,7 @@ function handleAuth(isLogin) {
                 document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
                 document.getElementById('menu-modal').classList.add('active');
 
+                requestLandscapeOrientation();
                 if (typeof checkPortraitLock === 'function') checkPortraitLock();
                 if (typeof checkAndShowRotateAnimation === 'function') {
                     checkAndShowRotateAnimation();
@@ -9786,6 +9820,7 @@ function handleAuth(isLogin) {
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('menu-modal').classList.add('active');
 
+        requestLandscapeOrientation();
         if (typeof checkPortraitLock === 'function') checkPortraitLock();
         if (typeof checkAndShowRotateAnimation === 'function') {
             checkAndShowRotateAnimation();
@@ -10611,9 +10646,12 @@ function init() {
     const savedPass = SecureStorage.getItem('neoSurvivor_pass');
 
     if (!savedUser || !savedPass) {
+        META.playerName = null;
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('login-modal').classList.add('active');
+        if (typeof checkPortraitLock === 'function') checkPortraitLock();
     } else {
+        META.playerName = savedUser;
         document.getElementById('display-player-name').innerText = savedUser;
         if (NET.socket) {
             NET.socket.emit('login', { user: savedUser, pass: savedPass });
@@ -10630,13 +10668,17 @@ function init() {
                     updateMusicVolume();
                     document.getElementById('display-max-level').innerText = META.maxLevel || 1;
                     updateCurrencyUI();
-                    checkAndShowRotateAnimation();
+                    if (typeof requestLandscapeOrientation === 'function') requestLandscapeOrientation();
+                    if (typeof checkPortraitLock === 'function') checkPortraitLock();
+                    if (typeof checkAndShowRotateAnimation === 'function') checkAndShowRotateAnimation();
                 }
             });
         }
         document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
         document.getElementById('menu-modal').classList.add('active');
 
+        if (typeof requestLandscapeOrientation === 'function') requestLandscapeOrientation();
+        if (typeof checkPortraitLock === 'function') checkPortraitLock();
         if (typeof checkAndShowRotateAnimation === 'function') {
             checkAndShowRotateAnimation();
         }
@@ -10940,24 +10982,20 @@ function init() {
     }
     
     window.addEventListener('resize', checkPortraitLock);
+    window.addEventListener('orientationchange', () => {
+        setTimeout(checkPortraitLock, 150);
+    });
+    window.addEventListener('fullscreenchange', () => {
+        setTimeout(checkPortraitLock, 150);
+    });
     checkPortraitLock(); // initial check
     
     if (portraitOverlay) {
         portraitOverlay.addEventListener('click', () => {
-            let elem = document.documentElement;
-            if (elem.requestFullscreen) {
-                elem.requestFullscreen().then(() => {
-                    if (screen.orientation && screen.orientation.lock) {
-                        screen.orientation.lock('landscape').catch(e => console.log(e));
-                    }
-                    portraitOverlay.style.display = 'none';
-                }).catch(e => {
-                    console.log(e);
-                    portraitOverlay.style.display = 'none';
-                });
-            } else {
-                portraitOverlay.style.display = 'none';
+            if (typeof requestLandscapeOrientation === 'function') {
+                requestLandscapeOrientation();
             }
+            setTimeout(checkPortraitLock, 300);
         });
     }
 
