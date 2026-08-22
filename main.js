@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.701
+ * NEO SURVIVOR - Core Game Logic - v1.702
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.701'
+    version: window.GAME_VERSION || '1.702'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.701";
+const GAME_VERSION = window.GAME_VERSION || "1.702";
 const GAME = {
     active: false,
     paused: false,
@@ -3775,18 +3775,20 @@ window.claimAchievement = function(id) {
 
 
 function triggerRescueExtraction(onComplete) {
-    if (GAME.isExtracting) {
-        if (typeof onComplete === 'function') onComplete();
-        return;
-    }
+    if (GAME.isExtracting) return;
     GAME.isExtracting = true;
     GAME.paused = false;
+
+    // Immediately dismiss all gameplay modals so viewport is clean
+    document.querySelectorAll('.modal:not(#planet-modal)').forEach(m => m.classList.remove('active'));
+    const uiLayer = document.getElementById('ui-layer');
+    if (uiLayer) uiLayer.style.display = 'none';
 
     if (typeof playSound === 'function') playSound('meteor');
 
     const p = GAME.entities.player || { x: 0, y: 0 };
     const extractStartTime = Date.now();
-    const extractDuration = 1000; // 1.0s
+    const extractDuration = 1100; // 1.1s
 
     GAME.extractionAnim = {
         startTime: extractStartTime,
@@ -4704,25 +4706,43 @@ const PlanetVisualEngine = {
 
         const modal = document.getElementById('planet-modal');
         if (modal) {
+            modal.classList.add('active');
             modal.style.opacity = '1';
             modal.style.pointerEvents = 'auto';
         }
 
         const topCard = document.getElementById('planet-top-card');
-        if (topCard) { topCard.style.opacity = '1'; topCard.style.pointerEvents = 'auto'; topCard.style.transform = 'none'; }
         const botMenu = document.getElementById('planet-bottom-menu');
-        if (botMenu) { botMenu.style.opacity = '1'; botMenu.style.pointerEvents = 'auto'; botMenu.style.transform = 'none'; }
         const centerAct = document.getElementById('planet-center-actions');
-        if (centerAct) { centerAct.style.opacity = '1'; centerAct.style.pointerEvents = 'auto'; }
+        const statusTag = document.getElementById('planet-status-tag');
+        const mpStagingHud = document.getElementById('mp-staging-hud');
 
         const curWorld = this.currentPlanet || PLANET_WORLDS[0];
         if (typeof applyPlanetTheme === 'function') applyPlanetTheme(this.currentPlanetId || 'terra');
-        const statusTag = document.getElementById('planet-status-tag');
-        if (statusTag) {
-            statusTag.style.opacity = '1';
-            statusTag.innerHTML = `<span>🚀 PŘISTÁVÁNÍ NA ${curWorld.name}...</span>`;
-            statusTag.style.color = curWorld.accentColor || '#38bdf8';
-            statusTag.style.borderColor = curWorld.accentColor || 'rgba(56, 189, 248, 0.4)';
+
+        if (mode === 'multiplayer') {
+            if (topCard) topCard.style.display = 'none';
+            if (botMenu) botMenu.style.display = 'none';
+            if (centerAct) centerAct.style.display = 'none';
+            if (statusTag) statusTag.style.display = 'none';
+            if (mpStagingHud) {
+                mpStagingHud.style.display = 'block';
+                if (typeof window.updateMultiplayerStagingUI === 'function') {
+                    window.updateMultiplayerStagingUI(this.multiplayerLobby);
+                }
+            }
+        } else {
+            if (mpStagingHud) mpStagingHud.style.display = 'none';
+            if (topCard) { topCard.style.display = 'flex'; topCard.style.opacity = '1'; topCard.style.pointerEvents = 'auto'; topCard.style.transform = 'none'; }
+            if (botMenu) { botMenu.style.display = 'flex'; botMenu.style.opacity = '1'; botMenu.style.pointerEvents = 'auto'; botMenu.style.transform = 'none'; }
+            if (centerAct) { centerAct.style.display = 'flex'; centerAct.style.opacity = '1'; centerAct.style.pointerEvents = 'auto'; }
+            if (statusTag) {
+                statusTag.style.display = 'inline-flex';
+                statusTag.style.opacity = '1';
+                statusTag.innerHTML = `<span>🚀 PŘISTÁVÁNÍ NA ${curWorld.name}...</span>`;
+                statusTag.style.color = curWorld.accentColor || '#38bdf8';
+                statusTag.style.borderColor = curWorld.accentColor || 'rgba(56, 189, 248, 0.4)';
+            }
         }
 
         if (typeof playSound === 'function') playSound('menuOpen');
@@ -12101,7 +12121,7 @@ function render() {
 
 
 
-        if (GAME.active && GAME.entities) {
+        if ((GAME.active || GAME.extractionAnim) && GAME.entities) {
             if (NET.isMultiplayer && NET.others) {
                 Object.values(NET.others).forEach(op => {
                     if (op.portals) {
@@ -12261,7 +12281,28 @@ function render() {
                 }
             }
             
-            if (GAME.entities.player) GAME.entities.player.draw(ctx, { x: camX, y: camY });
+            if (GAME.entities.player) {
+                if (GAME.extractionAnim) {
+                    const ex = GAME.extractionAnim;
+                    const elapsed = (Date.now() - ex.startTime) / 1000;
+                    const prog = Math.min(1.0, elapsed / (ex.duration / 1000));
+                    if (prog < 0.65) {
+                        ctx.save();
+                        if (prog >= 0.35) {
+                            const p2 = (prog - 0.35) / 0.30;
+                            const liftY = p2 * 25;
+                            const scale = Math.max(0.01, 1.0 - p2 * 0.8);
+                            ctx.translate(ex.targetX - camX, ex.targetY - camY - liftY);
+                            ctx.scale(scale, scale);
+                            ctx.translate(-(ex.targetX - camX), -(ex.targetY - camY));
+                        }
+                        GAME.entities.player.draw(ctx, { x: camX, y: camY });
+                        ctx.restore();
+                    }
+                } else {
+                    GAME.entities.player.draw(ctx, { x: camX, y: camY });
+                }
+            }
 
             // Rescue Extraction Ship Cinematic Animation
             if (GAME.extractionAnim) {
@@ -12269,35 +12310,46 @@ function render() {
                 const elapsed = (Date.now() - ex.startTime) / 1000;
                 const prog = Math.min(1.0, elapsed / (ex.duration / 1000));
                 
-                const shipX = (ex.targetX * GAME.zoom) - camX;
-                const shipScreenY = (ex.targetY * GAME.zoom) - camY;
+                const shipX = ex.targetX - camX;
+                const shipScreenY = ex.targetY - camY;
                 
                 let curShipY = shipScreenY;
                 let isThrustingUp = false;
                 
                 if (prog < 0.35) {
                     const p1 = prog / 0.35;
-                    curShipY = (shipScreenY - 350) + p1 * 320;
+                    const easeP = Math.sin(p1 * Math.PI / 2);
+                    curShipY = (shipScreenY - 360) + easeP * 330;
                 } else if (prog < 0.65) {
                     curShipY = shipScreenY - 30;
                     // Tractor beam cone
                     ctx.save();
                     const beamGrad = ctx.createLinearGradient(shipX, curShipY + 20, shipX, shipScreenY + 20);
-                    beamGrad.addColorStop(0, 'rgba(56, 189, 248, 0.7)');
+                    beamGrad.addColorStop(0, 'rgba(56, 189, 248, 0.75)');
+                    beamGrad.addColorStop(0.7, 'rgba(56, 189, 248, 0.35)');
                     beamGrad.addColorStop(1, 'rgba(56, 189, 248, 0.05)');
                     ctx.fillStyle = beamGrad;
                     ctx.beginPath();
-                    ctx.moveTo(shipX - 15, curShipY + 20);
-                    ctx.lineTo(shipX + 15, curShipY + 20);
-                    ctx.lineTo(shipX + 35, shipScreenY + 20);
-                    ctx.lineTo(shipX - 35, shipScreenY + 20);
+                    ctx.moveTo(shipX - 14, curShipY + 15);
+                    ctx.lineTo(shipX + 14, curShipY + 15);
+                    ctx.lineTo(shipX + 38, shipScreenY + 18);
+                    ctx.lineTo(shipX - 38, shipScreenY + 18);
                     ctx.closePath();
                     ctx.fill();
+
+                    // Beam energy ring on ground
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 2.5;
+                    ctx.shadowBlur = 12;
+                    ctx.shadowColor = '#38bdf8';
+                    ctx.beginPath();
+                    ctx.ellipse(shipX, shipScreenY + 12, 36, 12, 0, 0, Math.PI * 2);
+                    ctx.stroke();
                     ctx.restore();
                 } else {
                     isThrustingUp = true;
                     const p3 = (prog - 0.65) / 0.35;
-                    curShipY = (shipScreenY - 30) - (p3 * p3) * 500;
+                    curShipY = (shipScreenY - 30) - Math.pow(p3, 2.2) * 550;
                 }
 
                 // Draw the vector rocket model
@@ -12305,7 +12357,7 @@ function render() {
                     ctx.save();
                     const rColor = META.selectedShipColor || '#38bdf8';
                     const rState = isThrustingUp ? 'takeoff' : 'landing';
-                    window.PlanetVisualEngine.drawRocketModel(ctx, shipX, curShipY, isThrustingUp ? -15 : 5, rState, Date.now() / 1000, false, 'solo', 0, 0, META.playerName || 'Záchranný modul', rColor);
+                    window.PlanetVisualEngine.drawRocketModel(ctx, shipX, curShipY, isThrustingUp ? -15 : 6, rState, Date.now() / 1000, false, 'solo', 0, 0, META.playerName || 'Záchranný modul', rColor);
                     ctx.restore();
                 }
 
@@ -12314,6 +12366,7 @@ function render() {
                     const cb = ex.onComplete;
                     GAME.extractionAnim = null;
                     GAME.isExtracting = false;
+                    GAME.active = false;
                     if (typeof cb === 'function') cb();
                 }
             }
