@@ -1,5 +1,5 @@
 /**
- * NEO SURVIVOR - Core Game Logic - v1.702
+ * NEO SURVIVOR - Core Game Logic - v1.706
  */
 
 // Client-side Encrypted Storage for credentials & sensitive session data
@@ -474,7 +474,7 @@ const META = {
     selectedLanguage: 'cs',
     lastSession: null,
     planet: { buildings: {}, lastIncomeTime: Date.now() },
-    version: window.GAME_VERSION || '1.702'
+    version: window.GAME_VERSION || '1.706'
 };
 
 let achievementsInitialized = false;
@@ -839,7 +839,7 @@ const mergeMeta = (serverMeta, skipPreferences = false) => {
     updateCurrencyUI();
 };
 
-const GAME_VERSION = window.GAME_VERSION || "1.702";
+const GAME_VERSION = window.GAME_VERSION || "1.706";
 const GAME = {
     active: false,
     paused: false,
@@ -3788,7 +3788,7 @@ function triggerRescueExtraction(onComplete) {
 
     const p = GAME.entities.player || { x: 0, y: 0 };
     const extractStartTime = Date.now();
-    const extractDuration = 1100; // 1.1s
+    const extractDuration = 2200; // 2.2s cinematic extraction
 
     GAME.extractionAnim = {
         startTime: extractStartTime,
@@ -4834,10 +4834,20 @@ const PlanetVisualEngine = {
         }
 
         if (this.state === 'landing') {
+            const isMpLobby = !!(this.multiplayerLobby && this.multiplayerLobby.active);
+            const lobbyPlayers = isMpLobby 
+                ? ensureLocalPlayerInList(this.multiplayerLobby.players) 
+                : [{ id: myPlayerId, name: META.playerName || 'Hráč' }];
+            const numPads = lobbyPlayers.length;
+            const padSpacing = Math.min(140, Math.max(90, (w * 0.75) / Math.max(1, numPads)));
+            const myIdx = lobbyPlayers.findIndex(pl => pl.id === myPlayerId || pl.name === (META.playerName || SecureStorage.getItem('neoSurvivor_user')));
+            const myPadOffset = (myIdx >= 0 && isMpLobby) ? (myIdx - (numPads - 1) / 2) * padSpacing : 0;
+            const myPadX = cx + myPadOffset;
+
             const elapsed = (Date.now() - this.landingStartTime) / 1000;
-            const progress = Math.min(1.0, elapsed / 1.1); // Smooth 1.1s landing
+            const progress = Math.min(1.0, elapsed / 2.0); // Smooth 2.0s landing
             const easeP = Math.sin(progress * Math.PI / 2); // Smooth deceleration onto pad
-            this.shipY = -140 + easeP * (restY - (-140));
+            this.shipY = -150 + easeP * (restY - (-150));
             this.shipLateralX = 0;
             this.shipTilt = 0;
             this.shipRotation = 0;
@@ -4845,7 +4855,7 @@ const PlanetVisualEngine = {
             // Thrusters brake firing
             for (let i = 0; i < 4; i++) {
                 this.particles.push({
-                    x: cx + (Math.random() - 0.5) * 28,
+                    x: myPadX + (Math.random() - 0.5) * 28,
                     y: this.shipY + 52,
                     vx: (Math.random() - 0.5) * 4,
                     vy: Math.random() * 6 + 4,
@@ -4866,7 +4876,7 @@ const PlanetVisualEngine = {
                     const angle = Math.random() * Math.PI;
                     const spd = Math.random() * 7 + 2;
                     this.particles.push({
-                        x: cx + (Math.random() - 0.5) * 60,
+                        x: myPadX + (Math.random() - 0.5) * 60,
                         y: padY,
                         vx: Math.cos(angle) * spd,
                         vy: -Math.sin(angle) * (spd * 0.5),
@@ -12286,12 +12296,12 @@ function render() {
                     const ex = GAME.extractionAnim;
                     const elapsed = (Date.now() - ex.startTime) / 1000;
                     const prog = Math.min(1.0, elapsed / (ex.duration / 1000));
-                    if (prog < 0.65) {
+                    if (prog < 0.68) {
                         ctx.save();
-                        if (prog >= 0.35) {
-                            const p2 = (prog - 0.35) / 0.30;
-                            const liftY = p2 * 25;
-                            const scale = Math.max(0.01, 1.0 - p2 * 0.8);
+                        if (prog >= 0.30) {
+                            const p2 = (prog - 0.30) / 0.38;
+                            const liftY = p2 * 28;
+                            const scale = Math.max(0.01, 1.0 - p2 * 0.85);
                             ctx.translate(ex.targetX - camX, ex.targetY - camY - liftY);
                             ctx.scale(scale, scale);
                             ctx.translate(-(ex.targetX - camX), -(ex.targetY - camY));
@@ -12316,40 +12326,40 @@ function render() {
                 let curShipY = shipScreenY;
                 let isThrustingUp = false;
                 
-                if (prog < 0.35) {
-                    const p1 = prog / 0.35;
+                if (prog < 0.30) {
+                    const p1 = prog / 0.30;
                     const easeP = Math.sin(p1 * Math.PI / 2);
-                    curShipY = (shipScreenY - 360) + easeP * 330;
-                } else if (prog < 0.65) {
+                    curShipY = (shipScreenY - 380) + easeP * 350;
+                } else if (prog < 0.68) {
                     curShipY = shipScreenY - 30;
                     // Tractor beam cone
                     ctx.save();
                     const beamGrad = ctx.createLinearGradient(shipX, curShipY + 20, shipX, shipScreenY + 20);
-                    beamGrad.addColorStop(0, 'rgba(56, 189, 248, 0.75)');
-                    beamGrad.addColorStop(0.7, 'rgba(56, 189, 248, 0.35)');
+                    beamGrad.addColorStop(0, 'rgba(56, 189, 248, 0.85)');
+                    beamGrad.addColorStop(0.6, 'rgba(56, 189, 248, 0.40)');
                     beamGrad.addColorStop(1, 'rgba(56, 189, 248, 0.05)');
                     ctx.fillStyle = beamGrad;
                     ctx.beginPath();
-                    ctx.moveTo(shipX - 14, curShipY + 15);
-                    ctx.lineTo(shipX + 14, curShipY + 15);
-                    ctx.lineTo(shipX + 38, shipScreenY + 18);
-                    ctx.lineTo(shipX - 38, shipScreenY + 18);
+                    ctx.moveTo(shipX - 16, curShipY + 15);
+                    ctx.lineTo(shipX + 16, curShipY + 15);
+                    ctx.lineTo(shipX + 42, shipScreenY + 20);
+                    ctx.lineTo(shipX - 42, shipScreenY + 20);
                     ctx.closePath();
                     ctx.fill();
 
                     // Beam energy ring on ground
                     ctx.strokeStyle = '#38bdf8';
-                    ctx.lineWidth = 2.5;
-                    ctx.shadowBlur = 12;
+                    ctx.lineWidth = 3;
+                    ctx.shadowBlur = 15;
                     ctx.shadowColor = '#38bdf8';
                     ctx.beginPath();
-                    ctx.ellipse(shipX, shipScreenY + 12, 36, 12, 0, 0, Math.PI * 2);
+                    ctx.ellipse(shipX, shipScreenY + 14, 40, 14, 0, 0, Math.PI * 2);
                     ctx.stroke();
                     ctx.restore();
                 } else {
                     isThrustingUp = true;
-                    const p3 = (prog - 0.65) / 0.35;
-                    curShipY = (shipScreenY - 30) - Math.pow(p3, 2.2) * 550;
+                    const p3 = (prog - 0.68) / 0.32;
+                    curShipY = (shipScreenY - 30) - Math.pow(p3, 2.2) * 580;
                 }
 
                 // Draw the vector rocket model
